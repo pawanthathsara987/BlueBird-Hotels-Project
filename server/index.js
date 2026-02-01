@@ -1,7 +1,24 @@
-import express from 'express';
+import dotenv from 'dotenv';  // ✅ fixed typo
+dotenv.config();
 
-const app = express();
+import app from './src/app.js';
+import database from './src/config/database.js';  // ✅ fixed import name
 
-app.listen(3000, () => {
-  console.log('Server is running on port 3000');
-});
+const PORT = process.env.PORT || 3002;
+
+async function startServer() {
+  try {
+    // test DB connection first
+    await database.getConnection();
+    console.log('✅ MySQL connected (AWS RDS)');
+
+    app.listen(PORT, () =>
+      console.log(`🚀 Server running on port ${PORT}`)
+    );
+  } catch (err) {
+    console.error('❌ DB connection failed:', err);
+    process.exit(1);
+  }
+}
+
+startServer();
