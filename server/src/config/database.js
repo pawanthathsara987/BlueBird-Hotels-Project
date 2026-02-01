@@ -9,7 +9,7 @@ function getPool() {
       user: process.env.DB_USER,
       password: process.env.DB_PASS,
       database: process.env.DB_NAME,
-      port: 3306,
+      port: process.env.PORT,
       waitForConnections: true,
       connectionLimit: 10,
     });
