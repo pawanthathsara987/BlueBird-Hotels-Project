@@ -16,26 +16,67 @@ export default function ImageCarousel() {
     slidesToScroll: 1,
   };
 
-  const images = [
-    sliderImage1,
-    sliderImage2,
-    sliderImage3,
-    sliderImage4,
-    sliderImage5
+  const slides = [
+    {
+      img: sliderImage1,
+      title: "Welcome to BlueBird Hotel",
+      desc: "Experience luxury and comfort like never before"
+    },
+    {
+      img: sliderImage2,
+      title: "Luxury Rooms",
+      desc: "Relax in our modern designed rooms"
+    },
+    {
+      img: sliderImage3,
+      title: "Fine Dining",
+      desc: "Enjoy delicious meals with ocean views"
+    },
+    {
+      img: sliderImage4,
+      title: "Travel & Tours",
+      desc: "Discover beautiful destinations with us"
+    },
+    {
+      img: sliderImage5,
+      title: "Unforgettable Stay",
+      desc: "Make memories that last forever"
+    }
   ];
 
+
   return (
-    <div className="w-full  mx-auto">
+    <div className="w-full overflow-hidden">
       <Slider {...settings}>
-        {images.map((img, index) => (
-          <div key={index} className="">
-            <div className="overflow-hidden shadow-lg hover:shadow-2xl transition duration-300">
-              <img src={img} alt={`slide-${index}`} className="w-full h-[500px] object-cover overflow-hidden"/>
+        {slides.map((slide, index) => (
+          <div key={index}>
+
+            <div className="relative w-full overflow-hidden">
+
+              <img src={slide.img} className="w-full aspect-[16/7] object-cover block" />
+
+              <div className="absolute inset-0 bg-black/40" />
+
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center px-4">
+
+                <h1 className="text-3xl md:text-5xl font-bold mb-4">
+                  {slide.title}
+                </h1>
+
+                <p className="mb-6 max-w-xl">
+                  {slide.desc}
+                </p>
+
+              </div>
+
             </div>
+
           </div>
         ))}
       </Slider>
+
     </div>
   );
+
 }
 
