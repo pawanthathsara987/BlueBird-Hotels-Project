@@ -4,7 +4,7 @@ dotenv.config();
 import app from './src/app.js';
 import database from './src/config/database.js';  // ✅ fixed import name
 
-const PORT = 3002;
+const PORT = process.env.PORT || 3002;
 
 async function startServer() {
   try {
