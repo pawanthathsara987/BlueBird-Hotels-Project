@@ -25,17 +25,18 @@ export default function ImageCarousel() {
   ];
 
   return (
-    <div className="w-full  mx-auto">
+    <div className="w-full overflow-hidden">
       <Slider {...settings}>
         {images.map((img, index) => (
-          <div key={index} className="">
-            <div className="overflow-hidden shadow-lg hover:shadow-2xl transition duration-300">
-              <img src={img} alt={`slide-${index}`} className="w-full h-[500px] object-cover overflow-hidden"/>
+          <div key={index}>
+            <div className="w-full overflow-hidden">
+              <img src={img} alt={`slide-${index}`} className="w-full aspect-[16/7] object-cover block" />
             </div>
           </div>
         ))}
       </Slider>
     </div>
   );
+
 }
 
