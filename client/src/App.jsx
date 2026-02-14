@@ -1,4 +1,4 @@
-import BookingRoom from "./pages/client/booking/room-booking";
+import BookingRoom from "./pages/client/booking/roomBooking";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import HomePage from "./pages/homePage";
 
