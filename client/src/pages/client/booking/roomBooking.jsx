@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Bed, BedDouble, UserCheck, Star, Home,
+  BedDouble, UserCheck, Home,
   X, Check, Wifi, Wind, Waves, MapPin, Info
 } from 'lucide-react';
 
@@ -18,7 +18,6 @@ export default function BookingRoom() {
 
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [custom, setCustom] = useState(false);
 
   /* =========================
       SCROLL LOCK
@@ -36,9 +35,9 @@ export default function BookingRoom() {
       type: "Deluxe Double Room",
       description: "King bed, private balcony, oceanfront bath, smart lighting.",
       description2: "4 Adults - Breakfast Included",
-      cancel: "Free Cancel - Up to 24 hours",
+      cancel: "Free Cancel - Up to 4 days",
       cancelDate: "Free cancel until March 14, 2026",
-      price: 196,
+      price: 156,
       date: "March 14, 2028",
       mainFeatures: ["Balcony", "Garden View", "Air Conditioner", "Free Wifi"],
       amenities: ["Free toiletries", "Toilet", "Bath or shower", "TV", "Hairdryer"],
@@ -52,9 +51,9 @@ export default function BookingRoom() {
       type: "Double Room with Balcony",
       description: "King bed, private balcony, oceanfront bath, smart lighting.",
       description2: "2 Adults - Breakfast Included",
-      cancel: "Free Cancel - Up to 24 hours",
+      cancel: "Free Cancel - Up to 4 days",
       cancelDate: "Free cancel until March 14, 2026",
-      price: 180,
+      price: 175,
       date: "March 14, 2028",
       mainFeatures: ["Balcony", "Ocean View", "Air Conditioner", "Free Wifi"],
       amenities: ["Free toiletries", "Toilet", "Bath or shower", "TV", "Hairdryer"],
@@ -68,7 +67,7 @@ export default function BookingRoom() {
       type: "Superior Family Room",
       description: "King bed, private balcony, oceanfront bath, smart lighting.",
       description2: "2 Adults - Breakfast Included",
-      cancel: "Free Cancel - Up to 24 hours",
+      cancel: "Free Cancel - Up to 4 days",
       cancelDate: "Free cancel until March 14, 2026",
       price: 196,
       date: "March 14, 2028",
@@ -180,17 +179,6 @@ export default function BookingRoom() {
         <div className="bg-white rounded-3xl p-4 sm:p-6 lg:p-8 shadow-2xl mb-12">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <h2 className="text-xl sm:text-2xl font-bold">Room Assignment</h2>
-
-                <button
-                onClick={() => setCustom(prev => !prev)}
-                className={`w-full sm:w-auto px-6 py-3 rounded-xl font-bold transition-all cursor-pointer
-                ${custom
-                    ? "bg-green-600 text-white"
-                    : "bg-gray-200 text-gray-600"}
-                `}
-                >
-                {custom ? "Editing Enabled" : "Customize Rooms"}
-                </button>
             </div>
 
             {/* Mobile View - Cards */}
@@ -216,30 +204,24 @@ export default function BookingRoom() {
 
                     <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Rooms:</span>
-                    <div className={`inline-flex items-center rounded-lg border-2
-                    ${custom ? "border-blue-400" : "border-gray-300 bg-gray-100 opacity-60"}`}>
+                    <div className={"inline-flex items-center rounded-lg border-2 border-blue-400"}>
                         <button
-                        disabled={!custom}
-                        onClick={() => updateQuantity(room.id, -1)}
-                        className={`px-4 py-2 font-bold
-                        ${custom ? "text-blue-600 hover:bg-blue-100" : "text-gray-400 cursor-not-allowed"}`}>
+                          onClick={() => updateQuantity(room.id, -1)}
+                          className={`px-4 py-2 font-bold text-blue-600 hover:bg-blue-100`}
+                        >
                         −
                         </button>
                         <input
                         type="number"
-                        disabled={!custom}
                         value={room.quantity}
                         onChange={(e) => handleQuantityInput(room.id, e.target.value)}
-                        className={`w-16 text-center font-bold bg-transparent outline-none
-                        ${custom ? "text-gray-900" : "text-gray-400 cursor-not-allowed"}
+                        className={`w-16 text-center font-bold bg-transparent outline-none text-gray-900
                         [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
                         min="0"
                         />
                         <button
-                        disabled={!custom}
                         onClick={() => updateQuantity(room.id, 1)}
-                        className={`px-4 py-2 font-bold
-                        ${custom ? "text-blue-600 hover:bg-blue-100" : "text-gray-400 cursor-not-allowed"}`}>
+                        className={`px-4 py-2 font-bold text-blue-600 hover:bg-blue-100`}>
                         +
                         </button>
                     </div>
@@ -274,30 +256,23 @@ export default function BookingRoom() {
                         <td className="p-4 text-center">{room.kids}</td>
                         <td className="p-4 text-center">${room.price}</td>
                         <td className="p-4 text-center">
-                        <div className={`inline-flex items-center rounded-lg border-2
-                        ${custom ? "border-blue-400" : "border-gray-300 bg-gray-100 opacity-60"}`}>
+                        <div className={`inline-flex items-center rounded-lg border-2 border-blue-400`}>
                             <button
-                            disabled={!custom}
                             onClick={() => updateQuantity(room.id, -1)}
-                            className={`px-4 py-2 font-bold
-                            ${custom ? "text-blue-600 hover:bg-blue-100" : "text-gray-400 cursor-not-allowed"}`}>
+                            className={`px-4 py-2 font-bold text-blue-600 hover:bg-blue-100`}>
                             −
                             </button>
                             <input
                             type="number"
-                            disabled={!custom}
                             value={room.quantity}
                             onChange={(e) => handleQuantityInput(room.id, e.target.value)}
-                            className={`w-16 text-center font-bold bg-transparent outline-none
-                            ${custom ? "text-gray-900" : "text-gray-400 cursor-not-allowed"}
+                            className={`w-16 text-center font-bold bg-transparent outline-none text-gray-900
                             [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
                             min="0"
                             />
                             <button
-                            disabled={!custom}
                             onClick={() => updateQuantity(room.id, 1)}
-                            className={`px-4 py-2 font-bold
-                            ${custom ? "text-blue-600 hover:bg-blue-100" : "text-gray-400 cursor-not-allowed"}`}>
+                            className={`px-4 py-2 font-bold text-blue-600 hover:bg-blue-100`}>
                             +
                             </button>
                         </div>
