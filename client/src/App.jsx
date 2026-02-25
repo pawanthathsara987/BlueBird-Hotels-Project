@@ -5,7 +5,7 @@ import BookingProcessing from "./pages/client/booking/bookingProcessing";
 import LoginAdmin from "./pages/admin/loginAdmin";
 import LoginReceptionist from "./pages/reception/loginReceptionist";
 import UserRegister from "./pages/userRegister";
-import RoomManagement from "./pages/admin/roomManagement";
+import RoomManagement from "./pages/admin/rooms/roomManagement";
 
 export default function App() {
     return(
