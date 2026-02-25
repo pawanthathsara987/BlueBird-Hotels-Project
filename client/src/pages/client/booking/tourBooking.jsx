@@ -32,7 +32,7 @@ export default function BookingTour() {
     return (
         <div className="w-full  ">
             {/*hero section*/}
-            <div className="relative h-[400px] ">
+            <div className="relative h-96 ">
                 <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e" alt="Tour" 
                 className="w-full h-full object-cover" />
 
@@ -125,7 +125,7 @@ export default function BookingTour() {
             {/* image + inclution*/}
             <div className="max-w-6xl mx-auto px-6 pb-16 grid md:grid-cols-2 gap-10">
 
-                <div className="w-full h-[380px] overflow-hidden ">
+                <div className="w-full h-96 overflow-hidden ">
                     <img
                         src="https://images.unsplash.com/photo-1500375592092-40eb2168fd21"
                         alt="lagoon"
