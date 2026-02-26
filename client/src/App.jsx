@@ -6,6 +6,9 @@ import LoginAdmin from "./pages/admin/loginAdmin";
 import LoginReceptionist from "./pages/reception/loginReceptionist";
 import UserRegister from "./pages/userRegister";
 import RoomManagement from "./pages/admin/rooms/roomManagement";
+import BookingTour from "./pages/client/booking/tourBooking";
+import AddTour from "./pages/admin/TourForm";
+
 
 export default function App() {
     return(
@@ -19,6 +22,8 @@ export default function App() {
                     <Route path="/loginReceptionist" element={<LoginReceptionist />} />
                     <Route path="/userRegister" element={<UserRegister />} />
                     <Route path="/roomManage" element={< RoomManagement />} />
+                    <Route path="/booking/tour" element={< BookingTour />} />
+                    <Route path="/addTour" element={< AddTour />} />
                 </Routes>
             </div>
         </BrowserRouter>
