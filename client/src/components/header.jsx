@@ -8,7 +8,7 @@ export default function Header() {
 
   return (
     <header className="w-full bg-white shadow-sm relative z-50">
-      <div className="w-full px-4 lg:px-10 h-[90px] grid grid-cols-[1fr_auto_1fr] items-center">
+      <div className="w-full px-4 lg:px-10 h-22.5 grid grid-cols-[1fr_auto_1fr] items-center">
         
         <div className="hidden lg:flex justify-start items-center gap-3 text-sm text-gray-600">
           <span>Negombo</span>
@@ -43,9 +43,9 @@ export default function Header() {
       </div>
 
       {sideBarOpen && (
-        <div className="fixed lg:hidden w-[100vw] h-screen top-0 left-0 bg-black/50 z-50 transition-all duration-300">
-          <div className="bg-white w-[250px] h-full flex flex-col shadow-lg animate-in slide-in-from-left duration-300">
-            <div className="w-full h-[100px] bg-accent flex justify-between items-center px-4 border-b">
+        <div className="fixed lg:hidden w-screen h-screen top-0 left-0 bg-black/50 z-50 transition-all duration-300">
+          <div className="bg-white w-62.5 h-full flex flex-col shadow-lg animate-in slide-in-from-left duration-300">
+            <div className="w-full h-25 bg-accent flex justify-between items-center px-4 border-b">
                <img src={logo} alt="logo" className="h-14 object-contain" />
                <LuListCollapse 
                   onClick={() => setSideBarOpen(false)} 

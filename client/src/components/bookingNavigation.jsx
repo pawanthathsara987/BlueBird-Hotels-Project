@@ -15,13 +15,13 @@ export default function BookingNavigation(){
         { id: 4, name: "BlueBird Hotel City Center" },
     ];
     return(
-        <div className="w-[80%] h-[130px] bg-white absolute bottom-[-130px] left-1/2 transform -translate-x-1/2 rounded-lg flex items-center px-6 gap-8">
+        <div className="w-[80%] h-32.5 bg-white absolute -bottom-32.5 inset-x-0 mx-auto rounded-lg flex items-center px-6 gap-8">
                 <div className="flex flex-col mb-5">
                     <label className="text-md text-gray-700 ">Hotel</label>
                     <select 
                         value={selectedHotel} 
                         onChange={(e) => setSelectedHotel(e.target.value)}
-                        className="w-[200px] px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                        className="w-50 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
                     >
                         <option value="">Choose a Hotel</option>
                         {hotels.map((hotel) => (
@@ -54,13 +54,13 @@ export default function BookingNavigation(){
                     <button
                         type="button"
                         onClick={() => setGuestOpen((prev) => !prev)}
-                        className="w-[150px] px-4 py-2 border border-gray-300 rounded-md text-left focus:outline-none focus:ring-2 focus:ring-gray-500"
+                        className="w-37.5 px-4 py-2 border border-gray-300 rounded-md text-left focus:outline-none focus:ring-2 focus:ring-gray-500"
                         aria-expanded={guestOpen}
                     >
                         {adultCount} Adult{adultCount !== 1 ? "s" : ""}, {kidCount} Kid{kidCount !== 1 ? "s" : ""}
                     </button>
                     {guestOpen && (
-                        <div className="absolute top-[72px] left-0 w-[260px] bg-white border border-gray-200 rounded-md shadow-lg p-4 z-30 pointer-events-auto">
+                        <div className="absolute top-18 left-0 w-65 bg-white border border-gray-200 rounded-md shadow-lg p-4 z-30 pointer-events-auto">
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-gray-600">Adults</span>
                                 <div className="flex items-center gap-3">
