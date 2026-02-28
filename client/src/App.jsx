@@ -21,7 +21,6 @@ export default function App() {
                     <Route path="/loginAdmin" element={<LoginAdmin />} />
                     <Route path="/loginReceptionist" element={<LoginReceptionist />} />
                     <Route path="/userRegister" element={<UserRegister />} />
-                    <Route path="/roomManage" element={< RoomManagement />} />
                     <Route path="/booking/tour" element={< BookingTour />} />
                     <Route path="/addTour" element={< AddTour />} />
                     <Route path="/admin/*" element={< AdminPage />} />
