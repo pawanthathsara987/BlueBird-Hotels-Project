@@ -8,7 +8,7 @@ import UserRegister from "./pages/userRegister";
 import RoomManagement from "./pages/admin/rooms/roomManagement";
 import BookingTour from "./pages/client/booking/tourBooking";
 import AddTour from "./pages/admin/TourForm";
-
+import AdminPage from "./pages/admin/AdminPage";
 
 export default function App() {
     return(
@@ -24,6 +24,7 @@ export default function App() {
                     <Route path="/roomManage" element={< RoomManagement />} />
                     <Route path="/booking/tour" element={< BookingTour />} />
                     <Route path="/addTour" element={< AddTour />} />
+                    <Route path="/admin/*" element={< AdminPage />} />
                 </Routes>
             </div>
         </BrowserRouter>
