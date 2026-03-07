@@ -1,16 +1,20 @@
+// index.js
 import dotenv from 'dotenv';
 dotenv.config();
 
-import app from './src/app.js';
-import database from './src/config/database.js';
+// Dynamic import AFTER dotenv has loaded
+const { default: app } = await import('./src/app.js');
+const { default: sequelize } = await import('./src/config/database.js');
 
-const PORT = 3002;
+const PORT = process.env.PORT || 3002;
 
 async function startServer() {
   try {
-    // test DB connection first
-    await database.getConnection();
+    await sequelize.authenticate();
     console.log('✅ MySQL connected (AWS RDS)');
+
+    await sequelize.sync({ alter: false });
+    console.log('✅ Models synced');
 
     app.listen(PORT, () =>
       console.log(`🚀 Server running on port ${PORT}`)

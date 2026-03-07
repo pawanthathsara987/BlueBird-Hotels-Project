@@ -1,31 +1,16 @@
-import mysql from 'mysql2/promise';
+// config/database.js
+import { Sequelize } from 'sequelize';
 
-let pool = null;
-
-function getPool() {
-  if (!pool) {
-    pool = mysql.createPool({
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASS,
-      database: process.env.DB_NAME,
-      port: process.env.PORT,
-      waitForConnections: true,
-      connectionLimit: 10,
-    });
+const sequelize = new Sequelize(
+  process.env.DB_NAME,
+  process.env.DB_USER,
+  process.env.DB_PASS,
+  {
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT || 3306,
+    dialect: 'mysql',
+    pool: { max: 10, min: 0, acquire: 30000, idle: 10000 },
   }
-  return pool;
-}
+);
 
-// Export methods that use the pool
-export default {
-  async getConnection() {
-    return getPool().getConnection();
-  },
-  async query(sql, params) {
-    return getPool().query(sql, params);
-  },
-  async execute(sql, params) {
-    return getPool().execute(sql, params);
-  }
-};
+export default sequelize;
