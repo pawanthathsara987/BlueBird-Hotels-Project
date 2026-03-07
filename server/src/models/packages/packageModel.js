@@ -1,34 +1,30 @@
-import { Model, Sequelize } from "sequelize";
-import database from "../../config/database";
+import { Model, DataTypes } from "sequelize";
+import sequelize from "../../config/database.js";
 
 class RoomPackage extends Model {}
 
 RoomPackage.init({
-    pid: {
-        type: Sequelize.INTEGER,
+    id: {                          // ← renamed from pid
+        type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
         allowNull: false,
     },
-
     pname: {
-        type: Sequelize.STRING,
+        type: DataTypes.STRING,
         allowNull: false,
     },
-
     pprice: {
-        type: Sequelize.INTEGER,
+        type: DataTypes.INTEGER,
         allowNull: false,
     },
-
     pimage: {
-        type: Sequelize.STRING,
+        type: DataTypes.STRING,
         allowNull: true,
     }
-},
-{
-    sequelize: database,
-    modelName: RoomPackage,
+}, {
+    sequelize,
+    modelName: "RoomPackage",
     tableName: "room_package",
     timestamps: true,
 });

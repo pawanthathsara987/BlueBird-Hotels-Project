@@ -1,41 +1,36 @@
-import { Model, Sequelize } from "sequelize";
-import database from "../../config/database";
+import { Model, DataTypes } from "sequelize";
+import sequelize from "../../config/database.js";
 
 class Room extends Model {}
 
 Room.init({
-    rid: {
-        type: Sequelize.INTEGER,
+    id: {                          // ← renamed from rid
+        type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
         allowNull: false,
     },
-
     rnumber: {
-        type: Sequelize.INTEGER,
+        type: DataTypes.INTEGER,
         allowNull: false,
         unique: true,
     },
-
     radults: {
-        type: Sequelize.INTEGER,
+        type: DataTypes.INTEGER,
         allowNull: true,
     },
-
     rkids: {
-        type: Sequelize.INTEGER,
+        type: DataTypes.INTEGER,
         allowNull: true,
     },
-
     rstatus: {
-        type: Sequelize.ENUM("available", "occupied", "maintenance"),
+        type: DataTypes.ENUM("available", "occupied", "maintenance"),
         allowNull: false,
         defaultValue: "available",
     },
-},
-{
-    sequelize: database,
-    modelName: Room,
+}, {
+    sequelize,
+    modelName: "Room",
     tableName: "rooms",
     timestamps: true,
 });
