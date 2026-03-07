@@ -1,8 +1,8 @@
-import dotenv from 'dotenv';  // ✅ fixed typo
+import dotenv from 'dotenv';
 dotenv.config();
 
 import app from './src/app.js';
-import database from './src/config/database.js';  // ✅ fixed import name
+import database from './src/config/database.js';
 
 const PORT = 3002;
 
