@@ -2,7 +2,7 @@ import Guest from "./booking/roomBookGuestModel.js";
 import RoomBook from "./booking/roomBookModel.js";
 import Room from "./room/roomModel.js";
 import RoomPackage from "./packages/packageModel.js";
-import SystemUser from "./User/SystemUser.js";
+import StaffMember from "./User/StaffMember.js";
 
 export function initModels() {
 
@@ -36,8 +36,8 @@ export function initModels() {
         foreignKey: "packageId",
     });
 
-    return { Guest, RoomBook, Room, RoomPackage, SystemUser };
+    return { Guest, RoomBook, Room, RoomPackage, StaffMember };
 }
 
 // ← add these named exports so controllers can import them directly
-export { Guest, RoomBook, Room, RoomPackage, SystemUser };
+export { Guest, RoomBook, Room, RoomPackage, StaffMember };
