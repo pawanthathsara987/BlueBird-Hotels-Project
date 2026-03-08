@@ -1,7 +1,7 @@
 import Guest from "./booking/roomBookGuestModel.js";
 import RoomBook from "./booking/roomBookModel.js";
-import Room from "./room/roomModel.js";
-import RoomPackage from "./packages/packageModel.js";
+import Room from "./room_package/roomModel.js";
+import RoomPackage from "./room_package/packageModel.js";
 
 export function initModels() {
 
@@ -25,18 +25,19 @@ export function initModels() {
         foreignKey: "roomId",
     });
 
-    // RoomPackage -> RoomBook
-    RoomPackage.hasMany(RoomBook, {
+    // Package -> Room
+    RoomPackage.hasMany(Room, {
         foreignKey: "packageId",
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
-    });
-    RoomBook.belongsTo(RoomPackage, {
+    })
+    Room.belongsTo(RoomPackage, {
         foreignKey: "packageId",
-    });
+    })
 
-    return { Guest, RoomBook, Room, RoomPackage };
+
+    return { Guest, RoomBook, Room, RoomPackage, };
 }
 
 // ← add these named exports so controllers can import them directly
-export { Guest, RoomBook, Room, RoomPackage };
+export { Guest, RoomBook, Room, RoomPackage, };
