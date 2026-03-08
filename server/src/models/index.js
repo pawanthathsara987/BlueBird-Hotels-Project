@@ -1,40 +1,42 @@
-import Guest from "./booking/roomBookGuestModel";
-import RoomBook from "./booking/roomBookModel";
-import Room from "./room/roomModel";
-import RoomPackage from "./package/packageModel";
+import Guest from "./booking/roomBookGuestModel.js";
+import RoomBook from "./booking/roomBookModel.js";
+import Room from "./room/roomModel.js";
+import RoomPackage from "./packages/packageModel.js";
 
-// Define Associations
-// Guest -> RoomBook (One Guest has many RoomBooks)
-Guest.hasMany(RoomBook, {
-    foreignKey: 'guest_id',
-    onDelete: 'CASCADE',
-    onUpdate: 'CASCADE',
-});
+export function initModels() {
 
-RoomBook.belongsTo(Guest, {
-    foreignKey: 'guest_id',
-});
+    // Guest -> RoomBook
+    Guest.hasMany(RoomBook, {
+        foreignKey: "guest_id",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+    });
+    RoomBook.belongsTo(Guest, {
+        foreignKey: "guest_id",
+    });
 
-// Room -> RoomBook (One Room has many RoomBooks)
-Room.hasMany(RoomBook, {
-    foreignKey: 'roomId',
-    onDelete: 'CASCADE',
-    onUpdate: 'CASCADE',
-});
+    // Room -> RoomBook
+    Room.hasMany(RoomBook, {
+        foreignKey: "roomId",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+    });
+    RoomBook.belongsTo(Room, {
+        foreignKey: "roomId",
+    });
 
-RoomBook.belongsTo(Room, {
-    foreignKey: 'roomId',
-});
+    // RoomPackage -> RoomBook
+    RoomPackage.hasMany(RoomBook, {
+        foreignKey: "packageId",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+    });
+    RoomBook.belongsTo(RoomPackage, {
+        foreignKey: "packageId",
+    });
 
-// RoomPackage -> RoomBook (One Package has many RoomBooks)
-RoomPackage.hasMany(RoomBook, {
-    foreignKey: 'packageId',
-    onDelete: 'CASCADE',
-    onUpdate: 'CASCADE',
-});
+    return { Guest, RoomBook, Room, RoomPackage };
+}
 
-RoomBook.belongsTo(RoomPackage, {
-    foreignKey: 'packageId',
-});
-
+// ← add these named exports so controllers can import them directly
 export { Guest, RoomBook, Room, RoomPackage };
