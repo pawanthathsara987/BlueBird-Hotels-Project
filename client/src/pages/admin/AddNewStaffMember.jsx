@@ -49,16 +49,13 @@ export default function AddNewStaffMember() {
                 ← Back
             </Link>
 
-
             <div className="mb-6">
                 <h1 className="text-2xl font-bold text-gray-800">Add Staff Member</h1>
                 <p className="text-gray-500 mt-1">Fill in the details to register a new staff member</p>
             </div>
-
-
-            {/* Form Card */}
+        
             <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
-                {/* Header */}
+                
                 <div className="bg-[#2c4a6b] p-6 flex items-center gap-4">
                     <div className="bg-[#4a6a8a] rounded-full p-3">
                         <FaUserCircle className="text-3xl text-white" />
@@ -69,7 +66,6 @@ export default function AddNewStaffMember() {
                     </div>
                 </div>
 
-                {/* Username */}
                 <div className="m-5">
                     <label className="block text-sm font-semibold text-gray-600 mb-2 uppercase">
                         Username
@@ -83,8 +79,6 @@ export default function AddNewStaffMember() {
                         className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                 </div>
-
-                {/* Name */}
                 <div className="m-5">
                     <label className="block text-sm font-semibold text-gray-600 mb-2 uppercase">
                         Name
@@ -99,7 +93,6 @@ export default function AddNewStaffMember() {
                     />
                 </div>
 
-                {/* Email Address */}
                 <div className="m-5">
                     <label className="block text-sm font-semibold text-gray-600 mb-2 uppercase">
                         Email Address
@@ -114,7 +107,6 @@ export default function AddNewStaffMember() {
                     />
                 </div>
 
-                {/* Role and Phone Number */}
                 <div className="grid m-5 grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-semibold text-gray-600 mb-2 uppercase">
@@ -146,7 +138,6 @@ export default function AddNewStaffMember() {
                     </div>
                 </div>
 
-                {/* Buttons */}
                 <div className="flex justify-end gap-4 pt-4 m-5">
                     <Link
                         to="/admin/users"
