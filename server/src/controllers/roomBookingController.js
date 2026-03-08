@@ -9,7 +9,7 @@ const availableRooms = async (req, res) => {
             include: [
                 {
                     model: RoomPackage,
-                    attributes: ["id", "pname", "pprice", "pimage"],
+                    attributes: ["id", "pname", "maxAdults", "maxKids", "pprice", "pimage"],
                 }
             ]
         });
@@ -30,11 +30,43 @@ const availableRooms = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
         return res.status(500).json({
             success: false,
             message: "Something went wrong in internal server",  
             error: error.message,
+        });
+    }
+};
+
+//available package
+import sequelize from "../config/database.js";
+
+const getAllPackages = async (req, res) => {
+    try {
+        const packages = await sequelize.query(`
+            SELECT 
+                p.id,
+                p.pname,
+                p.pprice,
+                p.pimage,
+                p.maxAdults,
+                p.maxKids,
+                COUNT(CASE WHEN r.rstatus = 'available' THEN 1 END) AS availableRooms
+            FROM room_package p
+            LEFT JOIN rooms r ON p.id = r.packageId
+            GROUP BY p.id
+        `, { type: sequelize.QueryTypes.SELECT });
+
+        res.status(200).json({
+            success: true,
+            avlPackage: packages
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Something went wrong",
+            error: error.message
         });
     }
 };
@@ -44,7 +76,7 @@ const availableRooms = async (req, res) => {
 const createBooking = async (req, res) => {
     
     try {
-        const { name, email, country, phone, roomNo, price, checkIn, checkOut} = req.body;
+        const { name, email, country, phone, roomNo, price, checkIn, checkOut, actualAdults, actualKids} = req.body;
 
         const guest = await Guest.create({
             name,
@@ -59,6 +91,8 @@ const createBooking = async (req, res) => {
             price,
             checkIn,
             checkOut,
+            actualAdults,
+            actualKids,
         });
 
         return res.status(201).json({
@@ -151,7 +185,7 @@ const updateBooking = async (req, res) => {
     try {
         
         const { id } = req.params;
-        const { name, email, country, phone, roomNo, price, checkIn, checkOut} = req.body;
+        const { name, email, country, phone, roomNo, price, checkIn, checkOut, actualAdults, actualKids} = req.body;
 
         const booking = await RoomBook.findByPk(id);
 
@@ -179,7 +213,9 @@ const updateBooking = async (req, res) => {
                 roomId: roomNo,
                 price,
                 checkIn,
-                checkOut
+                checkOut,
+                actualAdults,
+                actualKids,
             },
             {
                 where: { booking_id: id }
@@ -244,5 +280,6 @@ export {
     getBookingById,
     deleteBookingById,
     updateBooking,
-    availableRooms
+    availableRooms,
+    getAllPackages
 }

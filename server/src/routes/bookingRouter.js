@@ -5,7 +5,8 @@ import {
    getBookingById,
    deleteBookingById,
    updateBooking,
-   availableRooms
+   availableRooms,
+   getAllPackages
 } from '../controllers/roomBookingController.js';
 
 const router = express.Router();
@@ -16,5 +17,6 @@ router.get('/booking/:id', getBookingById);
 router.delete('/booking/:id', deleteBookingById);
 router.put('/booking/:id', updateBooking);
 router.get('/availableRooms', availableRooms);
+router.get('/getAllPackages', getAllPackages);
 
 export default router;

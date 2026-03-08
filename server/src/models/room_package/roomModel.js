@@ -19,14 +19,6 @@ Room.init({
         allowNull: false,
         unique: true,
     },
-    radults: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-    },
-    rkids: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-    },
     rstatus: {
         type: DataTypes.ENUM("available", "occupied", "maintenance"),
         allowNull: false,
