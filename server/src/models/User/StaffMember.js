@@ -1,24 +1,20 @@
-import {Model, DataTypes} from 'sequelize';
-import sequelize from '../../config/database';
+import { Model, DataTypes } from 'sequelize';
+import sequelize from '../../config/database.js';
 
-class SystemUser extends Model {}
+class StaffMember extends Model { }
 
-SystemUser.init(
+StaffMember.init(
     {
-        user_id: {
+        userId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true
         },
-        first_name: {
+        name: {
             type: DataTypes.STRING(100),
             allowNull: false
         },
-        last_name: {
-            type: DataTypes.STRING(100),
-            allowNull: false
-        },
-        user_name: {
+        userName: {
             type: DataTypes.STRING(50),
             allowNull: false,
             unique: true
@@ -31,26 +27,22 @@ SystemUser.init(
                 isEmail: true
             }
         },
-        password: {
-            type: DataTypes.STRING(255),
-            allowNull: false
-        },
         role: {
-            type: DataTypes.ENUM('admin', 'receptionist'),
+            type: DataTypes.ENUM('staff_member', 'receptionist'),
             allowNull: false,
             defaultValue: 'receptionist'
         },
-        phone_number: {
+        phoneNumber: {
             type: DataTypes.STRING(20),
-            allowNull: true
+            allowNull: false
         }
     },
     {
         sequelize,
-        modelName: 'SystemUser',
-        tableName: 'system_users',
+        modelName: 'StaffMember',
+        tableName: 'staff_members',
         timestamps: true
     }
 );
 
-export default SystemUser;
+export default StaffMember;
