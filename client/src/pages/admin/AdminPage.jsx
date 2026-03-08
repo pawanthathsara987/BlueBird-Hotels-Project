@@ -2,6 +2,9 @@ import { useState } from "react";
 import { Link, Routes, Route } from "react-router-dom";
 import { MdAdminPanelSettings, MdDashboard, MdBedroomParent, MdBookOnline, MdPeople, MdSettings, MdLogout, MdMenu, MdClose } from "react-icons/md";
 import RoomManagement from "./rooms/roomManagement";
+import StaffManagement from "./StaffManegement";
+import AddNewStaffMember from "./AddNewStaffMember";
+import UpdateStaffMember from "./UpdateStaffMember";
 
 export default function AdminPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -46,7 +49,9 @@ export default function AdminPage() {
                     <Route path="/" element={<h1 className="p-5">Welcome to Admin Dashboard</h1>} />
                     <Route path="/rooms/roomManagement" element={<RoomManagement />} />
                     <Route path="/bookings" element={<h1 className="p-5">Bookings Management</h1>} />
-                    <Route path="/users" element={<h1 className="p-5">Users Management</h1>} />
+                    <Route path="/users" element={<StaffManagement />} />
+                    <Route path="/users/addStaffMember" element={<AddNewStaffMember />} />
+                    <Route path="/users/updateStaffMember" element={<UpdateStaffMember />}/>
                     <Route path="/settings" element={<h1 className="p-5">Settings</h1>} />
                 </Routes>
             </div>
