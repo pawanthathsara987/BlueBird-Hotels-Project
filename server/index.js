@@ -14,12 +14,10 @@ const PORT = process.env.SERVER_PORT || 3002;
 async function startServer() {
   try {
 
-    // await sequelize.sync({ force: false }); // ← set true to recreate table this will be lost data
-
     await sequelize.authenticate();
     console.log('✅ MySQL connected (AWS RDS)');
 
-    await sequelize.sync({ alter: false });
+    await sequelize.sync({ alter: false }); // ← set true to recreate table droping exiting table
     console.log('✅ Models synced');
 
     app.listen(PORT, () =>
