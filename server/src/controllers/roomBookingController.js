@@ -1,9 +1,50 @@
-import { Guest, Room, RoomBook } from "../models/index.js";
+import { Guest, Room, RoomBook, RoomPackage } from "../models/index.js";
 
+
+// available room check
+const availableRooms = async (req, res) => {
+    try {
+        const avlRooms = await Room.findAll({
+            where: { rstatus: "available" },
+            include: [
+                {
+                    model: RoomPackage,
+                    attributes: ["id", "pname", "pprice", "pimage"],
+                }
+            ]
+        });
+
+        if (!avlRooms || avlRooms.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No record found",
+            });
+        }
+
+        console.log(avlRooms);
+
+        return res.status(200).json({
+            success: true,
+            message: "Record Found",
+            avlRooms,
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "Something went wrong in internal server",  
+            error: error.message,
+        });
+    }
+};
+
+
+// Booking controller
 const createBooking = async (req, res) => {
     
     try {
-        const { name, email, country, phone, roomNo, packageId, price, checkIn, checkOut} = req.body;
+        const { name, email, country, phone, roomNo, price, checkIn, checkOut} = req.body;
 
         const guest = await Guest.create({
             name,
@@ -15,7 +56,6 @@ const createBooking = async (req, res) => {
         const booking = await RoomBook.create({
             guest_id: guest.id,
             roomId: roomNo,
-            packageId,
             price,
             checkIn,
             checkOut,
@@ -106,6 +146,64 @@ const getBookingById = async (req, res) => {
 }
 
 
+const updateBooking = async (req, res) => {
+
+    try {
+        
+        const { id } = req.params;
+        const { name, email, country, phone, roomNo, price, checkIn, checkOut} = req.body;
+
+        const booking = await RoomBook.findByPk(id);
+
+        if (booking == "") {
+            return res.status(401).json({
+                success: false,
+                message: "Booking not found",
+            })
+        }
+        
+        const updateguest = await Guest.update(
+            {
+                name,
+                email,
+                country,
+                pnumber: phone,
+            },
+            {
+                where: { id: booking.guest_id }
+            }
+        )
+
+        const updateBooking = await RoomBook.update(
+            {
+                roomId: roomNo,
+                price,
+                checkIn,
+                checkOut
+            },
+            {
+                where: { booking_id: id }
+            }
+        )
+    
+        return res.status(201).json({
+            success: true,
+            message: "Booking and Guest updated successfully",
+            updateBooking,
+            updateguest
+        })
+        
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Something wrong in internal server",  
+            error: error,
+        });
+    }
+}
+
+
 const deleteBookingById = async (req, res) => {
     try {
         const { id } = req.params;
@@ -144,5 +242,7 @@ export {
     createBooking,
     getAllBookings,
     getBookingById,
-    deleteBookingById
+    deleteBookingById,
+    updateBooking,
+    availableRooms
 }

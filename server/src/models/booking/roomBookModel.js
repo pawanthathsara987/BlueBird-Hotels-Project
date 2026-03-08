@@ -18,10 +18,6 @@ RoomBook.init({
         type: DataTypes.INTEGER,
         allowNull: false,
     },
-    packageId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-    },
     price: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -34,6 +30,11 @@ RoomBook.init({
         type: DataTypes.DATEONLY,
         allowNull: false,
     },
+    status: {
+        type: DataTypes.ENUM("reserved", "checked_in", "checked_out", "cancelled"),
+        defaultValue: "reserved",
+        allowNull: false,   
+    }
 }, {
     sequelize,
     modelName: "RoomBook",
