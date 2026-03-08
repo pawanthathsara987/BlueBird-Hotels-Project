@@ -9,7 +9,7 @@ const { initModels } = await import('./src/models/index.js');
 
 initModels();
 
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.SERVER_PORT || 3002;
 
 async function startServer() {
   try {
