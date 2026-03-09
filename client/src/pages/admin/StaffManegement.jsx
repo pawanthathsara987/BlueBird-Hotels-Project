@@ -61,7 +61,24 @@ export default function StaffManagement() {
             </div>
             <div className="w-5xl flex flex-row mx-auto justify-between items-center p-5 shadow-2xl rounded-lg">
                 <h3>Staff Members</h3>
-                <input type="text" placeholder="Search staff..." className="w-[250px] border p-2 rounded-lg mb-4" />
+                <input type="text" placeholder="Search staff..." className="w-[250px] border p-2 rounded-lg mb-4"
+                    onChange={async (e) => {
+
+                        const value = e.target.value;
+
+                        try {
+
+                            const response = await axios.get(
+                                `${import.meta.env.VITE_BACKEND_URL}/users/search/${value}`
+                            );
+
+                            setStaffMembers(response.data);
+
+                        } catch (error) {
+                            console.error("Error fetching staff members:", error);
+                        }
+                    }}
+                />
             </div>
             <div className="w-5xl mx-auto">
                 <table className="w-full border-collapse">
