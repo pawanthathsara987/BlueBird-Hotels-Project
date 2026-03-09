@@ -4,24 +4,57 @@ import {
   Grid3x3, List, Star
 } from 'lucide-react';
 import { RoomDetailsModal, RoomCard, RoomCardList } from './RoomViewingPanel';
+import axios from 'axios';
 
 export default function BookingRoom() {
 
-  /* =========================
-      STATE
-  ========================== */
-
-  const [rooms, setRooms] = useState([
-    { id: 1, type: "Deluxe Double Room", adults: 2, kids: 0, price: 156, quantity: 8, rating: 4.8, reviews: 245, availability: 8, discount: 0 },
-    { id: 2, type: "Double Room with Balcony", adults: 2, kids: 0, price: 175, quantity: 0, rating: 4.9, reviews: 312, availability: 3, discount: 15 },
-    { id: 3, type: "Superior Family Room", adults: 2, kids: 2, price: 196, quantity: 2, rating: 4.7, reviews: 189, availability: 2, discount: 10 },
-  ]);
+  const [packages, setPackages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [rooms, setRooms] = useState([]);
 
   // View State
   const [viewMode, setViewMode] = useState('grid'); // grid or list
 
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const getAllPackages = async () => {
+    setLoading(true);
+      try {
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/getallpackages`);
+          if (!response.data.avlPackage || response.data.avlPackage.length === 0) {
+              setError("No packages found");
+              return;
+          }
+
+          setPackages(response.data.avlPackage);
+
+      } catch (error) {
+          setError(error.message);
+          console.log(error);
+      } finally {
+          setLoading(false);
+      }
+  };
+
+  useEffect(() => {
+      getAllPackages();
+  }, []);
+
+  useEffect(() => {
+    if (packages.length > 0) {
+      setRooms(packages.map(pack => ({
+        id: pack.id,
+        type: pack.pname,
+        adults: pack.maxAdults,
+        kids: pack.maxKids,
+        price: pack.pprice,
+        availability: pack.availableRooms,
+        quantity: 0
+      })));
+    }
+  }, [packages]);
 
   /* =========================
       SCROLL LOCK
@@ -90,11 +123,11 @@ export default function BookingRoom() {
       QUANTITY UPDATE
   ========================== */
 
-  const updateQuantity = (id, change) => {
+  const setQuantity = (id, change) => {
     setRooms(prev =>
       prev.map(room =>
         room.id === id
-          ? { ...room, quantity: Math.max(0, room.quantity + change) }
+          ? { ...room, quantity: Math.min(room.availability, Math.max(0, room.quantity + change)) }
           : room
       )
     );
@@ -105,7 +138,7 @@ export default function BookingRoom() {
     setRooms(prev =>
       prev.map(room =>
         room.id === id
-          ? { ...room, quantity: Math.max(0, numValue) }
+          ? { ...room, quantity: Math.min(room.availability, Math.max(0, numValue)) }
           : room
       )
     );
@@ -169,39 +202,55 @@ export default function BookingRoom() {
         <div className="bg-white rounded-3xl p-4 sm:p-6 lg:p-8 shadow-2xl mb-12 border-t-4 border-blue-500">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Room Assignment</h2>
-                <button className="text-sm text-blue-600 hover:text-blue-700 font-semibold underline">
-                  View Pricing Details
-                </button>
             </div>
 
+            {loading && (
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                <p className="text-gray-600 font-semibold">Loading package details...</p>
+              </div>
+            )}
+
+            {!loading && error && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+                <p className="text-red-700 font-semibold">{error}</p>
+              </div>
+            )}
+
+            {!loading && !error && (
+              <>
             {/* Mobile View - Cards */}
             <div className="block lg:hidden space-y-4">
-                {rooms.map(room => (
-                <div key={room.id} className="border-2 border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-lg transition-all">
+                {packages.map(pack => (
+                <div key={pack.id} className={`border-2 rounded-xl p-4 transition-all ${
+                  pack.availableRooms === 0
+                    ? 'border-gray-300 bg-gray-100 opacity-60'
+                    : 'border-gray-200 hover:border-blue-300 hover:shadow-lg'
+                }`}>
                     <div className="flex justify-between items-start mb-3">
-                      <h3 className="font-bold text-lg">{room.type}</h3>
+                      <h3 className="font-bold text-lg">{pack.pname}</h3>
                       <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded">
                         <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm font-semibold text-gray-800">{room.rating}</span>
+                        <span className="text-sm font-semibold text-gray-800"></span>
                       </div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
                     <div>
                         <span className="text-gray-500">Adults:</span>
-                        <span className="font-semibold ml-2">{room.adults}</span>
+                        <span className="font-semibold ml-2">{pack.maxAdults}</span>
                     </div>
                     <div>
                         <span className="text-gray-500">Kids:</span>
-                        <span className="font-semibold ml-2">{room.kids}</span>
+                        <span className="font-semibold ml-2">{pack.maxKids}</span>
                     </div>
                     <div>
                         <span className="text-gray-500">Price:</span>
-                        <span className="font-semibold ml-2 text-blue-600">${room.price}</span>
+                        <span className="font-semibold ml-2 text-blue-600">${pack.pprice}</span>
                     </div>
                     <div>
                         <span className="text-gray-500">Free:</span>
-                        <span className="font-semibold ml-2 text-green-600">{room.availability}</span>
+                        <span className="font-semibold ml-2 text-green-600">{pack.availableRooms}</span>
                     </div>
                     </div>
 
@@ -209,22 +258,26 @@ export default function BookingRoom() {
                     <span className="text-sm text-gray-600">Rooms to book:</span>
                     <div className={"inline-flex items-center rounded-lg border-2 border-blue-400"}>
                         <button
-                          onClick={() => updateQuantity(room.id, -1)}
-                          className={`px-4 py-2 font-bold text-blue-600 hover:bg-blue-100`}
+                          onClick={() => setQuantity(pack.id, -1)}
+                          disabled={pack.availableRooms === 0}
+                          className={`px-4 py-2 font-bold text-blue-600 hover:bg-blue-100 ${pack.availableRooms === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                         −
                         </button>
                         <input
                         type="number"
-                        value={room.quantity}
-                        onChange={(e) => handleQuantityInput(room.id, e.target.value)}
+                        value={rooms.find(r => r.id === pack.id)?.quantity || 0}
+                        onChange={(e) => handleQuantityInput(pack.id, e.target.value)}
+                        disabled={pack.availableRooms === 0}
                         className={`w-16 text-center font-bold bg-transparent outline-none text-gray-900
-                        [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
+                        [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${pack.availableRooms === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                         min="0"
+                        max={rooms.find(r => r.id === pack.id)?.availability || 0}
                         />
                         <button
-                        onClick={() => updateQuantity(room.id, 1)}
-                        className={`px-4 py-2 font-bold text-blue-600 hover:bg-blue-100`}>
+                        onClick={() => setQuantity(pack.id, 1)}
+                        disabled={pack.availableRooms === 0}
+                        className={`px-4 py-2 font-bold text-blue-600 hover:bg-blue-100 ${pack.availableRooms === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}>
                         +
                         </button>
                     </div>
@@ -245,7 +298,6 @@ export default function BookingRoom() {
                 <thead className="bg-linear-to-r from-blue-50 to-indigo-50">
                     <tr>
                     <th className="p-4 text-left font-semibold text-gray-700">Room Type</th>
-                    <th className="p-4 text-center font-semibold text-gray-700">Rating</th>
                     <th className="p-4 text-center font-semibold text-gray-700">Adults</th>
                     <th className="p-4 text-center font-semibold text-gray-700">Kids</th>
                     <th className="p-4 text-center font-semibold text-gray-700">Price</th>
@@ -255,15 +307,12 @@ export default function BookingRoom() {
                 </thead>
                 <tbody>
                     {rooms.map(room => (
-                    <tr key={room.id} className="border-t hover:bg-blue-50 transition-colors">
+                    <tr key={room.id} className={`border-t transition-colors ${
+                      room.availability === 0
+                        ? 'bg-gray-100 opacity-60'
+                        : 'hover:bg-blue-50'
+                    }`}>
                         <td className="p-4 font-medium text-gray-900">{room.type}</td>
-                        <td className="p-4 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                            <span className="font-semibold text-gray-800">{room.rating}</span>
-                            <span className="text-xs text-gray-500">({room.reviews})</span>
-                          </div>
-                        </td>
                         <td className="p-4 text-center">{room.adults}</td>
                         <td className="p-4 text-center">{room.kids}</td>
                         <td className="p-4 text-center font-bold text-blue-600">${room.price}</td>
@@ -271,21 +320,25 @@ export default function BookingRoom() {
                         <td className="p-4 text-center">
                         <div className={`inline-flex items-center rounded-lg border-2 border-blue-400`}>
                             <button
-                              onClick={() => updateQuantity(room.id, -1)}
-                              className={`px-4 py-2 font-bold text-blue-600 hover:bg-blue-100`}>
+                              onClick={() => setQuantity(room.id, -1)}
+                              disabled={room.availability === 0}
+                              className={`px-4 py-2 font-bold text-blue-600 hover:bg-blue-100 ${room.availability === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}>
                               −
                             </button>
                             <input
                               type="number"
                               value={room.quantity}
                               onChange={(e) => handleQuantityInput(room.id, e.target.value)}
+                              disabled={room.availability === 0}
                               className={`w-16 text-center font-bold bg-transparent outline-none text-gray-900
-                              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
+                              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${room.availability === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                               min="0"
+                              max={room.availability}
                             />
                             <button
-                            onClick={() => updateQuantity(room.id, 1)}
-                            className={`px-4 py-2 font-bold text-blue-600 hover:bg-blue-100`}>
+                            onClick={() => setQuantity(room.id, 1)}
+                            disabled={room.availability === 0}
+                            className={`px-4 py-2 font-bold text-blue-600 hover:bg-blue-100 ${room.availability === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}>
                             +
                             </button>
                         </div>
@@ -316,6 +369,8 @@ export default function BookingRoom() {
                 Book Now →
                 </button>
             </div>
+            </>
+            )}
         </div>
 
         {/* ROOMS SECTION */}

@@ -225,7 +225,7 @@ export function RoomDetailsModal({
 
       </div>
 
-      <style jsx>{`
+      <style suppressHydrationWarning>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 8px;
         }
