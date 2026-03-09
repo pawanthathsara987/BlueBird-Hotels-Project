@@ -12,6 +12,12 @@ const AmenitiesView = ({ onOpenModal }) => {
         { id: 6, name: "Bathtub",          assignedRooms: 2 },
         { id: 7, name: "Safe Box",         assignedRooms: 5 },
         { id: 8, name: "Hair Dryer",       assignedRooms: 6 },
+        { id: 9, name: "TV",               assignedRooms: 6 },
+        { id: 10, name: "Mini Bar",         assignedRooms: 3 },
+        { id: 11, name: "Balcony",          assignedRooms: 2 },
+        { id: 12, name: "Bathtub",          assignedRooms: 2 },
+        { id: 13, name: "Safe Box",         assignedRooms: 5 },
+        { id: 14, name: "Hair Dryer",       assignedRooms: 6 },
     ];
 
     return (

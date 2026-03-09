@@ -1,55 +1,37 @@
 import { Plus } from "lucide-react";
 import { RiDeleteBinLine, RiEditLine } from "react-icons/ri";
 
-const RoomView = ({ onOpenModel }) => {
+const RoomView = ({ onOpenModal }) => {
 
     const Rooms = [
         {
             roomNo: 101,
             type: "deluxe double",
-            adults: 2,
-            kids: 0,
-            price: 156,
             status: "maintenance",
         },
         {
             roomNo: 102,
             type: "deluxe double",
-            adults: 2,
-            kids: 1,
-            price: 165,
             status: "available",
         },
         {
             roomNo: 103,
             type: "deluxe double bed with MdBalcony",
-            adults: 2,
-            kids: 0,
-            price: 180,
             status: "maintenance",
         },
         {
             roomNo: 104,
             type: "family",
-            adults: 4,
-            kids: 2,
-            price: 210,
             status: "available",
         },
         {
             roomNo: 105,
             type: "family",
-            adults: 3,
-            kids: 1,
-            price: 190,
             status: "maintenance",
         },
         {
             roomNo: 106,
             type: "deluxe double bed with MdBalcony",
-            adults: 2,
-            kids: 0,
-            price: 200,
             status: "available",
         },
     ];
@@ -60,7 +42,7 @@ const RoomView = ({ onOpenModel }) => {
                 className="w-fit m-2 ml-auto flex items-center justify-between p-2 
                     text-md rounded-[5px] space-x-1 bg-blue-400 shadow-md"
 
-                onClick={onOpenModel}
+                onClick={onOpenModal}
             >
                 <Plus />
                 <label>Add Room</label>
@@ -71,19 +53,15 @@ const RoomView = ({ onOpenModel }) => {
                     <tr>
                         <th className="px-4 py-2">Room Name</th>
                         <th className="px-4 py-2">Type</th>
-                        <th className="px-4 py-2">Capacity</th>
-                        <th className="px-4 py-2">Price</th>
                         <th className="px-4 py-2">Status</th>
                         <th className="px-4 py-2">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {Rooms.map((room) => (
-                        <tr className="text-center">
+                        <tr key={room.roomNo} className="text-center">
                             <td className="px-4 py-2">{room.roomNo}</td>
                             <td className="px-4 py-2">{room.type}</td>
-                            <td className="px-4 py-2">{room.adults} Adults and {room.kids} Kids</td>
-                            <td className="px-4 py-2">${room.price} /night</td>
                             <td className="px-4 py-2">
                                 <span className={`${
                                     room.status === "maintenance" ? "text-red-500" : "text-green-500"

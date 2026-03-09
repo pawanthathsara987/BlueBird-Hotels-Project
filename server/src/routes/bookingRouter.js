@@ -7,7 +7,7 @@ import {
    updateBooking,
    availableRooms,
    getAllPackages
-} from '../controllers/roomBookingController.js';
+} from '../controllers/booking/roomBookingController.js';
 
 const router = express.Router();
 

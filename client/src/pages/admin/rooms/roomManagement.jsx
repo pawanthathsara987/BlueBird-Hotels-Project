@@ -3,6 +3,8 @@ import RoomView from './RoomView';
 import RoomForm from "./RoomForm";
 import AmenitiesView from "./AmenitiesView";
 import AmenitiesForm from "./AmenitiesForm";
+import PackageView from "./PackageView";
+import PackageForm from "./PackageForm";
 import { useState } from "react";
 
 export default function RoomManagement() {
@@ -14,57 +16,76 @@ export default function RoomManagement() {
 
     const [selectBtn, setSelectBtn] = useState('room');
     const [openModal, setOpenModal] = useState(false);
-    const [amenityModal, setAmenityModal] = useState(false); 
+    const [amenityModal, setAmenityModal] = useState(false);
+    const [packageModal, setPackageModal] = useState(false); 
 
-    const anyModalOpen = openModal || amenityModal;
+    const anyModalOpen = openModal || amenityModal || packageModal;
 
     return (
         <div className="relative m-0 p-0 bg-gray-100 min-h-screen">
 
             {/* ✅ Blur wrapper around all page content */}
-            <div className={anyModalOpen ? "blur-sm pointer-events-none" : ""}>
+            <div className={ anyModalOpen ? "blur-sm pointer-events-none" : ""}>
 
                 {/* Header */}
                 <div className="p-5 flex justify-between items-center">
                     <h1 className="text-4xl font-bold">Rooms</h1>
-                    <div className="flex justify-center items-center rounded-lg border">
-                        <div
-                            className={`flex justify-center items-center
-                                text-[12px] font-bold p-3 rounded-l-lg cursor-pointer
+                    <div className="flex justify-center items-center rounded-full border-2 border-blue-600 p-1 bg-white shadow-md">
+                        <button
+                            className={`px-6 py-2 rounded-full text-13px font-bold cursor-pointer
                                 transition-all duration-300 ease-in-out
                                 ${selectBtn == 'room'
-                                ? "bg-blue-600 text-white"
-                                : "bg-blue-100 text-blue-700 hover:bg-blue-400"}`}
+                                ? "bg-blue-600 text-white shadow-lg"
+                                : "bg-white text-blue-700 hover:bg-gray-100"}`}
                             onClick={() => setSelectBtn('room')}
                         >
                             Room
-                        </div>
-                        <div
-                            className={`flex justify-center items-center
-                                text-[12px] font-bold p-3 rounded-r-lg cursor-pointer
+                        </button>
+                        <button
+                            className={`px-6 py-2 rounded-full text-13px font-bold cursor-pointer
                                 transition-all duration-300 ease-in-out
                                 ${selectBtn == 'amenities'
-                                ? "bg-blue-600 text-white"
-                                : "bg-blue-100 text-blue-700 hover:bg-blue-400"}`}
+                                ? "bg-blue-600 text-white shadow-lg"
+                                : "bg-white text-blue-700 hover:bg-gray-100"}`}
                             onClick={() => setSelectBtn('amenities')}
                         >
                             Amenities
-                        </div>
+                        </button>
+                        <button
+                            className={`px-6 py-2 rounded-full text-13px font-bold cursor-pointer
+                                transition-all duration-300 ease-in-out
+                                ${selectBtn == 'packages'
+                                ? "bg-blue-600 text-white shadow-lg"
+                                : "bg-white text-blue-700 hover:bg-gray-100"}`}
+                            onClick={() => setSelectBtn('packages')}
+                        >
+                            Packages
+                        </button>
                     </div>
                 </div>
 
                 {/* Filter */}
-                <div className="md:w-[60%] sm:w-[80%] m-auto mt-10 p-5 border flex sm:flex-wrap md:flex-row justify-between bg-white rounded-lg shadow-md">
-                    <div className="flex justify-between items-center space-x-2 w-full md:w-[50%] border rounded-lg p-2 bg-gray-50">
+                <div className="w-[90%] md:w-[65%] mx-auto mt-8 px-6 py-4 flex flex-col md:flex-row gap-4 bg-white rounded-2xl shadow-lg border border-gray-100">
+                    
+                    {/* Search Input */}
+                    <div className="flex items-center gap-3 flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus-within:ring-2 focus-within:ring-blue-400 focus-within:border-blue-400 transition-all">
+                        <Search size={18} className="text-gray-400 shrink-0" />
                         <input
                             type="search"
-                            placeholder="Search Rooms..."
-                            className="outline-none w-full p-2 rounded-lg"
+                            placeholder="Search rooms..."
+                            className="outline-none w-full bg-transparent text-sm text-gray-700 placeholder-gray-400"
                         />
-                        <Search />
                     </div>
-                    <div className="flex justify-between items-center space-x-2 border rounded-lg p-2 bg-gray-50 w-full md:w-[40%] sm:w-full md:mt-0 lg:mt-0 sm:mt-5">
-                        <select name="package" className="w-full outline-none p-2 rounded-lg">
+
+                    {/* Divider - visible only on md+ */}
+                    <div className="hidden md:block w-px bg-gray-200 self-stretch" />
+
+                    {/* Select Filter */}
+                    <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 md:w-[38%] focus-within:ring-2 focus-within:ring-blue-400 focus-within:border-blue-400 transition-all">
+                        <select
+                            name="package"
+                            className="w-full outline-none bg-transparent text-sm text-gray-700 cursor-pointer"
+                        >
                             <option value="all">All Types</option>
                             {RoomTypes.map((RoomType) => (
                                 <option key={RoomType.id} value={RoomType.id}>
@@ -73,19 +94,26 @@ export default function RoomManagement() {
                             ))}
                         </select>
                     </div>
-                </div>
 
+                </div>
+                
+
+                
                 {/* Tab Views */}
-                {selectBtn === 'room' ?
-                    <RoomView onOpenModel={() => setOpenModal(true)} /> :
+                {selectBtn === 'room' ? (
+                    <RoomView onOpenModal={() => setOpenModal(true)} />
+                ) : selectBtn === 'amenities' ? (
                     <AmenitiesView onOpenModal={() => setAmenityModal(true)} />
-                }
+                ) : (
+                    <PackageView onOpenModal={() => setPackageModal(true)} />
+                )}
 
             </div>
 
             {/* Both modals outside blur div */}
-            {openModal    && <RoomForm    closeOpenModel={() => setOpenModal(false)} />}
-            {amenityModal && <AmenitiesForm onClose={() => setAmenityModal(false)} />}
+            {openModal    && <RoomForm    closeOpenModal={() => setOpenModal(false)} />}
+            {amenityModal && <AmenitiesForm closeOpenModal={() => setAmenityModal(false)} />}
+            {packageModal && <PackageForm closeOpenModal={() => setPackageModal(false)} />}
 
         </div>
     );

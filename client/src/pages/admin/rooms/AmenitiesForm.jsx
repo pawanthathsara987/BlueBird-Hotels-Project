@@ -3,7 +3,7 @@ import { RiDeleteBinLine } from "react-icons/ri";
 import { Plus } from "lucide-react";
 import { IoMdClose } from "react-icons/io";
 
-function AmenitiesForm({ onClose }) {
+function AmenitiesForm({ closeOpenModal }) {
 
     const [name, setName] = useState("");
     const [icon, setIcon] = useState("");
@@ -33,7 +33,7 @@ function AmenitiesForm({ onClose }) {
         if (amenityList.length === 0) return alert("Please add at least one amenity");
         
         setAmenityList([]);
-        onClose();
+        closeOpenModal();
     };
 
     return (
@@ -41,7 +41,7 @@ function AmenitiesForm({ onClose }) {
             {/* Dark Overlay */}
             <div
                 className="fixed inset-0 bg-transparent bg-opacity-40 z-40"
-                onClick={onClose}
+                onClick={closeOpenModal}
             />
 
             {/* Modal */}
@@ -50,7 +50,7 @@ function AmenitiesForm({ onClose }) {
 
                     {/* Close Button */}
                     <button
-                        onClick={onClose}
+                        onClick={closeOpenModal}
                         className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl font-bold"
                     >
                         <IoMdClose />
@@ -126,7 +126,7 @@ function AmenitiesForm({ onClose }) {
                     {/* Action Buttons */}
                     <div className="flex justify-between gap-4">
                         <button
-                            onClick={onClose}
+                            onClick={closeOpenModal}
                             className="flex-1 px-4 py-3 border border-gray-300 rounded-lg 
                                 text-sm font-semibold hover:bg-gray-100 transition"
                         >
