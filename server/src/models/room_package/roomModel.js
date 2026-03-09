@@ -10,6 +10,10 @@ Room.init({
         primaryKey: true,
         allowNull: false,
     },
+    packageId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
     rnumber: {
         type: DataTypes.INTEGER,
         allowNull: false,
