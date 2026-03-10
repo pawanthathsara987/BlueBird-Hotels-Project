@@ -1,8 +1,8 @@
+import adminRouter from './routes/adminRouter.js'
 import express from 'express';
 import cors from 'cors';
 import bookingRouter from './routes/bookingRouter.js';
 import userRouter from './routes/userRoutes.js';
-import adminRouter from './routes/adminRouter.js'
 
 const app = express();
 

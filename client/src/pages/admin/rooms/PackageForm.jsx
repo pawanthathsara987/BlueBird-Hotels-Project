@@ -1,4 +1,6 @@
 import { useState, useRef } from "react";
+import axios from 'axios';
+import toast from "react-hot-toast";
 
 function PackageForm({ closeOpenModal }) {
     const [pname, setPname] = useState("");
@@ -6,31 +8,48 @@ function PackageForm({ closeOpenModal }) {
     const [pimage, setPimage] = useState(null);
     const [maxAdults, setMaxAdults] = useState(2);
     const [maxKids, setMaxKids] = useState(0);
+    const [isLoading, setIsLoading] = useState(false);
     const fileInputRef = useRef(null);
 
-    const handleAddPackage = () => {
-        if (!pname || !pprice) {
-            return alert("Please enter a name and price for the package.");
+    // Add package with Supabase image upload
+    const addPackage = async () => {
+        try {
+            if (!pname || !pprice || !pimage) {
+                toast.error("Please fill all fields");
+                return;
+            }
+
+            setIsLoading(true);
+
+            const formData = new FormData();
+            formData.append("pname", pname.trim());
+            formData.append("pprice", pprice);
+            formData.append("pimage", pimage); // File object
+            formData.append("maxAdults", maxAdults);
+            formData.append("maxKids", maxKids);
+
+            const response = await axios.post(
+                `${import.meta.env.VITE_BACKEND_URL}/admin/package`,
+                formData
+            );
+
+            toast.success(response?.data?.message || "Package added successfully");
+
+            // Reset form
+            setPname("");
+            setPprice("");
+            setPimage(null);
+            setMaxAdults(2);
+            setMaxKids(0);
+            fileInputRef.current.value = "";
+
+            closeOpenModal?.();
+
+        } catch (error) {
+            toast.error(error?.response?.data?.message || "Failed to add package");
+        } finally {
+            setIsLoading(false);
         }
-
-        const newPackage = {
-            pname,
-            pprice: Number(pprice),
-            pimage,
-            maxAdults,
-            maxKids
-        };
-
-        console.log("Saving package:", newPackage);
-        // TODO: replace with API call
-
-        // Reset form
-        setPname("");
-        setPprice("");
-        setPimage(null);
-        setMaxAdults(2);
-        setMaxKids(0);
-        closeOpenModal();
     };
 
     return (
@@ -45,7 +64,8 @@ function PackageForm({ closeOpenModal }) {
                 <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8 relative max-h-[90vh] overflow-y-auto border">
                     <button
                         onClick={closeOpenModal}
-                        className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl font-bold"
+                        disabled={isLoading}
+                        className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl font-bold disabled:opacity-50"
                     >
                         ✕
                     </button>
@@ -59,7 +79,8 @@ function PackageForm({ closeOpenModal }) {
                             value={pname}
                             onChange={(e) => setPname(e.target.value)}
                             placeholder="Enter package name"
-                            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            disabled={isLoading}
+                            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
                         />
                     </div>
 
@@ -73,7 +94,8 @@ function PackageForm({ closeOpenModal }) {
                                 value={pprice}
                                 onChange={(e) => setPprice(e.target.value)}
                                 placeholder="Enter price"
-                                className="w-full border border-gray-300 rounded-lg pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                disabled={isLoading}
+                                className="w-full border border-gray-300 rounded-lg pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
                             />
                         </div>
                     </div>
@@ -86,15 +108,17 @@ function PackageForm({ closeOpenModal }) {
                             accept="image/*"
                             ref={fileInputRef}
                             onChange={(e) => setPimage(e.target.files[0])}
+                            disabled={isLoading}
                             className="hidden"
                         />
                         <div className="flex items-center gap-3">
                             <button
                                 type="button"
                                 onClick={() => fileInputRef.current.click()}
-                                className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 transition"
+                                disabled={isLoading}
+                                className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Choose File
+                                {isLoading ? "Uploading..." : "Choose File"}
                             </button>
                             <span className="text-sm text-gray-600">
                                 {pimage ? pimage.name : "No file chosen"}
@@ -111,7 +135,8 @@ function PackageForm({ closeOpenModal }) {
                                 value={maxAdults}
                                 min={0}
                                 onChange={(e) => setMaxAdults(Number(e.target.value))}
-                                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                disabled={isLoading}
+                                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
                             />
                         </div>
                         <div className="flex-1">
@@ -121,7 +146,8 @@ function PackageForm({ closeOpenModal }) {
                                 value={maxKids}
                                 min={0}
                                 onChange={(e) => setMaxKids(Number(e.target.value))}
-                                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                disabled={isLoading}
+                                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
                             />
                         </div>
                     </div>
@@ -130,15 +156,24 @@ function PackageForm({ closeOpenModal }) {
                     <div className="flex justify-between gap-4">
                         <button
                             onClick={closeOpenModal}
-                            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-100 transition"
+                            disabled={isLoading}
+                            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Cancel
                         </button>
                         <button
-                            onClick={handleAddPackage}
-                            className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition"
+                            onClick={addPackage}
+                            disabled={isLoading}
+                            className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
-                            Add Package
+                            {isLoading ? (
+                                <>
+                                    <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                    Adding...
+                                </>
+                            ) : (
+                                "Add Package"
+                            )}
                         </button>
                     </div>
                 </div>
