@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Link, Routes, Route } from "react-router-dom";
 import { MdAdminPanelSettings, MdDashboard, MdBedroomParent, MdBookOnline, MdPeople, MdSettings, MdLogout, MdMenu, MdClose } from "react-icons/md";
 import RoomManagement from "./rooms/roomManagement";
-import StaffManagement from "./StaffManegement";
-import AddNewStaffMember from "./AddNewStaffMember";
-import UpdateStaffMember from "./UpdateStaffMember";
+import StaffManagement from "./user/StaffManegement";
+import AddNewStaffMember from "./user/AddNewStaffMember";
+import UpdateStaffMember from "./user/UpdateStaffMember";
 
 export default function AdminPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
