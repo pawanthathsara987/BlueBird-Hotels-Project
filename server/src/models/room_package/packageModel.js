@@ -5,7 +5,7 @@ class RoomPackage extends Model {}
 
 RoomPackage.init(
     {
-        id: {                          // ← renamed from pid
+        id: {
             type: DataTypes.INTEGER,
             autoIncrement: true,
             primaryKey: true,

@@ -1,13 +1,10 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
 
-function RoomForm({ closeOpenModel }) {
+function RoomForm({ closeOpenModal }) {
 
     const [roomNumber, setRoomNumber] = useState("");
     const [roomType, setRoomType]     = useState("");
-    const [adults, setAdults]         = useState(1);
-    const [kids, setKids]             = useState(0);
-    const [price, setPrice]           = useState("");
+    const [status, setStatus]         = useState("available");
     const [selectedAmenities, setSelectedAmenities] = useState([]); // ✅ track checked amenities
 
     // 👉 In real app, fetch this from your database /api/amenities
@@ -32,17 +29,14 @@ function RoomForm({ closeOpenModel }) {
     };
 
     const handleAddRoom = () => {
-        if (!roomNumber || !roomType || !price) {
-            return alert("Please fill in all fields.");
+        if (!roomNumber || !roomType) {
+            return alert("Please fill in all required fields.");
         }
 
         const newRoom = {
             roomNo:     roomNumber,
             type:       roomType,
-            adults,
-            kids,
-            price:      Number(price),
-            status:     "available",
+            status:     status,
             amenities:  selectedAmenities, // ✅ array of amenity IDs → insert into room_amenities
         };
 
@@ -58,11 +52,9 @@ function RoomForm({ closeOpenModel }) {
         // Reset
         setRoomNumber("");
         setRoomType("");
-        setAdults(1);
-        setKids(0);
-        setPrice("");
+        setStatus("available");
         setSelectedAmenities([]);
-        closeOpenModel();
+        closeOpenModal();
     };
 
     return (
@@ -70,16 +62,16 @@ function RoomForm({ closeOpenModel }) {
             {/* Dark Overlay */}
             <div
                 className="fixed inset-0 bg-transparent bg-opacity-40 z-40"
-                onClick={closeOpenModel}
+                onClick={closeOpenModal}
             />
 
             {/* Modal */}
             <div className="fixed inset-0 flex items-center justify-center z-50 px-4">
-                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8 relative max-h-[90vh] overflow-y-auto">
+                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8 relative max-h-[90vh] overflow-y-auto border">
 
                     {/* Close Button */}
                     <button
-                        onClick={closeOpenModel}
+                        onClick={closeOpenModal}
                         className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl font-bold"
                     >
                         ✕
@@ -117,51 +109,19 @@ function RoomForm({ closeOpenModel }) {
                         </select>
                     </div>
 
-                    {/* Adults & Kids */}
-                    <div className="flex gap-4 mb-5">
-                        <div className="flex-1">
-                            <label className="block text-sm font-semibold mb-1">Adults</label>
-                            <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
-                                <button
-                                    onClick={() => setAdults(Math.max(1, adults - 1))}
-                                    className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-lg font-bold"
-                                >−</button>
-                                <span className="flex-1 text-center text-sm py-3">{adults}</span>
-                                <button
-                                    onClick={() => setAdults(adults + 1)}
-                                    className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-lg font-bold"
-                                >+</button>
-                            </div>
-                        </div>
-                        <div className="flex-1">
-                            <label className="block text-sm font-semibold mb-1">Kids</label>
-                            <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
-                                <button
-                                    onClick={() => setKids(Math.max(0, kids - 1))}
-                                    className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-lg font-bold"
-                                >−</button>
-                                <span className="flex-1 text-center text-sm py-3">{kids}</span>
-                                <button
-                                    onClick={() => setKids(kids + 1)}
-                                    className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-lg font-bold"
-                                >+</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Price per Night */}
+                    {/* Status */}
                     <div className="mb-5">
-                        <label className="block text-sm font-semibold mb-1">Price per Night ($)</label>
-                        <div className="flex items-center border border-gray-300 rounded-lg px-4 py-3 focus-within:ring-2 focus-within:ring-blue-400">
-                            <span className="text-gray-400 mr-2 text-sm font-medium">$</span>
-                            <input
-                                type="number"
-                                value={price}
-                                onChange={(e) => setPrice(e.target.value)}
-                                placeholder="Enter price per night"
-                                className="w-full text-sm focus:outline-none"
-                            />
-                        </div>
+                        <label className="block text-sm font-semibold mb-1">Status</label>
+                        <select
+                            value={status}
+                            onChange={(e) => setStatus(e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg px-4 py-3
+                                text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                        >
+                            <option value="available">Available</option>
+                            <option value="occupied">Occupied</option>
+                            <option value="maintenance">Maintenance</option>
+                        </select>
                     </div>
 
                     {/* ✅ Amenities Section */}
@@ -205,7 +165,7 @@ function RoomForm({ closeOpenModel }) {
                     {/* Action Buttons */}
                     <div className="flex justify-between gap-4">
                         <button
-                            onClick={closeOpenModel}
+                            onClick={closeOpenModal}
                             className="flex-1 px-4 py-3 border border-gray-300 rounded-lg 
                                 text-sm font-semibold hover:bg-gray-100 transition"
                         >
