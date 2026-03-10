@@ -5,14 +5,15 @@ import BookingProcessing from "./pages/client/booking/bookingProcessing";
 import LoginAdmin from "./pages/admin/loginAdmin";
 import LoginReceptionist from "./pages/reception/loginReceptionist";
 import UserRegister from "./pages/userRegister";
-import RoomManagement from "./pages/admin/rooms/roomManagement";
 import BookingTour from "./pages/client/booking/tourBooking";
 import AddTour from "./pages/admin/TourForm";
 import AdminPage from "./pages/admin/AdminPage";
+import { Toaster } from "react-hot-toast";
 
 export default function App() {
     return(
         <BrowserRouter>
+            <Toaster position="top-right" reverseOrder={false} />
             <div className="w-full h-screen">
                 <Routes>
                     <Route path="/*" element={<HomePage/>} />
