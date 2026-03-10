@@ -1,5 +1,6 @@
-import {Op} from "sequelize";
-import StaffMember  from "../models/User/StaffMember.js";
+import { Op } from "sequelize";
+import StaffMember from "../models/User/StaffMember.js";
+import UserRegisterModel from "../models/User/UserRegisterModel.js";
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -34,12 +35,12 @@ export async function registerUser(req, res) {
 }
 
 export async function getAllUsers(req, res) {
-    try{
+    try {
 
         const users = await StaffMember.findAll();
         res.json(users);
 
-    }catch(error) {
+    } catch (error) {
         res.status(500).json({
             message: "Failed to fetch users",
             error: error.message
@@ -52,8 +53,8 @@ export async function updateUser(req, res) {
     const userId = req.params.id;
 
     try {
-        await StaffMember.update(req.body, { 
-            where: { userId: userId } 
+        await StaffMember.update(req.body, {
+            where: { userId: userId }
         });
         res.json({ message: "User updated successfully" });
     } catch (error) {
@@ -107,6 +108,50 @@ export async function searchUsers(req, res) {
     } catch (error) {
         res.status(500).json({
             message: "Failed to search users",
+            error: error.message
+        });
+    }
+}
+
+export async function verifyEmail(req, res) {
+    try {
+
+        const email = req.body.email;
+
+        const registeredUser = await UserRegisterModel.findOne({
+            where: { email: email }
+        });
+
+        if (registeredUser) {
+            return res.json({
+                showLogin: true,
+                showRegister: false
+            });
+        }
+
+        const staffMember = await StaffMember.findOne({
+            where: {
+                email: email,
+                role: "receptionist"
+            }
+        });
+
+        if (staffMember) {
+            return res.json({
+                showLogin: false,
+                showRegister: true
+            });
+        }
+
+        return res.json({
+            showLogin: false,
+            showRegister: false,
+            message: "Email is not allowed"
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: "Failed to verify email",
             error: error.message
         });
     }

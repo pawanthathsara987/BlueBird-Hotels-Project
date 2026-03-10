@@ -3,7 +3,7 @@ import { FaEdit, FaTrash } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
-import DeleteStaffModal from "../../components/DeleteStaffModal";
+import DeleteStaffModal from "../../../components/DeleteStaffModal";
 
 export default function StaffManagement() {
 
