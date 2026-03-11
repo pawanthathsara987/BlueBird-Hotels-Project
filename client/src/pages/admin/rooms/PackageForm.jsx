@@ -1,8 +1,8 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from 'axios';
 import toast from "react-hot-toast";
 
-function PackageForm({ closeOpenModal }) {
+function PackageForm({ closeOpenModal, onPackageAdded, selectedPackage }) {
     const [pname, setPname] = useState("");
     const [pprice, setPprice] = useState("");
     const [pimage, setPimage] = useState(null);
@@ -10,11 +10,31 @@ function PackageForm({ closeOpenModal }) {
     const [maxKids, setMaxKids] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
     const fileInputRef = useRef(null);
+    const isEditMode = Boolean(selectedPackage?.id);
 
-    // Add package with Supabase image upload
-    const addPackage = async () => {
+    // Preload fields when editing
+    useEffect(() => {
+        if (isEditMode) {
+            setPname(selectedPackage.pname || "");
+            setPprice(selectedPackage.pprice || "");
+            setMaxAdults(selectedPackage.maxAdults ?? 2);
+            setMaxKids(selectedPackage.maxKids ?? 0);
+            setPimage(null);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        } else {
+            setPname("");
+            setPprice("");
+            setPimage(null);
+            setMaxAdults(2);
+            setMaxKids(0);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    }, [isEditMode, selectedPackage]);
+
+    const savePackage = async () => {
+        let packageSaved = false;
         try {
-            if (!pname || !pprice || !pimage) {
+            if (!pname || !pprice || (!isEditMode && !pimage)) {
                 toast.error("Please fill all fields");
                 return;
             }
@@ -24,31 +44,36 @@ function PackageForm({ closeOpenModal }) {
             const formData = new FormData();
             formData.append("pname", pname.trim());
             formData.append("pprice", pprice);
-            formData.append("pimage", pimage); // File object
             formData.append("maxAdults", maxAdults);
             formData.append("maxKids", maxKids);
+            if (pimage) formData.append("pimage", pimage);
 
-            const response = await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/admin/package`,
-                formData
-            );
+            const endpoint = isEditMode
+                ? `${import.meta.env.VITE_BACKEND_URL}/admin/package/${selectedPackage.id}`
+                : `${import.meta.env.VITE_BACKEND_URL}/admin/package`;
 
-            toast.success(response?.data?.message || "Package added successfully");
+            const response = isEditMode
+                ? await axios.put(endpoint, formData)
+                : await axios.post(endpoint, formData);
 
-            // Reset form
+            packageSaved = true;
+            toast.success(response?.data?.message || (isEditMode ? "Package updated successfully" : "Package added successfully"));
+
             setPname("");
             setPprice("");
             setPimage(null);
             setMaxAdults(2);
             setMaxKids(0);
-            fileInputRef.current.value = "";
-
-            closeOpenModal?.();
+            if (fileInputRef.current) fileInputRef.current.value = "";
 
         } catch (error) {
-            toast.error(error?.response?.data?.message || "Failed to add package");
+            toast.error(error?.response?.data?.message || (isEditMode ? "Failed to update package" : "Failed to add package"));
         } finally {
             setIsLoading(false);
+            if (packageSaved) {
+                onPackageAdded?.();
+                closeOpenModal?.();
+            }
         }
     };
 
@@ -69,7 +94,7 @@ function PackageForm({ closeOpenModal }) {
                     >
                         ✕
                     </button>
-                    <h2 className="text-2xl font-bold text-center mb-6">Add New Package</h2>
+                    <h2 className="text-2xl font-bold text-center mb-6">{isEditMode ? "Update Package" : "Add New Package"}</h2>
 
                     {/* Package Name */}
                     <div className="mb-5">
@@ -121,7 +146,7 @@ function PackageForm({ closeOpenModal }) {
                                 {isLoading ? "Uploading..." : "Choose File"}
                             </button>
                             <span className="text-sm text-gray-600">
-                                {pimage ? pimage.name : "No file chosen"}
+                                {pimage ? pimage.name : isEditMode ? "Keep current image" : "No file chosen"}
                             </span>
                         </div>
                     </div>
@@ -162,17 +187,17 @@ function PackageForm({ closeOpenModal }) {
                             Cancel
                         </button>
                         <button
-                            onClick={addPackage}
+                            onClick={savePackage}
                             disabled={isLoading}
                             className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                             {isLoading ? (
                                 <>
                                     <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                                    Adding...
+                                    {isEditMode ? "Updating..." : "Adding..."}
                                 </>
                             ) : (
-                                "Add Package"
+                                isEditMode ? "Update Package" : "Add Package"
                             )}
                         </button>
                     </div>

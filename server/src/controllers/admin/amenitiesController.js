@@ -37,16 +37,9 @@ const getAllAmenities = async (req, res) => {
     try {
         const amenities = await Amenities.findAll();
 
-        if (amenities.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "No amenities found",
-            });
-        }
-
         return res.status(200).json({
             success: true,
-            message: "Amenities found",
+            message: amenities.length > 0 ? "Amenities found" : "Amenities not found",
             count: amenities.length,
             data: amenities,
         });
