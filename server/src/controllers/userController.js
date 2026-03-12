@@ -1,6 +1,7 @@
 import { Op } from "sequelize";
 import StaffMember from "../models/User/StaffMember.js";
 import UserRegisterModel from "../models/User/UserRegisterModel.js";
+import bcrypt from "bcrypt";
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -32,6 +33,38 @@ export async function registerUser(req, res) {
             error: error.message
         });
     }
+}
+
+export async function registerStaffMember(req, res) {
+    try {
+
+        const data = req.body;
+
+        if (data.password !== data.confirmPassword){
+            return res.status(400).json({
+                message: "Password do not match"
+            });
+        }
+
+        const hashedPassword = bcrypt.hashSync(data.password, 10);
+
+        const newStaffMember = await UserRegisterModel.create({
+            email: data.email,
+            password: hashedPassword
+        });
+
+        res.json({
+            message: "Staff member registered successfully",
+            user: newStaffMember
+        });
+
+    }catch (error) {
+        res.status(500).json({
+            message: "Failed to register staff member",
+            error: error.message
+        });
+    }
+
 }
 
 export async function getAllUsers(req, res) {
