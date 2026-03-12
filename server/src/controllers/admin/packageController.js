@@ -81,16 +81,9 @@ const getAllPackages = async (req, res) => {
     try {
         const packages = await RoomPackage.findAll();
 
-        if (packages.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "No packages found",
-            });
-        }
-
         return res.status(200).json({
             success: true,
-            message: "Packages loaded successfully",
+            message: packages.length > 0 ? "Packages loaded successfully" : "No packages available",
             count: packages.length,
             data: packages,
         });

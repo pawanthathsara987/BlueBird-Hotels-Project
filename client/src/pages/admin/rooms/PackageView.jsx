@@ -4,18 +4,18 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { RiDeleteBinLine, RiEditLine } from "react-icons/ri";
 
-const PackageView = ({ onOpenModal }) => {
+const PackageView = ({ onOpenModal, refreshTrigger }) => {
 
     const [packages, setPackages] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     
-    // ✅ State for delete confirmation popup
     const [showDeletePopup, setShowDeletePopup] = useState(false);
     const [packageToDelete, setPackageToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         getPackages();
-    }, []);
+    }, [refreshTrigger]);
 
     // Get all packages
     const getPackages = async () => {
@@ -28,26 +28,22 @@ const PackageView = ({ onOpenModal }) => {
 
             // Check if response has data
             if (!response.data || !response.data.data) {
-                toast.error("No packages found");
                 setPackages([]);
                 return;
             }
 
             // Check if packages array is empty
-            if (response.data.data.length === 0) {
-                toast.info("No packages available");
+            if (response.data.count === 0) {
                 setPackages([]);
                 return;
             }
 
             // Set packages successfully
             setPackages(response.data.data);
-            toast.success(response.data.message || "Packages loaded successfully");
 
         } catch (error) {
             console.error("Error fetching packages:", error);
             
-            // Better error handling
             const errorMessage = error.response?.data?.message || 
                                 error.message || 
                                 "Failed to fetch packages";
@@ -58,41 +54,47 @@ const PackageView = ({ onOpenModal }) => {
         }
     };
 
-    // ✅ Open delete popup
+    const editPackage = (pkg) => {
+        onOpenModal(pkg);
+    };
+
+    // Open delete popup
     const openDeletePopup = (pkg) => {
         setPackageToDelete(pkg);
         setShowDeletePopup(true);
     };
 
-    // ✅ Close delete popup
+    // Close delete popup
     const closeDeletePopup = () => {
+        if (isDeleting) return;
         setShowDeletePopup(false);
         setPackageToDelete(null);
     };
 
-    // ✅ Confirm and delete package
+    // Confirm and delete package
     const confirmDelete = async () => {
         if (!packageToDelete) return;
 
         try {
+            setIsDeleting(true);
             const response = await axios.delete(
                 `${import.meta.env.VITE_BACKEND_URL}/admin/package/${packageToDelete.id}`
             );
 
             toast.success(response.data.message || "Package deleted successfully");
-            
-            // Remove deleted package from state
-            setPackages(packages.filter(pkg => pkg.id !== packageToDelete.id));
-            
-            // Close popup
-            closeDeletePopup();
+            setShowDeletePopup(false);
+            setPackageToDelete(null);
+            getPackages();
 
         } catch (error) {
             console.error("Error deleting package:", error);
             const errorMessage = error.response?.data?.message || "Failed to delete package";
             toast.error(errorMessage);
+        } finally {
+            setIsDeleting(false);
         }
     };
+    
 
     return (
         <div className="mt-10 mx-5 rounded-lg">
@@ -171,7 +173,7 @@ const PackageView = ({ onOpenModal }) => {
                 <>
                     {/* Overlay */}
                     <div
-                        className="fixed inset-0 bg-black bg-opacity-40 z-40"
+                        className="fixed inset-0 bg-transparent backdrop-blur-sm z-40"
                         onClick={closeDeletePopup}
                     />
                     {/* Popup */}
@@ -186,17 +188,26 @@ const PackageView = ({ onOpenModal }) => {
                             <div className="flex gap-3">
                                 <button
                                     onClick={closeDeletePopup}
+                                    disabled={isDeleting}
                                     className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded font-semibold 
-                                        hover:bg-gray-400 transition"
+                                        hover:bg-gray-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={confirmDelete}
+                                    disabled={isDeleting}
                                     className="flex-1 px-4 py-2 bg-red-600 text-white rounded font-semibold 
-                                        hover:bg-red-700 transition"
+                                        hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 >
-                                    Delete
+                                    {isDeleting ? (
+                                        <>
+                                            <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                            Deleting...
+                                        </>
+                                    ) : (
+                                        "Delete"
+                                    )}
                                 </button>
                             </div>
                         </div>

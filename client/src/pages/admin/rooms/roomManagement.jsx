@@ -17,9 +17,36 @@ export default function RoomManagement() {
     const [selectBtn, setSelectBtn] = useState('room');
     const [openModal, setOpenModal] = useState(false);
     const [amenityModal, setAmenityModal] = useState(false);
-    const [packageModal, setPackageModal] = useState(false); 
+    const [packageModal, setPackageModal] = useState(false);
+    const [selectedAmenity, setSelectedAmenity] = useState(null);
+    const [selectedPackage, setSelectedPackage] = useState(null);
+    const [amenityRefreshTrigger, setAmenityRefreshTrigger] = useState(0);
+    const [packageRefreshTrigger, setPackageRefreshTrigger] = useState(0);
 
     const anyModalOpen = openModal || amenityModal || packageModal;
+
+    const handlePackageAdded = () => setPackageRefreshTrigger((prev) => prev + 1);
+    const handleAmenitiesAdded = () => setAmenityRefreshTrigger((prev) => prev + 1);
+
+    const openAmenityModal = (amenity = null) => {
+        setSelectedAmenity(amenity);
+        setAmenityModal(true);
+    };
+
+    const closeAmenityModal = () => {
+        setAmenityModal(false);
+        setSelectedAmenity(null);
+    };
+
+    const openPackageModal = (pkg = null) => {
+        setSelectedPackage(pkg);
+        setPackageModal(true);
+    };
+
+    const closePackageModal = () => {
+        setPackageModal(false);
+        setSelectedPackage(null);
+    };
 
     return (
         <div className="relative m-0 p-0 bg-gray-100 min-h-screen">
@@ -103,17 +130,35 @@ export default function RoomManagement() {
                 {selectBtn === 'room' ? (
                     <RoomView onOpenModal={() => setOpenModal(true)} />
                 ) : selectBtn === 'amenities' ? (
-                    <AmenitiesView onOpenModal={() => setAmenityModal(true)} />
+                    <AmenitiesView
+                        onOpenModal={openAmenityModal}
+                        refreshTrigger={amenityRefreshTrigger}
+                    />
                 ) : (
-                    <PackageView onOpenModal={() => setPackageModal(true)} />
+                    <PackageView
+                        onOpenModal={openPackageModal}
+                        refreshTrigger={packageRefreshTrigger}
+                    />
                 )}
 
             </div>
 
             {/* Both modals outside blur div */}
             {openModal    && <RoomForm    closeOpenModal={() => setOpenModal(false)} />}
-            {amenityModal && <AmenitiesForm closeOpenModal={() => setAmenityModal(false)} />}
-            {packageModal && <PackageForm closeOpenModal={() => setPackageModal(false)} />}
+            {amenityModal && (
+                <AmenitiesForm
+                    closeOpenModal={closeAmenityModal}
+                    onAmenitiesAdded={handleAmenitiesAdded}
+                    selectedAmenity={selectedAmenity}
+                />
+            )}
+            {packageModal && (
+                <PackageForm
+                    closeOpenModal={closePackageModal}
+                    onPackageAdded={handlePackageAdded}
+                    selectedPackage={selectedPackage}
+                />
+            )}
 
         </div>
     );

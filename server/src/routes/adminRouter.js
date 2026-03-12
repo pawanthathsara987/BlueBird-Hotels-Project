@@ -19,7 +19,7 @@ router.delete("/package/:id", deletePackage);
 
 // Amenities routes
 router.post('/amenitie', addAmenitie);
-router.get('/amenitie', getAllAmenities);
+router.get('/amenities', getAllAmenities);
 router.put('/amenitie/:id', updateAmenitie);
 router.delete('/amenitie/:id', deleteAmenitie);
 
