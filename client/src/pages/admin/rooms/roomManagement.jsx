@@ -1,11 +1,9 @@
 import { Search } from "lucide-react";
 import RoomView from './RoomView';
-import RoomForm from "./RoomForm";
 import AmenitiesView from "./AmenitiesView";
-import AmenitiesForm from "./AmenitiesForm";
 import PackageView from "./PackageView";
-import PackageForm from "./PackageForm";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 export default function RoomManagement() {
     const RoomTypes = [
@@ -14,45 +12,25 @@ export default function RoomManagement() {
         { id: 3, name: "family" },
     ];
 
-    const [selectBtn, setSelectBtn] = useState('room');
-    const [openModal, setOpenModal] = useState(false);
-    const [amenityModal, setAmenityModal] = useState(false);
-    const [packageModal, setPackageModal] = useState(false);
-    const [selectedAmenity, setSelectedAmenity] = useState(null);
-    const [selectedPackage, setSelectedPackage] = useState(null);
-    const [amenityRefreshTrigger, setAmenityRefreshTrigger] = useState(0);
-    const [packageRefreshTrigger, setPackageRefreshTrigger] = useState(0);
+    const [searchParams] = useSearchParams();
+    const initialTab = searchParams.get("tab");
+    const defaultTab = ["room", "amenities", "packages"].includes(initialTab)
+        ? initialTab
+        : "room";
 
-    const anyModalOpen = openModal || amenityModal || packageModal;
+    const [selectBtn, setSelectBtn] = useState(defaultTab);
 
-    const handlePackageAdded = () => setPackageRefreshTrigger((prev) => prev + 1);
-    const handleAmenitiesAdded = () => setAmenityRefreshTrigger((prev) => prev + 1);
-
-    const openAmenityModal = (amenity = null) => {
-        setSelectedAmenity(amenity);
-        setAmenityModal(true);
-    };
-
-    const closeAmenityModal = () => {
-        setAmenityModal(false);
-        setSelectedAmenity(null);
-    };
-
-    const openPackageModal = (pkg = null) => {
-        setSelectedPackage(pkg);
-        setPackageModal(true);
-    };
-
-    const closePackageModal = () => {
-        setPackageModal(false);
-        setSelectedPackage(null);
-    };
+    useEffect(() => {
+        const tab = searchParams.get("tab");
+        if (["room", "amenities", "packages"].includes(tab)) {
+            setSelectBtn(tab);
+        }
+    }, [searchParams]);
 
     return (
         <div className="relative m-0 p-0 bg-gray-100 min-h-screen">
 
-            {/* ✅ Blur wrapper around all page content */}
-            <div className={ anyModalOpen ? "blur-sm pointer-events-none" : ""}>
+            <div>
 
                 {/* Header */}
                 <div className="p-5 flex justify-between items-center">
@@ -128,37 +106,14 @@ export default function RoomManagement() {
                 
                 {/* Tab Views */}
                 {selectBtn === 'room' ? (
-                    <RoomView onOpenModal={() => setOpenModal(true)} />
+                    <RoomView />
                 ) : selectBtn === 'amenities' ? (
-                    <AmenitiesView
-                        onOpenModal={openAmenityModal}
-                        refreshTrigger={amenityRefreshTrigger}
-                    />
+                    <AmenitiesView />
                 ) : (
-                    <PackageView
-                        onOpenModal={openPackageModal}
-                        refreshTrigger={packageRefreshTrigger}
-                    />
+                    <PackageView />
                 )}
 
             </div>
-
-            {/* Both modals outside blur div */}
-            {openModal    && <RoomForm    closeOpenModal={() => setOpenModal(false)} />}
-            {amenityModal && (
-                <AmenitiesForm
-                    closeOpenModal={closeAmenityModal}
-                    onAmenitiesAdded={handleAmenitiesAdded}
-                    selectedAmenity={selectedAmenity}
-                />
-            )}
-            {packageModal && (
-                <PackageForm
-                    closeOpenModal={closePackageModal}
-                    onPackageAdded={handlePackageAdded}
-                    selectedPackage={selectedPackage}
-                />
-            )}
 
         </div>
     );
