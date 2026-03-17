@@ -1,10 +1,25 @@
 import { Op } from "sequelize";
 import StaffMember from "../models/User/StaffMember.js";
 import UserRegisterModel from "../models/User/UserRegisterModel.js";
+import Otp from "../models/User/Otp.js";
+import nodemailer from "nodemailer";
 import bcrypt from "bcrypt";
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
+import e from "express";
 dotenv.config();
 
+const transporter = nodemailer.createTransport(
+    {
+        service: "gmail",
+        host: "smtp.gmail.com",
+        port: 587,
+        secure: false,
+        auth: {
+            user: process.env.GMAIL_USER,
+            pass: process.env.GMAIL_APP_PASSWORD
+        }
+    }
+);
 
 export async function registerUser(req, res) {
 
@@ -40,7 +55,7 @@ export async function registerStaffMember(req, res) {
 
         const data = req.body;
 
-        if (data.password !== data.confirmPassword){
+        if (data.password !== data.confirmPassword) {
             return res.status(400).json({
                 message: "Password do not match"
             });
@@ -58,7 +73,7 @@ export async function registerStaffMember(req, res) {
             user: newStaffMember
         });
 
-    }catch (error) {
+    } catch (error) {
         res.status(500).json({
             message: "Failed to register staff member",
             error: error.message
@@ -189,3 +204,57 @@ export async function verifyEmail(req, res) {
         });
     }
 }
+
+export async function sendOtp(req, res) {
+
+    try {
+
+        const email = req.body.email;
+        const user = await UserRegisterModel.findOne({ where: { email: email } });
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+            return;
+        }
+
+        await Otp.destroy({ where: { email: email } });
+
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+        await Otp.create({
+            email: email,
+            otp: otpCode
+        });
+
+        const message = {
+            from: process.env.GMAIL_USER,
+            to: email,
+            subject: "Password Reset OTP",
+            text: `Your OTP for password reset is: ${otpCode}`
+        }
+
+        transporter.sendMail(message, (err, info) => {
+            if (err) {
+                console.error("Failed to send OTP email:", err);
+                return res.status(500).json({
+                    message: "Failed to send OTP email",
+                    error: err.message
+                });
+            } else {
+                res.json({
+                    message: "OTP sent successfully"
+                });
+            }
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: "Failed to send OTP",
+            error: error.message
+        });
+    }
+
+}
+
