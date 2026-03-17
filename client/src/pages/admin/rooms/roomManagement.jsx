@@ -2,8 +2,7 @@ import { Search } from "lucide-react";
 import RoomView from './RoomView';
 import AmenitiesView from "./AmenitiesView";
 import PackageView from "./PackageView";
-import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useState } from "react";
 
 export default function RoomManagement() {
     const RoomTypes = [
@@ -12,26 +11,18 @@ export default function RoomManagement() {
         { id: 3, name: "family" },
     ];
 
-    const [searchParams] = useSearchParams();
-    const initialTab = searchParams.get("tab");
-    const defaultTab = ["room", "amenities", "packages"].includes(initialTab)
-        ? initialTab
-        : "room";
+    const lastOpenTab = localStorage.getItem('roomSelectBtn') || 'room';
+    const [selectBtn, setSelectBtn] = useState(lastOpenTab);
+    
+    const saveSelectBtn = (value) => {
+        localStorage.setItem('roomSelectBtn', value);
+        setSelectBtn(value);
+    };
 
-    const [selectBtn, setSelectBtn] = useState(defaultTab);
-
-    useEffect(() => {
-        const tab = searchParams.get("tab");
-        if (["room", "amenities", "packages"].includes(tab)) {
-            setSelectBtn(tab);
-        }
-    }, [searchParams]);
 
     return (
         <div className="relative m-0 p-0 bg-gray-100 min-h-screen">
-
             <div>
-
                 {/* Header */}
                 <div className="p-5 flex justify-between items-center">
                     <h1 className="text-4xl font-bold">Rooms</h1>
@@ -42,7 +33,7 @@ export default function RoomManagement() {
                                 ${selectBtn == 'room'
                                 ? "bg-blue-600 text-white shadow-lg"
                                 : "bg-white text-blue-700 hover:bg-gray-100"}`}
-                            onClick={() => setSelectBtn('room')}
+                            onClick={() => saveSelectBtn('room')}
                         >
                             Room
                         </button>
@@ -52,7 +43,7 @@ export default function RoomManagement() {
                                 ${selectBtn == 'amenities'
                                 ? "bg-blue-600 text-white shadow-lg"
                                 : "bg-white text-blue-700 hover:bg-gray-100"}`}
-                            onClick={() => setSelectBtn('amenities')}
+                            onClick={() => saveSelectBtn('amenities')}
                         >
                             Amenities
                         </button>
@@ -62,7 +53,7 @@ export default function RoomManagement() {
                                 ${selectBtn == 'packages'
                                 ? "bg-blue-600 text-white shadow-lg"
                                 : "bg-white text-blue-700 hover:bg-gray-100"}`}
-                            onClick={() => setSelectBtn('packages')}
+                            onClick={() => saveSelectBtn('packages')}
                         >
                             Packages
                         </button>

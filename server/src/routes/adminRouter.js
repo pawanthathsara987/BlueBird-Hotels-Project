@@ -23,4 +23,6 @@ router.get('/amenities', getAllAmenities);
 router.put('/amenitie/:id', updateAmenitie);
 router.delete('/amenitie/:id', deleteAmenitie);
 
+// Rooms routes
+
 export default router;
