@@ -8,6 +8,7 @@ import UserRegister from "./pages/userRegister";
 import BookingTour from "./pages/client/booking/tourBooking";
 import AddTour from "./pages/admin/TourForm";
 import AdminPage from "./pages/admin/AdminPage";
+import PasswordResetPage from "./pages/reception/PasswordResetPage";
 import { Toaster } from "react-hot-toast";
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
                     <Route path="/userRegister" element={<UserRegister />} />
                     <Route path="/booking/tour" element={< BookingTour />} />
                     <Route path="/addTour" element={< AddTour />} />
+                    <Route path="/reset-password" element={< PasswordResetPage />} />
                     <Route path="/admin/*" element={< AdminPage />} />
                 </Routes>
             </div>
