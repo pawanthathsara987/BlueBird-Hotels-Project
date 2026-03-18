@@ -216,16 +216,17 @@ export async function sendOtp(req, res) {
             return res.status(404).json({
                 message: "User not found"
             });
-            return;
         }
 
         await Otp.destroy({ where: { email: email } });
 
         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
         await Otp.create({
-            email: email,
-            otp: otpCode
+            email,
+            otp: otpCode,
+            expiresAt
         });
 
         const message = {
@@ -258,3 +259,39 @@ export async function sendOtp(req, res) {
 
 }
 
+export async function verifyOtpAndResetPassword(req, res) {
+
+    try {
+        const otp = req.body.otp;
+        const email = req.body.email;
+        const newPassword = req.body.newPassword;
+
+        const otpRecord = await Otp.findOne({ where: { email: email, otp: otp, expiresAt: { [Op.gt]: new Date() } } });
+
+        if (!otpRecord) {
+            return res.status(400).json({
+                message: "Invalid or expired OTP"
+            });
+        }
+
+        await Otp.destroy({ where: { email: email } });
+        const hashedPassword = bcrypt.hashSync(newPassword, 10);
+
+        await UserRegisterModel.update(
+            {
+                password: hashedPassword
+            },
+            { where: { email: email } }
+        );
+
+        res.json({
+            message: "Password reset successfully"
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: "Failed to reset password",
+            error: error.message
+        });
+    }
+}
