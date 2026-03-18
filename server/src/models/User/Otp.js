@@ -16,6 +16,11 @@ Otp.init(
         otp : {
             type: DataTypes.STRING(6),
             allowNull: false
+        },
+
+        expiresAt : {
+            type: DataTypes.DATE,
+            allowNull: false
         }
     },
     {
