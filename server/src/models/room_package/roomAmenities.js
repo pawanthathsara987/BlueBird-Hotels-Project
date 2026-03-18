@@ -22,7 +22,7 @@ RoomAmenities.init(
 },
 {
     sequelize,
-    tableName: "room_amenities",
+    tableName: "room_amenitie",
     timestamps: false,
 }
 );
