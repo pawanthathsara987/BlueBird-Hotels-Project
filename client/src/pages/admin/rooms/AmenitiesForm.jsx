@@ -2,15 +2,23 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { RiDeleteBinLine } from "react-icons/ri";
 import { Plus } from "lucide-react";
-import { IoMdClose } from "react-icons/io";
 import toast from "react-hot-toast";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
-function AmenitiesForm({ closeOpenModal, onAmenitiesAdded, selectedAmenity }) {
+function AmenitiesForm() {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const selectedAmenity = location.state?.selectedAmenity || null;
+
     const [name, setName] = useState("");
     const [icon, setIcon] = useState("");
     const [amenityList, setAmenityList] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const isEditMode = Boolean(selectedAmenity?.id);
+
+    const goBackToAmenities = () => {
+        navigate("/admin/rooms/roomManagement?tab=amenities");
+    };
 
     useEffect(() => {
         if (isEditMode) {
@@ -75,8 +83,7 @@ function AmenitiesForm({ closeOpenModal, onAmenitiesAdded, selectedAmenity }) {
 
             toast.success("Amenities added successfully");
             setAmenityList([]);
-            onAmenitiesAdded?.();
-            closeOpenModal?.();
+            goBackToAmenities();
         } catch (error) {
             toast.error(error?.response?.data?.message || "Failed to add amenities");
         } finally {
@@ -110,8 +117,7 @@ function AmenitiesForm({ closeOpenModal, onAmenitiesAdded, selectedAmenity }) {
             );
 
             toast.success(response?.data?.message || "Amenity updated successfully");
-            onAmenitiesAdded?.();
-            closeOpenModal?.();
+            goBackToAmenities();
         } catch (error) {
             toast.error(error?.response?.data?.message || "Failed to update amenity");
         } finally {
@@ -120,26 +126,40 @@ function AmenitiesForm({ closeOpenModal, onAmenitiesAdded, selectedAmenity }) {
     };
 
     return (
-        <>
-            <div
-                className="fixed inset-0 bg-transparent backdrop-blur-sm z-40"
-                onClick={isLoading ? undefined : closeOpenModal}
-            />
+        <div className="p-6 bg-gray-50 min-h-screen">
+            <Link
+                to="/admin/rooms/roomManagement?tab=amenities"
+                className="text-gray-600 hover:text-gray-800 mb-4 inline-block"
+            >
+                ← Back
+            </Link>
 
-            <div className="fixed inset-0 flex items-center justify-center z-50 px-4">
-                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 relative border">
-                    <button
-                        onClick={closeOpenModal}
-                        disabled={isLoading}
-                        className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl font-bold disabled:opacity-50"
-                    >
-                        <IoMdClose />
-                    </button>
+            <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-800">
+                    {isEditMode ? "Update Amenity" : "Add Amenities"}
+                </h1>
+                <p className="text-gray-500 mt-1">
+                    {isEditMode
+                        ? "Update the selected amenity details"
+                        : "Add one or more amenities and save them together"}
+                </p>
+            </div>
 
-                    <h2 className="text-2xl font-bold text-center mb-6">
-                        {isEditMode ? "Update Amenity" : "Add Amenities"}
-                    </h2>
+            <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
+                <div className="bg-[#2c4a6b] p-6 flex items-center gap-4">
+                    <div>
+                        <h2 className="text-lg font-bold text-white">
+                            {isEditMode ? "Amenity Update" : "New Amenities"}
+                        </h2>
+                        <p className="text-gray-300 text-sm">
+                            {isEditMode
+                                ? "Edit the icon and name, then save changes"
+                                : "Use icon and name to queue amenities"}
+                        </p>
+                    </div>
+                </div>
 
+                <div className="p-5">
                     <div className="flex gap-2 mb-3">
                         <input
                             type="text"
@@ -212,18 +232,17 @@ function AmenitiesForm({ closeOpenModal, onAmenitiesAdded, selectedAmenity }) {
                         </div>
                     )}
 
-                    <div className="flex justify-between gap-4">
-                        <button
-                            onClick={closeOpenModal}
-                            disabled={isLoading}
-                            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    <div className="flex justify-end gap-4 pt-4">
+                        <Link
+                            to="/admin/rooms/roomManagement?tab=amenities"
+                            className="px-6 py-3 text-gray-700 hover:text-gray-900 font-medium"
                         >
                             Cancel
-                        </button>
+                        </Link>
                         <button
                             onClick={isEditMode ? updateAmenity : saveAmenities}
                             disabled={isLoading || (!isEditMode && amenityList.length === 0)}
-                            className="flex-1 px-4 py-3 rounded-lg text-sm font-semibold text-white transition bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            className="px-6 py-3 rounded-lg text-sm font-semibold text-white transition bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                             {isLoading ? (
                                 <>
@@ -237,7 +256,7 @@ function AmenitiesForm({ closeOpenModal, onAmenitiesAdded, selectedAmenity }) {
                     </div>
                 </div>
             </div>
-        </>
+        </div>
     );
 }
 

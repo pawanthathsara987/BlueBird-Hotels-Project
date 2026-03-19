@@ -1,8 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import axios from 'axios';
 import toast from "react-hot-toast";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
-function PackageForm({ closeOpenModal, onPackageAdded, selectedPackage }) {
+function PackageForm() {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const selectedPackage = location.state?.selectedPackage || null;
+
     const [pname, setPname] = useState("");
     const [pprice, setPprice] = useState("");
     const [pimage, setPimage] = useState(null);
@@ -11,6 +16,10 @@ function PackageForm({ closeOpenModal, onPackageAdded, selectedPackage }) {
     const [isLoading, setIsLoading] = useState(false);
     const fileInputRef = useRef(null);
     const isEditMode = Boolean(selectedPackage?.id);
+
+    const goBackToPackages = () => {
+        navigate("/admin/rooms/roomManagement?tab=packages");
+    };
 
     // Preload fields when editing
     useEffect(() => {
@@ -71,32 +80,46 @@ function PackageForm({ closeOpenModal, onPackageAdded, selectedPackage }) {
         } finally {
             setIsLoading(false);
             if (packageSaved) {
-                onPackageAdded?.();
-                closeOpenModal?.();
+                goBackToPackages();
             }
         }
     };
 
     return (
-        <>
-            {/* Overlay */}
-            <div
-                className="fixed inset-0 bg-transparent bg-opacity-40 z-40"
-                onClick={closeOpenModal}
-            />
-            {/* Modal */}
-            <div className="fixed inset-0 flex items-center justify-center z-50 px-4">
-                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8 relative max-h-[90vh] overflow-y-auto border">
-                    <button
-                        onClick={closeOpenModal}
-                        disabled={isLoading}
-                        className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl font-bold disabled:opacity-50"
-                    >
-                        ✕
-                    </button>
-                    <h2 className="text-2xl font-bold text-center mb-6">{isEditMode ? "Update Package" : "Add New Package"}</h2>
+        <div className="p-6 bg-gray-50 min-h-screen">
+            <Link
+                to="/admin/rooms/roomManagement?tab=packages"
+                className="text-gray-600 hover:text-gray-800 mb-4 inline-block"
+            >
+                ← Back
+            </Link>
 
-                    {/* Package Name */}
+            <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-800">
+                    {isEditMode ? "Update Package" : "Add Package"}
+                </h1>
+                <p className="text-gray-500 mt-1">
+                    {isEditMode
+                        ? "Update package details and save changes"
+                        : "Fill in package details and create a new package"}
+                </p>
+            </div>
+
+            <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
+                <div className="bg-[#2c4a6b] p-6 flex items-center gap-4">
+                    <div>
+                        <h2 className="text-lg font-bold text-white">
+                            {isEditMode ? "Package Update" : "New Package"}
+                        </h2>
+                        <p className="text-gray-300 text-sm">
+                            {isEditMode
+                                ? "You can optionally replace the current image"
+                                : "All fields are required except optional image updates later"}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="p-5">
                     <div className="mb-5">
                         <label className="block text-sm font-semibold mb-1">Package Name</label>
                         <input
@@ -109,7 +132,6 @@ function PackageForm({ closeOpenModal, onPackageAdded, selectedPackage }) {
                         />
                     </div>
 
-                    {/* Price */}
                     <div className="mb-5">
                         <label className="block text-sm font-semibold mb-1">Price</label>
                         <div className="relative">
@@ -125,7 +147,6 @@ function PackageForm({ closeOpenModal, onPackageAdded, selectedPackage }) {
                         </div>
                     </div>
 
-                    {/* Image File */}
                     <div className="mb-5">
                         <label className="block text-sm font-semibold mb-1">Package Image</label>
                         <input
@@ -151,7 +172,6 @@ function PackageForm({ closeOpenModal, onPackageAdded, selectedPackage }) {
                         </div>
                     </div>
 
-                    {/* Max Adults/Kids */}
                     <div className="flex gap-4 mb-5">
                         <div className="flex-1">
                             <label className="block text-sm font-semibold mb-1">Max Adults</label>
@@ -177,19 +197,17 @@ function PackageForm({ closeOpenModal, onPackageAdded, selectedPackage }) {
                         </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex justify-between gap-4">
-                        <button
-                            onClick={closeOpenModal}
-                            disabled={isLoading}
-                            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    <div className="flex justify-end gap-4 pt-4">
+                        <Link
+                            to="/admin/rooms/roomManagement?tab=packages"
+                            className="px-6 py-3 text-gray-700 hover:text-gray-900 font-medium"
                         >
                             Cancel
-                        </button>
+                        </Link>
                         <button
                             onClick={savePackage}
                             disabled={isLoading}
-                            className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            className="px-6 py-3 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                             {isLoading ? (
                                 <>
@@ -203,7 +221,7 @@ function PackageForm({ closeOpenModal, onPackageAdded, selectedPackage }) {
                     </div>
                 </div>
             </div>
-        </>
+        </div>
     );
 }
 

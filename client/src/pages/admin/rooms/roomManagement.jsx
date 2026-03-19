@@ -1,10 +1,7 @@
 import { Search } from "lucide-react";
 import RoomView from './RoomView';
-import RoomForm from "./RoomForm";
 import AmenitiesView from "./AmenitiesView";
-import AmenitiesForm from "./AmenitiesForm";
 import PackageView from "./PackageView";
-import PackageForm from "./PackageForm";
 import { useState } from "react";
 
 export default function RoomManagement() {
@@ -14,46 +11,18 @@ export default function RoomManagement() {
         { id: 3, name: "family" },
     ];
 
-    const [selectBtn, setSelectBtn] = useState('room');
-    const [openModal, setOpenModal] = useState(false);
-    const [amenityModal, setAmenityModal] = useState(false);
-    const [packageModal, setPackageModal] = useState(false);
-    const [selectedAmenity, setSelectedAmenity] = useState(null);
-    const [selectedPackage, setSelectedPackage] = useState(null);
-    const [amenityRefreshTrigger, setAmenityRefreshTrigger] = useState(0);
-    const [packageRefreshTrigger, setPackageRefreshTrigger] = useState(0);
-
-    const anyModalOpen = openModal || amenityModal || packageModal;
-
-    const handlePackageAdded = () => setPackageRefreshTrigger((prev) => prev + 1);
-    const handleAmenitiesAdded = () => setAmenityRefreshTrigger((prev) => prev + 1);
-
-    const openAmenityModal = (amenity = null) => {
-        setSelectedAmenity(amenity);
-        setAmenityModal(true);
+    const lastOpenTab = localStorage.getItem('roomSelectBtn') || 'room';
+    const [selectBtn, setSelectBtn] = useState(lastOpenTab);
+    
+    const saveSelectBtn = (value) => {
+        localStorage.setItem('roomSelectBtn', value);
+        setSelectBtn(value);
     };
 
-    const closeAmenityModal = () => {
-        setAmenityModal(false);
-        setSelectedAmenity(null);
-    };
-
-    const openPackageModal = (pkg = null) => {
-        setSelectedPackage(pkg);
-        setPackageModal(true);
-    };
-
-    const closePackageModal = () => {
-        setPackageModal(false);
-        setSelectedPackage(null);
-    };
 
     return (
         <div className="relative m-0 p-0 bg-gray-100 min-h-screen">
-
-            {/* ✅ Blur wrapper around all page content */}
-            <div className={ anyModalOpen ? "blur-sm pointer-events-none" : ""}>
-
+            <div>
                 {/* Header */}
                 <div className="p-5 flex justify-between items-center">
                     <h1 className="text-4xl font-bold">Rooms</h1>
@@ -64,7 +33,7 @@ export default function RoomManagement() {
                                 ${selectBtn == 'room'
                                 ? "bg-blue-600 text-white shadow-lg"
                                 : "bg-white text-blue-700 hover:bg-gray-100"}`}
-                            onClick={() => setSelectBtn('room')}
+                            onClick={() => saveSelectBtn('room')}
                         >
                             Room
                         </button>
@@ -74,7 +43,7 @@ export default function RoomManagement() {
                                 ${selectBtn == 'amenities'
                                 ? "bg-blue-600 text-white shadow-lg"
                                 : "bg-white text-blue-700 hover:bg-gray-100"}`}
-                            onClick={() => setSelectBtn('amenities')}
+                            onClick={() => saveSelectBtn('amenities')}
                         >
                             Amenities
                         </button>
@@ -84,7 +53,7 @@ export default function RoomManagement() {
                                 ${selectBtn == 'packages'
                                 ? "bg-blue-600 text-white shadow-lg"
                                 : "bg-white text-blue-700 hover:bg-gray-100"}`}
-                            onClick={() => setSelectBtn('packages')}
+                            onClick={() => saveSelectBtn('packages')}
                         >
                             Packages
                         </button>
@@ -128,37 +97,14 @@ export default function RoomManagement() {
                 
                 {/* Tab Views */}
                 {selectBtn === 'room' ? (
-                    <RoomView onOpenModal={() => setOpenModal(true)} />
+                    <RoomView />
                 ) : selectBtn === 'amenities' ? (
-                    <AmenitiesView
-                        onOpenModal={openAmenityModal}
-                        refreshTrigger={amenityRefreshTrigger}
-                    />
+                    <AmenitiesView />
                 ) : (
-                    <PackageView
-                        onOpenModal={openPackageModal}
-                        refreshTrigger={packageRefreshTrigger}
-                    />
+                    <PackageView />
                 )}
 
             </div>
-
-            {/* Both modals outside blur div */}
-            {openModal    && <RoomForm    closeOpenModal={() => setOpenModal(false)} />}
-            {amenityModal && (
-                <AmenitiesForm
-                    closeOpenModal={closeAmenityModal}
-                    onAmenitiesAdded={handleAmenitiesAdded}
-                    selectedAmenity={selectedAmenity}
-                />
-            )}
-            {packageModal && (
-                <PackageForm
-                    closeOpenModal={closePackageModal}
-                    onPackageAdded={handlePackageAdded}
-                    selectedPackage={selectedPackage}
-                />
-            )}
 
         </div>
     );
