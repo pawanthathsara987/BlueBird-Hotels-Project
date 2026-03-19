@@ -1,4 +1,4 @@
-import { Tour, TourItem, TourItemAssignment } from '../../models/index.js';
+import { Tour, TourItem } from '../../models/index.js';
 
 // Create a new tour item
 export const createTourItem = async (req, res) => {
