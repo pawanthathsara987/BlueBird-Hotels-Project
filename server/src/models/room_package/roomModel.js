@@ -14,12 +14,12 @@ Room.init({
         type: DataTypes.INTEGER,
         allowNull: true,
     },
-    rnumber: {
+    roomNumber: {
         type: DataTypes.INTEGER,
         allowNull: false,
         unique: true,
     },
-    rstatus: {
+    roomStatus: {
         type: DataTypes.ENUM("available", "occupied", "maintenance"),
         allowNull: false,
         defaultValue: "available",
@@ -27,7 +27,7 @@ Room.init({
 }, {
     sequelize,
     modelName: "Room",
-    tableName: "rooms",
+    tableName: "room",
     timestamps: true,
 });
 

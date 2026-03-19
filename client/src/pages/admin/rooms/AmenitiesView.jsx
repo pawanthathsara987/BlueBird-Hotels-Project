@@ -3,12 +3,14 @@ import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { RiDeleteBinLine, RiEditLine } from "react-icons/ri";
+import { Link, useNavigate } from "react-router-dom";
 
-const AmenitiesView = ({ onOpenModal, refreshTrigger }) => {
+const AmenitiesView = () => {
+    const navigate = useNavigate();
 
     useEffect(() => {
         getAmenities();
-    }, [refreshTrigger]);
+    }, []);
 
     const [isLoading, setLoading] = useState(false);
     const [amenities, setAmenities] = useState([]);
@@ -83,14 +85,14 @@ const AmenitiesView = ({ onOpenModal, refreshTrigger }) => {
         <div className="mt-10 mx-5 rounded-lg">
 
             {/* Add Button */}
-            <div
+            <Link
+                to="/admin/rooms/amenities/add"
                 className="w-fit m-2 ml-auto flex items-center justify-between p-2 
                     text-md rounded-[5px] space-x-1 bg-blue-400 shadow-md cursor-pointer hover:bg-blue-500"
-                onClick={() => onOpenModal(null)}
             >
                 <Plus />
                 <label className="cursor-pointer">Add Amenity</label>
-            </div>
+            </Link>
 
             {/* Amenities Table */}
             <table className="min-w-full bg-white shadow-md rounded-lg">
@@ -130,7 +132,11 @@ const AmenitiesView = ({ onOpenModal, refreshTrigger }) => {
                                     </td>
                                     <td className="px-4 py-2 flex justify-center items-center space-x-5">
                                         <button
-                                            onClick={() => onOpenModal(amenity)}
+                                            onClick={() =>
+                                                navigate("/admin/rooms/amenities/edit", {
+                                                    state: { selectedAmenity: amenity },
+                                                })
+                                            }
                                             className="text-blue-500 hover:text-blue-700 cursor-pointer"
                                             title="Edit amenity"
                                         >

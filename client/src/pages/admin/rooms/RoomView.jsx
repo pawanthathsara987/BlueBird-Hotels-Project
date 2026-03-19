@@ -1,7 +1,9 @@
 import { Plus } from "lucide-react";
 import { RiDeleteBinLine, RiEditLine } from "react-icons/ri";
+import { Link, useNavigate } from "react-router-dom";
 
-const RoomView = ({ onOpenModal }) => {
+const RoomView = () => {
+    const navigate = useNavigate();
 
     const Rooms = [
         {
@@ -38,15 +40,14 @@ const RoomView = ({ onOpenModal }) => {
 
     return (
         <div className="mt-10 mx-5 rounded-lg">
-            <div 
+            <Link
+                to="/admin/rooms/room/add"
                 className="w-fit m-2 ml-auto flex items-center justify-between p-2 
                     text-md rounded-[5px] space-x-1 bg-blue-400 shadow-md"
-
-                onClick={onOpenModal}
             >
                 <Plus />
                 <label>Add Room</label>
-            </div>
+            </Link>
             {/* Room List */}
             <table className="min-w-full bg-white shadow-md rounded-lg">
                 <thead className="bg-gray-200">
@@ -70,7 +71,13 @@ const RoomView = ({ onOpenModal }) => {
                                 </span>
                             </td>
                             <td className="px-4 py-2 flex justify-center items-center space-x-5">
-                                <RiEditLine  className="text-blue-500 hover:text-blue-700"/>
+                                <button
+                                    onClick={() => navigate("/admin/rooms/room/edit", { state: { selectedRoom: room } })}
+                                    className="text-blue-500 hover:text-blue-700"
+                                    title="Edit room"
+                                >
+                                    <RiEditLine />
+                                </button>
                                 <RiDeleteBinLine className="text-red-500 hover:text-red-700"/>
                             </td>
                         </tr>

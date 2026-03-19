@@ -3,8 +3,10 @@ import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { RiDeleteBinLine, RiEditLine } from "react-icons/ri";
+import { Link, useNavigate } from "react-router-dom";
 
-const PackageView = ({ onOpenModal, refreshTrigger }) => {
+const PackageView = () => {
+    const navigate = useNavigate();
 
     const [packages, setPackages] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -15,7 +17,7 @@ const PackageView = ({ onOpenModal, refreshTrigger }) => {
 
     useEffect(() => {
         getPackages();
-    }, [refreshTrigger]);
+    }, []);
 
     // Get all packages
     const getPackages = async () => {
@@ -52,10 +54,6 @@ const PackageView = ({ onOpenModal, refreshTrigger }) => {
         } finally {
             setIsLoading(false);
         }
-    };
-
-    const editPackage = (pkg) => {
-        onOpenModal(pkg);
     };
 
     // Open delete popup
@@ -98,15 +96,15 @@ const PackageView = ({ onOpenModal, refreshTrigger }) => {
 
     return (
         <div className="mt-10 mx-5 rounded-lg">
-            <div 
+            <Link
+                to="/admin/rooms/packages/add"
                 className="w-fit m-2 ml-auto flex items-center justify-between p-2 
                     text-md rounded-[5px] space-x-1 bg-blue-400 shadow-md hover:bg-blue-500 
                     cursor-pointer transition-colors"
-                onClick={() => onOpenModal(null)}
             >
                 <Plus />
                 <label className="cursor-pointer">Add Package</label>
-            </div>
+            </Link>
             <table className="min-w-full bg-white shadow-md rounded-lg">
                 <thead className="bg-gray-200">
                     <tr>
@@ -146,7 +144,11 @@ const PackageView = ({ onOpenModal, refreshTrigger }) => {
                                     <td className="px-4 py-2 flex justify-center items-center space-x-5">
                                         {/* ✅ Edit button */}
                                         <button
-                                            onClick={() => editPackage(pkg)}
+                                            onClick={() =>
+                                                navigate("/admin/rooms/packages/edit", {
+                                                    state: { selectedPackage: pkg },
+                                                })
+                                            }
                                             className="text-blue-500 hover:text-blue-700 hover:scale-110 transition-transform cursor-pointer"
                                             title="Edit package"
                                         >

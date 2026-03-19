@@ -2,6 +2,9 @@ import { useState } from "react";
 import { Link, Routes, Route } from "react-router-dom";
 import { MdAdminPanelSettings, MdDashboard, MdBedroomParent, MdBookOnline, MdPeople, MdSettings, MdLogout, MdMenu, MdClose } from "react-icons/md";
 import RoomManagement from "./rooms/roomManagement";
+import AmenitiesForm from "./rooms/AmenitiesForm";
+import RoomForm from "./rooms/RoomForm";
+import PackageForm from "./rooms/PackageForm";
 import StaffManagement from "./user/StaffManegement";
 import AddNewStaffMember from "./user/AddNewStaffMember";
 import UpdateStaffMember from "./user/UpdateStaffMember";
@@ -48,6 +51,12 @@ export default function AdminPage() {
                 <Routes>
                     <Route path="/" element={<h1 className="p-5">Welcome to Admin Dashboard</h1>} />
                     <Route path="/rooms/roomManagement" element={<RoomManagement />} />
+                    <Route path="/rooms/room/add" element={<RoomForm />} />
+                    <Route path="/rooms/room/edit" element={<RoomForm />} />
+                    <Route path="/rooms/amenities/add" element={<AmenitiesForm />} />
+                    <Route path="/rooms/amenities/edit" element={<AmenitiesForm />} />
+                    <Route path="/rooms/packages/add" element={<PackageForm />} />
+                    <Route path="/rooms/packages/edit" element={<PackageForm />} />
                     <Route path="/bookings" element={<h1 className="p-5">Bookings Management</h1>} />
                     <Route path="/users" element={<StaffManagement />} />
                     <Route path="/users/addStaffMember" element={<AddNewStaffMember />} />
