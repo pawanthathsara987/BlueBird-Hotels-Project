@@ -1,20 +1,27 @@
-// models/TourItem.js
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+import { Model, DataTypes } from "sequelize";
+import sequelize from "../../config/database.js";
 
-const TourItem = sequelize.define('TourItem', {
-  id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true,
-  },
-  name: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-}, {
-  tableName: 'tour_items',
-  timestamps: true,
-});
+class TourItem extends Model {}
 
-module.exports = TourItem;
+TourItem.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+      allowNull: false,
+    },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+  },
+  {
+    sequelize,
+    modelName: "TourItem",
+    tableName: "tour_items",
+    timestamps: true,
+  }
+);
+
+export default TourItem;
