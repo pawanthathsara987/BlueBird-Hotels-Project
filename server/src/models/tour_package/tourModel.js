@@ -3,7 +3,7 @@ import sequelize from "../../config/database.js";
 
 class Tour extends Model {}
 
-TourPackage.init(
+Tour.init(
     {
     id: {
         type: DataTypes.INTEGER,
