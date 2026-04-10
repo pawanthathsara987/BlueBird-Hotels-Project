@@ -4,6 +4,7 @@ import {
   ClipboardCheck, Info, Image as ImageIcon,
   MapPin, Upload, Search, Map,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 // White card wrapper
 const Card = ({ children, className = "" }) => (
@@ -14,14 +15,14 @@ const Card = ({ children, className = "" }) => (
 
 // Section heading with colored icon
 const SectionTitle = ({ bg, color, Icon, title, right }) => (
-  <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-5">
+  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-slate-100 mb-5">
     <div className="flex items-center gap-2">
       <div className={`w-7 h-7 ${bg} rounded-lg flex items-center justify-center`}>
         {Icon && <Icon className={`w-4 h-4 ${color}`} />}
       </div>
       <h3 className="text-sm font-bold text-slate-700">{title}</h3>
     </div>
-    {right}
+    <div className="self-start sm:self-auto">{right}</div>
   </div>
 );
 
@@ -61,7 +62,18 @@ export default function AddTour({ onSave, onCancel }) {
   });
 
   const [image, setImage]   = useState(null);
-  const [items, setItems]   = useState([""]);
+  const [items, setItems]   = useState(() => {
+    const savedItems = localStorage.getItem("selectedTourItems");
+    if (!savedItems) return [""];
+
+    try {
+      const parsed = JSON.parse(savedItems);
+      return Array.isArray(parsed) && parsed.length ? parsed : [""];
+    } catch (error) {
+      console.error("Invalid selectedTourItems data:", error);
+      return [""];
+    }
+  });
   const [errors, setErrors] = useState({});
 
   // Update a form field and clear its error
@@ -256,10 +268,18 @@ export default function AddTour({ onSave, onCancel }) {
               <SectionTitle
                 bg="bg-teal-100" color="text-teal-600" Icon={ClipboardCheck} title="Inclusions"
                 right={
-                  <button type="button" onClick={() => setItems([...items, ""])}
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1">
-                    <Plus className="w-3.5 h-3.5" /> Add Item
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      to="/manager/tours/item/select"
+                      className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add Tour Item
+                    </Link>
+                    <button type="button" onClick={() => setItems([...items, ""])}
+                      className="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1">
+                      <Plus className="w-3.5 h-3.5" /> Add Item
+                    </button>
+                  </div>
                 }
               />
 
