@@ -21,17 +21,23 @@ export default function BookingRoom() {
 
   const getAllPackages = async () => {
     setLoading(true);
+    setError(null);
       try {
         const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/getallpackages`);
-          if (!response.data.avlPackage || response.data.avlPackage.length === 0) {
+        const payload = response?.data;
+        const packageList = payload?.avlPackage || payload?.data || payload?.packages || [];
+
+        if (!Array.isArray(packageList) || packageList.length === 0) {
               setError("No packages found");
+          setPackages([]);
               return;
           }
 
-          setPackages(response.data.avlPackage);
+        setPackages(packageList);
 
       } catch (error) {
-          setError(error.message);
+        setError(error?.response?.data?.message || error.message || "Failed to load packages");
+        setPackages([]);
           console.log(error);
       } finally {
           setLoading(false);
