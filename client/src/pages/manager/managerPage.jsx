@@ -4,6 +4,7 @@ import { MdDashboard, MdBedroomParent, MdBookOnline, MdLoop, MdAssessment, MdLog
 import AddTour from "./tours/TourForm";
 import TourItemForm from "./tours/TourItemForm";
 import TourItemView from "./tours/TourItemView";
+import TourItemSelectPage from "./tours/TourItemSelectPage";
 import TourManagement from "./tours/tourManagement";
 
 export default function ManagerPage() {
@@ -48,7 +49,7 @@ export default function ManagerPage() {
                     <Route path="/vehicles" element={<h1 className="text-2xl font-bold">Manage Vehicles</h1>} />
                     <Route path="/reports" element={<h1 className="text-2xl font-bold">View Reports</h1>} />
                     <Route path="/tours/item/add" element={<TourItemForm />} />
-                    <Route path="/tours/item/select" element={<TourItemView selectionMode />} />
+                    <Route path="/tours/item/select" element={<TourItemSelectPage />} />
                 </Routes>
             </div>
         </div>
