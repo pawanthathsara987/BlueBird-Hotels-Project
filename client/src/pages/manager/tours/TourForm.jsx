@@ -49,16 +49,19 @@ const inputCls = (hasError) =>
 
  //ADD TOUR FORM
 
-export default function AddTour({ onSave, onCancel }) {
+export default function AddTour({ onSave, onCancel, isEdit = false, initialData = {} }) {
 
   // Form state
   const [form, setForm] = useState({
-    packageName: "",
-    overview: "",
-    price: "",
-    discount: "",
-    termsConditions: "",
-    mapLink: "",
+    packageName: initialData.packageName || "",
+    overview: initialData.overview || "",
+    price: initialData.price || "",
+    discount: initialData.discount || "",
+    termsConditions: initialData.termsConditions || "",
+    mapLink: initialData.mapLink || "",
+    itinerary: Array.isArray(initialData.itinerary) ? initialData.itinerary.join("\n") : (initialData.itinerary || ""),
+    groupSize: initialData.groupSize || "",
+    status: initialData.status || "active",
   });
 
   const [image, setImage]   = useState(null);
@@ -116,6 +119,9 @@ export default function AddTour({ onSave, onCancel }) {
     if (form.discount && (+form.discount < 0 || +form.discount > 100))  e.discount        = "Must be 0–100.";
     if (!items.filter(i => i.trim()).length)                             e.items           = "Add at least one inclusion.";
     if (!form.termsConditions.trim())                                    e.termsConditions = "Required.";
+    if (form.groupSize && (!Number.isInteger(Number(form.groupSize)) || Number(form.groupSize) <= 0)) {
+      e.groupSize = "Group size must be a positive whole number.";
+    }
     return e;
   };
 
@@ -128,6 +134,11 @@ export default function AddTour({ onSave, onCancel }) {
       ...form,
       image,
       includedItems: items.filter(i => i.trim()),
+      itinerary: form.itinerary
+        .split("\n")
+        .map((step) => step.trim())
+        .filter(Boolean),
+      groupSize: form.groupSize ? Number(form.groupSize) : null,
     });
   };
 
@@ -275,10 +286,6 @@ export default function AddTour({ onSave, onCancel }) {
                     >
                       <Plus className="w-3.5 h-3.5" /> Add Tour Item
                     </Link>
-                    <button type="button" onClick={() => setItems([...items, ""])}
-                      className="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1">
-                      <Plus className="w-3.5 h-3.5" /> Add Item
-                    </button>
                   </div>
                 }
               />
@@ -343,6 +350,51 @@ export default function AddTour({ onSave, onCancel }) {
                   </div>
                 )}
               </div>
+            </Card>
+          </div>
+
+          {/* ── Row 5: Itinerary + Group ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <Card>
+              <SectionTitle bg="bg-indigo-100" color="text-indigo-600" Icon={ClipboardCheck} title="Itinerary" />
+              <FieldLabel text="Tour Steps (one step per line)" error={errors.itinerary} />
+              <textarea
+                name="itinerary"
+                value={form.itinerary}
+                onChange={handleChange}
+                rows={6}
+                placeholder={"Pickup from hotel\nBoat ride\nLunch break\nDrop-off"}
+                className={`${inputCls(errors.itinerary)} resize-none`}
+              />
+            </Card>
+
+            <Card>
+              <SectionTitle bg="bg-emerald-100" color="text-emerald-600" Icon={Info} title="Capacity" />
+              <FieldLabel text="Group Size" error={errors.groupSize} />
+              <input
+                type="number"
+                name="groupSize"
+                value={form.groupSize}
+                onChange={handleChange}
+                min="1"
+                placeholder="e.g. 12"
+                className={inputCls(errors.groupSize)}
+              />
+
+              {isEdit && (
+                <div className="mt-5">
+                  <FieldLabel text="Status" />
+                  <select
+                    name="status"
+                    value={form.status}
+                    onChange={handleChange}
+                    className={inputCls(false)}
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+              )}
             </Card>
           </div>
 
