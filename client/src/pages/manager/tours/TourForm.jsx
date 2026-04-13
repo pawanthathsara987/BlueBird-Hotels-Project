@@ -4,7 +4,7 @@ import {
   ClipboardCheck, Info, Image as ImageIcon,
   MapPin, Upload, Search, Map,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 // White card wrapper
 const Card = ({ children, className = "" }) => (
@@ -50,6 +50,27 @@ const inputCls = (hasError) =>
  //ADD TOUR FORM
 
 export default function AddTour({ onSave, onCancel, isEdit = false, initialData = {} }) {
+  const navigate = useNavigate();
+  const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api").replace(/\/$/, "");
+
+  const getInitialItems = () => {
+    // In edit mode, prefer record data over local cache.
+    if (Array.isArray(initialData.includedItems) && initialData.includedItems.length) {
+      return initialData.includedItems;
+    }
+
+    const savedItems = localStorage.getItem("selectedTourItems");
+    if (!savedItems) return [""];
+
+    try {
+      const parsed = JSON.parse(savedItems);
+      localStorage.removeItem("selectedTourItems");
+      return Array.isArray(parsed) && parsed.length ? parsed : [""];
+    } catch (error) {
+      console.error("Invalid selectedTourItems data:", error);
+      return [""];
+    }
+  };
 
   // Form state
   const [form, setForm] = useState({
@@ -58,25 +79,15 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
     price: initialData.price || "",
     discount: initialData.discount || "",
     termsConditions: initialData.termsConditions || "",
-    mapLink: initialData.mapLink || "",
+    location: initialData.location || "",
     itinerary: Array.isArray(initialData.itinerary) ? initialData.itinerary.join("\n") : (initialData.itinerary || ""),
     groupSize: initialData.groupSize || "",
     status: initialData.status || "active",
   });
 
-  const [image, setImage]   = useState(null);
-  const [items, setItems]   = useState(() => {
-    const savedItems = localStorage.getItem("selectedTourItems");
-    if (!savedItems) return [""];
-
-    try {
-      const parsed = JSON.parse(savedItems);
-      return Array.isArray(parsed) && parsed.length ? parsed : [""];
-    } catch (error) {
-      console.error("Invalid selectedTourItems data:", error);
-      return [""];
-    }
-  });
+  const [image, setImage]   = useState(initialData.image || null);
+  const [imageFile, setImageFile] = useState(null);
+  const [items, setItems]   = useState(getInitialItems);
   const [errors, setErrors] = useState({});
 
   // Update a form field and clear its error
@@ -92,6 +103,7 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
     const reader = new FileReader();
     reader.onloadend = () => {
       setImage(reader.result);
+      setImageFile(file);
       setErrors(prev => ({ ...prev, image: "" }));
     };
     reader.readAsDataURL(file);
@@ -113,7 +125,7 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
   const validate = () => {
     const e = {};
     if (!form.packageName.trim())                                        e.packageName     = "Required.";
-    if (!image)                                                          e.image           = "Tour image required.";
+    if (!isEdit && !image && !imageFile)                                e.image           = "Tour image required.";
     if (!form.overview.trim())                                           e.overview        = "Required.";
     if (!form.price || isNaN(form.price) || +form.price <= 0)           e.price           = "Enter a valid price.";
     if (form.discount && (+form.discount < 0 || +form.discount > 100))  e.discount        = "Must be 0–100.";
@@ -126,20 +138,62 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
   };
 
   // Submit handler
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const v = validate();
     if (Object.keys(v).length) { setErrors(v); return; }
-    onSave?.({
+
+    const payload = {
       ...form,
-      image,
       includedItems: items.filter(i => i.trim()),
       itinerary: form.itinerary
         .split("\n")
         .map((step) => step.trim())
         .filter(Boolean),
       groupSize: form.groupSize ? Number(form.groupSize) : null,
-    });
+    };
+
+    if (onSave) {
+      onSave({ ...payload, imageFile });
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append("packageName", payload.packageName);
+      formData.append("overview", payload.overview);
+      formData.append("price", String(payload.price));
+      formData.append("discount", String(payload.discount || 0));
+      formData.append("termsConditions", payload.termsConditions);
+      formData.append("location", payload.location);
+      formData.append("itinerary", JSON.stringify(payload.itinerary));
+      formData.append("includedItems", JSON.stringify(payload.includedItems));
+      if (payload.groupSize !== null) {
+        formData.append("groupSize", String(payload.groupSize));
+      }
+      formData.append("status", payload.status || "active");
+      if (imageFile) {
+        formData.append("image", imageFile);
+      }
+
+      const response = await fetch(`${backendBaseUrl}/manager/tours`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Failed to create tour");
+      }
+
+      localStorage.removeItem("selectedTourItems");
+      navigate("/manager/tours/tourManagement");
+    } catch (error) {
+      setErrors((prev) => ({
+        ...prev,
+        submit: error.message || "Failed to create tour",
+      }));
+    }
   };
 
   // Derived values
@@ -147,8 +201,8 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
     ? (Number(form.price) * (1 - Number(form.discount) / 100)).toFixed(2)
     : null;
 
-  const mapSrc = form.mapLink
-    ? `https://maps.google.com/maps?q=${encodeURIComponent(form.mapLink)}&output=embed`
+  const mapSrc = form.location
+    ? `https://maps.google.com/maps?q=${encodeURIComponent(form.location)}&output=embed`
     : null;
 
 
@@ -212,7 +266,7 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
               </label>
 
               {image && (
-                <button type="button" onClick={() => setImage(null)}
+                <button type="button" onClick={() => { setImage(null); setImageFile(null); }}
                   className="mt-3 text-xs text-red-500 hover:text-red-700 font-medium flex items-center gap-1 justify-center">
                   <X className="w-3.5 h-3.5" /> Remove image
                 </button>
@@ -335,7 +389,7 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
               <div className="relative mb-3">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
-                  name="mapLink" value={form.mapLink} onChange={handleChange}
+                  name="location" value={form.location} onChange={handleChange}
                   placeholder="e.g. Negombo, Sri Lanka"
                   className={`${inputCls(false)} pl-9`}
                 />
@@ -405,7 +459,7 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
               <span className="text-red-500">*</span> required fields
             </p>
             <div className="flex gap-3 ml-auto">
-              <button type="button" onClick={onCancel}
+              <button type="button" onClick={() => (onCancel ? onCancel() : navigate("/manager/tours/tourManagement"))}
                 className="px-5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all">
                 Cancel
               </button>
@@ -416,6 +470,7 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
               </button>
             </div>
           </div>
+          {errors.submit && <p className="text-red-500 text-sm text-right">{errors.submit}</p>}
 
         </form>
       </div>
