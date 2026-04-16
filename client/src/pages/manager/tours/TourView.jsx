@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Edit2, Trash2, Plus } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 
 export default function TourView() {
+    const navigate = useNavigate();
     const [tours, setTours] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -31,6 +32,7 @@ export default function TourView() {
 
         fetchTours();
     }, [backendBaseUrl]);
+    
 
     if (loading) {
         return <div className="text-center p-8">Loading tours...</div>;
@@ -95,7 +97,9 @@ export default function TourView() {
                                 )}
 
                                 <div className="flex gap-2">
-                                    <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg flex items-center justify-center gap-2">
+                                    <button 
+                                    onClick={() => navigate(`/manager/tours/edit/${tour.id}`)}
+                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg flex items-center justify-center gap-2">
                                         <Edit2 size={18} />
                                         Edit
                                     </button>
