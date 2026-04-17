@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Plus, Check, X, DollarSign, FileText,
   ClipboardCheck, Info, Image as ImageIcon,
   MapPin, Upload, Search, Map,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 // White card wrapper
 const Card = ({ children, className = "" }) => (
@@ -49,32 +49,83 @@ const inputCls = (hasError) =>
 
  //ADD TOUR FORM
 
-export default function AddTour({ onSave, onCancel }) {
+export default function AddTour({ onSave, onCancel, isEdit = false, initialData = {} }) {
+  const navigate = useNavigate();
+  const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api").replace(/\/$/, "");
 
-  // Form state
-  const [form, setForm] = useState({
-    packageName: "",
-    overview: "",
-    price: "",
-    discount: "",
-    termsConditions: "",
-    mapLink: "",
-  });
+  const getInitialItems = () => {
+    // In edit mode, prefer record data over local cache.
+    if (Array.isArray(initialData.includedItems) && initialData.includedItems.length) {
+      return initialData.includedItems;
+    }
 
-  const [image, setImage]   = useState(null);
-  const [items, setItems]   = useState(() => {
     const savedItems = localStorage.getItem("selectedTourItems");
     if (!savedItems) return [""];
 
     try {
       const parsed = JSON.parse(savedItems);
+      localStorage.removeItem("selectedTourItems");
       return Array.isArray(parsed) && parsed.length ? parsed : [""];
     } catch (error) {
       console.error("Invalid selectedTourItems data:", error);
       return [""];
     }
+  };
+
+  // Form state
+  const [form, setForm] = useState({
+    packageName: initialData.packageName || "",
+    overview: initialData.overview || "",
+    price: initialData.price || "",
+    discount: initialData.discount || "",
+    termsConditions: initialData.termsConditions || "",
+    location: initialData.location || "",
+    itinerary: Array.isArray(initialData.itinerary) ? initialData.itinerary.join("\n") : (initialData.itinerary || ""),
+    groupSize: initialData.groupSize || "",
+    status: initialData.status || "active",
   });
+
+  const [image, setImage]   = useState(initialData.image || null);
+  const [imageFile, setImageFile] = useState(null);
+  const [items, setItems]   = useState(getInitialItems);
   const [errors, setErrors] = useState({});
+
+  // Modal state for tour items selection
+  const [showItemModal, setShowItemModal] = useState(false);
+  const [tourItemsList, setTourItemsList] = useState([]);
+  const [loadingItems, setLoadingItems] = useState(false);
+
+  // Fetch available tour items when modal opens
+  useEffect(() => {
+    const fetchTourItems = async () => {
+      try {
+        setLoadingItems(true);
+        const response = await fetch(`${backendBaseUrl}/manager/tour-items`);
+        const result = await response.json();
+        if (result.success && Array.isArray(result.data)) {
+          setTourItemsList(result.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch tour items:", error);
+      } finally {
+        setLoadingItems(false);
+      }
+    };
+
+    if (showItemModal) {
+      fetchTourItems();
+    }
+  }, [showItemModal, backendBaseUrl]);
+
+  // Toggle item selection in modal
+  const toggleItem = (itemId, itemName) => {
+    const itemExists = items.some(item => item === itemName || item === itemId);
+    if (itemExists) {
+      setItems(items.filter(item => item !== itemName && item !== itemId));
+    } else {
+      setItems([...items, itemName]);
+    }
+  };
 
   // Update a form field and clear its error
   const handleChange = (e) => {
@@ -89,6 +140,7 @@ export default function AddTour({ onSave, onCancel }) {
     const reader = new FileReader();
     reader.onloadend = () => {
       setImage(reader.result);
+      setImageFile(file);
       setErrors(prev => ({ ...prev, image: "" }));
     };
     reader.readAsDataURL(file);
@@ -110,25 +162,75 @@ export default function AddTour({ onSave, onCancel }) {
   const validate = () => {
     const e = {};
     if (!form.packageName.trim())                                        e.packageName     = "Required.";
-    if (!image)                                                          e.image           = "Tour image required.";
+    if (!isEdit && !image && !imageFile)                                e.image           = "Tour image required.";
     if (!form.overview.trim())                                           e.overview        = "Required.";
     if (!form.price || isNaN(form.price) || +form.price <= 0)           e.price           = "Enter a valid price.";
     if (form.discount && (+form.discount < 0 || +form.discount > 100))  e.discount        = "Must be 0–100.";
     if (!items.filter(i => i.trim()).length)                             e.items           = "Add at least one inclusion.";
     if (!form.termsConditions.trim())                                    e.termsConditions = "Required.";
+    if (form.groupSize && (!Number.isInteger(Number(form.groupSize)) || Number(form.groupSize) <= 0)) {
+      e.groupSize = "Group size must be a positive whole number.";
+    }
     return e;
   };
 
   // Submit handler
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const v = validate();
     if (Object.keys(v).length) { setErrors(v); return; }
-    onSave?.({
+
+    const payload = {
       ...form,
-      image,
       includedItems: items.filter(i => i.trim()),
-    });
+      itinerary: form.itinerary
+        .split("\n")
+        .map((step) => step.trim())
+        .filter(Boolean),
+      groupSize: form.groupSize ? Number(form.groupSize) : null,
+    };
+
+    if (onSave) {
+      onSave({ ...payload, imageFile });
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append("packageName", payload.packageName);
+      formData.append("overview", payload.overview);
+      formData.append("price", String(payload.price));
+      formData.append("discount", String(payload.discount || 0));
+      formData.append("termsConditions", payload.termsConditions);
+      formData.append("location", payload.location);
+      formData.append("itinerary", JSON.stringify(payload.itinerary));
+      formData.append("includedItems", JSON.stringify(payload.includedItems));
+      if (payload.groupSize !== null) {
+        formData.append("groupSize", String(payload.groupSize));
+      }
+      formData.append("status", payload.status || "active");
+      if (imageFile) {
+        formData.append("image", imageFile);
+      }
+
+      const response = await fetch(`${backendBaseUrl}/manager/tours`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Failed to create tour");
+      }
+
+      localStorage.removeItem("selectedTourItems");
+      navigate("/manager/tours/tourManagement");
+    } catch (error) {
+      setErrors((prev) => ({
+        ...prev,
+        submit: error.message || "Failed to create tour",
+      }));
+    }
   };
 
   // Derived values
@@ -136,8 +238,8 @@ export default function AddTour({ onSave, onCancel }) {
     ? (Number(form.price) * (1 - Number(form.discount) / 100)).toFixed(2)
     : null;
 
-  const mapSrc = form.mapLink
-    ? `https://maps.google.com/maps?q=${encodeURIComponent(form.mapLink)}&output=embed`
+  const mapSrc = form.location
+    ? `https://maps.google.com/maps?q=${encodeURIComponent(form.location)}&output=embed`
     : null;
 
 
@@ -201,7 +303,7 @@ export default function AddTour({ onSave, onCancel }) {
               </label>
 
               {image && (
-                <button type="button" onClick={() => setImage(null)}
+                <button type="button" onClick={() => { setImage(null); setImageFile(null); }}
                   className="mt-3 text-xs text-red-500 hover:text-red-700 font-medium flex items-center gap-1 justify-center">
                   <X className="w-3.5 h-3.5" /> Remove image
                 </button>
@@ -269,15 +371,12 @@ export default function AddTour({ onSave, onCancel }) {
                 bg="bg-teal-100" color="text-teal-600" Icon={ClipboardCheck} title="Inclusions"
                 right={
                   <div className="flex items-center gap-2">
-                    <Link
-                      to="/manager/tours/item/select"
+                    <button
+                      type="button"
+                      onClick={() => setShowItemModal(true)}
                       className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1"
                     >
                       <Plus className="w-3.5 h-3.5" /> Add Tour Item
-                    </Link>
-                    <button type="button" onClick={() => setItems([...items, ""])}
-                      className="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1">
-                      <Plus className="w-3.5 h-3.5" /> Add Item
                     </button>
                   </div>
                 }
@@ -328,7 +427,7 @@ export default function AddTour({ onSave, onCancel }) {
               <div className="relative mb-3">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
-                  name="mapLink" value={form.mapLink} onChange={handleChange}
+                  name="location" value={form.location} onChange={handleChange}
                   placeholder="e.g. Negombo, Sri Lanka"
                   className={`${inputCls(false)} pl-9`}
                 />
@@ -346,6 +445,51 @@ export default function AddTour({ onSave, onCancel }) {
             </Card>
           </div>
 
+          {/* ── Row 5: Itinerary + Group ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <Card>
+              <SectionTitle bg="bg-indigo-100" color="text-indigo-600" Icon={ClipboardCheck} title="Itinerary" />
+              <FieldLabel text="Tour Steps (one step per line)" error={errors.itinerary} />
+              <textarea
+                name="itinerary"
+                value={form.itinerary}
+                onChange={handleChange}
+                rows={6}
+                placeholder={"Pickup from hotel\nBoat ride\nLunch break\nDrop-off"}
+                className={`${inputCls(errors.itinerary)} resize-none`}
+              />
+            </Card>
+
+            <Card>
+              <SectionTitle bg="bg-emerald-100" color="text-emerald-600" Icon={Info} title="Capacity" />
+              <FieldLabel text="Group Size" error={errors.groupSize} />
+              <input
+                type="number"
+                name="groupSize"
+                value={form.groupSize}
+                onChange={handleChange}
+                min="1"
+                placeholder="e.g. 12"
+                className={inputCls(errors.groupSize)}
+              />
+
+              {isEdit && (
+                <div className="mt-5">
+                  <FieldLabel text="Status" />
+                  <select
+                    name="status"
+                    value={form.status}
+                    onChange={handleChange}
+                    className={inputCls(false)}
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+              )}
+            </Card>
+          </div>
+
 
           {/* ── Action Bar ── */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center justify-between sticky bottom-4">
@@ -353,17 +497,73 @@ export default function AddTour({ onSave, onCancel }) {
               <span className="text-red-500">*</span> required fields
             </p>
             <div className="flex gap-3 ml-auto">
-              <button type="button" onClick={onCancel}
+              <button type="button" onClick={() => (onCancel ? onCancel() : navigate("/manager/tours/tourManagement"))}
                 className="px-5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all">
                 Cancel
               </button>
               <button type="submit"
                 className="px-7 py-2.5 bg-linear-to-r from-blue-700 to-blue-500 hover:from-blue-800
                 hover:to-blue-600 text-white text-sm font-semibold rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center gap-2">
-                <Plus className="w-4 h-4" /> Create Tour
+                <Plus className="w-4 h-4" /> {isEdit ? "Update Tour" : "Create Tour"}
               </button>
             </div>
           </div>
+          {errors.submit && <p className="text-red-500 text-sm text-right">{errors.submit}</p>}
+
+          {/* ── Tour Items Selection Modal ── */}
+          {showItemModal && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-md max-h-96 flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-slate-800">Select Tour Items</h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowItemModal(false)}
+                    className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5 text-slate-400" />
+                  </button>
+                </div>
+
+                {loadingItems ? (
+                  <div className="flex items-center justify-center py-8">
+                    <p className="text-slate-500">Loading items...</p>
+                  </div>
+                ) : tourItemsList.length === 0 ? (
+                  <div className="flex items-center justify-center py-8">
+                    <p className="text-slate-500 text-sm">No tour items available. Create one first.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-y-auto flex-1 mb-4 space-y-2">
+                    {tourItemsList.map((tourItem) => (
+                      <label
+                        key={tourItem.id}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={items.includes(tourItem.name) || items.includes(tourItem.id.toString())}
+                          onChange={() => toggleItem(tourItem.id, tourItem.name)}
+                          className="w-4 h-4 text-blue-600 rounded cursor-pointer"
+                        />
+                        <span className="text-sm text-slate-700">{tourItem.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowItemModal(false)}
+                    className="flex-1 px-4 py-2.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
         </form>
       </div>

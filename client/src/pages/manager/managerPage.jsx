@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, Routes, Route } from "react-router-dom";
 import { MdDashboard, MdBedroomParent, MdBookOnline, MdLoop, MdAssessment, MdLogout, MdMenu, MdClose } from "react-icons/md";
 import AddTour from "./tours/TourForm";
+import TourEdit from "./tours/TourEdit";
 import TourItemForm from "./tours/TourItemForm";
 import TourItemView from "./tours/TourItemView";
 import TourItemSelectPage from "./tours/TourItemSelectPage";
@@ -45,6 +46,7 @@ export default function ManagerPage() {
                     <Route path="/" element={<h1 className="text-2xl font-bold">Welcome, Manager!</h1>} />
                     <Route path="/tours/tourManagement" element={<TourManagement />} />
                     <Route path="/tours/add" element={<AddTour />} />
+                    <Route path="/tours/edit/:id" element={<TourEdit />} />
                     <Route path="/bookings" element={<h1 className="text-2xl font-bold">Manage Bookings</h1>} />
                     <Route path="/vehicles" element={<h1 className="text-2xl font-bold">Manage Vehicles</h1>} />
                     <Route path="/reports" element={<h1 className="text-2xl font-bold">View Reports</h1>} />

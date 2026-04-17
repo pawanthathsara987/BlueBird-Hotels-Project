@@ -4,14 +4,14 @@ import sequelize from "../../config/database.js";
 class Tour extends Model {}
 
 Tour.init(
-    {
+  {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
         allowNull: false,
     },
-    name: {
+    packageName: {
         type: DataTypes.STRING,
         allowNull: false
     },
@@ -19,17 +19,9 @@ Tour.init(
         type: DataTypes.TEXT,
         allowNull: true
     },
-    inclusion: {
-        type: DataTypes.JSON,
-        allowNull: true
-    },
-    exclusion: {
-        type: DataTypes.JSON,
-        allowNull: true
-    },
     location: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING(500),
+        allowNull: true
     },
     price: {
         type: DataTypes.DECIMAL(10, 2),
@@ -40,20 +32,16 @@ Tour.init(
         allowNull: true,
         defaultValue: 0.00
     },
-    terms: {
+    termsConditions: {
         type: DataTypes.TEXT,
         allowNull: true
     },
-    duration: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
     itinerary: {
-        type: DataTypes.JSON,  
+        type: DataTypes.JSON,
         allowNull: true
     },
     image: {
-        type: DataTypes.STRING(500),  
+        type: DataTypes.STRING(500),
         allowNull: true
     },
     status: {
@@ -61,11 +49,11 @@ Tour.init(
         allowNull: false,
         defaultValue: 'active'
     },
-    groupSize: {
-        type: DataTypes.INTEGER,
-        allowNull: true
-    }
-}, 
+        groupSize: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+        },
+    },
     {
         sequelize,
         modelName: "Tour",
