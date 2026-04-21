@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, Loader, ChevronDown, DollarSign, CheckCircle, XCircle, TrendingUp, Clock } from 'lucide-react';
-import Header from '../../components/header';
-import Footer from '../../components/footer';
 
 export default function TourPaymentTracking() {
   const [payments, setPayments] = useState([]);
@@ -79,21 +77,18 @@ export default function TourPaymentTracking() {
   if (loading) {
     return (
       <div className="w-full h-full flex flex-col">
-        <Header />
         <div className="flex-1 bg-gray-50 flex items-center justify-center">
           <div className="text-center">
             <Loader className="w-12 h-12 text-blue-600 mx-auto mb-4 animate-spin" />
             <p className="text-gray-600">Loading payments...</p>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="w-full h-full flex flex-col">
-      <Header />
       <div className="flex-1 bg-gray-50">
         <div className="w-full max-w-6xl mx-auto py-8 px-4">
           
@@ -296,7 +291,6 @@ export default function TourPaymentTracking() {
           )}
         </div>
       </div>
-      <Footer />
     </div>
   );
 }
