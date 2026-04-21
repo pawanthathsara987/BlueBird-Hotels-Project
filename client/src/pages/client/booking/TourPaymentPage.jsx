@@ -17,6 +17,7 @@ export default function TourPaymentPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(!!bookingId);
   const [booking, setBooking] = useState(null);
+  const [pageError, setPageError] = useState(null);
   
   const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3002/api').replace(/\/$/, '');
 
@@ -39,28 +40,50 @@ export default function TourPaymentPage() {
       const fetchBooking = async () => {
         try {
           setLoading(true);
+          setPageError(null);
           const response = await fetch(`${backendBaseUrl}/tour-booking/${bookingId}`);
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
           const data = await response.json();
-          if (data.success) {
+          if (data.success && data.data) {
             setBooking(data.data);
           } else {
-            setError('Failed to load booking details');
+            setPageError('Failed to load booking details: ' + (data.message || 'Unknown error'));
           }
         } catch (error) {
           console.error('Error fetching booking:', error);
-          setError('Failed to load booking details');
+          setPageError('Failed to load booking details. ' + error.message);
         } finally {
           setLoading(false);
         }
       };
       fetchBooking();
+    } else if (!bookingData) {
+      // No bookingId in URL and no bookingData in state
+      setPageError('No booking information provided. Please start from the booking page.');
     }
-  }, [bookingId, backendBaseUrl]);
+  }, [bookingId, bookingData, backendBaseUrl]);
 
-  // Calculate 50% advance
-  const totalAmount = booking?.totalAmount || bookingData?.totalPrice || 0;
-  const advanceAmount = totalAmount * 0.5;
-  const remainingAmount = totalAmount - advanceAmount;
+  // Use booking from API or bookingData from state
+  const bookingInfo = booking || bookingData;
+  
+  // Calculate 50% advance - ensure values are numbers
+  const totalAmount = Number(booking?.totalAmount || bookingData?.totalPrice || 0);
+  const advanceAmount = Number((totalAmount * 0.5).toFixed(2));
+  const remainingAmount = Number((totalAmount - advanceAmount).toFixed(2));
+
+  // Safe date formatting
+  const formatDate = (dateString) => {
+    try {
+      if (!dateString) return 'N/A';
+      return new Date(dateString).toLocaleDateString();
+    } catch {
+      return 'N/A';
+    }
+  };
 
   const handleCardChange = (e) => {
     const { name, value } = e.target;
@@ -181,7 +204,29 @@ export default function TourPaymentPage() {
     }
   };
 
-  if (!bookingData) {
+  if (pageError && !loading) {
+    return (
+      <div className="w-full h-full flex flex-col">
+        <Header />
+        <div className="flex-1 bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <p className="text-xl text-gray-700 mb-2">Error Loading Payment</p>
+            <p className="text-gray-600 mb-6">{pageError}</p>
+            <button
+              onClick={() => navigate('/tourBooking')}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold"
+            >
+              Back to Tours
+            </button>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!bookingInfo && !loading) {
     return (
       <div className="w-full h-full flex flex-col">
         <Header />
@@ -225,7 +270,7 @@ export default function TourPaymentPage() {
           
           {/* Back Button */}
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/tourBooking')}
             className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold mb-6"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -262,19 +307,19 @@ export default function TourPaymentPage() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Guest Name:</span>
-                      <span className="font-semibold">{bookingData.fullName}</span>
+                      <span className="font-semibold">{bookingInfo?.TourInquiry?.fullName || bookingData?.fullName || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Email:</span>
-                      <span className="font-semibold">{bookingData.email}</span>
+                      <span className="font-semibold">{bookingInfo?.TourInquiry?.email || bookingData?.email || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Date:</span>
-                      <span className="font-semibold">{bookingData.startDate}</span>
+                      <span className="font-semibold">{formatDate(bookingInfo?.TourInquiry?.startDate || bookingData?.startDate)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Guests:</span>
-                      <span className="font-semibold">{bookingData.numberOfAdults} Adult(s) + {bookingData.numberOfChildren} Child(ren)</span>
+                      <span className="font-semibold">{bookingInfo?.TourInquiry?.numberOfAdults || bookingData?.numberOfAdults || 0} Adult(s) + {bookingInfo?.TourInquiry?.numberOfChildren || bookingData?.numberOfChildren || 0} Child(ren)</span>
                     </div>
                   </div>
                 </div>
