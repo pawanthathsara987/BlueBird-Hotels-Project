@@ -321,9 +321,9 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
 
                 {/* Price */}
                 <div>
-                  <FieldLabel text="Price (USD)" required error={errors.price} />
+                  <FieldLabel text="Price (LKR)" required error={errors.price} />
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">LKR</span>
                     <input
                       type="number" name="price" value={form.price} onChange={handleChange}
                       placeholder="0.00" min="0"
@@ -350,7 +350,7 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
                   <div className="bg-linear-to-r from-blue-50 to-sky-50 border border-blue-100 rounded-xl p-4 flex items-center justify-between">
                     <div>
                       <p className="text-xs text-slate-500">Final Price</p>
-                      <p className="text-xl font-bold text-blue-700">${finalPrice}</p>
+                      <p className="text-xl font-bold text-blue-700">LKR {finalPrice}</p>
                     </div>
                     <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-lg">
                       -{form.discount}%
