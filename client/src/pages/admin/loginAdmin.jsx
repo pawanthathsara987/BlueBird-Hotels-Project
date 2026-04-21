@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import Logo from "../../assets/bluebird logo.png";
 import axios from "axios";
+import { toast } from "react-hot-toast";
 
 export default function LoginAdmin() {
 
@@ -9,15 +10,15 @@ export default function LoginAdmin() {
     const [shouldRegister, setShouldRegister] = useState(false);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
     const [verifyMessage, setVerifyMessage] = useState("");
     const [isVerifying, setIsVerifying] = useState(false);
-
     const navigate = useNavigate();
 
     async function handleVerifyEmail() {
 
         if (!email.trim()) {
-            setVerifyMessage("Please enter your email first.");
+            toast.error("Please enter your email first.");
             return;
         }
 
@@ -38,27 +39,52 @@ export default function LoginAdmin() {
             setShouldRegister(showRegister);
 
             if (showLogin) {
-                setVerifyMessage("Email verified. Please enter your password.");
+                toast.success("Email verified. Please enter your password.");
             }
             else if (showRegister) {
-                setVerifyMessage("Staff email detected. Please complete registration.");
+                toast.success("Staff email detected. Please complete registration.");
             }
             else {
-                setVerifyMessage("Email is not authorized.");
+                toast.error("Email is not authorized.");
             }
 
         } catch (error) {
-
             setVerifyMessage(
                 error?.response?.data?.message || "Failed to verify email"
             );
-
         } finally {
             setIsVerifying(false);
         }
     }
 
-    
+    async function register() {
+
+        try {
+
+            if (!email.trim() || !password || !confirmPassword) {
+                toast.error("Please fill in all fields.");
+                return;
+            }
+
+            if (password !== confirmPassword){
+                toast.error("Passwords do not match.");
+                return;
+            }
+
+            const res = await axios.post(import.meta.env.VITE_BACKEND_URL + "/users/registerStaffMember", {
+                email: email.trim(),
+                password: password,
+                confirmPassword: confirmPassword
+            });
+
+            toast.success(res?.data?.message || "Registration successful. You can now log in.");
+            setShouldRegister(false);
+            setEmailVerified(true);
+
+        } catch (err) {
+            toast.error(err?.response?.data?.message || "Registration failed");
+        }
+    }
 
     return (
 
@@ -68,7 +94,7 @@ export default function LoginAdmin() {
                 <img src={Logo} alt="Logo" className="w-32 object-contain" />
             </div>
 
-            <div className="w-[450px] h-[500px] mb-10 shadow-xl rounded-2xl border border-black/30 flex flex-col items-center">
+            <div className="w-[450px] h-fit mb-10 shadow-xl rounded-2xl border border-black/30 flex flex-col items-center">
 
                 <h1 className="text-[30px] font-bold pt-5">Admin Login</h1>
 
@@ -91,7 +117,7 @@ export default function LoginAdmin() {
                         <button
                             onClick={handleVerifyEmail}
                             disabled={isVerifying}
-                            className="w-full h-[50px] bg-blue-500 text-white font-bold rounded-lg hover:cursor-pointer disabled:opacity-60"
+                            className="w-full h-[50px] mb-5 bg-blue-500 text-white font-bold rounded-lg hover:cursor-pointer disabled:opacity-60"
                         >
                             {isVerifying ? "Verifying..." : "Verify Email"}
                         </button>
@@ -113,18 +139,23 @@ export default function LoginAdmin() {
 
                 {shouldRegister && !emailVerified && (
 
-                    <div className="w-[350px] mt-6">
-                        <button
-                            onClick={() => navigate("/userRegister")}
-                            className="w-full h-[45px] bg-black text-white rounded-lg hover:cursor-pointer"
-                        >
-                            Go to Registration Form
+                    <div className="w-[350px] ">
+                        <div className="w-full mt-7">
+                            <p>Password</p>
+                            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Your password" className="w-full h-[50px] p-3 rounded-lg border border-black/20" />
+                        </div>
+                        <div className="w-full mt-7">
+                            <p>Confirm Password</p>
+                            <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm your password" className="w-full h-[50px] p-3 rounded-lg border border-black/20" />
+                        </div>
+                        <button onClick={register} 
+                            className="w-full h-[50px] mb-5 mt-7 bg-green-500 text-white font-bold rounded-lg hover:cursor-pointer">
+                            Register
                         </button>
                     </div>
                 )}
 
                 {emailVerified && (
-
                     <>
                         <div className="w-[350px] mt-8">
                             <p>Password</p>
@@ -144,17 +175,14 @@ export default function LoginAdmin() {
                             </p>
                         </div>
 
-                        <div className="w-[350px] mt-8">
+                        <div className="w-[350px] mt-8 mb-5">
                             <button
-                                onClick={handleLogin}
                                 className="w-full h-[50px] bg-blue-500 text-white font-bold rounded-lg hover:cursor-pointer"
                             >
                                 Login
                             </button>
                         </div>
-
                     </>
-
                 )}
             </div>
 
