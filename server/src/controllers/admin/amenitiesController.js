@@ -1,4 +1,5 @@
-import { Amenities } from "../../models/index.js";
+import { col, fn } from "sequelize";
+import { Amenities, RoomAmenities } from "../../models/index.js";
 
 // add amenity
 const addAmenitie = async (req, res) => {
@@ -115,9 +116,45 @@ const deleteAmenitie = async (req, res) => {
     }
 }
 
+const AmenitieswithAssignRoom = async (req, res) => {
+    try {
+        const amenities = await Amenities.findAll({
+            attributes: [
+                "id",
+                "name",
+                "icon",
+                [fn("COUNT", col("RoomAmenities.roomId")), "Assign_Rooms"]
+            ],
+            include: [
+                {
+                    model: RoomAmenities,
+                    attributes: [],
+                    required: false
+                }
+            ],
+            group: ["Amenities.id", "Amenities.name", "Amenities.icon"],
+            subQuery: false
+        });
+
+
+        res.status(200).json({
+            success: true,
+            message: amenities.length > 0 ? "" : "Amenities load unsuccessfull",
+            data: amenities,
+        })
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message,
+        });
+    }
+}
+
 export {
     addAmenitie,
     getAllAmenities,
     updateAmenitie,
     deleteAmenitie,
+    AmenitieswithAssignRoom
 }
