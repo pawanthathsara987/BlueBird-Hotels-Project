@@ -112,6 +112,7 @@ const PackageView = () => {
                         <th className="px-4 py-2">Price</th>
                         <th className="px-4 py-2">Adults</th>
                         <th className="px-4 py-2">Kids</th>
+                        <th className="px-4 py-2">Description</th>
                         <th className="px-4 py-2">Actions</th>
                     </tr>
                 </thead>
@@ -141,6 +142,7 @@ const PackageView = () => {
                                     <td className="px-4 py-2 font-semibold text-green-600">${pkg.pprice}</td>
                                     <td className="px-4 py-2">{pkg.maxAdults}</td>
                                     <td className="px-4 py-2">{pkg.maxKids}</td>
+                                    <td className="px-4 py-2">{pkg.description}</td>
                                     <td className="px-4 py-2 flex justify-center items-center space-x-5">
                                         {/* ✅ Edit button */}
                                         <button

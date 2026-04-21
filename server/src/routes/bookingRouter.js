@@ -5,9 +5,10 @@ import {
    getBookingById,
    deleteBookingById,
    updateBooking,
-   availableRooms,
-   getAllPackages
+   availableRooms
 } from '../controllers/booking/roomBookingController.js';
+
+import { getAllPackages } from '../controllers/admin/packageController.js';
 
 const router = express.Router();
 

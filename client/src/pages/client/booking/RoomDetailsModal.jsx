@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Check, Star, BedDouble, UserCheck, MapPin, Wifi, Wind, Waves } from 'lucide-react';
+import { X, Check, Star, BedDouble, UserCheck } from 'lucide-react';
 
 export default function RoomDetailsModal({
   selectedRoom,
@@ -10,67 +10,57 @@ export default function RoomDetailsModal({
   onNextImage
 }) {
   if (!selectedRoom) return null;
-
-  const getFeatureIcon = (feature) => {
-    const iconMap = {
-      Balcony: MapPin,
-      "Garden View": Waves,
-      "Ocean View": Waves,
-      "Air Conditioner": Wind,
-      "Free Wifi": Wifi
-    };
-    return iconMap[feature] || MapPin;
-  };
+  const imageCount = Math.max(1, Number(selectedRoom.images) || 1);
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-2 sm:p-4">
+      <div className="relative flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-xl bg-white shadow-2xl sm:max-w-3xl sm:rounded-2xl lg:max-w-5xl">
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-30 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100 transition-all"
+          className="absolute right-2 top-2 z-30 rounded-full bg-white p-1.5 shadow-lg transition-all hover:bg-gray-100 sm:right-4 sm:top-4 sm:p-2"
         >
-          <X className="w-6 h-6" />
+          <X className="h-5 w-5 sm:h-6 sm:w-6" />
         </button>
 
         {/* Scrollable Content */}
         <div className="overflow-y-auto custom-scrollbar">
           
           {/* Image Carousel */}
-          <div className="relative h-96 overflow-hidden">
+          <div className="relative h-44 overflow-hidden sm:h-72 lg:h-96">
             <img
               src={`https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=1200&h=600&fit=crop`}
               alt={selectedRoom.type}
-              className="w-full h-full object-cover"
+              className="h-full w-full object-cover"
             />
             
             {/* Navigation Arrows */}
             <button
               onClick={onPrevImage}
-              className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full p-2.5 shadow-lg transition-all"
+              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-1.5 shadow-lg transition-all hover:bg-white sm:left-4 sm:p-2.5"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
             <button
               onClick={onNextImage}
-              className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full p-2.5 shadow-lg transition-all"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-1.5 shadow-lg transition-all hover:bg-white sm:right-4 sm:p-2.5"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
               </svg>
             </button>
 
             {/* Carousel Dots */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-              {[...Array(selectedRoom.images)].map((_, idx) => (
+            <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5 sm:bottom-4 sm:gap-2">
+              {[...Array(imageCount)].map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentImageIndex(idx)}
-                  className={`h-2 rounded-full transition-all ${
-                    idx === currentImageIndex ? 'bg-white w-8' : 'bg-white/50 w-2'
+                  className={`h-1.5 rounded-full transition-all sm:h-2 ${
+                    idx === currentImageIndex ? 'w-6 bg-white sm:w-8' : 'w-1.5 bg-white/50 sm:w-2'
                   }`}
                 />
               ))}
@@ -78,143 +68,91 @@ export default function RoomDetailsModal({
           </div>
 
           {/* Content */}
-          <div className="p-8">
+          <div className="p-4 sm:p-8">
             
             {/* Room Title & Type */}
-            <div className="mb-6 flex justify-between items-start">
+            <div className="mb-5 flex flex-col items-start justify-between gap-3 sm:mb-6 sm:flex-row">
               <div>
-                <h2 className="text-4xl font-bold text-gray-900 mb-2">
+                <h2 className="mb-1 text-2xl font-bold text-gray-900 sm:mb-2 sm:text-4xl">
                   {selectedRoom.type}
                 </h2>
-                <p className="text-gray-600 text-lg">{selectedRoom.description2}</p>
+                <p className="text-sm text-gray-600 sm:text-lg">{selectedRoom.description2}</p>
               </div>
-              <div className="flex items-center gap-2 bg-yellow-50 px-4 py-2 rounded-lg">
-                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+              <div className="flex items-center gap-2 rounded-lg bg-yellow-50 px-3 py-2 sm:px-4">
+                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 sm:h-5 sm:w-5" />
                 <div>
-                  <p className="font-bold text-gray-900">4.8</p>
+                  <p className="text-sm font-bold text-gray-900 sm:text-base">4.8</p>
                   <p className="text-xs text-gray-600">(245 reviews)</p>
                 </div>
               </div>
             </div>
 
-            {/* Main Features Pills */}
-            <div className="mb-8">
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Key Features</h3>
-              <div className="flex flex-wrap gap-3">
-                {selectedRoom.mainFeatures.map((feature, idx) => {
-                  const Icon = getFeatureIcon(feature);
-                  return (
-                    <div key={idx} className="flex items-center gap-2.5 px-5 py-3 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors cursor-default">
-                      <Icon className="w-5 h-5 text-blue-600" />
-                      <span className="text-sm font-medium text-gray-700">{feature}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
             {/* Room Information Grid */}
-            <div className="grid md:grid-cols-2 gap-6 mb-8 p-6 bg-gray-50 rounded-xl">
+            <div className="mb-6 grid gap-3 rounded-xl bg-gray-50 p-4 sm:mb-8 sm:gap-6 sm:p-6 md:grid-cols-2">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                  <UserCheck className="w-5 h-5 text-blue-600" />
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-blue-100 sm:h-10 sm:w-10">
+                  <UserCheck className="h-4 w-4 text-blue-600 sm:h-5 sm:w-5" />
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 font-medium uppercase">Max Guests</p>
-                  <p className="text-base font-semibold text-gray-900">{selectedRoom.maxGuests}</p>
+                  <p className="text-sm font-semibold text-gray-900 sm:text-base">{selectedRoom.maxGuests}</p>
                 </div>
               </div>
               
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                  <BedDouble className="w-5 h-5 text-blue-600" />
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-blue-100 sm:h-10 sm:w-10">
+                  <BedDouble className="h-4 w-4 text-blue-600 sm:h-5 sm:w-5" />
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 font-medium uppercase">Room Size</p>
-                  <p className="text-base font-semibold text-gray-900">{selectedRoom.roomSize}</p>
+                  <p className="text-sm font-semibold text-gray-900 sm:text-base">{selectedRoom.roomSize}</p>
                 </div>
               </div>
               
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-blue-100 sm:h-10 sm:w-10">
+                  <svg className="h-4 w-4 text-blue-600 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 font-medium uppercase">Check-In</p>
-                  <p className="text-base font-semibold text-gray-900">{selectedRoom.checkIn}</p>
+                  <p className="text-sm font-semibold text-gray-900 sm:text-base">{selectedRoom.checkIn}</p>
                 </div>
               </div>
               
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-blue-100 sm:h-10 sm:w-10">
+                  <svg className="h-4 w-4 text-blue-600 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 font-medium uppercase">Check-Out</p>
-                  <p className="text-base font-semibold text-gray-900">{selectedRoom.checkOut}</p>
+                  <p className="text-sm font-semibold text-gray-900 sm:text-base">{selectedRoom.checkOut}</p>
                 </div>
               </div>
             </div>
 
             {/* Cancellation Policy */}
-            <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                <Check className="w-5 h-5 text-green-600" />
+            <div className="mb-6 flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 p-3 sm:mb-8 sm:gap-3 sm:p-4">
+              <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-green-100 sm:h-8 sm:w-8">
+                <Check className="h-4 w-4 text-green-600 sm:h-5 sm:w-5" />
               </div>
-              <p className="text-sm font-medium text-green-800">{selectedRoom.cancel}</p>
-            </div>
-
-            {/* Room Amenities */}
-            <div className="mb-32">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Room Amenities</h3>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
-                {selectedRoom.amenities.map((amenity, idx) => (
-                  <div key={idx} className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
-                    <span className="text-sm text-gray-700">{amenity}</span>
-                  </div>
-                ))}
-                {/* Additional amenities */}
-                {[
-                  'Socket near the bed',
-                  'Tile/marble floor',
-                  'Desk',
-                  'Seating area',
-                  'Private entrance',
-                  'Alarm clock',
-                  'Wardrobe or closet',
-                  'Carpeted',
-                  'Electric kettle',
-                  'Fan',
-                  'Outdoor furniture',
-                  'Cable channels',
-                  'Towels/sheets (extra fee)',
-                  'Board games/puzzles',
-                  'Books & DVDs for children'
-                ].map((amenity, idx) => (
-                  <div key={`extra-${idx}`} className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
-                    <span className="text-sm text-gray-700">{amenity}</span>
-                  </div>
-                ))}
-              </div>
+              <p className="text-xs font-medium text-green-800 sm:text-sm">{selectedRoom.cancel}</p>
             </div>
 
           </div>
         </div>
 
         {/* Fixed Footer */}
-        <div className="flex-shrink-0 p-6 bg-white border-t border-gray-200">
+        <div className="shrink-0 border-t border-gray-200 bg-white p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 mb-1">Price per night</p>
+              <p className="mb-1 text-xs text-gray-500 sm:text-sm">Price per night</p>
               <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-bold text-gray-900">${selectedRoom.price}</span>
-                <span className="text-lg text-gray-500">/night</span>
+                <span className="text-3xl font-bold text-gray-900 sm:text-4xl">${selectedRoom.price}</span>
+                <span className="text-sm text-gray-500 sm:text-lg">/night</span>
               </div>
             </div>
           </div>
@@ -222,7 +160,7 @@ export default function RoomDetailsModal({
 
       </div>
 
-      <style jsx>{`
+      <style>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 8px;
         }

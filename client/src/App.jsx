@@ -1,4 +1,3 @@
-import BookingRoom from "./pages/client/booking/roomBooking";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import HomePage from "./pages/homePage";
 import BookingProcessing from "./pages/client/booking/bookingProcessing";
@@ -9,6 +8,7 @@ import BookingTour from "./pages/client/booking/tourBooking";
 import AdminPage from "./pages/admin/AdminPage";
 import PasswordResetPage from "./pages/reception/PasswordResetPage";
 import { Toaster } from "react-hot-toast";
+import BookingRoom from "./pages/client/booking/roomBooking";
 import ManagerPage from "./pages/manager/managerPage";
 
 export default function App() {
