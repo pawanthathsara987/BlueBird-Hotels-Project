@@ -10,6 +10,11 @@ import PasswordResetPage from "./pages/reception/PasswordResetPage";
 import { Toaster } from "react-hot-toast";
 import BookingRoom from "./pages/client/booking/roomBooking";
 import ManagerPage from "./pages/manager/managerPage";
+import TourViewPage from "./pages/client/booking/TourViewing";
+import TourDetailsPage from "./pages/client/booking/TourDetailsPage";
+import TourPaymentPage from "./pages/client/booking/TourPaymentPage";
+
+
 
 export default function App() {
     return(
@@ -17,16 +22,19 @@ export default function App() {
             <Toaster position="top-right" reverseOrder={false} />
             <div className="w-full h-screen">
                 <Routes>
-                    <Route path="/*" element={<HomePage/>} />
                     <Route path="/booking" element={<BookingRoom />} />
                     <Route path="/booking/process" element={<BookingProcessing />} />
+                    <Route path="/booking/tour" element={<BookingTour />} />
+                    <Route path="/booking/tour-details" element={<TourDetailsPage />} />
+                    <Route path="/booking/payment" element={<TourPaymentPage />} />
+                    <Route path="/tourBooking" element={<TourViewPage />} />
                     <Route path="/loginAdmin" element={<LoginAdmin />} />
                     <Route path="/loginReceptionist" element={<LoginReceptionist />} />
                     <Route path="/userRegister" element={<UserRegister />} />
-                    <Route path="/booking/tour" element={< BookingTour />} />           
-                    <Route path="/reset-password" element={< PasswordResetPage />} />
-                    <Route path="/admin/*" element={< AdminPage />} />
-                    <Route path="/manager/*" element={< ManagerPage />} />
+                    <Route path="/reset-password" element={<PasswordResetPage />} />
+                    <Route path="/admin/*" element={<AdminPage />} />
+                    <Route path="/manager/*" element={<ManagerPage />} />
+                    <Route path="/*" element={<HomePage />} />
                 </Routes>
             </div>
         </BrowserRouter>
