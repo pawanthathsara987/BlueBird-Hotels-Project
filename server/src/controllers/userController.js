@@ -6,6 +6,7 @@ import nodemailer from "nodemailer";
 import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 import e from "express";
+import sequelize from "../config/database.js";
 dotenv.config();
 
 const transporter = nodemailer.createTransport(
@@ -146,15 +147,32 @@ export async function userLogin(req, res) {
         const userId = req.params.id;
 
         try {
-            const deletedCount = await StaffMember.destroy({
-                where: { userId: userId }
+            const deletedCount = await sequelize.transaction(async (transaction) => {
+                const staffMember = await StaffMember.findOne({
+                    where: { userId: userId },
+                    transaction
+                });
+
+                if (!staffMember) {
+                    return 0;
+                }
+
+                await UserRegisterModel.destroy({
+                    where: { email: staffMember.email },
+                    transaction
+                });
+
+                return StaffMember.destroy({
+                    where: { userId: userId },
+                    transaction
+                });
             });
 
             if (!deletedCount) {
                 return res.status(404).json({ message: "User not found" });
             }
 
-            res.json({ message: "User deleted successfully" });
+            res.json({ message: "User deleted successfully from staff and login records" });
         } catch (error) {
             res.status(500).json({
                 message: "Failed to delete user",
