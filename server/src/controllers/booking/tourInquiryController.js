@@ -6,6 +6,11 @@ import {
   validateTourDate,
   validateInquiryForm,
 } from "../../utils/validationUtils.js";
+import {
+  sendBookingConfirmationEmail,
+  sendRejectionEmail,
+} from "../../services/emailService.js";
+import { sendInquiryAcceptedEmail, sendInquiryRejectedEmail } from "../../middleware/EmailSender.js";
 
 // Create new tour inquiry
 export const createTourInquiry = async (req, res) => {
@@ -271,6 +276,14 @@ export const acceptInquiry = async (req, res) => {
       paymentStatus: "pending",
     });
 
+    // Send booking confirmation email to guest
+    try {
+      await sendBookingConfirmationEmail(inquiry, booking);
+    } catch (emailError) {
+      console.error("Warning: Email sending failed, but booking was created:", emailError);
+      // Don't fail the entire request if email fails
+    }
+
     res.status(200).json({
       success: true,
       message: "Inquiry accepted and booking created. Confirmation email sent to guest.",
@@ -324,9 +337,17 @@ export const rejectInquiry = async (req, res) => {
       managerNote: reason || null,
     });
 
+    // Send rejection email to guest
+    try {
+      await sendRejectionEmail(inquiry, reason || "Your inquiry does not match our current availability.");
+    } catch (emailError) {
+      console.error("Warning: Email sending failed, but inquiry was rejected:", emailError);
+      // Don't fail the entire request if email fails
+    }
+
     res.status(200).json({
       success: true,
-      message: "Inquiry rejected successfully",
+      message: "Inquiry rejected successfully. Rejection email sent to guest.",
       data: {
         ...inquiry.toJSON(),
         rejectionReason: reason,
