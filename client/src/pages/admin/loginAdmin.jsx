@@ -57,6 +57,26 @@ export default function LoginAdmin() {
         }
     }
 
+    async function handleLogin() {
+
+        if (!email || !password) {
+            toast.error("Please enter both email and password.");
+            return;
+        }
+
+        try {
+            const res = await axios.post(import.meta.env.VITE_BACKEND_URL + "/users/login", {
+                email: email,
+                password: password
+            });
+
+            toast.success(res?.data?.message || "Login successful.");
+            navigate("/");
+        } catch (error) {
+            toast.error(error?.response?.data?.message || "Login failed.");
+        }
+    }
+
     async function register() {
 
         try {
@@ -178,6 +198,7 @@ export default function LoginAdmin() {
                         <div className="w-[350px] mt-8 mb-5">
                             <button
                                 className="w-full h-[50px] bg-blue-500 text-white font-bold rounded-lg hover:cursor-pointer"
+                                onClick={handleLogin}
                             >
                                 Login
                             </button>
