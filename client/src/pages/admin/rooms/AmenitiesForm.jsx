@@ -11,7 +11,6 @@ function AmenitiesForm() {
     const selectedAmenity = location.state?.selectedAmenity || null;
 
     const [name, setName] = useState("");
-    const [icon, setIcon] = useState("");
     const [amenityList, setAmenityList] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const isEditMode = Boolean(selectedAmenity?.id);
@@ -23,21 +22,18 @@ function AmenitiesForm() {
     useEffect(() => {
         if (isEditMode) {
             setName(selectedAmenity?.name || "");
-            setIcon(selectedAmenity?.icon || "");
             setAmenityList([]);
         } else {
             setName("");
-            setIcon("");
             setAmenityList([]);
         }
     }, [isEditMode, selectedAmenity]);
 
     const handleAdd = () => {
         const trimmedName = name.trim();
-        const trimmedIcon = icon.trim();
 
-        if (!trimmedName || !trimmedIcon) {
-            toast.error("Please enter both icon and amenity name");
+        if (!trimmedName) {
+            toast.error("Please enter amenity name");
             return;
         }
 
@@ -52,10 +48,9 @@ function AmenitiesForm() {
 
         setAmenityList((prev) => [
             ...prev,
-            { id: Date.now(), name: trimmedName, icon: trimmedIcon },
+            { id: Date.now(), name: trimmedName },
         ]);
         setName("");
-        setIcon("");
     };
 
     const handleRemove = (id) => {
@@ -76,7 +71,6 @@ function AmenitiesForm() {
                     `${import.meta.env.VITE_BACKEND_URL}/admin/amenitie`,
                     {
                         name: amenity.name,
-                        icon: amenity.icon,
                     }
                 );
             }
@@ -93,10 +87,9 @@ function AmenitiesForm() {
 
     const updateAmenity = async () => {
         const trimmedName = name.trim();
-        const trimmedIcon = icon.trim();
 
-        if (!trimmedName || !trimmedIcon) {
-            toast.error("Please enter both icon and amenity name");
+        if (!trimmedName) {
+            toast.error("Please enter amenity name");
             return;
         }
 
@@ -112,7 +105,6 @@ function AmenitiesForm() {
                 `${import.meta.env.VITE_BACKEND_URL}/admin/amenitie/${selectedAmenity.id}`,
                 {
                     name: trimmedName,
-                    icon: trimmedIcon,
                 }
             );
 
@@ -153,22 +145,14 @@ function AmenitiesForm() {
                         </h2>
                         <p className="text-gray-300 text-sm">
                             {isEditMode
-                                ? "Edit the icon and name, then save changes"
-                                : "Use icon and name to queue amenities"}
+                                ? "Edit the name, then save changes"
+                                : "Use name to queue amenities"}
                         </p>
                     </div>
                 </div>
 
                 <div className="p-5">
                     <div className="flex gap-2 mb-3">
-                        <input
-                            type="text"
-                            value={icon}
-                            onChange={(e) => setIcon(e.target.value)}
-                            placeholder="Icon"
-                            disabled={isLoading}
-                            className="w-20 border border-gray-300 rounded-lg px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 text-center disabled:bg-gray-100"
-                        />
                         <input
                             type="text"
                             value={name}
@@ -209,7 +193,6 @@ function AmenitiesForm() {
                                         className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-3 py-2"
                                     >
                                         <div className="flex items-center gap-2">
-                                            <span className="text-lg">{item.icon}</span>
                                             <span className="text-sm font-medium">{item.name}</span>
                                         </div>
                                         <RiDeleteBinLine

@@ -121,7 +121,6 @@ const AmenitieswithAssignRoom = async (req, res) => {
             attributes: [
                 "id",
                 "name",
-                "icon",
                 [fn("COUNT", col("RoomAmenities.roomId")), "Assign_Rooms"]
             ],
             include: [
@@ -131,7 +130,7 @@ const AmenitieswithAssignRoom = async (req, res) => {
                     required: false
                 }
             ],
-            group: ["Amenities.id", "Amenities.name", "Amenities.icon"],
+            group: ["Amenities.id", "Amenities.name"],
             subQuery: false
         });
 
