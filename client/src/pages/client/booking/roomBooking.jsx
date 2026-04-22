@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import "react-datepicker/dist/react-datepicker.css";
 import axios from "axios";
 import RoomDetailsModal from "./RoomDetailsModal";
+import { SiGitconnected } from "react-icons/si";
 
 const BookingRoom = () => {
     const today = new Date();
@@ -172,6 +173,10 @@ const BookingRoom = () => {
         if (!selectedRoom) return;
         setCurrentImageIndex((prev) => (prev - 1 + selectedRoom.images) % selectedRoom.images);
     };
+
+    const handleBooking = () => {
+        console.log(selectedPackage.id);
+    }
 
     return (
         <div
@@ -500,12 +505,30 @@ const BookingRoom = () => {
                                 })}
                             </div>
                         )}
+                        { rooms.length > 1 && 
+                            <div className="flex items-center gap-2.5 p-2 w-fit ml-auto font-bold">
+                                <input type="checkbox" name="ClosetRoom" className="w-5 h-5"/>
+                                <SiGitconnected className="border rounded-full text-2xl p-0.5"/>
+                                <div className="group relative flex items-center">
+                                    <span className="absolute bottom-full left-1/2 mb-3 w-48 -translate-x-1/2 scale-0 rounded-lg bg-gray-300 border p-3 text-xs text-black shadow-lg transition-all group-hover:scale-100">
+                                        <p className="leading-relaxed">
+                                            You can book a <span className="font-semibold text-blue-600">Closet Room</span> if available at the time of your stay.
+                                        </p>
+                                        {/* tail arrow */}
+                                        <div className="absolute -bottom-1 left-4 h-2 w-2 rotate-45 bg-gray-300 border-b border-r"></div>
+                                    </span>
+
+                                    <label className="cursor-help"> Connecting Rooms</label>
+                                </div>
+                            </div>
+                        }
                     </div>
 
                     <div className="border-t border-stone-200 p-4 sm:p-5">
                         <div className="flex justify-end">
                             <button
                                 type="button"
+                                onClick={handleBooking}
                                 disabled={rooms.length === 0 || rooms.some(room => !room.packageId)}
                                 className="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-7 py-3 text-sm font-extrabold uppercase tracking-[0.14em] text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
                             >
