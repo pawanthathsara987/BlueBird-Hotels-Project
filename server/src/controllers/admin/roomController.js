@@ -1,6 +1,7 @@
-import roomModel from "../../models/roomModel.js";
-import roomAmenities from "../../models/roomAmenities.js";
-import packageModel from "../../models/packageModel.js";
+import roomModel from "../../models/room_package/roomModel.js";
+import roomAmenities from "../../models/room_package/roomAmenities.js";
+import packageModel from "../../models/room_package/packageModel.js";
+import amenitiesModel from "../../models/room_package/amenitiesModel.js";
 
 export async function addRoom(req, res) {
 
@@ -15,11 +16,19 @@ export async function addRoom(req, res) {
         }
 
         const newRoom = await roomModel.create({
-            roomNo,
+            roomNumber: roomNo,
             status,
             packageId,
-            amenities,
         });
+
+        if (amenities && amenities.length > 0) {
+            const records = amenities.map((amenityId) => ({
+                roomId: newRoom.id,
+                amenityId: amenityId,
+            }));
+
+            await roomAmenities.bulkCreate(records);
+        }
 
         return res.status(201).json({
             success: true,
@@ -29,6 +38,9 @@ export async function addRoom(req, res) {
 
 
     } catch (error) {
+
+        console.error("ADD ROOM ERROR:", error);
+
         return res.status(500).json({
             success: false,
             message: "Failed to create room",
@@ -36,4 +48,109 @@ export async function addRoom(req, res) {
         });
     }
 
+}
+
+
+export async function getAllRooms(req, res) {
+    try {
+
+
+
+        const rooms = await roomModel.findAll({
+            include: [
+                {
+                    model: packageModel,
+                    attributes: ["id", "pname"]
+                },
+                {
+                    model: roomAmenities,
+                    include: [
+                        {
+                            model: amenitiesModel,
+                            attributes: ["id", "name"]
+                        }
+                    ]
+                }
+            ]
+        });
+        return res.json({
+            success: true,
+            data: rooms
+        });
+
+    } catch (error) {
+        console.error("GET ALL ROOMS ERROR:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch rooms",
+            error: error.message
+        });
+    }
+}
+
+export async function updateRoom(req, res) {
+    const roomId = req.params.id;
+    try {
+        const { roomNo, status, packageId, amenities } = req.body;
+        console.log("UPDATE ROOM DATA:", req.body);
+        const existingRoom = await roomModel.findOne({
+            where: { roomNumber: roomNo }
+        });
+
+        if (existingRoom && existingRoom.id != roomId) {
+            return res.status(400).json({
+                success: false,
+                message: "Room number already exists"
+            });
+        }
+
+        await roomModel.update(
+            {
+                roomNumber: roomNo,
+                roomStatus: status,
+                packageId,
+            },
+            {
+                where: { id: roomId }
+            }
+        );
+        if (amenities && amenities.length > 0) {
+            await roomAmenities.destroy({ where: { roomId } });
+            const records = amenities.map((amenityId) => ({
+                roomId,
+                amenityId: amenityId,
+            }));
+            await roomAmenities.bulkCreate(records);
+        }
+        return res.json({
+            success: true,
+            message: "Room updated successfully"
+        });
+    } catch (error) {
+        console.error("UPDATE ROOM ERROR:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to update room",
+            error: error.message
+        });
+    }
+}
+
+export async function deleteRoom(req, res) {
+    const roomId = req.params.id;
+    try {
+        await roomAmenities.destroy({ where: { roomId } });
+        await roomModel.destroy({ where: { id: roomId } });
+        return res.json({
+            success: true,
+            message: "Room deleted successfully"
+        });
+    } catch (error) {
+        console.error("DELETE ROOM ERROR:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to delete room",
+            error: error.message
+        });
+    }
 }
