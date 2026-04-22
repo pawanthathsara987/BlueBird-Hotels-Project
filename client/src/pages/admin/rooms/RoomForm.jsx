@@ -1,3 +1,5 @@
+import axios from "axios";
+import { Import } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -11,23 +13,15 @@ function RoomForm() {
     const [roomType, setRoomType] = useState("");
     const [status, setStatus] = useState("available");
     const [selectedAmenities, setSelectedAmenities] = useState([]);
+    
+    const [packages, setPackages] = useState([]);
+    const [amenities, setAmenities] = useState([]);
 
     const isEditMode = Boolean(selectedRoom?.roomNo);
 
     const goBackToRooms = () => {
         navigate("/admin/rooms/roomManagement?tab=room");
     };
-
-    const amenities = [
-        { id: 1, name: "WiFi", icon: "📶" },
-        { id: 2, name: "Air Condition", icon: "❄️" },
-        { id: 3, name: "TV", icon: "📺" },
-        { id: 4, name: "Mini Bar", icon: "🍷" },
-        { id: 5, name: "Balcony", icon: "🌇" },
-        { id: 6, name: "Bathtub", icon: "🛁" },
-        { id: 7, name: "Safe Box", icon: "🔒" },
-        { id: 8, name: "Hair Dryer", icon: "💨" },
-    ];
 
     useEffect(() => {
         if (isEditMode) {
@@ -51,24 +45,56 @@ function RoomForm() {
         );
     };
 
-    const handleSaveRoom = () => {
+    async function handleSaveRoom() {
         if (!roomNumber || !roomType) {
             toast.error("Please fill in all required fields");
             return;
         }
 
-        const newRoom = {
-            roomNo: roomNumber,
-            type: roomType,
-            status: status,
-            amenities: selectedAmenities,
-        };
+        try{
+            const res = await axios.post(import.meta.env.VITE_BACKEND_URL + "/admin/rooms", {
+                roomNo: roomNumber,
+                packageId: roomType,
+                status: status,
+                amenities: selectedAmenities,
+            });
+            console.log("API response:", res.data);
+            toast.success("Room saved successfully");
+            goBackToRooms();
+        }catch (error) {
+            toast.error("Failed to save room");
+        }
+    }
 
-        console.log("Saving room with amenities:", newRoom);
+    useEffect(() => {
+        async function fetchPackages() {
+            try{
+                const res = await axios.get(import.meta.env.VITE_BACKEND_URL + "/admin/packages");
+                setPackages(res.data.data);
+                console.log("API response:", res.data);
 
-        toast.success(isEditMode ? "Room updated successfully" : "Room added successfully");
-        goBackToRooms();
-    };
+            } catch (error) {
+                console.error("Error fetching packages:", error);
+            }
+        }
+
+        fetchPackages();
+
+    }, []);
+
+    useEffect(() => {
+        async function fetchAmenities() {
+            try{
+                const res = await axios.get(import.meta.env.VITE_BACKEND_URL + "/admin/amenities");
+                setAmenities(res.data.data);
+                console.log("API response:", res.data);
+            } catch (error) {
+                console.error("Error fetching amenities:", error);
+            }
+        }
+
+        fetchAmenities();
+    }, []);
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
@@ -119,10 +145,11 @@ function RoomForm() {
                             onChange={(e) => setRoomType(e.target.value)}
                             className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
                         >
-                            <option value="">Select room type</option>
-                            <option value="deluxe-double">Deluxe Double</option>
-                            <option value="deluxe-balcony">Deluxe Double with Balcony</option>
-                            <option value="family">Family</option>
+
+                            <option value="">Select Room Type</option>
+                            {packages.map((pkg) =>(
+                                <option key={pkg.id} value={pkg.id}>{pkg.pname}</option> 
+                            ))}
                         </select>
                     </div>
 
