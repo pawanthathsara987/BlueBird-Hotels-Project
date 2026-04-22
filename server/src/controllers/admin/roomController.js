@@ -2,6 +2,7 @@ import roomModel from "../../models/room_package/roomModel.js";
 import roomAmenities from "../../models/room_package/roomAmenities.js";
 import packageModel from "../../models/room_package/packageModel.js";
 import amenitiesModel from "../../models/room_package/amenitiesModel.js";
+import { Op } from "sequelize";
 
 export async function addRoom(req, res) {
 
@@ -54,8 +55,6 @@ export async function addRoom(req, res) {
 export async function getAllRooms(req, res) {
     try {
 
-
-
         const rooms = await roomModel.findAll({
             include: [
                 {
@@ -71,7 +70,8 @@ export async function getAllRooms(req, res) {
                         }
                     ]
                 }
-            ]
+            ],
+            order: [["roomNumber", "ASC"]]
         });
         return res.json({
             success: true,
@@ -90,9 +90,11 @@ export async function getAllRooms(req, res) {
 
 export async function updateRoom(req, res) {
     const roomId = req.params.id;
+
     try {
         const { roomNo, status, packageId, amenities } = req.body;
         console.log("UPDATE ROOM DATA:", req.body);
+
         const existingRoom = await roomModel.findOne({
             where: { roomNumber: roomNo }
         });
@@ -107,25 +109,30 @@ export async function updateRoom(req, res) {
         await roomModel.update(
             {
                 roomNumber: roomNo,
-                roomStatus: status,
+                roomStatus: status, 
                 packageId,
             },
             {
                 where: { id: roomId }
             }
         );
+
+        await roomAmenities.destroy({ where: { roomId } });
+
         if (amenities && amenities.length > 0) {
-            await roomAmenities.destroy({ where: { roomId } });
             const records = amenities.map((amenityId) => ({
                 roomId,
-                amenityId: amenityId,
+                amenityId,
             }));
+
             await roomAmenities.bulkCreate(records);
         }
+
         return res.json({
             success: true,
             message: "Room updated successfully"
         });
+
     } catch (error) {
         console.error("UPDATE ROOM ERROR:", error);
         return res.status(500).json({
@@ -150,6 +157,36 @@ export async function deleteRoom(req, res) {
         return res.status(500).json({
             success: false,
             message: "Failed to delete room",
+            error: error.message
+        });
+    }
+}
+
+export async function searchRooms(req, res) {
+
+    const query = req.params.query || "";
+
+    try {
+
+        const rooms = await roomModel.findAll({
+            where: {
+                [Op.or]: [
+                    { roomNumber: { [Op.like]: `%${query}%` } },
+                    { roomStatus: { [Op.like]: `%${query}%` } }
+                ]
+            }
+        });
+
+        return res.json({
+            success: true,
+            data: rooms
+        });
+
+    } catch (error) {
+        console.error("SEARCH ROOMS ERROR:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to search rooms",
             error: error.message
         });
     }
