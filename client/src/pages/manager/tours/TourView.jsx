@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { Edit2, Trash2, Plus } from "lucide-react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function TourView() {
     const navigate = useNavigate();
     const [tours, setTours] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [deletingId, setDeletingId] = useState(null);
     const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api").replace(/\/$/, "");
 
     useEffect(() => {
@@ -32,6 +33,31 @@ export default function TourView() {
 
         fetchTours();
     }, [backendBaseUrl]);
+
+    const handleDeleteTour = async (tourId) => {
+        const shouldDelete = window.confirm("Are you sure you want to delete this tour?");
+        if (!shouldDelete) return;
+
+        try {
+            setDeletingId(tourId);
+            const response = await fetch(`${backendBaseUrl}/manager/tours/${tourId}`, {
+                method: "DELETE",
+            });
+
+            const payload = await response.json();
+            if (!response.ok || !payload.success) {
+                throw new Error(payload.message || "Failed to delete tour");
+            }
+
+            setTours((prevTours) => prevTours.filter((tour) => tour.id !== tourId));
+            setError("");
+        } catch (deleteError) {
+            console.error("Failed to delete tour:", deleteError);
+            setError(deleteError.message || "Failed to delete tour");
+        } finally {
+            setDeletingId(null);
+        }
+    };
     
 
     if (loading) {
@@ -103,9 +129,13 @@ export default function TourView() {
                                         <Edit2 size={18} />
                                         Edit
                                     </button>
-                                    <button className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg flex items-center justify-center gap-2">
+                                    <button
+                                        onClick={() => handleDeleteTour(tour.id)}
+                                        disabled={deletingId === tour.id}
+                                        className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white py-2 rounded-lg flex items-center justify-center gap-2"
+                                    >
                                         <Trash2 size={18} />
-                                        Delete
+                                        {deletingId === tour.id ? "Deleting..." : "Delete"}
                                     </button>
                                 </div>
                             </div>
