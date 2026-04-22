@@ -8,6 +8,7 @@ import Footer from '../../../components/footer';
 export default function TourDetailsPage() {
   const location = useLocation();
   const selectedTour = location.state?.tour || null;
+  const tourIdFromQuery = new URLSearchParams(location.search).get('tourId');
   const [tour, setTour] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -42,10 +43,20 @@ export default function TourDetailsPage() {
     const fetchTour = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${backendBaseUrl}/manager/tours`);
-        
-        if (response.data.success && response.data.data.length > 0) {
-          setTour(response.data.data[0]); // Use first tour
+        const endpoint = tourIdFromQuery
+          ? `${backendBaseUrl}/manager/tours/${tourIdFromQuery}`
+          : `${backendBaseUrl}/manager/tours`;
+        const response = await axios.get(endpoint);
+
+        if (tourIdFromQuery) {
+          if (response.data.success && response.data.data) {
+            setTour(response.data.data);
+            setError(null);
+          } else {
+            setError('Tour not found');
+          }
+        } else if (response.data.success && response.data.data.length > 0) {
+          setTour(response.data.data[0]);
           setError(null);
         } else {
           setError('No tours available');
@@ -59,7 +70,7 @@ export default function TourDetailsPage() {
     };
 
     fetchTour();
-  }, [backendBaseUrl, selectedTour]);
+  }, [backendBaseUrl, selectedTour, tourIdFromQuery]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -485,9 +496,9 @@ export default function TourDetailsPage() {
                   {formData.numberOfChildren > 0 && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">
-                        Children: {formData.numberOfChildren} (50%)
+                        Children: {formData.numberOfChildren}
                       </span>
-                      <span className="font-bold">LKR {(finalPrice * 0.5 * formData.numberOfChildren).toFixed(2)}</span>
+                      <span className="font-bold">LKR {(finalPrice * formData.numberOfChildren).toFixed(2)}</span>
                     </div>
                   )}
                 </div>

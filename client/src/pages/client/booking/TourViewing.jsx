@@ -350,7 +350,7 @@ export default function TourViewPage() {
      HANDLE TOUR SELECT
   ========================== */
   const handleSelectTour = (tour) => {
-    navigate('/booking/tour-details', { state: { tour } });
+    navigate(`/booking/tour-details?tourId=${tour.id}`, { state: { tour } });
   };
 
   /* =========================

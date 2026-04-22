@@ -1,4 +1,4 @@
-import { TourBooking, TourPayment, TourInquiry, Tour } from "../../models/index.js";
+import { TourBooking, TourPayment, TourInquiry, Tour , TourRefund } from "../../models/index.js";
 import { Op } from "sequelize";
 
 // Get all bookings (for manager/admin)
@@ -165,39 +165,6 @@ export const getBookingByRef = async (req, res) => {
   }
 };
 
-// Update booking notes
-export const updateBookingNotes = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { managerNote } = req.body;
-
-    const booking = await TourBooking.findByPk(id);
-
-    if (!booking) {
-      return res.status(404).json({
-        success: false,
-        message: "Booking not found",
-      });
-    }
-
-    await booking.update({
-      managerNote,
-    });
-
-    res.status(200).json({
-      success: true,
-      message: "Booking notes updated",
-      data: booking,
-    });
-  } catch (error) {
-    console.error("Error updating booking notes:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error updating booking notes",
-      error: error.message,
-    });
-  }
-};
 
 // Cancel booking
 export const cancelBooking = async (req, res) => {
@@ -222,8 +189,7 @@ export const cancelBooking = async (req, res) => {
     }
 
     // Calculate refund eligibility (24 hours before tour)
-    const inquiry = await booking.getTourInquiry();
-    const tourDate = new Date(inquiry.startDate);
+    const tourDate = new Date(booking.tourStartDate);
     const currentDate = new Date();
     const hoursDiff = (tourDate - currentDate) / (1000 * 60 * 60);
 
@@ -362,21 +328,16 @@ export const getBookingsByDateRange = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const bookings = await TourBooking.findAndCountAll({
-      include: [
-        {
-          model: TourInquiry,
-          where: {
-            startDate: {
-              [Op.between]: [new Date(startDate), new Date(endDate)],
-            },
-          },
+      where: {
+        tourStartDate: {
+          [Op.between]: [new Date(startDate), new Date(endDate)],
         },
-      ],
+      },
+      include: [TourInquiry, TourPayment],
       offset,
       limit: Number(limit),
       order: [["createdAt", "DESC"]],
     });
-
     res.status(200).json({
       success: true,
       message: "Bookings retrieved for date range",
