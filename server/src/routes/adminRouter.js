@@ -7,6 +7,8 @@ import {
     addAmenitie, getAllAmenities, updateAmenitie, deleteAmenitie
 } from "./../controllers/admin/amenitiesController.js";
 
+import { addRoom } from "../controllers/admin/roomController.js";
+
 const router = express.Router();
 
 console.log("✅ Admin routes loaded");
@@ -24,5 +26,6 @@ router.put('/amenitie/:id', updateAmenitie);
 router.delete('/amenitie/:id', deleteAmenitie);
 
 // Rooms routes
+router.post('/room', addRoom);
 
 export default router;
