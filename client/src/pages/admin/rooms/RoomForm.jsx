@@ -13,11 +13,11 @@ function RoomForm() {
     const [roomType, setRoomType] = useState("");
     const [status, setStatus] = useState("available");
     const [selectedAmenities, setSelectedAmenities] = useState([]);
-    
+
     const [packages, setPackages] = useState([]);
     const [amenities, setAmenities] = useState([]);
 
-    const isEditMode = Boolean(selectedRoom?.roomNo);
+    const isEditMode = Boolean(selectedRoom?.id || selectedRoom?.roomNo || selectedRoom?.roomNumber);
 
     const goBackToRooms = () => {
         navigate("/admin/rooms/roomManagement?tab=room");
@@ -25,10 +25,18 @@ function RoomForm() {
 
     useEffect(() => {
         if (isEditMode) {
-            setRoomNumber(String(selectedRoom.roomNo || ""));
-            setRoomType(selectedRoom.type || "");
-            setStatus(selectedRoom.status || "available");
+            setRoomNumber(String(selectedRoom.roomNo || selectedRoom.roomNumber || ""));
+            setRoomType(String(selectedRoom.packageId || selectedRoom.RoomPackage?.id || selectedRoom.type || ""));
+            setStatus((selectedRoom.status || "available").toLowerCase());
             setSelectedAmenities([]);
+
+            if (selectedRoom.RoomAmenities) {
+                const amenityIds = selectedRoom.RoomAmenities.map(
+                    (ra) => ra.amenityId
+                );
+                setSelectedAmenities(amenityIds);
+            }
+
         } else {
             setRoomNumber("");
             setRoomType("");
@@ -51,24 +59,52 @@ function RoomForm() {
             return;
         }
 
-        try{
-            const res = await axios.post(import.meta.env.VITE_BACKEND_URL + "/admin/rooms", {
-                roomNo: roomNumber,
-                packageId: roomType,
-                status: status,
-                amenities: selectedAmenities,
-            });
-            console.log("API response:", res.data);
-            toast.success("Room saved successfully");
+        try {
+
+            if (isEditMode) {
+                if (!selectedRoom?.id) {
+                    toast.error("Unable to update room: missing room id");
+                    return;
+                }
+
+                console.log("SENDING DATA:", {
+                    roomNo: roomNumber,
+                    packageId: roomType,
+                    status: status,
+                    amenities: selectedAmenities,
+                });
+
+                const res = await axios.put(import.meta.env.VITE_BACKEND_URL + `/admin/rooms/${selectedRoom.id}`, {
+                    roomNo: roomNumber,
+                    packageId: roomType,
+                    status: status,
+                    amenities: selectedAmenities,
+                });
+                console.log("API response:", res.data);
+                toast.success("Room updated successfully");
+                goBackToRooms();
+                return;
+            } else {
+                const res = await axios.post(import.meta.env.VITE_BACKEND_URL + "/admin/rooms", {
+                    roomNo: roomNumber,
+                    packageId: roomType,
+                    status: status,
+                    amenities: selectedAmenities,
+                });
+                console.log("API response:", res.data);
+                toast.success("Room saved successfully");
+            }
+
             goBackToRooms();
-        }catch (error) {
-            toast.error("Failed to save room");
+        } catch (error) {
+            console.error("Failed to save room:", error?.response?.data || error);
+            toast.error(error?.response?.data?.message || "Failed to save room");
         }
     }
 
     useEffect(() => {
         async function fetchPackages() {
-            try{
+            try {
                 const res = await axios.get(import.meta.env.VITE_BACKEND_URL + "/admin/packages");
                 setPackages(res.data.data);
                 console.log("API response:", res.data);
@@ -84,7 +120,7 @@ function RoomForm() {
 
     useEffect(() => {
         async function fetchAmenities() {
-            try{
+            try {
                 const res = await axios.get(import.meta.env.VITE_BACKEND_URL + "/admin/amenities");
                 setAmenities(res.data.data);
                 console.log("API response:", res.data);
@@ -147,8 +183,8 @@ function RoomForm() {
                         >
 
                             <option value="">Select Room Type</option>
-                            {packages.map((pkg) =>(
-                                <option key={pkg.id} value={pkg.id}>{pkg.pname}</option> 
+                            {packages.map((pkg) => (
+                                <option key={pkg.id} value={pkg.id}>{pkg.pname}</option>
                             ))}
                         </select>
                     </div>
@@ -181,11 +217,10 @@ function RoomForm() {
                                     <div
                                         key={amenity.id}
                                         onClick={() => handleAmenityToggle(amenity.id)}
-                                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all ${
-                                            isChecked
-                                                ? "border-blue-500 bg-blue-50 text-blue-700"
-                                                : "border-gray-200 bg-gray-50 hover:border-gray-300"
-                                        }`}
+                                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all ${isChecked
+                                            ? "border-blue-500 bg-blue-50 text-blue-700"
+                                            : "border-gray-200 bg-gray-50 hover:border-gray-300"
+                                            }`}
                                     >
                                         <input
                                             type="checkbox"
