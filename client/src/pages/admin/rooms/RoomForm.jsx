@@ -27,16 +27,21 @@ function RoomForm() {
         if (isEditMode) {
             setRoomNumber(String(selectedRoom.roomNo || selectedRoom.roomNumber || ""));
             setRoomType(String(selectedRoom.packageId || selectedRoom.RoomPackage?.id || selectedRoom.type || ""));
-            setStatus((selectedRoom.status || "available").toLowerCase());
-            setSelectedAmenities([]);
+            const normalizedStatus = (selectedRoom.roomStatus || "available")
+                .toString()
+                .trim()
+                .toLowerCase();
+
+            setStatus(normalizedStatus);
 
             if (selectedRoom.RoomAmenities) {
                 const amenityIds = selectedRoom.RoomAmenities.map(
                     (ra) => ra.amenityId
                 );
                 setSelectedAmenities(amenityIds);
+            } else {
+                setSelectedAmenities([]);
             }
-
         } else {
             setRoomNumber("");
             setRoomType("");
@@ -44,6 +49,16 @@ function RoomForm() {
             setSelectedAmenities([]);
         }
     }, [isEditMode, selectedRoom]);
+
+    const isAllSelected = amenities.length > 0 && selectedAmenities.length === amenities.length;
+    const handleSelectAll = () => {
+        if (isAllSelected) {
+            setSelectedAmenities([]);
+        } else {
+            const allIds = amenities.map(a => a.id);
+            setSelectedAmenities(allIds);
+        }
+    };
 
     const handleAmenityToggle = (id) => {
         setSelectedAmenities((prev) =>
@@ -203,12 +218,29 @@ function RoomForm() {
                     </div>
 
                     <div className="mb-6">
-                        <label className="block text-sm font-semibold mb-3">
-                            Amenities
-                            <span className="ml-2 text-xs text-blue-500 font-normal">
-                                ({selectedAmenities.length} selected)
-                            </span>
-                        </label>
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="block text-sm font-semibold">
+                                Amenities
+                                <span className="ml-2 text-xs text-blue-500 font-normal">
+                                    ({selectedAmenities.length} selected)
+                                </span>
+                            </label>
+
+                            {/* Select All / Unselect All Button */}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (selectedAmenities.length === amenities.length) {
+                                        setSelectedAmenities([]);
+                                    } else {
+                                        setSelectedAmenities(amenities.map(a => a.id));
+                                    }
+                                }}
+                                className="text-sm text-blue-600 hover:underline"
+                            >
+                                {selectedAmenities.length === amenities.length ? "Unselect All" : "Select All"}
+                            </button>
+                        </div>
 
                         <div className="grid grid-cols-2 gap-2">
                             {amenities.map((amenity) => {
