@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, DollarSign, Tag, X, SlidersHorizontal, RotateCcw } from 'lucide-react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import Header from '../../../components/header';
 import Footer from '../../../components/footer';
 
@@ -106,7 +107,14 @@ function TourCard({ tour, onSelect }) {
               <p className="text-2xl font-bold text-blue-600">LKR {Number(tour.price).toFixed(2)}</p>
             )}
           </div>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(tour);
+            }}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+          >
             View
           </button>
         </div>
@@ -259,6 +267,7 @@ function FilterSidebar({
    MAIN TOUR VIEW COMPONENT
    ==================================== */
 export default function TourViewPage() {
+  const navigate = useNavigate();
   const [tours, setTours] = useState([]);
   const [filteredTours, setFilteredTours] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -341,8 +350,7 @@ export default function TourViewPage() {
      HANDLE TOUR SELECT
   ========================== */
   const handleSelectTour = (tour) => {
-    console.log('Selected tour:', tour);
-    // You can navigate to tour details or show modal here
+    navigate('/booking/tour-details', { state: { tour } });
   };
 
   /* =========================
@@ -409,8 +417,21 @@ export default function TourViewPage() {
 
           {/* Main Layout - Cards and Filters */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            
-            {/* Left Side: Tour Cards */}
+            {/* Left Side: Filter Sidebar */}
+            <div className="lg:col-span-1">
+              <FilterSidebar
+                minPrice={minPrice}
+                setMinPrice={setMinPrice}
+                maxPrice={maxPrice}
+                setMaxPrice={setMaxPrice}
+                statusFilter={statusFilter}
+                setStatusFilter={setStatusFilter}
+                onReset={handleResetFilters}
+                maxAvailablePrice={maxAvailablePrice}
+              />
+            </div>
+
+            {/* Right Side: Tour Cards */}
             <div className="lg:col-span-3">
               {filteredTours.length === 0 ? (
                 <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
@@ -440,20 +461,6 @@ export default function TourViewPage() {
                   ))}
                 </div>
               )}
-            </div>
-
-            {/* Right Side: Filter Sidebar */}
-            <div className="lg:col-span-1">
-              <FilterSidebar
-                minPrice={minPrice}
-                setMinPrice={setMinPrice}
-                maxPrice={maxPrice}
-                setMaxPrice={setMaxPrice}
-                statusFilter={statusFilter}
-                setStatusFilter={setStatusFilter}
-                onReset={handleResetFilters}
-                maxAvailablePrice={maxAvailablePrice}
-              />
             </div>
         </div>
         </div>
