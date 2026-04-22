@@ -33,6 +33,11 @@ RoomPackage.init(
             allowNull: false,
             defaultValue: 0,
         },
+        description: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            defaultValue: "Sea-facing room with balcony, breakfast, and sunset lounge access."
+        }
     }, 
     {
         sequelize,

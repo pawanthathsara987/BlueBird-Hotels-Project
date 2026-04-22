@@ -1,12 +1,11 @@
-import sequelize from "../../config/database.js";
 import { Guest, Room, RoomBook, RoomPackage } from "../../models/index.js";
 
 
-// available room check
+// available room list with packages
 const availableRooms = async (req, res) => {
     try {
         const avlRooms = await Room.findAll({
-            where: { rstatus: "available" },
+            where: { roomstatus: "available" },
             include: [
                 {
                     model: RoomPackage,
@@ -37,46 +36,6 @@ const availableRooms = async (req, res) => {
         });
     }
 };
-
-//available package
-const getAllPackages = async (req, res) => {
-    try {
-        const packages = await sequelize.query(`
-            SELECT 
-                p.id,
-                p.pname,
-                p.pprice,
-                p.pimage,
-                p.maxAdults,
-                p.maxKids,
-                COUNT(CASE WHEN r.rstatus = 'available' THEN 1 END) AS availableRooms
-            FROM room_package p
-            LEFT JOIN rooms r ON p.id = r.packageId
-            GROUP BY p.id
-        `, { type: sequelize.QueryTypes.SELECT });
-
-        if (packages.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "No packages found",
-            });
-        }
-
-        return res.status(200).json({
-            success: true,
-            count: packages.length,
-            data: packages,
-        });
-
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: "Something went wrong",
-            error: error.message,
-        });
-    }
-};
-
 
 // add booking
 const createBooking = async (req, res) => {
@@ -347,6 +306,5 @@ export {
     getBookingById,
     deleteBookingById,
     updateBooking,
-    availableRooms,
-    getAllPackages
+    availableRooms
 }

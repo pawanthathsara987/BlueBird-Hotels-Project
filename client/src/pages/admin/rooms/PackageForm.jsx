@@ -13,6 +13,7 @@ function PackageForm() {
     const [pimage, setPimage] = useState(null);
     const [maxAdults, setMaxAdults] = useState(2);
     const [maxKids, setMaxKids] = useState(0);
+    const [description, setDescription] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const fileInputRef = useRef(null);
     const isEditMode = Boolean(selectedPackage?.id);
@@ -28,6 +29,7 @@ function PackageForm() {
             setPprice(selectedPackage.pprice || "");
             setMaxAdults(selectedPackage.maxAdults ?? 2);
             setMaxKids(selectedPackage.maxKids ?? 0);
+            setDescription(selectedPackage.description || "");
             setPimage(null);
             if (fileInputRef.current) fileInputRef.current.value = "";
         } else {
@@ -36,6 +38,7 @@ function PackageForm() {
             setPimage(null);
             setMaxAdults(2);
             setMaxKids(0);
+            setDescription("");
             if (fileInputRef.current) fileInputRef.current.value = "";
         }
     }, [isEditMode, selectedPackage]);
@@ -55,6 +58,7 @@ function PackageForm() {
             formData.append("pprice", pprice);
             formData.append("maxAdults", maxAdults);
             formData.append("maxKids", maxKids);
+            formData.append("description", description.trim());
             if (pimage) formData.append("pimage", pimage);
 
             const endpoint = isEditMode
@@ -73,6 +77,7 @@ function PackageForm() {
             setPimage(null);
             setMaxAdults(2);
             setMaxKids(0);
+            setDescription("")
             if (fileInputRef.current) fileInputRef.current.value = "";
 
         } catch (error) {
@@ -170,6 +175,17 @@ function PackageForm() {
                                 {pimage ? pimage.name : isEditMode ? "Keep current image" : "No file chosen"}
                             </span>
                         </div>
+                    </div>
+
+                    <div className="mb-5">
+                        <label className="block text-sm font-semibold mb-1">Description</label>
+                        <textarea
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            placeholder="Enter description"
+                            disabled={isLoading}
+                            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        />
                     </div>
 
                     <div className="flex gap-4 mb-5">

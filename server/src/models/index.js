@@ -8,6 +8,9 @@ import UserRegisterModel from "./User/UserRegisterModel.js";
 import Tour from "./tour_package/tourModel.js";
 import TourItem from "./tour_package/tourItemsModel.js";
 import RoomAmenities from "./room_package/roomAmenities.js";
+import TourInquiry from "./tour_package/TourInquiry.js";
+import TourBooking from "./tour_package/TourBooking.js";
+import TourPayment from "./tour_package/TourPayment.js";
 
 
 export function initModels() {
@@ -82,10 +85,38 @@ export function initModels() {
         onUpdate: "CASCADE",
     });
 
+    // Tour -> TourInquiry (One-to-Many)
+    Tour.hasMany(TourInquiry, {
+        foreignKey: "tourId",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+    });
+    TourInquiry.belongsTo(Tour, {
+        foreignKey: "tourId",
+    });
 
+    // TourInquiry -> TourBooking (One-to-One)
+    TourInquiry.hasOne(TourBooking, {
+        foreignKey: "inquiryId",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+    });
+    TourBooking.belongsTo(TourInquiry, {
+        foreignKey: "inquiryId",
+    });
 
-    return { Guest, RoomBook, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem };
+    // TourBooking -> TourPayment (One-to-Many)
+    TourBooking.hasMany(TourPayment, {
+        foreignKey: "bookingId",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+    });
+    TourPayment.belongsTo(TourBooking, {
+        foreignKey: "bookingId",
+    });
+
+    return { Guest, RoomBook, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourBooking, TourPayment };
 }
-export { Guest, RoomBook, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem };
+export { Guest, RoomBook, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourBooking, TourPayment };
 
 
