@@ -76,6 +76,7 @@ const RoomView = () => {
 
     return (
         <div className="mt-10 mx-5 rounded-lg">
+            
             <Link
                 to="/admin/rooms/room/add"
                 className="w-fit m-2 ml-auto flex items-center justify-between p-2 
@@ -88,7 +89,7 @@ const RoomView = () => {
             <table className="min-w-full bg-white shadow-md rounded-lg">
                 <thead className="bg-gray-200">
                     <tr>
-                        <th className="px-4 py-2">Room Name</th>
+                        <th className="px-4 py-2">Room No</th>
                         <th className="px-4 py-2">Type</th>
                         <th className="px-4 py-2">Status</th>
                         <th className="px-4 py-2">Actions</th>
