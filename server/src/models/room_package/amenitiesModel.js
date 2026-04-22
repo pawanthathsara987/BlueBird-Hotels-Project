@@ -16,10 +16,6 @@ Amenities.init(
             allowNull: false,
         },
 
-        icon: {
-            type: DataTypes.STRING(10),
-            allowNull: true,
-        },
     },
     {
         sequelize,
