@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Users, MapPin, DollarSign, Check, AlertCircle, Heart, Share2, Loader } from 'lucide-react';
 import axios from 'axios';
+import { useLocation } from 'react-router-dom';
 import Header from '../../../components/header';
 import Footer from '../../../components/footer';
 
 export default function TourDetailsPage() {
+  const location = useLocation();
+  const selectedTour = location.state?.tour || null;
   const [tour, setTour] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,8 +30,15 @@ export default function TourDetailsPage() {
 
   const [errors, setErrors] = useState({});
 
-  // Fetch tour details (using first tour as example)
+  // Prefer selected tour from navigation state, then fallback to API.
   useEffect(() => {
+    if (selectedTour) {
+      setTour(selectedTour);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     const fetchTour = async () => {
       try {
         setLoading(true);
@@ -49,7 +59,7 @@ export default function TourDetailsPage() {
     };
 
     fetchTour();
-  }, [backendBaseUrl]);
+  }, [backendBaseUrl, selectedTour]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
