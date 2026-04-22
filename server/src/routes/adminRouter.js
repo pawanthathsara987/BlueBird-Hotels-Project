@@ -9,6 +9,8 @@ import {
 } from "./../controllers/admin/amenitiesController.js";
 import { packagesWithAvailableRoomCount } from './../controllers/admin/packageController.js';
 
+import { addRoom, getAllRooms, updateRoom, deleteRoom } from "../controllers/admin/roomController.js";
+
 const router = express.Router();
 
 console.log("✅ Admin routes loaded");
@@ -30,5 +32,9 @@ router.put('/amenitie/:id', updateAmenitie);
 router.delete('/amenitie/:id', deleteAmenitie);
 
 // Rooms routes
+router.post('/rooms', addRoom);
+router.get('/rooms', getAllRooms);
+router.put('/rooms/:id', updateRoom);
+router.delete('/rooms/:id', deleteRoom);
 
 export default router;

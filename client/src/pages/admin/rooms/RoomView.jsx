@@ -1,42 +1,78 @@
+import axios from "axios";
 import { Plus } from "lucide-react";
+import { useEffect, useState } from "react";
 import { RiDeleteBinLine, RiEditLine } from "react-icons/ri";
+import toast from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
+import DeleteRoomModal from "../../../components/DeleteRoomModal";
 
 const RoomView = () => {
+
+    const [rooms, setRooms] = useState([]);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [selectedRoom, setSelectedRoom] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const getRoomId = (room) => room?.id || room?.roomId;
+
+    const getStatusValue = (room) => {
+        const rawStatus = room?.status ?? room?.roomStatus ?? room?.state;
+        return String(rawStatus || "unknown").toLowerCase();
+    };
+
+
+    useEffect(() => {
+
+        async function fetchRooms() {
+            try {
+                const res = await axios.get(import.meta.env.VITE_BACKEND_URL + "/admin/rooms");
+                setRooms(res.data.data);
+            } catch (err) {
+                console.error("Error fetching rooms:", err);
+            }
+        }
+        fetchRooms();
+
+    }, []);
+
     const navigate = useNavigate();
 
-    const Rooms = [
-        {
-            roomNo: 101,
-            type: "deluxe double",
-            status: "maintenance",
-        },
-        {
-            roomNo: 102,
-            type: "deluxe double",
-            status: "available",
-        },
-        {
-            roomNo: 103,
-            type: "deluxe double bed with MdBalcony",
-            status: "maintenance",
-        },
-        {
-            roomNo: 104,
-            type: "family",
-            status: "available",
-        },
-        {
-            roomNo: 105,
-            type: "family",
-            status: "maintenance",
-        },
-        {
-            roomNo: 106,
-            type: "deluxe double bed with MdBalcony",
-            status: "available",
-        },
-    ];
+    const openDeleteModal = (room) => {
+        setSelectedRoom(room);
+        setIsDeleteModalOpen(true);
+    };
+
+    const closeDeleteModal = () => {
+        if (isDeleting) {
+            return;
+        }
+
+        setIsDeleteModalOpen(false);
+        setSelectedRoom(null);
+    };
+
+    const handleDeleteRoom = async () => {
+        const roomId = getRoomId(selectedRoom);
+
+        if (!roomId) {
+            toast.error("Unable to delete room: missing room id");
+            return;
+        }
+
+        try {
+            setIsDeleting(true);
+            await axios.delete(import.meta.env.VITE_BACKEND_URL + `/admin/rooms/${roomId}`);
+
+            setRooms((prevRooms) => prevRooms.filter((room) => getRoomId(room) !== roomId));
+            toast.success("Room deleted successfully");
+            closeDeleteModal();
+        } catch (error) {
+            console.error("Failed to delete room:", error?.response?.data || error);
+            toast.error(error?.response?.data?.message || "Failed to delete room");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     return (
         <div className="mt-10 mx-5 rounded-lg">
@@ -59,31 +95,52 @@ const RoomView = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {Rooms.map((room) => (
-                        <tr key={room.roomNo} className="text-center">
-                            <td className="px-4 py-2">{room.roomNo}</td>
-                            <td className="px-4 py-2">{room.type}</td>
+                    {rooms.map((room) => (
+                        <tr key={room.id} className="text-center border-t">
+                            
+                            <td className="px-4 py-2">{room.roomNumber}</td>
+
                             <td className="px-4 py-2">
-                                <span className={`${
-                                    room.status === "maintenance" ? "text-red-500" : "text-green-500"
-                                }`}>
-                                    {room.status}
+                                {room.RoomPackage?.pname || "N/A"}
+                            </td>
+
+                            <td className="px-4 py-2">
+                                <span className={`px-2 py-1 rounded text-white text-xs ${getStatusValue(room) === "available"
+                                        ? "bg-green-500"
+                                        : getStatusValue(room) === "occupied"
+                                            ? "bg-red-500"
+                                            : "bg-yellow-500"
+                                    }`}>
+                                    {getStatusValue(room)}
                                 </span>
                             </td>
-                            <td className="px-4 py-2 flex justify-center items-center space-x-5">
+
+                            <td className="px-4 py-2 flex justify-center gap-3">
                                 <button
                                     onClick={() => navigate("/admin/rooms/room/edit", { state: { selectedRoom: room } })}
-                                    className="text-blue-500 hover:text-blue-700"
-                                    title="Edit room"
+                                    className="text-blue-500"
                                 >
-                                    <RiEditLine />
+                                    <RiEditLine size={18} />
                                 </button>
-                                <RiDeleteBinLine className="text-red-500 hover:text-red-700"/>
+
+                                <button
+                                    onClick={() => openDeleteModal(room)}
+                                    className="text-red-500">
+                                    <RiDeleteBinLine size={18} />
+                                </button>
                             </td>
                         </tr>
                     ))}
                 </tbody>
             </table>
+
+            <DeleteRoomModal
+                isOpen={isDeleteModalOpen}
+                room={selectedRoom}
+                isDeleting={isDeleting}
+                onCancel={closeDeleteModal}
+                onConfirm={handleDeleteRoom}
+            />
         </div>
     );
 }
