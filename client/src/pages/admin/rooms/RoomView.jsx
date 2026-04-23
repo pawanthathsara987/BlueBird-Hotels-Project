@@ -5,6 +5,7 @@ import { RiDeleteBinLine, RiEditLine } from "react-icons/ri";
 import toast from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
 import DeleteRoomModal from "../../../components/DeleteRoomModal";
+import Loader from "../../../components/Loader";
 
 const RoomView = () => {
 
@@ -14,33 +15,24 @@ const RoomView = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
+    const [loading, setLoading] = useState(false);
 
     const navigate = useNavigate();
 
+    // Helper functions to handle different room data structures
     const getRoomId = (room) => room?.id || room?.roomId;
 
+    // Function to extract status value from different possible fields
     const getStatusValue = (room) => {
         const rawStatus = room?.status ?? room?.roomStatus ?? room?.state;
         return String(rawStatus || "unknown").toLowerCase();
     };
 
 
-    useEffect(() => {
-
-        async function fetchRooms() {
-            try {
-                const res = await axios.get(import.meta.env.VITE_BACKEND_URL + "/admin/rooms");
-                setRooms(res.data.data);
-            } catch (err) {
-                console.error("Error fetching rooms:", err);
-            }
-        }
-        fetchRooms();
-
-    }, []);
-
+    // Fetch rooms from the backend, with search term
     useEffect(() => {
         async function fetchRooms() {
+            setLoading(true);
             try {
                 let url = import.meta.env.VITE_BACKEND_URL + "/admin/rooms";
 
@@ -49,16 +41,19 @@ const RoomView = () => {
                 }
 
                 const res = await axios.get(url);
-                console.log("Fetched rooms:", res.data.data);
                 setRooms(res.data.data);
 
             } catch (err) {
                 console.error("Error fetching rooms:", err);
+            } finally {
+                setLoading(false);
             }
         }
         fetchRooms();
     }, [searchTerm]);
 
+
+    // Memoized filtered rooms based on status filter
     const filteredRooms = useMemo(() => {
         return rooms.filter((room) => {
             const statusValue = getStatusValue(room);
@@ -68,13 +63,17 @@ const RoomView = () => {
             }
             return statusValue === statusFilter;
         })
-    },[rooms, statusFilter]);
+    }, [rooms, statusFilter]);
 
+
+    // Handlers for delete action    
     const openDeleteModal = (room) => {
         setSelectedRoom(room);
         setIsDeleteModalOpen(true);
     };
 
+
+    // Handler to close delete modal, preventing closure during deletion process    
     const closeDeleteModal = () => {
         if (isDeleting) {
             return;
@@ -84,6 +83,8 @@ const RoomView = () => {
         setSelectedRoom(null);
     };
 
+
+    // Handler for confirming deletion of a room, with error handling
     const handleDeleteRoom = async () => {
         const roomId = getRoomId(selectedRoom);
 
@@ -140,56 +141,58 @@ const RoomView = () => {
                 <label>Add Room</label>
             </Link>
 
-            {/* Room List */}
-            <table className="min-w-full bg-white shadow-md rounded-lg">
-                <thead className="bg-gray-200">
-                    <tr>
-                        <th className="px-4 py-2">Room No</th>
-                        <th className="px-4 py-2">Type</th>
-                        <th className="px-4 py-2">Status</th>
-                        <th className="px-4 py-2">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {filteredRooms.map((room) => (
-                        <tr key={room.id} className="text-center border-t">
-
-                            <td className="px-4 py-2">{room.roomNumber}</td>
-
-                            <td className="px-4 py-2">
-                                {room.RoomPackage?.pname || "N/A"}
-                            </td>
-
-                            <td className="px-4 py-2">
-                                <span className={`px-2 py-1 rounded text-white text-xs ${getStatusValue(room) === "available"
-                                    ? "bg-green-500"
-                                    : getStatusValue(room) === "occupied"
-                                        ? "bg-red-500"
-                                        : "bg-yellow-500"
-                                    }`}>
-                                    {getStatusValue(room)}
-                                </span>
-                            </td>
-
-                            <td className="px-4 py-2 flex justify-center gap-3">
-                                <button
-                                    onClick={() => navigate("/admin/rooms/room/edit", { state: { selectedRoom: room } })}
-                                    className="text-blue-500"
-                                >
-                                    <RiEditLine size={18} />
-                                </button>
-
-                                <button
-                                    onClick={() => openDeleteModal(room)}
-                                    className="text-red-500">
-                                    <RiDeleteBinLine size={18} />
-                                </button>
-                            </td>
+            {loading ? (
+                <Loader />
+            ) : (
+                <table className="min-w-full bg-white shadow-md rounded-lg">
+                    <thead className="bg-gray-200">
+                        <tr>
+                            <th className="px-4 py-2">Room No</th>
+                            <th className="px-4 py-2">Type</th>
+                            <th className="px-4 py-2">Status</th>
+                            <th className="px-4 py-2">Actions</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {filteredRooms.map((room) => (
+                            <tr key={room.id} className="text-center border-t">
 
+                                <td className="px-4 py-2">{room.roomNumber}</td>
+
+                                <td className="px-4 py-2">
+                                    {room.RoomPackage?.pname || "N/A"}
+                                </td>
+
+                                <td className="px-4 py-2">
+                                    <span className={`px-2 py-1 rounded text-white text-xs ${getStatusValue(room) === "available"
+                                        ? "bg-green-500"
+                                        : getStatusValue(room) === "occupied"
+                                            ? "bg-red-500"
+                                            : "bg-yellow-500"
+                                        }`}>
+                                        {getStatusValue(room)}
+                                    </span>
+                                </td>
+
+                                <td className="px-4 py-2 flex justify-center gap-3">
+                                    <button
+                                        onClick={() => navigate("/admin/rooms/room/edit", { state: { selectedRoom: room } })}
+                                        className="text-blue-500"
+                                    >
+                                        <RiEditLine size={18} />
+                                    </button>
+
+                                    <button
+                                        onClick={() => openDeleteModal(room)}
+                                        className="text-red-500">
+                                        <RiDeleteBinLine size={18} />
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            )}
             <DeleteRoomModal
                 isOpen={isDeleteModalOpen}
                 room={selectedRoom}
