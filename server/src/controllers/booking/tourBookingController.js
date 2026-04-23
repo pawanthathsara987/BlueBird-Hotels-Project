@@ -1,6 +1,68 @@
 import { TourBooking, TourPayment, TourInquiry, Tour , TourRefund } from "../../models/index.js";
 import { Op } from "sequelize";
 
+const REFUND_POLICY_DAYS = 4;
+
+const calculateRefundEligibility = (tourStartDate, refundablePaidAmount) => {
+  const tourDate = new Date(tourStartDate);
+  const currentDate = new Date();
+  const hoursDiff = (tourDate - currentDate) / (1000 * 60 * 60);
+  const daysDiff = hoursDiff / 24;
+  const dateEligible = daysDiff >= REFUND_POLICY_DAYS;
+  const hasRefundablePayment = Number(refundablePaidAmount || 0) > 0;
+  const isEligible = dateEligible && hasRefundablePayment;
+
+  return {
+    isEligible,
+    dateEligible,
+    hasRefundablePayment,
+    refundStatus: isEligible ? "approved" : "not_eligible",
+    refundAmount: isEligible ? Number(refundablePaidAmount || 0) : 0,
+    hoursBeforeTour: Math.max(0, Math.floor(hoursDiff)),
+    daysBeforeTour: Math.max(0, Math.floor(daysDiff)),
+  };
+};
+
+const persistCancellation = async (booking, { reason = null } = {}) => {
+  const successfulDepositPayments = await TourPayment.findAll({
+    where: {
+      bookingId: booking.id,
+      paymentType: "deposit",
+      paymentStatus: "success",
+    },
+    attributes: ["amount"],
+    raw: true,
+  });
+
+  const refundablePaidAmount = successfulDepositPayments.reduce(
+    (sum, payment) => sum + Number(payment.amount || 0),
+    0
+  );
+
+  const eligibility = calculateRefundEligibility(booking.tourStartDate, refundablePaidAmount);
+
+  await booking.update({
+    status: "cancelled",
+    refundStatus: eligibility.refundStatus,
+    refundAmount: eligibility.refundAmount,
+    cancelledAt: new Date(),
+    paymentToken: null,
+    trackingToken: null,
+  });
+
+  await TourRefund.create({
+    bookingId: booking.id,
+    isEligible: eligibility.isEligible,
+    daysBeforeTour: eligibility.daysBeforeTour,
+    refundAmount: eligibility.refundAmount,
+    status: eligibility.isEligible ? "pending" : "not_eligible",
+    clientReason: reason || null,
+    requestedAt: new Date(),
+  });
+
+  return eligibility;
+};
+
 // Get all bookings (for manager/admin)
 export const getAllBookings = async (req, res) => {
   try {
@@ -170,7 +232,7 @@ export const getBookingByRef = async (req, res) => {
 export const cancelBooking = async (req, res) => {
   try {
     const { id } = req.params;
-    const { reason, refundAmount } = req.body;
+    const { reason } = req.body;
 
     const booking = await TourBooking.findByPk(id);
 
@@ -188,37 +250,177 @@ export const cancelBooking = async (req, res) => {
       });
     }
 
-    // Calculate refund eligibility (24 hours before tour)
-    const tourDate = new Date(booking.tourStartDate);
-    const currentDate = new Date();
-    const hoursDiff = (tourDate - currentDate) / (1000 * 60 * 60);
-
-    let refundStatus = "approved";
-    let finalRefund = booking.depositAmount;
-
-    if (hoursDiff < 24) {
-      refundStatus = "not_eligible";
-      finalRefund = 0;
+    if (booking.status === "completed") {
+      return res.status(400).json({
+        success: false,
+        message: "Completed bookings cannot be cancelled",
+      });
     }
 
-    await booking.update({
-      status: "cancelled",
-      refundStatus,
-      refundAmount: finalRefund || refundAmount,
-      cancelledAt: new Date(),
-    });
+    const eligibility = await persistCancellation(booking, { reason });
 
     res.status(200).json({
       success: true,
       message: "Booking cancelled successfully",
       data: {
         booking,
-        refundEligible: refundStatus === "approved",
-        refundAmount: finalRefund,
+        refundEligible: eligibility.isEligible,
+        dateEligible: eligibility.dateEligible,
+        refundablePaymentFound: eligibility.hasRefundablePayment,
+        refundAmount: eligibility.refundAmount,
+        refundPolicyDays: REFUND_POLICY_DAYS,
+        hoursBeforeTour: eligibility.hoursBeforeTour,
       },
     });
   } catch (error) {
     console.error("Error cancelling booking:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error cancelling booking",
+      error: error.message,
+    });
+  }
+};
+
+// Validate guest cancellation token
+export const validateCancelToken = async (req, res) => {
+  try {
+    const { bookingId, token } = req.query;
+
+    if (!bookingId || !token) {
+      return res.status(400).json({
+        success: false,
+        message: "bookingId and token are required",
+      });
+    }
+
+    const booking = await TourBooking.findByPk(bookingId, {
+      include: [{
+        model: TourInquiry,
+        include: [{ model: Tour, attributes: ["id", "packageName"] }],
+      }],
+    });
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+
+    if (booking.status === "cancelled") {
+      return res.status(400).json({ success: false, message: "Booking is already cancelled" });
+    }
+
+    if (booking.status === "completed") {
+      return res.status(400).json({ success: false, message: "Completed bookings cannot be cancelled" });
+    }
+
+    if (!booking.paymentToken || booking.paymentToken !== token) {
+      return res.status(401).json({ success: false, message: "Invalid cancellation token" });
+    }
+
+    if (!booking.tokenExpiresAt || new Date() > new Date(booking.tokenExpiresAt)) {
+      return res.status(401).json({ success: false, message: "Cancellation link has expired" });
+    }
+
+    const successfulDepositPayments = await TourPayment.findAll({
+      where: {
+        bookingId: booking.id,
+        paymentType: "deposit",
+        paymentStatus: "success",
+      },
+      attributes: ["amount"],
+      raw: true,
+    });
+
+    const refundablePaidAmount = successfulDepositPayments.reduce(
+      (sum, payment) => sum + Number(payment.amount || 0),
+      0
+    );
+
+    const eligibility = calculateRefundEligibility(booking.tourStartDate, refundablePaidAmount);
+
+    res.status(200).json({
+      success: true,
+      message: "Token is valid",
+      data: {
+        bookingId: booking.id,
+        bookingRef: booking.bookingRef,
+        guestName: booking.TourInquiry?.fullName || "Guest",
+        tourName: booking.TourInquiry?.Tour?.packageName || "Tour",
+        startDate: booking.tourStartDate,
+        refundEligible: eligibility.isEligible,
+        dateEligible: eligibility.dateEligible,
+        refundablePaymentFound: eligibility.hasRefundablePayment,
+        refundAmount: eligibility.refundAmount,
+        refundPolicyDays: REFUND_POLICY_DAYS,
+        hoursBeforeTour: eligibility.hoursBeforeTour,
+      },
+    });
+  } catch (error) {
+    console.error("Error validating cancellation token:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error validating cancellation token",
+      error: error.message,
+    });
+  }
+};
+
+// Guest cancellation by token
+export const cancelBookingByToken = async (req, res) => {
+  try {
+    const { bookingId, token, reason } = req.body;
+
+    if (!bookingId || !token) {
+      return res.status(400).json({
+        success: false,
+        message: "bookingId and token are required",
+      });
+    }
+
+    const booking = await TourBooking.findByPk(bookingId, {
+      include: [{
+        model: TourInquiry,
+        include: [{ model: Tour, attributes: ["id", "packageName"] }],
+      }],
+    });
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+
+    if (booking.status === "cancelled") {
+      return res.status(400).json({ success: false, message: "Booking is already cancelled" });
+    }
+
+    if (booking.status === "completed") {
+      return res.status(400).json({ success: false, message: "Completed bookings cannot be cancelled" });
+    }
+
+    if (!booking.paymentToken || booking.paymentToken !== token) {
+      return res.status(401).json({ success: false, message: "Invalid cancellation token" });
+    }
+
+    if (!booking.tokenExpiresAt || new Date() > new Date(booking.tokenExpiresAt)) {
+      return res.status(401).json({ success: false, message: "Cancellation link has expired" });
+    }
+
+    const eligibility = await persistCancellation(booking, { reason });
+
+    res.status(200).json({
+      success: true,
+      message: "Booking cancelled successfully",
+      data: {
+        bookingRef: booking.bookingRef,
+        refundEligible: eligibility.isEligible,
+        dateEligible: eligibility.dateEligible,
+        refundablePaymentFound: eligibility.hasRefundablePayment,
+        refundAmount: eligibility.refundAmount,
+        refundPolicyDays: REFUND_POLICY_DAYS,
+        hoursBeforeTour: eligibility.hoursBeforeTour,
+      },
+    });
+  } catch (error) {
+    console.error("Error cancelling booking by token:", error);
     res.status(500).json({
       success: false,
       message: "Error cancelling booking",

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AlertCircle, Loader, ChevronDown, DollarSign, CheckCircle, XCircle, TrendingUp, Clock } from 'lucide-react';
 
 export default function TourPaymentTracking() {
@@ -11,12 +11,9 @@ export default function TourPaymentTracking() {
 
   const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3002/api').replace(/\/$/, '');
 
-  useEffect(() => {
-    fetchPayments();
-    fetchStats();
-  }, [filter]);
+  const formatLkr = (value) => `LKR ${Number(value || 0).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const fetchPayments = async () => {
+  const fetchPayments = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`${backendBaseUrl}/tour-payment`);
@@ -38,9 +35,9 @@ export default function TourPaymentTracking() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [backendBaseUrl, filter]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const response = await fetch(`${backendBaseUrl}/tour-payment/stats`);
       const data = await response.json();
@@ -50,7 +47,12 @@ export default function TourPaymentTracking() {
     } catch (err) {
       console.error('Error fetching stats:', err);
     }
-  };
+  }, [backendBaseUrl]);
+
+  useEffect(() => {
+    fetchPayments();
+    fetchStats();
+  }, [fetchPayments, fetchStats]);
 
   const getStatusBadge = (status) => {
     const badges = {
@@ -72,6 +74,10 @@ export default function TourPaymentTracking() {
 
   const getPaymentTypeLabel = (type) => {
     return type === 'deposit' ? '50% Advance' : 'Final Payment (50%)';
+  };
+
+  const getBookingRef = (payment) => {
+    return payment.TourBooking?.bookingRef || 'N/A';
   };
 
   if (loading) {
@@ -105,7 +111,7 @@ export default function TourPaymentTracking() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-gray-600 text-sm">Total Payments</p>
-                    <p className="text-3xl font-bold text-gray-900">{stats.total || 0}</p>
+                    <p className="text-3xl font-bold text-gray-900">{stats.totalTransactions ?? stats.total ?? 0}</p>
                   </div>
                   <DollarSign className="w-8 h-8 text-blue-600" />
                 </div>
@@ -123,7 +129,7 @@ export default function TourPaymentTracking() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-gray-600 text-sm">Successful</p>
-                    <p className="text-3xl font-bold text-green-600">{stats.success || 0}</p>
+                    <p className="text-3xl font-bold text-green-600">{stats.successful ?? stats.success ?? 0}</p>
                   </div>
                   <CheckCircle className="w-8 h-8 text-green-600" />
                 </div>
@@ -187,7 +193,8 @@ export default function TourPaymentTracking() {
                       </div>
                       <div>
                         <p className="font-bold text-gray-900">{getPaymentTypeLabel(payment.paymentType)}</p>
-                        <p className="text-sm text-gray-600">Amount: ${Number(payment.amount)?.toFixed(2)}</p>
+                        <p className="text-sm text-gray-700">Booking Ref: {getBookingRef(payment)}</p>
+                        <p className="text-sm text-gray-600">Amount: {formatLkr(payment.amount)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -220,8 +227,16 @@ export default function TourPaymentTracking() {
                               <span className="font-semibold">{getPaymentTypeLabel(payment.paymentType)}</span>
                             </div>
                             <div className="flex justify-between">
+                              <span className="text-gray-600">Booking Ref:</span>
+                              <span className="font-semibold">{getBookingRef(payment)}</span>
+                            </div>
+                            <div className="flex justify-between">
                               <span className="text-gray-600">Amount:</span>
-                              <span className="font-bold text-blue-600">${Number(payment.amount)?.toFixed(2)}</span>
+                              <span className="font-bold text-blue-600">{formatLkr(payment.amount)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Method:</span>
+                              <span className="font-semibold capitalize">{payment.paymentMethod || 'N/A'}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-600">Status:</span>

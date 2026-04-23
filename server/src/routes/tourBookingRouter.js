@@ -4,6 +4,8 @@ import {
   getBookingById,
   getBookingByRef,
   cancelBooking,
+  validateCancelToken,
+  cancelBookingByToken,
   getBookingStats,
   getBookingsByStatus,
   getBookingsByDateRange,
@@ -25,6 +27,12 @@ router.get('/date-range', getBookingsByDateRange);
 
 // Get booking by reference
 router.get('/ref/:bookingRef', getBookingByRef);
+
+// Validate cancellation link token (guest)
+router.get('/cancel/validate', validateCancelToken);
+
+// Cancel booking by secure token (guest)
+router.put('/cancel/by-token', cancelBookingByToken);
 
 // Get booking by ID
 router.get('/:id', getBookingById);
