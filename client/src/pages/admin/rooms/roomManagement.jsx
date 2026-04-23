@@ -5,11 +5,6 @@ import PackageView from "./PackageView";
 import { useState } from "react";
 
 export default function RoomManagement() {
-    const RoomTypes = [
-        { id: 1, name: "deluxe double" },
-        { id: 2, name: "deluxe double bed with MdBalcony" },
-        { id: 3, name: "family" },
-    ];
 
     const lastOpenTab = localStorage.getItem('roomSelectBtn') || 'room';
     const [selectBtn, setSelectBtn] = useState(lastOpenTab);

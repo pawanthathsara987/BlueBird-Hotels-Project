@@ -4,38 +4,55 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
 import DeleteStaffModal from "../../../components/DeleteStaffModal";
+import Loader from "../../../components/Loader";
 
 export default function StaffManagement() {
 
     const [staffMembers, setStaffMembers] = useState([]);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [selectedMember, setSelectedMember] = useState(null);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
-    useEffect(() => {
-        loadStaffMembers();
-    }, []);
 
-    const loadStaffMembers = () => {
-        axios.get(import.meta.env.VITE_BACKEND_URL + "/users/getAll")
-            .then((response) => {
-                setStaffMembers(response.data);
-            })
-            .catch((error) => {
-                console.error("Error fetching staff members:", error);
-            });
+    // Function to load staff members, with search term
+    const loadStaffMembers = async () => {
+        try {
+            setLoading(true);
+            let url = import.meta.env.VITE_BACKEND_URL + "/users/getAll";
+
+            if (searchTerm.trim() !== "") {
+                url = import.meta.env.VITE_BACKEND_URL + `/users/search/${searchTerm}`;
+            }
+
+            const res = await axios.get(url);
+            setStaffMembers(res.data);
+        } catch (err) {
+            console.error("Error fetching staff members:", err);
+        } finally {
+            setLoading(false);
+        }
     };
 
+    // Load staff members on component mount and whenever search term changes    
+    useEffect(() => {
+        loadStaffMembers();
+    }, [searchTerm]);
+
+    // Handlers for delete action
     const onDeleteClick = (member) => {
         setSelectedMember(member);
         setShowDeleteModal(true);
     };
 
+    // Handlers for delete modal actions    
     const onCancelDelete = () => {
         setShowDeleteModal(false);
         setSelectedMember(null);
     };
 
+    // Handler for confirming deletion of a staff member
     const onConfirmDelete = async () => {
         try {
             await axios.delete(import.meta.env.VITE_BACKEND_URL + "/users/delete/" + selectedMember.userId);
@@ -61,64 +78,57 @@ export default function StaffManagement() {
             </div>
             <div className="w-5xl flex flex-row mx-auto justify-between items-center p-5 shadow-2xl rounded-lg">
                 <h3>Staff Members</h3>
-                <input type="text" placeholder="Search staff..." className="w-[250px] border p-2 rounded-lg mb-4"
-                    onChange={async (e) => {
-
-                        const value = e.target.value;
-
-                        try {
-
-                            const response = await axios.get(
-                                `${import.meta.env.VITE_BACKEND_URL}/users/search/${value}`
-                            );
-
-                            setStaffMembers(response.data);
-
-                        } catch (error) {
-                            console.error("Error fetching staff members:", error);
-                        }
-                    }}
+                <input type="search" placeholder="Search staff..." className="w-[250px] border p-2 rounded-lg mb-4"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
             <div className="w-5xl mx-auto">
-                <table className="w-full border-collapse">
-                    <thead className="bg-gray-100 border-b">
-                        <tr>
-                            <th className="text-left p-4 font-semibold text-gray-400 text-sm">STAFF MEMBER</th>
-                            <th className="text-left p-4 font-semibold text-gray-400 text-sm">USERNAME</th>
-                            <th className="text-left p-4 font-semibold text-gray-400 text-sm">EMAIL</th>
-                            <th className="text-left p-4 font-semibold text-gray-400 text-sm">ROLE</th>
-                            <th className="text-left p-4 font-semibold text-gray-400 text-sm">PHONE</th>
-                            <th className="text-left p-4 font-semibold text-gray-400 text-sm">ACTIONS</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {staffMembers.map((member, index) => (
-                            <tr key={index}>
-                                <td className="p-4 border-b">{member.name}</td>
-                                <td className="p-4 border-b">{member.userName}</td>
-                                <td className="p-4 border-b">{member.email}</td>
-                                <td className="p-4 border-b">{member.role}</td>
-                                <td className="p-4 border-b">{member.phoneNumber}</td>
-                                <td className="p-4 border-b">
-                                    <div className="flex flex-row gap-2">
-                                        <button
-                                            onClick={() => {
-                                                navigate("/admin/users/updateStaffMember", { state: { member } });
-                                            }} className="bg-blue-500 text-white p-2 rounded-lg flex items-center gap-1">
-                                            <FaEdit /> Edit
-                                        </button>
-                                        <button
-                                            onClick={() => onDeleteClick(member)}
-                                            className="bg-red-500 text-white p-2 rounded-lg flex items-center gap-1">
-                                            <FaTrash /> Delete
-                                        </button>
-                                    </div>
-                                </td>
+                {loading ? (
+                    <Loader />
+                ) : (
+                    <table className="w-full border-collapse">
+                        <thead className="bg-gray-100 border-b">
+                            <tr>
+                                <th className="text-left p-4 font-semibold text-gray-400 text-sm">STAFF MEMBER</th>
+                                <th className="text-left p-4 font-semibold text-gray-400 text-sm">USERNAME</th>
+                                <th className="text-left p-4 font-semibold text-gray-400 text-sm">EMAIL</th>
+                                <th className="text-left p-4 font-semibold text-gray-400 text-sm">ROLE</th>
+                                <th className="text-left p-4 font-semibold text-gray-400 text-sm">PHONE</th>
+                                <th className="text-left p-4 font-semibold text-gray-400 text-sm">ACTIONS</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {staffMembers.map((member, index) => (
+                                <tr key={index}>
+                                    <td className="p-4 border-b">{member.name}</td>
+                                    <td className="p-4 border-b">{member.userName}</td>
+                                    <td className="p-4 border-b">{member.email}</td>
+                                    <td className="p-4 border-b">{member.role}</td>
+                                    <td className="p-4 border-b">{member.phoneNumber}</td>
+                                    <td className="p-4 border-b">
+                                        <div className="flex flex-row gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    navigate("/admin/users/updateStaffMember", { state: { member } });
+                                                }} className="bg-blue-500 text-white p-2 rounded-lg flex items-center gap-1">
+                                                <FaEdit /> Edit
+                                            </button>
+                                            <button
+                                                onClick={() => onDeleteClick(member)}
+                                                className="bg-red-500 text-white p-2 rounded-lg flex items-center gap-1">
+                                                <FaTrash /> Delete
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )
+
+                }
+
             </div>
 
             <DeleteStaffModal
