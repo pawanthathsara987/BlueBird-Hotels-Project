@@ -12,6 +12,7 @@ import {
     getPackageImagesByPackageId,
     updatePackageImage,
     deletePackageImage,
+    getAllPackageimages,
 } from '../controllers/admin/packageImageController.js';
 
 import { addRoom, getAllRooms, updateRoom, deleteRoom, searchRooms } from "../controllers/admin/roomController.js";
@@ -32,6 +33,7 @@ router.post("/packageimage", upload.array("pimage"), addImages);
 router.get("/packageimage/:packageId", getPackageImagesByPackageId);
 router.put("/packageimage/:id", upload.single("pimage"), updatePackageImage);
 router.delete("/packageimage/:id", deletePackageImage);
+router.get("/packageimage", getAllPackageimages);
 
 // Amenities routes
 router.post('/amenitie', addAmenitie);
