@@ -6,6 +6,7 @@ import { useState } from "react";
 export default function TourManagement() {
     const lastOpenTab = localStorage.getItem('tourSelectBtn') || 'tours';
     const [selectBtn, setSelectBtn] = useState(lastOpenTab);
+    const [searchQuery, setSearchQuery] = useState("");
     
     const saveSelectBtn = (value) => {
         localStorage.setItem('tourSelectBtn', value);
@@ -51,6 +52,8 @@ export default function TourManagement() {
                         <input
                             type="search"
                             placeholder={selectBtn === 'tours' ? "Search tours..." : "Search items..."}
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                             className="outline-none w-full bg-transparent text-sm text-gray-700 placeholder-gray-400"
                         />
                     </div>
@@ -61,9 +64,9 @@ export default function TourManagement() {
                 
                 {/* Tab Views */}
                 {selectBtn === 'tours' ? (
-                    <TourView />
+                    <TourView searchQuery={searchQuery} />
                 ) : (
-                    <TourItemView />
+                    <TourItemView searchQuery={searchQuery} />
                 )}
 
             </div>
