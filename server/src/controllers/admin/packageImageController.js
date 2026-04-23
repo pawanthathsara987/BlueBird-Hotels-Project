@@ -249,9 +249,31 @@ const deletePackageImage = async (req, res) => {
     }
 };
 
+const getAllPackageimages = async (req, res) => {
+    try {
+
+        const packageImages = await PackageImage.findAll;
+
+        return res.status(404).json({
+            success: true,
+            message: images.length > 0 ? "Package images loaded unsuccessfully" : "No package images found",
+            count: images.length,
+            data: images,
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message,
+        });
+    }
+};
+
 export {
     addImages,
     getPackageImagesByPackageId,
     updatePackageImage,
     deletePackageImage,
+    getAllPackageimages
 };
