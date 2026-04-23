@@ -1,3 +1,5 @@
+import { QueryTypes } from "sequelize";
+import sequelize from "../../config/database.js";
 import { Guest, Room, RoomBook, RoomPackage } from "../../models/index.js";
 
 
@@ -300,11 +302,73 @@ const deleteBookingById = async (req, res) => {
     }
 }
 
+// get all packages which assign room status = available and not boooking for specific date
+const getAvailablePackagesByDate  = async (req, res) => {
+    try {
+        const { checkIn, checkOut } = req.query;
+
+        if (!checkIn || !checkOut) {
+            return res.status(400).json({
+                success: false,
+                message: "checkin and checkout date are required",
+            });
+        };
+
+        const query =
+            `SELECT 
+                p.id,
+                p.pname,
+                p.pprice,
+                p.pimage,
+                p.maxAdults,
+                p.maxKids,
+                p.description,
+                COUNT(r.id) AS available_room
+            FROM room_package p
+            JOIN room r 
+                ON p.id = r.packageId
+            WHERE r.roomStatus = 'available'
+            AND NOT EXISTS (
+                SELECT 1
+                FROM booking_room br
+                WHERE br.roomId = r.id
+                AND br.status NOT IN ('cancelled', 'checked_out')
+                AND br.checkIn < ?
+                AND br.checkOut > ?
+            )
+            GROUP BY 
+                p.id, p.pname, p.pprice, p.pimage, 
+                p.maxAdults, p.maxKids, p.description`;
+
+        const packagesList = await sequelize.query(query, {
+            replacements: [checkOut, checkIn],
+            type: QueryTypes.SELECT
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: packagesList.length > 0
+                ? "Packages retrieved successfully"
+                : "No available packages for selected dates",
+            count: packagesList.length,
+            data: packagesList
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Something went wrong in internal server",
+            error: error.message,
+        });
+    }
+}
+
 export {
     createBooking,
     getAllBookings,
     getBookingById,
     deleteBookingById,
     updateBooking,
-    availableRooms
+    availableRooms,
+    getAvailablePackagesByDate
 }

@@ -96,15 +96,26 @@ const PackageView = () => {
 
     return (
         <div className="mt-10 mx-5 rounded-lg">
-            <Link
-                to="/admin/rooms/packages/add"
-                className="w-fit m-2 ml-auto flex items-center justify-between p-2 
-                    text-md rounded-[5px] space-x-1 bg-blue-400 shadow-md hover:bg-blue-500 
-                    cursor-pointer transition-colors"
-            >
-                <Plus />
-                <label className="cursor-pointer">Add Package</label>
-            </Link>
+            <div className='w-fit ml-auto flex'>
+                <Link
+                    to="/admin/rooms/packages/image/add"
+                    className="w-fit m-2 ml-auto flex items-center justify-between p-2 
+                        text-md rounded-[5px] space-x-1 bg-blue-400 shadow-md hover:bg-blue-500 
+                        cursor-pointer transition-colors"
+                >
+                    <Plus />
+                    <label className="cursor-pointer">Add Image</label>
+                </Link>
+                <Link
+                    to="/admin/rooms/packages/add"
+                    className="w-fit m-2 ml-auto flex items-center justify-between p-2 
+                        text-md rounded-[5px] space-x-1 bg-blue-400 shadow-md hover:bg-blue-500 
+                        cursor-pointer transition-colors"
+                >
+                    <Plus />
+                    <label className="cursor-pointer">Add Package</label>
+                </Link>
+            </div>
             <table className="min-w-full bg-white shadow-md rounded-lg">
                 <thead className="bg-gray-200">
                     <tr>

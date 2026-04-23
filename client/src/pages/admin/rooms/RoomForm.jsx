@@ -13,11 +13,11 @@ function RoomForm() {
     const [roomType, setRoomType] = useState("");
     const [status, setStatus] = useState("available");
     const [selectedAmenities, setSelectedAmenities] = useState([]);
-    
+
     const [packages, setPackages] = useState([]);
     const [amenities, setAmenities] = useState([]);
 
-    const isEditMode = Boolean(selectedRoom?.roomNo);
+    const isEditMode = Boolean(selectedRoom?.id || selectedRoom?.roomNo || selectedRoom?.roomNumber);
 
     const goBackToRooms = () => {
         navigate("/admin/rooms/roomManagement?tab=room");
@@ -25,10 +25,23 @@ function RoomForm() {
 
     useEffect(() => {
         if (isEditMode) {
-            setRoomNumber(String(selectedRoom.roomNo || ""));
-            setRoomType(selectedRoom.type || "");
-            setStatus(selectedRoom.status || "available");
-            setSelectedAmenities([]);
+            setRoomNumber(String(selectedRoom.roomNo || selectedRoom.roomNumber || ""));
+            setRoomType(String(selectedRoom.packageId || selectedRoom.RoomPackage?.id || selectedRoom.type || ""));
+            const normalizedStatus = (selectedRoom.roomStatus || "available")
+                .toString()
+                .trim()
+                .toLowerCase();
+
+            setStatus(normalizedStatus);
+
+            if (selectedRoom.RoomAmenities) {
+                const amenityIds = selectedRoom.RoomAmenities.map(
+                    (ra) => ra.amenityId
+                );
+                setSelectedAmenities(amenityIds);
+            } else {
+                setSelectedAmenities([]);
+            }
         } else {
             setRoomNumber("");
             setRoomType("");
@@ -36,6 +49,16 @@ function RoomForm() {
             setSelectedAmenities([]);
         }
     }, [isEditMode, selectedRoom]);
+
+    const isAllSelected = amenities.length > 0 && selectedAmenities.length === amenities.length;
+    const handleSelectAll = () => {
+        if (isAllSelected) {
+            setSelectedAmenities([]);
+        } else {
+            const allIds = amenities.map(a => a.id);
+            setSelectedAmenities(allIds);
+        }
+    };
 
     const handleAmenityToggle = (id) => {
         setSelectedAmenities((prev) =>
@@ -51,24 +74,52 @@ function RoomForm() {
             return;
         }
 
-        try{
-            const res = await axios.post(import.meta.env.VITE_BACKEND_URL + "/admin/rooms", {
-                roomNo: roomNumber,
-                packageId: roomType,
-                status: status,
-                amenities: selectedAmenities,
-            });
-            console.log("API response:", res.data);
-            toast.success("Room saved successfully");
+        try {
+
+            if (isEditMode) {
+                if (!selectedRoom?.id) {
+                    toast.error("Unable to update room: missing room id");
+                    return;
+                }
+
+                console.log("SENDING DATA:", {
+                    roomNo: roomNumber,
+                    packageId: roomType,
+                    status: status,
+                    amenities: selectedAmenities,
+                });
+
+                const res = await axios.put(import.meta.env.VITE_BACKEND_URL + `/admin/rooms/${selectedRoom.id}`, {
+                    roomNo: roomNumber,
+                    packageId: roomType,
+                    status: status,
+                    amenities: selectedAmenities,
+                });
+                console.log("API response:", res.data);
+                toast.success("Room updated successfully");
+                goBackToRooms();
+                return;
+            } else {
+                const res = await axios.post(import.meta.env.VITE_BACKEND_URL + "/admin/rooms", {
+                    roomNo: roomNumber,
+                    packageId: roomType,
+                    status: status,
+                    amenities: selectedAmenities,
+                });
+                console.log("API response:", res.data);
+                toast.success("Room saved successfully");
+            }
+
             goBackToRooms();
-        }catch (error) {
-            toast.error("Failed to save room");
+        } catch (error) {
+            console.error("Failed to save room:", error?.response?.data || error);
+            toast.error(error?.response?.data?.message || "Failed to save room");
         }
     }
 
     useEffect(() => {
         async function fetchPackages() {
-            try{
+            try {
                 const res = await axios.get(import.meta.env.VITE_BACKEND_URL + "/admin/packages");
                 setPackages(res.data.data);
                 console.log("API response:", res.data);
@@ -84,7 +135,7 @@ function RoomForm() {
 
     useEffect(() => {
         async function fetchAmenities() {
-            try{
+            try {
                 const res = await axios.get(import.meta.env.VITE_BACKEND_URL + "/admin/amenities");
                 setAmenities(res.data.data);
                 console.log("API response:", res.data);
@@ -147,8 +198,8 @@ function RoomForm() {
                         >
 
                             <option value="">Select Room Type</option>
-                            {packages.map((pkg) =>(
-                                <option key={pkg.id} value={pkg.id}>{pkg.pname}</option> 
+                            {packages.map((pkg) => (
+                                <option key={pkg.id} value={pkg.id}>{pkg.pname}</option>
                             ))}
                         </select>
                     </div>
@@ -167,12 +218,29 @@ function RoomForm() {
                     </div>
 
                     <div className="mb-6">
-                        <label className="block text-sm font-semibold mb-3">
-                            Amenities
-                            <span className="ml-2 text-xs text-blue-500 font-normal">
-                                ({selectedAmenities.length} selected)
-                            </span>
-                        </label>
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="block text-sm font-semibold">
+                                Amenities
+                                <span className="ml-2 text-xs text-blue-500 font-normal">
+                                    ({selectedAmenities.length} selected)
+                                </span>
+                            </label>
+
+                            {/* Select All / Unselect All Button */}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (selectedAmenities.length === amenities.length) {
+                                        setSelectedAmenities([]);
+                                    } else {
+                                        setSelectedAmenities(amenities.map(a => a.id));
+                                    }
+                                }}
+                                className="text-sm text-blue-600 hover:underline"
+                            >
+                                {selectedAmenities.length === amenities.length ? "Unselect All" : "Select All"}
+                            </button>
+                        </div>
 
                         <div className="grid grid-cols-2 gap-2">
                             {amenities.map((amenity) => {
@@ -181,11 +249,10 @@ function RoomForm() {
                                     <div
                                         key={amenity.id}
                                         onClick={() => handleAmenityToggle(amenity.id)}
-                                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all ${
-                                            isChecked
-                                                ? "border-blue-500 bg-blue-50 text-blue-700"
-                                                : "border-gray-200 bg-gray-50 hover:border-gray-300"
-                                        }`}
+                                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all ${isChecked
+                                            ? "border-blue-500 bg-blue-50 text-blue-700"
+                                            : "border-gray-200 bg-gray-50 hover:border-gray-300"
+                                            }`}
                                     >
                                         <input
                                             type="checkbox"

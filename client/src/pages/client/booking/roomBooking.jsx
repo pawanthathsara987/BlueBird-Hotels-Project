@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import "react-datepicker/dist/react-datepicker.css";
 import axios from "axios";
 import RoomDetailsModal from "./RoomDetailsModal";
+import { SiGitconnected } from "react-icons/si";
 
 const BookingRoom = () => {
     const today = new Date();
@@ -15,56 +16,84 @@ const BookingRoom = () => {
     const [checkOutDate, setCheckOutDate] = useState(defaultCheckOut);
     const [rooms, setRooms] = useState([]);
     const [packageOptions, setPackageOptions] = useState([]);
+    const [reviewPackageList, setRevirePackageList] = useState([]);
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-    useEffect(() => {
-        const getAvailablePackages = async () => {
-            try {
-                const response = await axios.get(
-                    `${import.meta.env.VITE_BACKEND_URL}/admin/package/available-rooms`,
-                );
-                const packageList = response?.data?.data || response?.data || [];
+    // getAllAvailable Packages
+    const getAllPackages = async () => {
+        try {
+            const response = await axios.get(
+                `${import.meta.env.VITE_BACKEND_URL}/admin/packages`,
+            );
+            const packageList = response?.data?.data;
 
-                if (!Array.isArray(packageList)) {
-                    setPackageOptions([]);
-                    return;
-                }
-
-                setPackageOptions(
-                    packageList.map((item) => ({
-                        id: item.id,
-                        name: item.pname,
-                        image: item.pimage,
-                        description:
-                            item.description ||
-                            "Sea-facing room with balcony, breakfast, and sunset lounge access.",
-                        maxAdults: item.maxAdults,
-                        maxKids: item.maxKids,
-                        available: item.availableRooms,
-                        price: `$${item.pprice}`,
-                        rawPrice: Number(item.pprice) || 0,
-                        roomSize: item.roomSize || "72m²",
-                        checkIn: item.checkIn || "2.00 PM",
-                        checkOut: item.checkOut || "12.00 PM",
-                        cancellationPolicy: item.cancel || "Free Cancel - Up to 4 days",
-                        mainFeatures: Array.isArray(item.mainFeatures)
-                            ? item.mainFeatures
-                            : ["Balcony", "Garden View", "Air Conditioner", "Free Wifi"],
-                        amenities: Array.isArray(item.amenities)
-                            ? item.amenities
-                            : ["Free toiletries", "Toilet", "Bath or shower", "TV", "Hairdryer"],
-                        imagesCount: Number(item.imagesCount) || 5,
-                    })),
-                );
-            } catch (error) {
-                console.error("Failed to load packages", error);
+            if (!Array.isArray(packageList)) {
                 setPackageOptions([]);
+                return;
             }
-        };
 
-        getAvailablePackages();
+            setRevirePackageList(
+                packageList.map((pkg) => ({
+                    id: pkg.id,
+                    name: pkg.pname,
+                    price: pkg.pprice,
+                    main_image: pkg.pimage,
+                    description: pkg.description,
+                    maxAdults: pkg.maxAdults,
+                    maxKids: pkg.maxKids
+                }))
+            );
+            
+        } catch (error) {
+            console.error("Failed to load packages", error);
+            setPackageOptions([]);
+        }
+    };
+    
+    useEffect(() => {
+        getAllPackages();
     }, []);
+
+    const normalizePackage = (pkg) => ({
+        id: pkg.id,
+        name: pkg.pname || pkg.name,
+        price: pkg.pprice ?? pkg.price,
+        image: pkg.pimage || pkg.image,
+        description: pkg.description,
+        maxAdults: pkg.maxAdults ?? 0,
+        maxKids: pkg.maxKids ?? 0,
+        available: pkg.available_room ?? pkg.available ?? 0,
+    });
+
+    const getAvailablePackagesByDate = async (startDate = checkInDate, endDate = checkOutDate) => {
+        try {
+            if (!startDate || !endDate) {
+                return;
+            }
+
+            const response = await axios.get(
+                `${import.meta.env.VITE_BACKEND_URL}/roombook/available-packages`,
+                {
+                    params: {
+                        checkIn: format(startDate, "yyyy-MM-dd"),
+                        checkOut: format(endDate, "yyyy-MM-dd")
+                    }
+                }
+            );
+
+            const packageList = response?.data?.data;
+            if (!Array.isArray(packageList)) {
+                setPackageOptions([]);
+                return;
+            }
+
+            setPackageOptions(packageList.map(normalizePackage));
+        } catch (error) {
+            setPackageOptions([]);
+        }
+    }
+
 
     useEffect(() => {
         document.body.style.overflow = selectedRoom ? "hidden" : "unset";
@@ -77,6 +106,7 @@ const BookingRoom = () => {
         const [start, end] = dates;
         setCheckInDate(start);
         setCheckOutDate(end);
+        setPackageOptions([]);
     };
 
     const addRoom = () => {
@@ -102,25 +132,28 @@ const BookingRoom = () => {
             prev.map((room) =>
                 room.id === roomId
                     ? {
-                          ...room,
-                          packageId,
-                          adults: selectedPackage ? 1 : room.adults,
-                          kids: 0,
-                          showPackagePicker: false,
-                      }
+                        ...room,
+                        packageId,
+                        adults: selectedPackage ? 1 : room.adults,
+                        kids: 0,
+                        showPackagePicker: false,
+                    }
                     : room,
             ),
         );
     };
 
     const togglePackagePicker = (roomId, showPackagePicker) => {
+        if (showPackagePicker) {
+            getAvailablePackagesByDate(checkInDate, checkOutDate);
+        }
         setRooms((prev) =>
             prev.map((room) =>
                 room.id === roomId
                     ? {
-                          ...room,
-                          showPackagePicker,
-                      }
+                        ...room,
+                        showPackagePicker,
+                    }
                     : room,
             ),
         );
@@ -142,36 +175,27 @@ const BookingRoom = () => {
         return Math.max(0, pkg.available - usedCount);
     };
 
-    const openPackageDetails = (item) => {
+    const openPackageDetails = (item) => {  
         setSelectedRoom({
-            type: item.name,
+            id: item.id,
+            name: item.name,
+            image: item.main_image,
+            description: item.description,
             description2: `${item.maxAdults} Adults${item.maxKids ? `, ${item.maxKids} Kids` : ""} - Breakfast Included`,
-            cancel: item.cancellationPolicy,
-            price: item.rawPrice,
-            mainFeatures: item.mainFeatures,
-            amenities: item.amenities,
+            price: item.price,
             maxGuests: `${item.maxAdults + item.maxKids} (${item.maxAdults} Adults, ${item.maxKids} Children)`,
-            roomSize: item.roomSize,
-            checkIn: item.checkIn,
-            checkOut: item.checkOut,
-            images: item.imagesCount,
+            checkIn: item.checkIn || "2.00 pm",
+            checkOut: item.checkOut || "12.0 pm",
         });
-        setCurrentImageIndex(0);
     };
 
     const closePackageDetails = () => {
         setSelectedRoom(null);
     };
 
-    const nextImage = () => {
-        if (!selectedRoom) return;
-        setCurrentImageIndex((prev) => (prev + 1) % selectedRoom.images);
-    };
-
-    const prevImage = () => {
-        if (!selectedRoom) return;
-        setCurrentImageIndex((prev) => (prev - 1 + selectedRoom.images) % selectedRoom.images);
-    };
+    const handleBooking = () => {
+        console.log(selectedPackage.id);
+    }
 
     return (
         <div
@@ -380,17 +404,15 @@ const BookingRoom = () => {
                                                                             type="button"
                                                                             disabled={isUnavailable}
                                                                             onClick={() => updateRoomPackage(room.id, item.id)}
-                                                                            className={`relative overflow-hidden rounded-xl border text-left transition ${
-                                                                                isSelected
+                                                                            className={`relative overflow-hidden rounded-xl border text-left transition ${isSelected
                                                                                     ? "border-emerald-600 ring-2 ring-emerald-200"
                                                                                     : isUnavailable
-                                                                                    ? "border-rose-200"
-                                                                                    : "border-stone-200 hover:-translate-y-0.5 hover:shadow-md"
-                                                                            } ${
-                                                                                isUnavailable
+                                                                                        ? "border-rose-200"
+                                                                                        : "border-stone-200 hover:-translate-y-0.5 hover:shadow-md"
+                                                                                } ${isUnavailable
                                                                                     ? "cursor-not-allowed"
                                                                                     : ""
-                                                                            }`}
+                                                                                }`}
                                                                         >
                                                                             <img
                                                                                 src={item.image}
@@ -416,14 +438,13 @@ const BookingRoom = () => {
                                                                                 </p>
                                                                                 <div className="flex items-center justify-between">
                                                                                     <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">
-                                                                                        {item.price} / night
+                                                                                        ${item.price} / night
                                                                                     </p>
                                                                                     <p
-                                                                                        className={`text-xs font-bold ${
-                                                                                            isUnavailable
+                                                                                        className={`text-xs font-bold ${isUnavailable
                                                                                                 ? "text-rose-600"
                                                                                                 : "text-emerald-700"
-                                                                                        }`}
+                                                                                            }`}
                                                                                     >
                                                                                         {isUnavailable
                                                                                             ? "Sold out"
@@ -442,57 +463,57 @@ const BookingRoom = () => {
 
                                             <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
                                                 <div>
-                                                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-stone-500">
-                                                    Adults
-                                                </label>
-                                                <select
-                                                    value={room.adults}
-                                                    disabled={!selectedPackage}
-                                                    onChange={(e) =>
-                                                        updateRoomGuests(room.id, "adults", e.target.value)
-                                                    }
-                                                    className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm font-semibold text-stone-800 disabled:cursor-not-allowed disabled:bg-stone-100"
-                                                >
-                                                    {!selectedPackage ? (
-                                                        <option value="1">Select package first</option>
-                                                    ) : (
-                                                        Array.from(
-                                                            { length: adultMax },
-                                                            (_, i) => i + 1,
-                                                        ).map((count) => (
-                                                            <option key={count} value={count}>
-                                                                {count}
-                                                            </option>
-                                                        ))
-                                                    )}
-                                                </select>
+                                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-stone-500">
+                                                        Adults
+                                                    </label>
+                                                    <select
+                                                        value={room.adults}
+                                                        disabled={!selectedPackage}
+                                                        onChange={(e) =>
+                                                            updateRoomGuests(room.id, "adults", e.target.value)
+                                                        }
+                                                        className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm font-semibold text-stone-800 disabled:cursor-not-allowed disabled:bg-stone-100"
+                                                    >
+                                                        {!selectedPackage ? (
+                                                            <option value="1">Select package first</option>
+                                                        ) : (
+                                                            Array.from(
+                                                                { length: adultMax },
+                                                                (_, i) => i + 1,
+                                                            ).map((count) => (
+                                                                <option key={count} value={count}>
+                                                                    {count}
+                                                                </option>
+                                                            ))
+                                                        )}
+                                                    </select>
                                                 </div>
 
                                                 <div>
-                                                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-stone-500">
-                                                    Kids
-                                                </label>
-                                                <select
-                                                    value={room.kids}
-                                                    disabled={!selectedPackage}
-                                                    onChange={(e) =>
-                                                        updateRoomGuests(room.id, "kids", e.target.value)
-                                                    }
-                                                    className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm font-semibold text-stone-800 disabled:cursor-not-allowed disabled:bg-stone-100"
-                                                >
-                                                    {!selectedPackage ? (
-                                                        <option value="0">Select package first</option>
-                                                    ) : (
-                                                        Array.from(
-                                                            { length: kidMax + 1 },
-                                                            (_, i) => i,
-                                                        ).map((count) => (
-                                                            <option key={count} value={count}>
-                                                                {count}
-                                                            </option>
-                                                        ))
-                                                    )}
-                                                </select>
+                                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-stone-500">
+                                                        Kids
+                                                    </label>
+                                                    <select
+                                                        value={room.kids}
+                                                        disabled={!selectedPackage}
+                                                        onChange={(e) =>
+                                                            updateRoomGuests(room.id, "kids", e.target.value)
+                                                        }
+                                                        className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm font-semibold text-stone-800 disabled:cursor-not-allowed disabled:bg-stone-100"
+                                                    >
+                                                        {!selectedPackage ? (
+                                                            <option value="0">Select package first</option>
+                                                        ) : (
+                                                            Array.from(
+                                                                { length: kidMax + 1 },
+                                                                (_, i) => i,
+                                                            ).map((count) => (
+                                                                <option key={count} value={count}>
+                                                                    {count}
+                                                                </option>
+                                                            ))
+                                                        )}
+                                                    </select>
                                                 </div>
                                             </div>
                                         </div>
@@ -500,12 +521,30 @@ const BookingRoom = () => {
                                 })}
                             </div>
                         )}
+                        {rooms.length > 1 &&
+                            <div className="flex items-center gap-2.5 p-2 w-fit ml-auto font-bold">
+                                <input type="checkbox" name="ClosetRoom" className="w-5 h-5" />
+                                <SiGitconnected className="border rounded-full text-2xl p-0.5" />
+                                <div className="group relative flex items-center">
+                                    <span className="absolute bottom-full left-1/2 mb-3 w-48 -translate-x-1/2 scale-0 rounded-lg bg-gray-300 border p-3 text-xs text-black shadow-lg transition-all group-hover:scale-100">
+                                        <p className="leading-relaxed">
+                                            You can book a <span className="font-semibold text-blue-600">Closet Room</span> if available at the time of your stay.
+                                        </p>
+                                        {/* tail arrow */}
+                                        <div className="absolute -bottom-1 left-4 h-2 w-2 rotate-45 bg-gray-300 border-b border-r"></div>
+                                    </span>
+
+                                    <label className="cursor-help"> Connecting Rooms</label>
+                                </div>
+                            </div>
+                        }
                     </div>
 
                     <div className="border-t border-stone-200 p-4 sm:p-5">
                         <div className="flex justify-end">
                             <button
                                 type="button"
+                                onClick={handleBooking}
                                 disabled={rooms.length === 0 || rooms.some(room => !room.packageId)}
                                 className="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-7 py-3 text-sm font-extrabold uppercase tracking-[0.14em] text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
                             >
@@ -517,7 +556,7 @@ const BookingRoom = () => {
             </section>
 
             <section className="mx-auto mt-12 max-w-7xl px-4 sm:px-8 lg:px-14">
-                <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div className="mb-6 space-y-2 gap-3 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                         <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-700">
                             Package Details
@@ -532,26 +571,18 @@ const BookingRoom = () => {
                 </div>
 
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-                    {packageOptions.length === 0 ? (
+                    {reviewPackageList.length === 0 ? (
                         <div className="col-span-full rounded-2xl border border-dashed border-stone-300 bg-white p-6 text-sm font-semibold text-stone-600 shadow-sm">
                             No package details available right now.
                         </div>
                     ) : (
-                        packageOptions.map((item) => (
+                        reviewPackageList.map((item) => (
                             <article
                                 key={item.id}
-                                onClick={() => openPackageDetails(item)}
-                                onKeyDown={(event) => {
-                                    if (event.key === "Enter" || event.key === " ") {
-                                        event.preventDefault();
-                                        openPackageDetails(item);
-                                    }
-                                }}
-                                role="button"
                                 tabIndex={0}
                                 className="overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-lg transition hover:-translate-y-1 hover:shadow-2xl cursor-pointer"
                             >
-                                <img src={item.image} alt={item.name} className="h-52 w-full object-cover" />
+                                <img src={item.main_image} alt={item.name} className="h-52 w-full object-cover" />
                                 <div className="space-y-4 p-5">
                                     <div className="flex items-start justify-between gap-3">
                                         <div>
@@ -559,9 +590,6 @@ const BookingRoom = () => {
                                             <p className="mt-1 text-sm text-stone-500">
                                                 Capacity: {item.maxAdults} Adults / {item.maxKids} Kids
                                             </p>
-                                        </div>
-                                        <div className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-700">
-                                            {item.available} available
                                         </div>
                                     </div>
 
@@ -571,6 +599,7 @@ const BookingRoom = () => {
 
                                     <button
                                         type="button"
+                                        onClick={() => openPackageDetails(item)}
                                         className="rounded-lg border border-emerald-700 px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-emerald-700 transition hover:bg-emerald-50"
                                     >
                                         View Package Details
@@ -605,14 +634,13 @@ const BookingRoom = () => {
                 </div>
             </section>
 
-            <RoomDetailsModal
-                selectedRoom={selectedRoom}
-                currentImageIndex={currentImageIndex}
-                setCurrentImageIndex={setCurrentImageIndex}
-                onClose={closePackageDetails}
-                onPrevImage={prevImage}
-                onNextImage={nextImage}
-            />
+            { selectedRoom && 
+                <RoomDetailsModal
+                    selectedRoom={selectedRoom}
+                    setCurrentImageIndex={setCurrentImageIndex}
+                    onClose={closePackageDetails}
+                />
+            }
         </div>
     );
 };

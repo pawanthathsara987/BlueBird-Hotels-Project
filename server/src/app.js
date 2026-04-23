@@ -13,7 +13,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.use('/api', bookingRouter);
+app.use('/api/roombook', bookingRouter);
 app.use('/api/tour-inquiry', tourInquiryRouter);
 app.use('/api/tour-booking', tourBookingRouter);
 app.use('/api/tour-payment', tourPaymentRouter);

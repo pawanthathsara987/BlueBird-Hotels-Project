@@ -1,13 +1,21 @@
 import express from 'express';
 import { 
-    createPackage, getAllPackages, updatePackage, deletePackage, upload
+    createPackage, getAllPackages, updatePackage, deletePackage, upload, packagesWithAvailableRoomCount
 } from './../controllers/admin/packageController.js';
 
 import {
     addAmenitie, getAllAmenities, updateAmenitie, deleteAmenitie,
     AmenitieswithAssignRoom
 } from "./../controllers/admin/amenitiesController.js";
-import { packagesWithAvailableRoomCount } from './../controllers/admin/packageController.js';
+import {
+    addImages,
+    getPackageImagesByPackageId,
+    updatePackageImage,
+    deletePackageImage,
+    getAllPackageimages,
+} from '../controllers/admin/packageImageController.js';
+
+import { addRoom, getAllRooms, updateRoom, deleteRoom, searchRooms } from "../controllers/admin/roomController.js";
 
 const router = express.Router();
 
@@ -18,9 +26,14 @@ router.post("/package", upload.single("pimage"), createPackage);
 router.get("/packages", getAllPackages);
 router.put("/package/:id", upload.single("pimage"), updatePackage);
 router.delete("/package/:id", deletePackage);
-
 router.get("/package/available-rooms", packagesWithAvailableRoomCount);
 
+// package image upload
+router.post("/packageimage", upload.array("pimage"), addImages);
+router.get("/packageimage/:packageId", getPackageImagesByPackageId);
+router.put("/packageimage/:id", upload.single("pimage"), updatePackageImage);
+router.delete("/packageimage/:id", deletePackageImage);
+router.get("/packageimage", getAllPackageimages);
 
 // Amenities routes
 router.post('/amenitie', addAmenitie);
@@ -30,5 +43,10 @@ router.put('/amenitie/:id', updateAmenitie);
 router.delete('/amenitie/:id', deleteAmenitie);
 
 // Rooms routes
+router.post('/rooms', addRoom);
+router.get('/rooms/search/:query', searchRooms);
+router.get('/rooms', getAllRooms);
+router.put('/rooms/:id', updateRoom);
+router.delete('/rooms/:id', deleteRoom);
 
 export default router;
