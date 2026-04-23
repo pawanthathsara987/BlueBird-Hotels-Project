@@ -172,9 +172,16 @@ export async function searchRooms(req, res) {
             where: {
                 [Op.or]: [
                     { roomNumber: { [Op.like]: `%${query}%` } },
-                    { roomStatus: { [Op.like]: `%${query}%` } }
+                    { roomStatus: { [Op.like]: `%${query}%` } },
+                    { "$RoomPackage.pname$": { [Op.like]: `%${query}%` } }
                 ]
-            }
+            },
+            include: [
+                {
+                    model: packageModel,
+                    attributes: ["id", "pname"],
+                }
+            ]
         });
 
         return res.json({
