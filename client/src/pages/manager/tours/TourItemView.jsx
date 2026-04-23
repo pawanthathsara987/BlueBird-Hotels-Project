@@ -83,6 +83,10 @@ export default function TourItemView({ selectionMode = false }) {
         navigate("/manager/tours/add");
     };
 
+    const handleEdit = (itemId) => {
+        navigate(`/manager/tours/item/edit/${itemId}`);
+    };
+
     return (
         <div className="w-[90%] md:w-[85%] mx-auto mt-8 px-6 py-4 flex flex-col gap-4 bg-white rounded-2xl shadow-lg border border-gray-100">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-2">
@@ -156,7 +160,12 @@ export default function TourItemView({ selectionMode = false }) {
                                             </button>
                                         ) : (
                                             <div className="flex gap-2">
-                                                <button className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Edit">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleEdit(assignment.id)}
+                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                    title="Edit"
+                                                >
                                                     <Edit size={18} />
                                                 </button>
                                                 <button 
@@ -174,7 +183,7 @@ export default function TourItemView({ selectionMode = false }) {
                         }
 
                         // If tours assigned, show each tour item-tour pair
-                        return assignment.assignedTours.map((tour, idx) => (
+                        return assignment.assignedTours.map((tour) => (
                             <div key={`${assignment.id}-${tour.id}`} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
                                 <div className="flex justify-between items-start gap-4">
                                     <div className="flex-1">
@@ -198,7 +207,12 @@ export default function TourItemView({ selectionMode = false }) {
 
                                         {!selectionMode && (
                                             <div className="flex gap-2">
-                                                <button className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Edit">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleEdit(assignment.id)}
+                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                    title="Edit"
+                                                >
                                                     <Edit size={18} />
                                                 </button>
                                                 <button 
