@@ -10,6 +10,8 @@ import AdminPage from "./pages/admin/AdminPage";
 import PasswordResetPage from "./pages/reception/PasswordResetPage";
 import { Toaster } from "react-hot-toast";
 import ManagerPage from "./pages/manager/managerPage";
+import ReceptionPage from "./pages/reception/receptionPage";
+
 
 export default function App() {
     return(
@@ -27,6 +29,7 @@ export default function App() {
                     <Route path="/reset-password" element={< PasswordResetPage />} />
                     <Route path="/admin/*" element={< AdminPage />} />
                     <Route path="/manager/*" element={< ManagerPage />} />
+                    <Route path="/reception/*" element={< ReceptionPage />} />
                 </Routes>
             </div>
         </BrowserRouter>
