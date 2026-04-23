@@ -1,20 +1,20 @@
-import { Amenities } from "../../models/index.js";
+import { col, fn } from "sequelize";
+import { Amenities, RoomAmenities } from "../../models/index.js";
 
 // add amenity
 const addAmenitie = async (req, res) => {
     try {
-        const { name, icon } = req.body;
+        const { name } = req.body;
 
-        if (!name || !icon) {
+        if (!name) {
             return res.status(400).json({
                 success: false,
-                message: "Name and icon are required",
+                message: "Name is required",
             });
         }
 
         const amenity = await Amenities.create({
             name,
-            icon,
         });
 
         return res.status(201).json({
@@ -57,7 +57,7 @@ const getAllAmenities = async (req, res) => {
 const updateAmenitie = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, icon } = req.body;
+        const { name } = req.body;
 
         const amenity = await Amenities.findByPk(id);
 
@@ -68,7 +68,7 @@ const updateAmenitie = async (req, res) => {
             });
         }
 
-        await amenity.update({ name, icon });
+        await amenity.update({ name });
 
         return res.status(200).json({
             success: true,
@@ -115,9 +115,44 @@ const deleteAmenitie = async (req, res) => {
     }
 }
 
+const AmenitieswithAssignRoom = async (req, res) => {
+    try {
+        const amenities = await Amenities.findAll({
+            attributes: [
+                "id",
+                "name",
+                [fn("COUNT", col("RoomAmenities.roomId")), "Assign_Rooms"]
+            ],
+            include: [
+                {
+                    model: RoomAmenities,
+                    attributes: [],
+                    required: false
+                }
+            ],
+            group: ["Amenities.id", "Amenities.name"],
+            subQuery: false
+        });
+
+
+        res.status(200).json({
+            success: true,
+            message: amenities.length > 0 ? "" : "Amenities load unsuccessfull",
+            data: amenities,
+        })
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message,
+        });
+    }
+}
+
 export {
     addAmenitie,
     getAllAmenities,
     updateAmenitie,
     deleteAmenitie,
+    AmenitieswithAssignRoom
 }

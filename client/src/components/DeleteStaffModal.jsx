@@ -22,9 +22,6 @@ export default function DeleteStaffModal({ isOpen, member, onCancel, onConfirm }
                     <p className="text-slate-700 text-xl font-semibold">
                         Are you sure you want to remove <span className="font-bold">{member.name}</span>?
                     </p>
-                    <p className="text-slate-400 mt-2">
-                        @{member.userName} . {member.role} . {member.email}
-                    </p>
                 </div>
 
                 <div className="px-6 pb-6 flex justify-end gap-3">

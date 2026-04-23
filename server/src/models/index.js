@@ -8,6 +8,10 @@ import UserRegisterModel from "./User/UserRegisterModel.js";
 import Tour from "./tour_package/tourModel.js";
 import TourItem from "./tour_package/tourItemsModel.js";
 import RoomAmenities from "./room_package/roomAmenities.js";
+import TourInquiry from "./tour_package/TourInquiry.js";
+import TourBooking from "./tour_package/TourBooking.js";
+import TourPayment from "./tour_package/TourPayment.js";
+import PackageImage from "./room_package/packageImageModel.js";
 
 
 export function initModels() {
@@ -42,6 +46,16 @@ export function initModels() {
         foreignKey: "packageId",
     })
 
+    // package -> packageImage
+    RoomPackage.hasMany(PackageImage, {
+        foreignKey: "packageId",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+    })
+    PackageImage.belongsTo(RoomPackage, {
+        foreignKey: "packageId",
+    })
+
     // Room -> RoomAmenities
     Room.hasMany(RoomAmenities, {
         foreignKey: "roomId",
@@ -65,8 +79,55 @@ export function initModels() {
         foreignKey: "amenityId",
     });
 
-    return { Guest, RoomBook, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem };
+    // Tour <-> TourItem (Many-to-Many)
+    Tour.belongsToMany(TourItem, {
+        through: "tour_item_assignments",
+        foreignKey: "tourId",
+        otherKey: "tourItemId",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+    });
+
+    TourItem.belongsToMany(Tour, {
+        through: "tour_item_assignments",
+        foreignKey: "tourItemId",
+        otherKey: "tourId",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+    });
+
+    // Tour -> TourInquiry (One-to-Many)
+    Tour.hasMany(TourInquiry, {
+        foreignKey: "tourId",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+    });
+    TourInquiry.belongsTo(Tour, {
+        foreignKey: "tourId",
+    });
+
+    // TourInquiry -> TourBooking (One-to-One)
+    TourInquiry.hasOne(TourBooking, {
+        foreignKey: "inquiryId",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+    });
+    TourBooking.belongsTo(TourInquiry, {
+        foreignKey: "inquiryId",
+    });
+
+    // TourBooking -> TourPayment (One-to-Many)
+    TourBooking.hasMany(TourPayment, {
+        foreignKey: "bookingId",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+    });
+    TourPayment.belongsTo(TourBooking, {
+        foreignKey: "bookingId",
+    });
+
+    return { Guest, RoomBook, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourBooking, TourPayment, PackageImage };
 }
-export { Guest, RoomBook, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem };
+export { Guest, RoomBook, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourBooking, TourPayment, PackageImage };
 
 

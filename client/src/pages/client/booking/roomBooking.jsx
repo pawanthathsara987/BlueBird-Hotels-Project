@@ -1,466 +1,648 @@
-import React, { useState, useEffect } from 'react';
-import {
-  UserCheck, Home,
-  Grid3x3, List, Star
-} from 'lucide-react';
-import { RoomDetailsModal, RoomCard, RoomCardList } from './RoomViewingPanel';
-import axios from 'axios';
+import { CalendarDays, ChevronDown, MapPin, Users, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
+import DatePicker from "react-datepicker";
+import { format } from "date-fns";
+import "react-datepicker/dist/react-datepicker.css";
+import axios from "axios";
+import RoomDetailsModal from "./RoomDetailsModal";
+import { SiGitconnected } from "react-icons/si";
 
-export default function BookingRoom() {
+const BookingRoom = () => {
+    const today = new Date();
+    const defaultCheckOut = new Date(today);
+    defaultCheckOut.setDate(defaultCheckOut.getDate() + 4);
 
-  const [packages, setPackages] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [rooms, setRooms] = useState([]);
+    const [checkInDate, setCheckInDate] = useState(today);
+    const [checkOutDate, setCheckOutDate] = useState(defaultCheckOut);
+    const [rooms, setRooms] = useState([]);
+    const [packageOptions, setPackageOptions] = useState([]);
+    const [reviewPackageList, setRevirePackageList] = useState([]);
+    const [selectedRoom, setSelectedRoom] = useState(null);
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  // View State
-  const [viewMode, setViewMode] = useState('grid'); // grid or list
+    // getAllAvailable Packages
+    const getAllPackages = async () => {
+        try {
+            const response = await axios.get(
+                `${import.meta.env.VITE_BACKEND_URL}/admin/packages`,
+            );
+            const packageList = response?.data?.data;
 
-  const [selectedRoom, setSelectedRoom] = useState(null);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+            if (!Array.isArray(packageList)) {
+                setPackageOptions([]);
+                return;
+            }
 
-  const getAllPackages = async () => {
-    setLoading(true);
-      try {
-        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/getallpackages`);
-          if (!response.data.avlPackage || response.data.avlPackage.length === 0) {
-              setError("No packages found");
-              return;
-          }
+            setRevirePackageList(
+                packageList.map((pkg) => ({
+                    id: pkg.id,
+                    name: pkg.pname,
+                    price: pkg.pprice,
+                    main_image: pkg.pimage,
+                    description: pkg.description,
+                    maxAdults: pkg.maxAdults,
+                    maxKids: pkg.maxKids
+                }))
+            );
+            
+        } catch (error) {
+            console.error("Failed to load packages", error);
+            setPackageOptions([]);
+        }
+    };
+    
+    useEffect(() => {
+        getAllPackages();
+    }, []);
 
-          setPackages(response.data.avlPackage);
+    const normalizePackage = (pkg) => ({
+        id: pkg.id,
+        name: pkg.pname || pkg.name,
+        price: pkg.pprice ?? pkg.price,
+        image: pkg.pimage || pkg.image,
+        description: pkg.description,
+        maxAdults: pkg.maxAdults ?? 0,
+        maxKids: pkg.maxKids ?? 0,
+        available: pkg.available_room ?? pkg.available ?? 0,
+    });
 
-      } catch (error) {
-          setError(error.message);
-          console.log(error);
-      } finally {
-          setLoading(false);
-      }
-  };
+    const getAvailablePackagesByDate = async (startDate = checkInDate, endDate = checkOutDate) => {
+        try {
+            if (!startDate || !endDate) {
+                return;
+            }
 
-  useEffect(() => {
-      getAllPackages();
-  }, []);
+            const response = await axios.get(
+                `${import.meta.env.VITE_BACKEND_URL}/roombook/available-packages`,
+                {
+                    params: {
+                        checkIn: format(startDate, "yyyy-MM-dd"),
+                        checkOut: format(endDate, "yyyy-MM-dd")
+                    }
+                }
+            );
 
-  useEffect(() => {
-    if (packages.length > 0) {
-      setRooms(packages.map(pack => ({
-        id: pack.id,
-        type: pack.pname,
-        adults: pack.maxAdults,
-        kids: pack.maxKids,
-        price: pack.pprice,
-        availability: pack.availableRooms,
-        quantity: 0
-      })));
+            const packageList = response?.data?.data;
+            if (!Array.isArray(packageList)) {
+                setPackageOptions([]);
+                return;
+            }
+
+            setPackageOptions(packageList.map(normalizePackage));
+        } catch (error) {
+            setPackageOptions([]);
+        }
     }
-  }, [packages]);
-
-  /* =========================
-      SCROLL LOCK
-  ========================== */
-  useEffect(() => {
-    document.body.style.overflow = selectedRoom ? "hidden" : "unset";
-  }, [selectedRoom]);
 
 
-  /* =========================
-      ROOM TYPE DATA
-  ========================== */
+    useEffect(() => {
+        document.body.style.overflow = selectedRoom ? "hidden" : "unset";
+        return () => {
+            document.body.style.overflow = "unset";
+        };
+    }, [selectedRoom]);
 
-  const roomType = [
-    {
-      type: "Deluxe Double Room",
-      description: "King bed, private balcony, oceanfront bath, smart lighting.",
-      description2: "4 Adults - Breakfast Included",
-      cancel: "Free Cancel - Up to 4 days",
-      cancelDate: "Free cancel until March 14, 2026",
-      price: 156,
-      date: "March 14, 2028",
-      mainFeatures: ["Balcony", "Garden View", "Air Conditioner", "Free Wifi"],
-      amenities: ["Free toiletries", "Toilet", "Bath or shower", "TV", "Hairdryer"],
-      maxGuests: "4 (4 Adults, 2 Children)",
-      roomSize: "72m²",
-      checkIn: "2.00 PM",
-      checkOut: "12.00 PM",
-      images: 5
-    },
-    {
-      type: "Double Room with Balcony",
-      description: "King bed, private balcony, oceanfront bath, smart lighting.",
-      description2: "2 Adults - Breakfast Included",
-      cancel: "Free Cancel - Up to 4 days",
-      cancelDate: "Free cancel until March 14, 2026",
-      price: 175,
-      date: "March 14, 2028",
-      mainFeatures: ["Balcony", "Ocean View", "Air Conditioner", "Free Wifi"],
-      amenities: ["Free toiletries", "Toilet", "Bath or shower", "TV", "Hairdryer"],
-      maxGuests: "2 (2 Adults, 0 Children)",
-      roomSize: "68m²",
-      checkIn: "2.00 PM",
-      checkOut: "12.00 PM",
-      images: 5
-    },
-    {
-      type: "Superior Family Room",
-      description: "King bed, private balcony, oceanfront bath, smart lighting.",
-      description2: "2 Adults - Breakfast Included",
-      cancel: "Free Cancel - Up to 4 days",
-      cancelDate: "Free cancel until March 14, 2026",
-      price: 196,
-      date: "March 14, 2028",
-      mainFeatures: ["Balcony", "Garden View", "Air Conditioner", "Free Wifi"],
-      amenities: ["Free toiletries", "Toilet", "Bath or shower", "TV", "Hairdryer"],
-      maxGuests: "4 (4 Adults, 2 Children)",
-      roomSize: "85m²",
-      checkIn: "2.00 PM",
-      checkOut: "12.00 PM",
-      images: 5
+    const handleRangeChange = (dates) => {
+        const [start, end] = dates;
+        setCheckInDate(start);
+        setCheckOutDate(end);
+        setPackageOptions([]);
+    };
+
+    const addRoom = () => {
+        setRooms((prev) => [
+            ...prev,
+            {
+                id: Date.now() + prev.length,
+                packageId: "",
+                adults: 1,
+                kids: 0,
+                showPackagePicker: false,
+            },
+        ]);
+    };
+
+    const removeRoom = (roomId) => {
+        setRooms((prev) => prev.filter((room) => room.id !== roomId));
+    };
+
+    const updateRoomPackage = (roomId, packageId) => {
+        const selectedPackage = packageOptions.find((item) => item.id === packageId);
+        setRooms((prev) =>
+            prev.map((room) =>
+                room.id === roomId
+                    ? {
+                        ...room,
+                        packageId,
+                        adults: selectedPackage ? 1 : room.adults,
+                        kids: 0,
+                        showPackagePicker: false,
+                    }
+                    : room,
+            ),
+        );
+    };
+
+    const togglePackagePicker = (roomId, showPackagePicker) => {
+        if (showPackagePicker) {
+            getAvailablePackagesByDate(checkInDate, checkOutDate);
+        }
+        setRooms((prev) =>
+            prev.map((room) =>
+                room.id === roomId
+                    ? {
+                        ...room,
+                        showPackagePicker,
+                    }
+                    : room,
+            ),
+        );
+    };
+
+    const updateRoomGuests = (roomId, field, value) => {
+        setRooms((prev) =>
+            prev.map((room) => (room.id === roomId ? { ...room, [field]: Number(value) } : room)),
+        );
+    };
+
+    const totalAdults = rooms.reduce((sum, room) => sum + (room.packageId ? room.adults : 0), 0);
+    const totalKids = rooms.reduce((sum, room) => sum + (room.packageId ? room.kids : 0), 0);
+
+    const getRemainingAvailability = (packageId) => {
+        const pkg = packageOptions.find((p) => p.id === packageId);
+        if (!pkg) return 0;
+        const usedCount = rooms.filter((room) => room.packageId === packageId).length;
+        return Math.max(0, pkg.available - usedCount);
+    };
+
+    const openPackageDetails = (item) => {  
+        setSelectedRoom({
+            id: item.id,
+            name: item.name,
+            image: item.main_image,
+            description: item.description,
+            description2: `${item.maxAdults} Adults${item.maxKids ? `, ${item.maxKids} Kids` : ""} - Breakfast Included`,
+            price: item.price,
+            maxGuests: `${item.maxAdults + item.maxKids} (${item.maxAdults} Adults, ${item.maxKids} Children)`,
+            checkIn: item.checkIn || "2.00 pm",
+            checkOut: item.checkOut || "12.0 pm",
+        });
+    };
+
+    const closePackageDetails = () => {
+        setSelectedRoom(null);
+    };
+
+    const handleBooking = () => {
+        console.log(selectedPackage.id);
     }
-  ];
 
-  /* =========================
-      QUANTITY UPDATE
-  ========================== */
+    return (
+        <div
+            className="min-h-screen pb-14"
+            style={{
+                background:
+                    "linear-gradient(180deg, #f3efe5 0%, #f7f5ef 44%, #f0f4f1 100%)",
+            }}
+        >
+            <section className="relative overflow-hidden">
+                <img
+                    src="https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=1920&q=80"
+                    alt="Tropical hotel"
+                    className="h-107.5 w-full object-cover object-center sm:h-130"
+                />
+                <div className="absolute inset-0 bg-linear-to-r from-black/70 via-black/35 to-transparent" />
 
-  const setQuantity = (id, change) => {
-    setRooms(prev =>
-      prev.map(room =>
-        room.id === id
-          ? { ...room, quantity: Math.min(room.availability, Math.max(0, room.quantity + change)) }
-          : room
-      )
-    );
-  };
-
-  const handleQuantityInput = (id, value) => {
-    const numValue = parseInt(value) || 0;
-    setRooms(prev =>
-      prev.map(room =>
-        room.id === id
-          ? { ...room, quantity: Math.min(room.availability, Math.max(0, numValue)) }
-          : room
-      )
-    );
-  };
-
-  /* =========================
-      TOTALS
-  ========================== */
-
-  const totalRooms = rooms.reduce((sum, r) => sum + r.quantity, 0);
-  const totalPrice = rooms.reduce((sum, r) => sum + r.quantity * r.price, 0);
-  const totalAdults = rooms.reduce((sum, r) => sum + r.quantity * r.adults, 0);
-  const totalKids = rooms.reduce((sum, r) => sum + r.quantity * r.kids, 0);
-
-  /* =========================
-      MODAL FUNCTIONS
-  ========================== */
-
-  const openModal = (room) => {
-    setSelectedRoom(room);
-    setCurrentImageIndex(0);
-  };
-
-  const closeModal = () => {
-    setSelectedRoom(null);
-  };
-
-  const nextImage = () => {
-    setCurrentImageIndex(prev => (prev + 1) % selectedRoom.images);
-  };
-
-  const prevImage = () => {
-    setCurrentImageIndex(prev =>
-      (prev - 1 + selectedRoom.images) % selectedRoom.images
-    );
-  };
-
-  return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50 py-8 px-4">
-
-      <div className="max-w-7xl mx-auto">
-
-        {/* HEADER */}
-        <div className="mb-12">
-          <h1 className="text-5xl font-bold text-blue-900 mb-2">
-            DISCOVER OUR ROOMS
-          </h1>
-          <p className="text-gray-600 text-lg">
-            Find the perfect room for your stay with our interactive booking system
-          </p>
-        </div>
-
-        {/* SUMMARY CARDS */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
-          <SummaryCard icon={<Home />} label="Rooms" value={totalRooms} color="blue" />
-          <SummaryCard icon={<UserCheck />} label="Adults" value={totalAdults} color="green" />
-          <SummaryCard icon={<UserCheck />} label="Children" value={totalKids} color="purple" />
-        </div>
-
-        {/* ROOM ASSIGNMENT BLOCK */}
-        <div className="bg-white rounded-3xl p-4 sm:p-6 lg:p-8 shadow-2xl mb-12 border-t-4 border-blue-500">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Room Assignment</h2>
-            </div>
-
-            {loading && (
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-                <p className="text-gray-600 font-semibold">Loading package details...</p>
-              </div>
-            )}
-
-            {!loading && error && (
-              <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
-                <p className="text-red-700 font-semibold">{error}</p>
-              </div>
-            )}
-
-            {!loading && !error && (
-              <>
-            {/* Mobile View - Cards */}
-            <div className="block lg:hidden space-y-4">
-                {packages.map(pack => (
-                <div key={pack.id} className={`border-2 rounded-xl p-4 transition-all ${
-                  pack.availableRooms === 0
-                    ? 'border-gray-300 bg-gray-100 opacity-60'
-                    : 'border-gray-200 hover:border-blue-300 hover:shadow-lg'
-                }`}>
-                    <div className="flex justify-between items-start mb-3">
-                      <h3 className="font-bold text-lg">{pack.pname}</h3>
-                      <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded">
-                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm font-semibold text-gray-800"></span>
-                      </div>
+                <div className="absolute left-0 top-0 w-full px-4 pt-8 sm:px-8 lg:px-14">
+                    <div className="mx-auto max-w-7xl">
+                        <p className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white backdrop-blur-sm">
+                            <Sparkles className="h-3.5 w-3.5" /> Island Luxury Collection
+                        </p>
+                        <h1 className="mt-4 max-w-3xl text-4xl font-black leading-tight text-white sm:text-5xl lg:text-6xl">
+                            Escape To Places
+                            <br />
+                            You Will Never Forget
+                        </h1>
+                        <p className="mt-4 max-w-xl text-sm text-stone-100 sm:text-base">
+                            Discover curated beachfront, city, and hillside stays with a streamlined booking
+                            experience designed for quick decisions.
+                        </p>
                     </div>
-                    
-                    <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
-                    <div>
-                        <span className="text-gray-500">Adults:</span>
-                        <span className="font-semibold ml-2">{pack.maxAdults}</span>
-                    </div>
-                    <div>
-                        <span className="text-gray-500">Kids:</span>
-                        <span className="font-semibold ml-2">{pack.maxKids}</span>
-                    </div>
-                    <div>
-                        <span className="text-gray-500">Price:</span>
-                        <span className="font-semibold ml-2 text-blue-600">${pack.pprice}</span>
-                    </div>
-                    <div>
-                        <span className="text-gray-500">Free:</span>
-                        <span className="font-semibold ml-2 text-green-600">{pack.availableRooms}</span>
-                    </div>
-                    </div>
+                </div>
+            </section>
 
-                    <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Rooms to book:</span>
-                    <div className={"inline-flex items-center rounded-lg border-2 border-blue-400"}>
-                        <button
-                          onClick={() => setQuantity(pack.id, -1)}
-                          disabled={pack.availableRooms === 0}
-                          className={`px-4 py-2 font-bold text-blue-600 hover:bg-blue-100 ${pack.availableRooms === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+            <section className="relative z-10 mx-auto -mt-16 max-w-7xl px-4 sm:px-8 lg:px-14">
+                <div className="overflow-visible rounded-3xl border border-white/60 bg-white/95 shadow-2xl backdrop-blur-md">
+                    <div className="flex flex-wrap gap-2 border-b border-stone-200 p-4 sm:p-5">
+                        <label
+                            className="rounded-full bg-emerald-700 px-5 py-2 text-xs font-bold uppercase tracking-widest text-white"
                         >
-                        −
-                        </button>
-                        <input
-                        type="number"
-                        value={rooms.find(r => r.id === pack.id)?.quantity || 0}
-                        onChange={(e) => handleQuantityInput(pack.id, e.target.value)}
-                        disabled={pack.availableRooms === 0}
-                        className={`w-16 text-center font-bold bg-transparent outline-none text-gray-900
-                        [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${pack.availableRooms === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        min="0"
-                        max={rooms.find(r => r.id === pack.id)?.availability || 0}
-                        />
-                        <button
-                        onClick={() => setQuantity(pack.id, 1)}
-                        disabled={pack.availableRooms === 0}
-                        className={`px-4 py-2 font-bold text-blue-600 hover:bg-blue-100 ${pack.availableRooms === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                        +
-                        </button>
+                            Hotels
+                        </label>
                     </div>
+
+                    <div className="grid grid-cols-1 gap-3 p-4 sm:p-5 lg:grid-cols-4 lg:gap-0">
+                        <div className="rounded-2xl border border-stone-200 p-4 lg:rounded-none lg:border-y-0 lg:border-l-0 lg:border-r">
+                            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500">Destination</p>
+                            <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-stone-800">
+                                <MapPin className="h-4 w-4 text-emerald-700" /> Sri Lanka
+                            </p>
+                        </div>
+
+                        <div className="rounded-2xl border border-stone-200 p-4 lg:col-span-2 lg:rounded-none lg:border-y-0 lg:border-l-0 lg:border-r">
+                            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500">Stay Dates</p>
+                            <div className="mt-2 flex items-center gap-2">
+                                <CalendarDays className="h-4 w-4 text-emerald-700" />
+                                <DatePicker
+                                    selected={checkInDate}
+                                    startDate={checkInDate}
+                                    endDate={checkOutDate}
+                                    onChange={handleRangeChange}
+                                    selectsRange
+                                    minDate={today}
+                                    dateFormat="dd MMM yyyy"
+                                    popperPlacement="bottom-start"
+                                    popperClassName="!z-[70]"
+                                    wrapperClassName="w-full"
+                                    className="w-full rounded-md border border-stone-300 px-2 py-1 text-sm font-semibold text-stone-800 focus:border-emerald-700 focus:outline-none"
+                                />
+                            </div>
+                            <p className="mt-2 text-xs font-semibold text-stone-600">
+                                {checkInDate ? format(checkInDate, "dd MMM yyyy") : "Select check in"}
+                                {" - "}
+                                {checkOutDate ? format(checkOutDate, "dd MMM yyyy") : "Select check out"}
+                            </p>
+                        </div>
+
+                        <div className="rounded-2xl border border-stone-200 p-4 lg:rounded-none lg:border-y-0 lg:border-l-0 lg:border-r">
+                            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500">Guests</p>
+                            <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-stone-800">
+                                <Users className="h-4 w-4 text-emerald-700" />
+                                {totalAdults} Adult{totalAdults !== 1 ? "s" : ""}, {totalKids} Kid
+                                {totalKids !== 1 ? "s" : ""}
+                                <ChevronDown className="ml-auto h-4 w-4 text-stone-500" />
+                            </p>
+                        </div>
                     </div>
-                </div>
-                ))}
 
-                {/* Mobile Total */}
-                <div className="bg-linear-to-r from-blue-50 to-indigo-50 rounded-xl p-4 font-bold flex justify-between items-center border-2 border-blue-200">
-                <span className="text-lg">Total</span>
-                <span className="text-2xl text-blue-600">${totalPrice}</span>
-                </div>
-            </div>
-
-            {/* Desktop View - Table */}
-            <div className="hidden lg:block overflow-x-auto">
-                <table className="w-full rounded-xl overflow-hidden border border-gray-200">
-                <thead className="bg-linear-to-r from-blue-50 to-indigo-50">
-                    <tr>
-                    <th className="p-4 text-left font-semibold text-gray-700">Room Type</th>
-                    <th className="p-4 text-center font-semibold text-gray-700">Adults</th>
-                    <th className="p-4 text-center font-semibold text-gray-700">Kids</th>
-                    <th className="p-4 text-center font-semibold text-gray-700">Price</th>
-                    <th className="p-4 text-center font-semibold text-gray-700">Available</th>
-                    <th className="p-4 text-center font-semibold text-gray-700">Rooms</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {rooms.map(room => (
-                    <tr key={room.id} className={`border-t transition-colors ${
-                      room.availability === 0
-                        ? 'bg-gray-100 opacity-60'
-                        : 'hover:bg-blue-50'
-                    }`}>
-                        <td className="p-4 font-medium text-gray-900">{room.type}</td>
-                        <td className="p-4 text-center">{room.adults}</td>
-                        <td className="p-4 text-center">{room.kids}</td>
-                        <td className="p-4 text-center font-bold text-blue-600">${room.price}</td>
-                        <td className="p-4 text-center font-semibold text-green-600">{room.availability}</td>
-                        <td className="p-4 text-center">
-                        <div className={`inline-flex items-center rounded-lg border-2 border-blue-400`}>
+                    <div className="border-t border-stone-200 p-4 sm:p-5">
+                        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-xs font-bold uppercase tracking-widest text-stone-500">
+                                Room and Guest Assignment
+                            </p>
                             <button
-                              onClick={() => setQuantity(room.id, -1)}
-                              disabled={room.availability === 0}
-                              className={`px-4 py-2 font-bold text-blue-600 hover:bg-blue-100 ${room.availability === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                              −
-                            </button>
-                            <input
-                              type="number"
-                              value={room.quantity}
-                              onChange={(e) => handleQuantityInput(room.id, e.target.value)}
-                              disabled={room.availability === 0}
-                              className={`w-16 text-center font-bold bg-transparent outline-none text-gray-900
-                              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${room.availability === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                              min="0"
-                              max={room.availability}
-                            />
-                            <button
-                            onClick={() => setQuantity(room.id, 1)}
-                            disabled={room.availability === 0}
-                            className={`px-4 py-2 font-bold text-blue-600 hover:bg-blue-100 ${room.availability === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                            +
+                                type="button"
+                                onClick={addRoom}
+                                className="rounded-lg bg-emerald-700 px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-white transition hover:bg-emerald-800"
+                            >
+                                + Add Room
                             </button>
                         </div>
-                        </td>
-                    </tr>
-                    ))}
 
-                    <tr className="bg-linear-to-r from-blue-100 to-indigo-100 font-bold">
-                    <td colSpan="5" className="p-4 text-right">Total Price</td>
-                    <td colSpan="2" className="p-4 text-right text-2xl text-blue-600">${totalPrice}</td>
-                    </tr>
-                </tbody>
-                </table>
-            </div>
+                        {rooms.length === 0 ? (
+                            <p className="rounded-xl border border-dashed border-stone-300 bg-stone-50 p-3 text-sm text-stone-600">
+                                Add a room first. Then select a package, and only after that choose adults and kids.
+                            </p>
+                        ) : (
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                {rooms.map((room, index) => {
+                                    const selectedPackage = packageOptions.find(
+                                        (item) => item.id === room.packageId,
+                                    );
+                                    const adultMax = selectedPackage ? selectedPackage.maxAdults : 0;
+                                    const kidMax = selectedPackage ? selectedPackage.maxKids : 0;
 
-            {/* BOOK NOW BUTTON */}
-            <div className="mt-6 flex justify-end gap-3">
-                <button 
-                className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 px-8 rounded-xl transition-colors"
-                onClick={() => window.location.reload()}
-                >
-                Clear Selection
-                </button>
-                <button 
-                className="bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg hover:shadow-xl"
-                onClick={() => alert('Proceeding to booking...')}
-                >
-                Book Now →
-                </button>
-            </div>
-            </>
-            )}
+                                    return (
+                                        <div key={room.id} className="rounded-xl border border-stone-200 bg-white p-3">
+                                            <div className="mb-3 flex items-center justify-between">
+                                                <p className="text-xs font-bold uppercase tracking-wider text-stone-500">
+                                                    Room {index + 1}
+                                                </p>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeRoom(room.id)}
+                                                    className="rounded-md border border-rose-200 px-3 py-2 text-xs font-bold uppercase tracking-wider text-rose-700 transition hover:bg-rose-50"
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+
+                                            <div className="mb-3">
+                                                {!room.packageId && !room.showPackagePicker && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => togglePackagePicker(room.id, true)}
+                                                        className="rounded-lg border border-emerald-700 px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-emerald-700 transition hover:bg-emerald-50"
+                                                    >
+                                                        Select Package
+                                                    </button>
+                                                )}
+
+                                                {room.packageId && !room.showPackagePicker && selectedPackage && (
+                                                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-3">
+                                                        <p className="mb-2 text-xs font-bold uppercase tracking-wider text-stone-500">
+                                                            Selected Package
+                                                        </p>
+                                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                                            <img
+                                                                src={selectedPackage.image}
+                                                                alt={selectedPackage.name}
+                                                                className="h-20 w-full rounded-lg object-cover sm:w-36"
+                                                            />
+                                                            <div className="flex-1">
+                                                                <p className="text-sm font-extrabold text-stone-900">
+                                                                    {selectedPackage.name}
+                                                                </p>
+                                                                <p className="text-xs text-stone-600">
+                                                                    {selectedPackage.description}
+                                                                </p>
+                                                                <p className="mt-1 text-xs font-semibold text-stone-700">
+                                                                    Capacity: {selectedPackage.maxAdults} Adults / {selectedPackage.maxKids} Kids
+                                                                </p>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => togglePackagePicker(room.id, true)}
+                                                                className="rounded-md border border-stone-300 px-3 py-2 text-xs font-bold uppercase tracking-wider text-stone-700 transition hover:bg-white"
+                                                            >
+                                                                Change Package
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {room.showPackagePicker && (
+                                                    <>
+                                                        <div className="mb-2 flex items-center justify-between">
+                                                            <p className="text-xs font-bold uppercase tracking-wider text-stone-500">
+                                                                Select Package
+                                                            </p>
+                                                            {room.packageId && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => togglePackagePicker(room.id, false)}
+                                                                    className="text-xs font-bold uppercase tracking-wider text-stone-500 hover:text-stone-800"
+                                                                >
+                                                                    Hide
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                                                            {packageOptions.length === 0 ? (
+                                                                <p className="col-span-full rounded-xl border border-dashed border-stone-300 bg-stone-50 p-4 text-sm font-semibold text-stone-600">
+                                                                    No available packages right now.
+                                                                </p>
+                                                            ) : (
+                                                                packageOptions.map((item) => {
+                                                                    const isSelected = room.packageId === item.id;
+                                                                    const remainingAvailable = getRemainingAvailability(item.id);
+                                                                    const isUnavailable = remainingAvailable === 0 && !isSelected;
+
+                                                                    return (
+                                                                        <button
+                                                                            key={item.id}
+                                                                            type="button"
+                                                                            disabled={isUnavailable}
+                                                                            onClick={() => updateRoomPackage(room.id, item.id)}
+                                                                            className={`relative overflow-hidden rounded-xl border text-left transition ${isSelected
+                                                                                    ? "border-emerald-600 ring-2 ring-emerald-200"
+                                                                                    : isUnavailable
+                                                                                        ? "border-rose-200"
+                                                                                        : "border-stone-200 hover:-translate-y-0.5 hover:shadow-md"
+                                                                                } ${isUnavailable
+                                                                                    ? "cursor-not-allowed"
+                                                                                    : ""
+                                                                                }`}
+                                                                        >
+                                                                            <img
+                                                                                src={item.image}
+                                                                                alt={item.name}
+                                                                                className="h-28 w-full object-cover"
+                                                                            />
+                                                                            {isUnavailable && (
+                                                                                <div className="absolute inset-0 flex items-center justify-center bg-black/29">
+                                                                                    <span className="text-sm font-extrabold uppercase tracking-wider text-white">
+                                                                                        Sold Out
+                                                                                    </span>
+                                                                                </div>
+                                                                            )}
+                                                                            <div className="space-y-1 p-3">
+                                                                                <p className="text-sm font-extrabold text-stone-900">
+                                                                                    {item.name}
+                                                                                </p>
+                                                                                <p className="text-xs leading-relaxed text-stone-600">
+                                                                                    {item.description}
+                                                                                </p>
+                                                                                <p className="text-xs font-semibold text-stone-700">
+                                                                                    Capacity: {item.maxAdults} Adults / {item.maxKids} Kids
+                                                                                </p>
+                                                                                <div className="flex items-center justify-between">
+                                                                                    <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">
+                                                                                        ${item.price} / night
+                                                                                    </p>
+                                                                                    <p
+                                                                                        className={`text-xs font-bold ${isUnavailable
+                                                                                                ? "text-rose-600"
+                                                                                                : "text-emerald-700"
+                                                                                            }`}
+                                                                                    >
+                                                                                        {isUnavailable
+                                                                                            ? "Sold out"
+                                                                                            : `${remainingAvailable} available`}
+                                                                                    </p>
+                                                                                </div>
+                                                                            </div>
+                                                                        </button>
+                                                                    );
+                                                                })
+                                                            )}
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+
+                                            <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
+                                                <div>
+                                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-stone-500">
+                                                        Adults
+                                                    </label>
+                                                    <select
+                                                        value={room.adults}
+                                                        disabled={!selectedPackage}
+                                                        onChange={(e) =>
+                                                            updateRoomGuests(room.id, "adults", e.target.value)
+                                                        }
+                                                        className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm font-semibold text-stone-800 disabled:cursor-not-allowed disabled:bg-stone-100"
+                                                    >
+                                                        {!selectedPackage ? (
+                                                            <option value="1">Select package first</option>
+                                                        ) : (
+                                                            Array.from(
+                                                                { length: adultMax },
+                                                                (_, i) => i + 1,
+                                                            ).map((count) => (
+                                                                <option key={count} value={count}>
+                                                                    {count}
+                                                                </option>
+                                                            ))
+                                                        )}
+                                                    </select>
+                                                </div>
+
+                                                <div>
+                                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-stone-500">
+                                                        Kids
+                                                    </label>
+                                                    <select
+                                                        value={room.kids}
+                                                        disabled={!selectedPackage}
+                                                        onChange={(e) =>
+                                                            updateRoomGuests(room.id, "kids", e.target.value)
+                                                        }
+                                                        className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm font-semibold text-stone-800 disabled:cursor-not-allowed disabled:bg-stone-100"
+                                                    >
+                                                        {!selectedPackage ? (
+                                                            <option value="0">Select package first</option>
+                                                        ) : (
+                                                            Array.from(
+                                                                { length: kidMax + 1 },
+                                                                (_, i) => i,
+                                                            ).map((count) => (
+                                                                <option key={count} value={count}>
+                                                                    {count}
+                                                                </option>
+                                                            ))
+                                                        )}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                        {rooms.length > 1 &&
+                            <div className="flex items-center gap-2.5 p-2 w-fit ml-auto font-bold">
+                                <input type="checkbox" name="ClosetRoom" className="w-5 h-5" />
+                                <SiGitconnected className="border rounded-full text-2xl p-0.5" />
+                                <div className="group relative flex items-center">
+                                    <span className="absolute bottom-full left-1/2 mb-3 w-48 -translate-x-1/2 scale-0 rounded-lg bg-gray-300 border p-3 text-xs text-black shadow-lg transition-all group-hover:scale-100">
+                                        <p className="leading-relaxed">
+                                            You can book a <span className="font-semibold text-blue-600">Closet Room</span> if available at the time of your stay.
+                                        </p>
+                                        {/* tail arrow */}
+                                        <div className="absolute -bottom-1 left-4 h-2 w-2 rotate-45 bg-gray-300 border-b border-r"></div>
+                                    </span>
+
+                                    <label className="cursor-help"> Connecting Rooms</label>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <div className="border-t border-stone-200 p-4 sm:p-5">
+                        <div className="flex justify-end">
+                            <button
+                                type="button"
+                                onClick={handleBooking}
+                                disabled={rooms.length === 0 || rooms.some(room => !room.packageId)}
+                                className="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-7 py-3 text-sm font-extrabold uppercase tracking-[0.14em] text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Book Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section className="mx-auto mt-12 max-w-7xl px-4 sm:px-8 lg:px-14">
+                <div className="mb-6 space-y-2 gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-700">
+                            Package Details
+                        </p>
+                        <h2 className="mt-2 text-3xl font-black text-stone-900 sm:text-4xl">
+                            Review Packages Before Booking
+                        </h2>
+                    </div>
+                    <p className="max-w-xl text-sm text-stone-600">
+                        Check the room package details below before you assign a package to any room.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+                    {reviewPackageList.length === 0 ? (
+                        <div className="col-span-full rounded-2xl border border-dashed border-stone-300 bg-white p-6 text-sm font-semibold text-stone-600 shadow-sm">
+                            No package details available right now.
+                        </div>
+                    ) : (
+                        reviewPackageList.map((item) => (
+                            <article
+                                key={item.id}
+                                tabIndex={0}
+                                className="overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-lg transition hover:-translate-y-1 hover:shadow-2xl cursor-pointer"
+                            >
+                                <img src={item.main_image} alt={item.name} className="h-52 w-full object-cover" />
+                                <div className="space-y-4 p-5">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <h3 className="text-2xl font-extrabold text-stone-900">{item.name}</h3>
+                                            <p className="mt-1 text-sm text-stone-500">
+                                                Capacity: {item.maxAdults} Adults / {item.maxKids} Kids
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <p className="text-sm leading-relaxed text-stone-600">
+                                        {item.description}
+                                    </p>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => openPackageDetails(item)}
+                                        className="rounded-lg border border-emerald-700 px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-emerald-700 transition hover:bg-emerald-50"
+                                    >
+                                        View Package Details
+                                    </button>
+
+                                    <div className="rounded-2xl bg-stone-50 p-4">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-xs font-bold uppercase tracking-wider text-stone-500">
+                                                Price
+                                            </p>
+                                            <p className="text-lg font-black text-emerald-700">{item.price}</p>
+                                        </div>
+                                        <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                                            <div className="rounded-xl bg-white px-3 py-2">
+                                                <p className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
+                                                    Adults
+                                                </p>
+                                                <p className="font-semibold text-stone-900">Up to {item.maxAdults}</p>
+                                            </div>
+                                            <div className="rounded-xl bg-white px-3 py-2">
+                                                <p className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
+                                                    Kids
+                                                </p>
+                                                <p className="font-semibold text-stone-900">Up to {item.maxKids}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </article>
+                        ))
+                    )}
+                </div>
+            </section>
+
+            { selectedRoom && 
+                <RoomDetailsModal
+                    selectedRoom={selectedRoom}
+                    setCurrentImageIndex={setCurrentImageIndex}
+                    onClose={closePackageDetails}
+                />
+            }
         </div>
+    );
+};
 
-        {/* ROOMS SECTION */}
-        <div>
-          {/* MAIN CONTENT */}
-          <div>
-            
-            {/* View Controls */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 bg-white p-4 rounded-xl shadow-sm">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600 font-medium">View:</span>
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                >
-                  <Grid3x3 className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                >
-                  <List className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* ROOM CARDS */}
-            {viewMode === 'grid' ? (
-              <div className="grid md:grid-cols-2 gap-6 mb-8">
-                {roomType.map((room, index) => {
-                  const roomData = rooms.find(r => r.type === room.type);
-                  return (
-                    <RoomCard
-                      key={index}
-                      room={room}
-                      roomData={roomData}
-                      onViewDetails={() => openModal(room)}
-                    />
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="space-y-4 mb-8">
-                {roomType.map((room, index) => {
-                  const roomData = rooms.find(r => r.type === room.type);
-                  return (
-                    <RoomCardList
-                      key={index}
-                      room={room}
-                      roomData={roomData}
-                      onViewDetails={() => openModal(room)}
-                    />
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-        </div>
-
-        {/* MODAL */}
-        <RoomDetailsModal
-          selectedRoom={selectedRoom}
-          currentImageIndex={currentImageIndex}
-          setCurrentImageIndex={setCurrentImageIndex}
-          onClose={closeModal}
-          onPrevImage={prevImage}
-          onNextImage={nextImage}
-        />
-
-      </div>
-    </div>
-  );
-}
-
-/* SUMMARY CARD COMPONENT */
-function SummaryCard({ icon, label, value, color = 'blue' }) {
-  const colorClasses = {
-    blue: 'text-blue-600',
-    green: 'text-green-600',
-    purple: 'text-purple-600'
-  };
-
-  return (
-    <div className="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow border-l-4 border-blue-500">
-      <div className={`${colorClasses[color]} text-3xl mb-2`}>{icon}</div>
-      <div className="text-right">
-        <div className="text-2xl font-bold text-gray-900">{value}</div>
-        <div className="text-gray-500 text-sm">{label}</div>
-      </div>
-    </div>
-  );
-}
+export default BookingRoom;

@@ -1,6 +1,7 @@
-import { RoomPackage } from "../../models/index.js";
-import supabase from "../../config/supabaseClient.js";
+import { col, fn } from "sequelize";
 import multer from "multer";
+import { Room, RoomPackage } from "../../models/index.js";
+import supabase from "../../config/supabaseClient.js";
 
 // Configure multer to store in memory (required for Supabase)
 const storage = multer.memoryStorage();
@@ -19,7 +20,7 @@ export const upload = multer({
 // Add package
 const createPackage = async (req, res) => {
     try {
-        const { pname, pprice, maxAdults, maxKids } = req.body;
+        const { pname, pprice, maxAdults, maxKids, description } = req.body;
 
         // Validate required fields
         if (!pname || !pprice || !req.file) {
@@ -59,6 +60,7 @@ const createPackage = async (req, res) => {
             pimage,
             maxAdults: Number(maxAdults) || 2,
             maxKids: Number(maxKids) || 0,
+            description: description.trim(),
         });
 
         return res.status(201).json({
@@ -101,7 +103,7 @@ const getAllPackages = async (req, res) => {
 const updatePackage = async (req, res) => {
     try {
         const { id } = req.params;
-        const { pname, pprice, maxAdults, maxKids } = req.body;
+        const { pname, pprice, maxAdults, maxKids, description } = req.body;
 
         const package_ = await RoomPackage.findByPk(id);
 
@@ -159,6 +161,7 @@ const updatePackage = async (req, res) => {
             pimage,
             maxAdults: Number(maxAdults),
             maxKids: Number(maxKids),
+            description: description.trim(),
         });
 
         return res.status(200).json({
@@ -220,9 +223,50 @@ const deletePackage = async (req, res) => {
     }
 };
 
+// package details with available room count
+const packagesWithAvailableRoomCount = async (req, res) => {
+    try {
+        const data = await RoomPackage.findAll({
+            attributes: [
+                "id",
+                "pname",
+                "pprice",
+                "pimage",
+                "maxAdults",
+                "maxKids",
+                [fn("COUNT", col("Rooms.id")), "availableRooms"]
+            ],
+            include: [
+                {
+                    model: Room,
+                    attributes: [],
+                    where: {
+                        roomStatus: "available"
+                    }
+                }
+            ],
+            group: ["RoomPackage.id"]
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Packages with available room count",
+            data
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Something went wrong",
+            error: error.message
+        });
+    }
+};
+
 export {
     createPackage,
     getAllPackages,
     updatePackage,
-    deletePackage
+    deletePackage,
+    packagesWithAvailableRoomCount
 };

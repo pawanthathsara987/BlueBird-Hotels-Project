@@ -10,16 +10,11 @@ Amenities.init(
             primaryKey: true,
             autoIncrement: true,
         },
-
         name: {
             type: DataTypes.STRING(100),
             allowNull: false,
         },
 
-        icon: {
-            type: DataTypes.STRING(10),
-            allowNull: true,
-        },
     },
     {
         sequelize,

@@ -21,7 +21,7 @@ const AmenitiesView = () => {
     const getAmenities = async () => {
         setLoading(true);
         try {
-            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/amenities`);
+            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/amenitiesroom`);
             
             if (!response.data || !response.data.data) {
                 setAmenities([]);
@@ -99,7 +99,6 @@ const AmenitiesView = () => {
                 <thead className="bg-gray-200">
                     <tr>
                         <th className="px-4 py-2">Name</th>
-                        <th className="px-4 py-2">Icon</th>
                         <th className="px-4 py-2">Assigned Rooms</th>
                         <th className="px-4 py-2">Actions</th>
                     </tr>
@@ -124,10 +123,9 @@ const AmenitiesView = () => {
                             {amenities.map((amenity) => (
                                 <tr key={amenity.id} className="text-center border-t">
                                     <td className="px-4 py-2 font-medium">{amenity.name}</td>
-                                    <td className="px-4 py-2 font-medium">{amenity.icon}</td>
                                     <td className="px-4 py-2">
                                         <span className="bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full">
-                                            {amenity.assignedRooms || 0} Rooms
+                                            {amenity.Assign_Rooms || 0} Rooms
                                         </span>
                                     </td>
                                     <td className="px-4 py-2 flex justify-center items-center space-x-5">

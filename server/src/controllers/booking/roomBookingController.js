@@ -1,12 +1,13 @@
+import { QueryTypes } from "sequelize";
 import sequelize from "../../config/database.js";
 import { Guest, Room, RoomBook, RoomPackage } from "../../models/index.js";
 
 
-// available room check
+// available room list with packages
 const availableRooms = async (req, res) => {
     try {
         const avlRooms = await Room.findAll({
-            where: { rstatus: "available" },
+            where: { roomstatus: "available" },
             include: [
                 {
                     model: RoomPackage,
@@ -37,46 +38,6 @@ const availableRooms = async (req, res) => {
         });
     }
 };
-
-//available package
-const getAllPackages = async (req, res) => {
-    try {
-        const packages = await sequelize.query(`
-            SELECT 
-                p.id,
-                p.pname,
-                p.pprice,
-                p.pimage,
-                p.maxAdults,
-                p.maxKids,
-                COUNT(CASE WHEN r.rstatus = 'available' THEN 1 END) AS availableRooms
-            FROM room_package p
-            LEFT JOIN rooms r ON p.id = r.packageId
-            GROUP BY p.id
-        `, { type: sequelize.QueryTypes.SELECT });
-
-        if (packages.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "No packages found",
-            });
-        }
-
-        return res.status(200).json({
-            success: true,
-            count: packages.length,
-            data: packages,
-        });
-
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: "Something went wrong",
-            error: error.message,
-        });
-    }
-};
-
 
 // add booking
 const createBooking = async (req, res) => {
@@ -341,6 +302,67 @@ const deleteBookingById = async (req, res) => {
     }
 }
 
+// get all packages which assign room status = available and not boooking for specific date
+const getAvailablePackagesByDate  = async (req, res) => {
+    try {
+        const { checkIn, checkOut } = req.query;
+
+        if (!checkIn || !checkOut) {
+            return res.status(400).json({
+                success: false,
+                message: "checkin and checkout date are required",
+            });
+        };
+
+        const query =
+            `SELECT 
+                p.id,
+                p.pname,
+                p.pprice,
+                p.pimage,
+                p.maxAdults,
+                p.maxKids,
+                p.description,
+                COUNT(r.id) AS available_room
+            FROM room_package p
+            JOIN room r 
+                ON p.id = r.packageId
+            WHERE r.roomStatus = 'available'
+            AND NOT EXISTS (
+                SELECT 1
+                FROM booking_room br
+                WHERE br.roomId = r.id
+                AND br.status NOT IN ('cancelled', 'checked_out')
+                AND br.checkIn < ?
+                AND br.checkOut > ?
+            )
+            GROUP BY 
+                p.id, p.pname, p.pprice, p.pimage, 
+                p.maxAdults, p.maxKids, p.description`;
+
+        const packagesList = await sequelize.query(query, {
+            replacements: [checkOut, checkIn],
+            type: QueryTypes.SELECT
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: packagesList.length > 0
+                ? "Packages retrieved successfully"
+                : "No available packages for selected dates",
+            count: packagesList.length,
+            data: packagesList
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Something went wrong in internal server",
+            error: error.message,
+        });
+    }
+}
+
 export {
     createBooking,
     getAllBookings,
@@ -348,5 +370,5 @@ export {
     deleteBookingById,
     updateBooking,
     availableRooms,
-    getAllPackages
+    getAvailablePackagesByDate
 }

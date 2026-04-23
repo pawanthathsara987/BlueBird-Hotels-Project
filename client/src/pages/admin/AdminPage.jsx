@@ -5,6 +5,7 @@ import RoomManagement from "./rooms/roomManagement";
 import AmenitiesForm from "./rooms/AmenitiesForm";
 import RoomForm from "./rooms/RoomForm";
 import PackageForm from "./rooms/PackageForm";
+import PackageImageForm from "./rooms/PackageImageForm";
 import StaffManagement from "./user/StaffManegement";
 import AddNewStaffMember from "./user/AddNewStaffMember";
 import UpdateStaffMember from "./user/UpdateStaffMember";
@@ -57,6 +58,7 @@ export default function AdminPage() {
                     <Route path="/rooms/amenities/edit" element={<AmenitiesForm />} />
                     <Route path="/rooms/packages/add" element={<PackageForm />} />
                     <Route path="/rooms/packages/edit" element={<PackageForm />} />
+                    <Route path="/rooms/packages/image/add" element={<PackageImageForm />} />
                     <Route path="/bookings" element={<h1 className="p-5">Bookings Management</h1>} />
                     <Route path="/users" element={<StaffManagement />} />
                     <Route path="/users/addStaffMember" element={<AddNewStaffMember />} />
