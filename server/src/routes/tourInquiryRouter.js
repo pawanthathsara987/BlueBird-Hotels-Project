@@ -20,6 +20,9 @@ router.get('/', getAllInquiries);
 // Get inquiry stats
 router.get('/stats', getInquiryStats);
 
+// Get inquiries for specific tour
+router.get('/tour/:tourId', getInquiriesByTour);
+
 // Get inquiry by ID
 router.get('/:id', getInquiryById);
 
@@ -28,8 +31,5 @@ router.put('/:id/accept', acceptInquiry);
 
 // Reject inquiry (manager rejects)
 router.put('/:id/reject', rejectInquiry);
-
-// Get inquiries for specific tour
-router.get('/tour/:tourId', getInquiriesByTour);
 
 export default router;
