@@ -261,7 +261,7 @@ export const acceptInquiry = async (req, res) => {
       depositAmount,
       remainingAmount,
       status: "payment_pending",
-      managerNote: managerNote || null,
+      tourStartDate: inquiry.startDate,
       paymentToken,
       trackingToken,
       tokenExpiresAt,
@@ -334,7 +334,7 @@ export const rejectInquiry = async (req, res) => {
 
     await inquiry.update({
       status: "rejected",
-      managerNote: reason || null,
+      rejectionReason: reason || null,
     });
 
     // Send rejection email to guest
