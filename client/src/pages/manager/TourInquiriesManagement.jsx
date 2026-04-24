@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { Check, X, AlertCircle, Loader, ChevronDown, Mail, Phone, MapPin, Users, Calendar } from 'lucide-react';
 
 export default function TourInquiriesManagement() {
+  const [allInquiries, setAllInquiries] = useState([]);
   const [inquiries, setInquiries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -11,26 +12,54 @@ export default function TourInquiriesManagement() {
 
   const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3002/api').replace(/\/$/, '');
 
-  // Fetch inquiries
-  useEffect(() => {
-    fetchInquiries();
-  }, [filter]);
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return dateStr;
+    return date.toLocaleDateString('en-GB', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
 
-  const fetchInquiries = async () => {
+  const formatLkr = (amount) => {
+    if (amount === null || amount === undefined || Number.isNaN(Number(amount))) return 'N/A';
+    return `LKR ${Number(amount).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const getInquiryName = (inquiry) => {
+    return (
+      inquiry.fullName ||
+      inquiry.name ||
+      inquiry.customerName ||
+      [inquiry.firstName, inquiry.lastName].filter(Boolean).join(' ') ||
+      'Name not provided'
+    );
+  };
+
+  const getTourPackageName = (inquiry) => {
+    return inquiry.Tour?.packageName || inquiry.tour?.packageName || inquiry.packageName || 'Tour package not found';
+  };
+
+  const statusCounts = useMemo(() => {
+    const counts = { pending: 0, accepted: 0, rejected: 0 };
+    allInquiries.forEach((inq) => {
+      if (counts[inq.status] !== undefined) {
+        counts[inq.status] += 1;
+      }
+    });
+    return counts;
+  }, [allInquiries]);
+
+  const fetchInquiries = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`${backendBaseUrl}/tour-inquiry`);
       const data = await response.json();
       
       if (data.success) {
-        // Filter inquiries by status
-        const filtered = data.data.filter(inq => {
-          if (filter === 'pending') return inq.status === 'pending';
-          if (filter === 'accepted') return inq.status === 'accepted';
-          if (filter === 'rejected') return inq.status === 'rejected';
-          return true;
-        });
-        setInquiries(filtered);
+        setAllInquiries(data.data || []);
         setError(null);
       } else {
         setError('Failed to fetch inquiries');
@@ -41,7 +70,22 @@ export default function TourInquiriesManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [backendBaseUrl]);
+
+  // Fetch inquiries
+  useEffect(() => {
+    fetchInquiries();
+  }, [fetchInquiries]);
+
+  useEffect(() => {
+    const filtered = allInquiries.filter((inq) => {
+      if (filter === 'pending') return inq.status === 'pending';
+      if (filter === 'accepted') return inq.status === 'accepted';
+      if (filter === 'rejected') return inq.status === 'rejected';
+      return true;
+    });
+    setInquiries(filtered);
+  }, [allInquiries, filter]);
 
   const handleAccept = async (inquiryId) => {
     setProcessing(inquiryId);
@@ -132,13 +176,25 @@ export default function TourInquiriesManagement() {
                 onClick={() => setFilter(status)}
                 className={`px-4 py-3 font-semibold border-b-2 transition-colors capitalize ${
                   filter === status
-                    ? 'border-blue-600 text-blue-600'
+                    ? status === 'pending'
+                      ? 'border-amber-500 text-amber-700'
+                      : status === 'accepted'
+                        ? 'border-emerald-600 text-emerald-700'
+                        : 'border-rose-600 text-rose-700'
                     : 'border-transparent text-gray-600 hover:text-gray-900'
                 }`}
               >
-                {status === 'pending' ? '📋 Pending' : status === 'accepted' ? '✅ Accepted' : '❌ Rejected'}
-                <span className="ml-2 bg-gray-200 rounded-full px-2 py-1 text-sm">
-                  {inquiries.length}
+                {status === 'pending' ? 'Pending' : status === 'accepted' ? 'Accepted' : 'Rejected'}
+                <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                  filter === status
+                    ? status === 'pending'
+                      ? 'bg-amber-100 text-amber-800 ml-2'
+                      : status === 'accepted'
+                        ? 'bg-emerald-100 text-emerald-800 ml-2'
+                        : 'bg-rose-100 text-rose-800 ml-2'
+                    : 'bg-gray-100 text-gray-700 ml-2'
+                }`}>
+                  {statusCounts[status]}
                 </span>
               </button>
             ))}
@@ -170,8 +226,19 @@ export default function TourInquiriesManagement() {
                   >
                     <div className="flex items-center gap-4 flex-1 text-left">
                       <div>
-                        <p className="font-bold text-gray-900">{inquiry.fullName}</p>
-                        <p className="text-sm text-gray-600">Ref: {inquiry.inquiryRef}</p>
+                        <p className="font-bold text-gray-900">{getInquiryName(inquiry)}</p>
+                        <p className="text-sm text-gray-600">Ref: {inquiry.inquiryRef} • Submitted: {formatDate(inquiry.createdAt)}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                          <span className="px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                            {getTourPackageName(inquiry)}
+                          </span>
+                          <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                            Start: {formatDate(inquiry.startDate)}
+                          </span>
+                          <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                            Guests: {(inquiry.numberOfAdults || 0) + (inquiry.numberOfChildren || 0)}
+                          </span>
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -215,8 +282,16 @@ export default function TourInquiriesManagement() {
                           <h4 className="font-bold text-gray-900 mb-3">Booking Information</h4>
                           <div className="space-y-2 text-sm">
                             <div className="flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4 text-gray-600" />
+                              <span><strong>Tour Package:</strong> {inquiry.Tour?.packageName || 'N/A'}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4 text-gray-600" />
+                              <span><strong>Quoted Price:</strong> {formatLkr(inquiry.Tour?.price)}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
                               <Calendar className="w-4 h-4 text-gray-600" />
-                              <span><strong>Start Date:</strong> {inquiry.startDate}</span>
+                              <span><strong>Start Date:</strong> {formatDate(inquiry.startDate)}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <Users className="w-4 h-4 text-gray-600" />
@@ -229,6 +304,13 @@ export default function TourInquiriesManagement() {
                           </div>
                         </div>
                       </div>
+
+                      {inquiry.status === 'rejected' && inquiry.rejectionReason && (
+                        <div className="mb-6 p-4 bg-rose-50 rounded border border-rose-200">
+                          <h4 className="font-bold text-rose-800 mb-2">Rejection Reason</h4>
+                          <p className="text-sm text-rose-700">{inquiry.rejectionReason}</p>
+                        </div>
+                      )}
 
                       {/* Special Requests */}
                       {inquiry.specialRequests && (
@@ -244,7 +326,7 @@ export default function TourInquiriesManagement() {
                           <button
                             onClick={() => handleAccept(inquiry.id)}
                             disabled={processing === inquiry.id}
-                            className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-semibold disabled:bg-gray-400 transition-colors"
+                            className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-lg font-semibold disabled:bg-gray-400 transition-colors"
                           >
                             {processing === inquiry.id ? (
                               <Loader className="w-4 h-4 animate-spin" />
@@ -256,7 +338,7 @@ export default function TourInquiriesManagement() {
                           <button
                             onClick={() => handleReject(inquiry.id)}
                             disabled={processing === inquiry.id}
-                            className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-semibold disabled:bg-gray-400 transition-colors"
+                            className="flex-1 flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-4 py-3 rounded-lg font-semibold disabled:bg-gray-400 transition-colors"
                           >
                             {processing === inquiry.id ? (
                               <Loader className="w-4 h-4 animate-spin" />

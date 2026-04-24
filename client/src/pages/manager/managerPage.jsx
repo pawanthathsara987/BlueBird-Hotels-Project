@@ -60,6 +60,7 @@ export default function ManagerPage() {
                     <Route path="/vehicles" element={<h1 className="text-2xl font-bold">Manage Vehicles</h1>} />
                     <Route path="/reports" element={<h1 className="text-2xl font-bold">View Reports</h1>} />
                     <Route path="/tours/item/add" element={<TourItemForm />} />
+                    <Route path="/tours/item/edit/:itemId" element={<TourItemForm />} />
                     <Route path="/tours/item/select" element={<TourItemSelectPage />} />
                 </Routes>
             </div>

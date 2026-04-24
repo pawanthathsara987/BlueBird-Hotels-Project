@@ -12,6 +12,7 @@ import TourInquiry from "./tour_package/TourInquiry.js";
 import TourBooking from "./tour_package/TourBooking.js";
 import TourPayment from "./tour_package/TourPayment.js";
 import PackageImage from "./room_package/packageImageModel.js";
+import TourRefund from "./tour_package/TourRefund.js";
 
 
 export function initModels() {
@@ -127,7 +128,20 @@ export function initModels() {
     });
 
     return { Guest, RoomBook, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourBooking, TourPayment, PackageImage };
+    // TourBooking -> TourRefund (One-to-One)
+    TourBooking.hasOne(TourRefund, {
+        foreignKey: "bookingId",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+    });
+    TourRefund.belongsTo(TourBooking, {
+        foreignKey: "bookingId",
+    });
+
+
+    return { Guest, RoomBook, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourBooking, TourPayment, TourRefund };
 }
 export { Guest, RoomBook, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourBooking, TourPayment, PackageImage };
+export { Guest, RoomBook, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourBooking, TourPayment, TourRefund };
 
 
