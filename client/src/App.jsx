@@ -13,6 +13,7 @@ import ManagerPage from "./pages/manager/managerPage";
 import TourViewPage from "./pages/client/booking/TourViewing";
 import TourDetailsPage from "./pages/client/booking/TourDetailsPage";
 import TourPaymentPage from "./pages/client/booking/TourPaymentPage";
+import FloatingChatbot from "./components/FloatingChatbot";
 
 
 
@@ -36,6 +37,7 @@ export default function App() {
                     <Route path="/manager/*" element={<ManagerPage />} />
                     <Route path="/*" element={<HomePage />} />
                 </Routes>
+                <FloatingChatbot />
             </div>
         </BrowserRouter>
     );
