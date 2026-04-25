@@ -114,6 +114,7 @@ export const sendBookingConfirmationEmail = async (inquiry, booking) => {
     const SITE_URL = process.env.FRONTEND_URL || "http://localhost:5174";
     const paymentLink = `${SITE_URL}/booking/payment?bookingId=${booking.id}&token=${booking.paymentToken}`;
     const trackingLink = `${SITE_URL}/booking/track?bookingId=${booking.id}&token=${booking.trackingToken}`;
+    const cancelLink = `${SITE_URL}/booking/cancel?bookingId=${booking.id}&token=${booking.paymentToken}`;
 
     const subject = `Booking Confirmation - Reference: ${booking.bookingRef}`;
 
@@ -189,6 +190,7 @@ export const sendBookingConfirmationEmail = async (inquiry, booking) => {
                 <h3>Need Help?</h3>
                 <p>
                   <a href="${trackingLink}" style="color: #3b82f6;">Track Your Booking</a> | 
+                  <a href="${cancelLink}" style="color: #dc2626;">Cancel Booking</a> |
                   <a href="mailto:support@bluebird-hotels.com" style="color: #3b82f6;">Contact Support</a>
                 </p>
               </div>
@@ -198,9 +200,10 @@ export const sendBookingConfirmationEmail = async (inquiry, booking) => {
                 <ul>
                   <li>50% Advance: Due now to confirm booking</li>
                   <li>Remaining 50%: Due before tour date</li>
-                  <li>Free cancellation up to 24 hours before tour</li>
+                  <li>Refund eligible only if cancelled at least 4 days before tour start</li>
                 </ul>
                 <p>Payment Link: <a href="${paymentLink}">${paymentLink}</a></p>
+                <p>Cancel Link: <a href="${cancelLink}">${cancelLink}</a></p>
                 <p style="margin-top: 20px;">Best regards,<br/>BlueJay Hotels Team</p>
               </div>
             </div>

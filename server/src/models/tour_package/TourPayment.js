@@ -6,15 +6,14 @@ class TourPayment extends Model {}
 TourPayment.init(
   {
     id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      type: DataTypes.INTEGER,
       primaryKey: true,
+      autoIncrement: true,
       allowNull: false,
     },
     bookingId: {
-      type: DataTypes.UUID,
+      type: DataTypes.INTEGER,
       allowNull: false,
-      // Link to TourBooking
     },
     // deposit = 50% upfront | final = remaining 50%
     paymentType: {
@@ -26,18 +25,14 @@ TourPayment.init(
       allowNull: false,
     },
     paymentMethod: {
-      type: DataTypes.ENUM("payhere", "cash", "card"),
+      type: DataTypes.ENUM("cash", "card", "online"),
       allowNull: true,
+      // online → placeholder until gateway decided
     },
     paymentStatus: {
       type: DataTypes.ENUM("pending", "success", "failed"),
       defaultValue: "pending",
       allowNull: false,
-    },
-    // PayHere reference (when using PayHere)
-    payhereOrderId: {
-      type: DataTypes.STRING,
-      allowNull: true,
     },
     paidAt: {
       type: DataTypes.DATE,

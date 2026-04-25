@@ -10,10 +10,12 @@ import PasswordResetPage from "./pages/reception/PasswordResetPage";
 import { Toaster } from "react-hot-toast";
 import BookingRoom from "./pages/client/booking/roomBooking";
 import ManagerPage from "./pages/manager/managerPage";
+import ReceptionPage from "./pages/reception/receptionPage";
 import TourViewPage from "./pages/client/booking/TourViewing";
 import TourDetailsPage from "./pages/client/booking/TourDetailsPage";
 import TourPaymentPage from "./pages/client/booking/TourPaymentPage";
 import FloatingChatbot from "./components/FloatingChatbot";
+import TourCancelPage from "./pages/client/booking/TourCancelPage";
 
 
 
@@ -28,13 +30,16 @@ export default function App() {
                     <Route path="/booking/tour" element={<BookingTour />} />
                     <Route path="/booking/tour-details" element={<TourDetailsPage />} />
                     <Route path="/booking/payment" element={<TourPaymentPage />} />
+                    <Route path="/booking/cancel" element={<TourCancelPage />} />
                     <Route path="/tourBooking" element={<TourViewPage />} />
                     <Route path="/loginAdmin" element={<LoginAdmin />} />
                     <Route path="/loginReceptionist" element={<LoginReceptionist />} />
                     <Route path="/userRegister" element={<UserRegister />} />
-                    <Route path="/reset-password" element={<PasswordResetPage />} />
-                    <Route path="/admin/*" element={<AdminPage />} />
-                    <Route path="/manager/*" element={<ManagerPage />} />
+                    <Route path="/booking/tour" element={< BookingTour />} />           
+                    <Route path="/reset-password" element={< PasswordResetPage />} />
+                    <Route path="/admin/*" element={< AdminPage />} />
+                    <Route path="/manager/*" element={< ManagerPage />} />
+                    <Route path="/reception/*" element={< ReceptionPage />} />
                     <Route path="/*" element={<HomePage />} />
                 </Routes>
                 <FloatingChatbot />

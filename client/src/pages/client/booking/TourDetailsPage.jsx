@@ -1,525 +1,543 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Users, MapPin, DollarSign, Check, AlertCircle, Heart, Share2, Loader } from 'lucide-react';
+import {
+  MapPin, Users, Tag, Check, AlertCircle, Heart, Share2,
+  Loader, ChevronLeft, ChevronRight, Star, Clock, Shield, X
+} from 'lucide-react';
 import axios from 'axios';
+import { useLocation } from 'react-router-dom';
 import Header from '../../../components/header';
 import Footer from '../../../components/footer';
 
+/* ─── Helpers ─────────────────────────────────────────────── */
+const TABS = ['Overview', "What's Included", 'Terms & Conditions'];
+
+function Stepper({ label, value, onChange, min = 0 }) {
+  return (
+    <div>
+      <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1.5">{label}</label>
+      <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden bg-gray-50">
+        <button
+          type="button"
+          onClick={() => onChange(Math.max(min, value - 1))}
+          className="w-10 h-10 flex items-center justify-center text-lg text-emerald-700 hover:bg-gray-200 transition-colors font-semibold"
+        >−</button>
+        <span className="flex-1 text-center font-bold text-gray-800 border-x border-gray-200 leading-10 text-sm">{value}</span>
+        <button
+          type="button"
+          onClick={() => onChange(value + 1)}
+          className="w-10 h-10 flex items-center justify-center text-lg text-emerald-700 hover:bg-gray-200 transition-colors font-semibold"
+        >+</button>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, error, children }) {
+  return (
+    <div>
+      <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1.5">{label}</label>
+      {children}
+      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+    </div>
+  );
+}
+
+const inputCls = (err) =>
+  `w-full px-3.5 py-2.5 rounded-xl border text-sm text-gray-800 bg-gray-50 outline-none transition focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 ${err ? 'border-red-400 bg-red-50' : 'border-gray-200'}`;
+
+/* ─── Component ───────────────────────────────────────────── */
 export default function TourDetailsPage() {
-  const [tour, setTour] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [wishlist, setWishlist] = useState(false);
-  
+  const location = useLocation();
+  const selectedTour = location.state?.tour || null;
+  const tourIdFromQuery = new URLSearchParams(location.search).get('tourId');
   const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3002/api').replace(/\/$/, '');
 
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    nationality: '',
-    numberOfAdults: 1,
-    numberOfChildren: 0,
-    startDate: '',
-    pickupLocation: '',
-    specialRequests: '',
-  });
+  const [tour, setTour] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [pageError, setPageError] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [wishlist, setWishlist] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
+  const [toast, setToast] = useState(null);
+  const [activeImg, setActiveImg] = useState(0);
 
+  const getImages = (t) => {
+    if (!t) return [];
+    if (Array.isArray(t.images) && t.images.length) return t.images;
+    if (t.image) return [t.image];
+    return [];
+  };
+
+  const [form, setForm] = useState({
+    fullName: '', email: '', phone: '', nationality: '',
+    numberOfAdults: 2, numberOfChildren: 0,
+    startDate: '', pickupLocation: '', specialRequests: '',
+  });
   const [errors, setErrors] = useState({});
 
-  // Fetch tour details (using first tour as example)
+  const minStartDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split('T')[0];
+
   useEffect(() => {
-    const fetchTour = async () => {
+    if (selectedTour) { setTour(selectedTour); setLoading(false); return; }
+    (async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${backendBaseUrl}/manager/tours`);
-        
-        if (response.data.success && response.data.data.length > 0) {
-          setTour(response.data.data[0]); // Use first tour
-          setError(null);
-        } else {
-          setError('No tours available');
-        }
-      } catch (error) {
-        console.error('Error fetching tour:', error);
-        setError(error.message || 'Failed to load tour details');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTour();
-  }, [backendBaseUrl]);
+        const endpoint = tourIdFromQuery
+          ? `${backendBaseUrl}/manager/tours/${tourIdFromQuery}`
+          : `${backendBaseUrl}/manager/tours`;
+        const res = await axios.get(endpoint);
+        if (tourIdFromQuery) {
+          if (res.data.success && res.data.data) setTour(res.data.data);
+          else setPageError('Tour not found');
+        } else if (res.data.success && res.data.data.length > 0) {
+          setTour(res.data.data[0]);
+        } else setPageError('No tours available');
+      } catch (e) {
+        setPageError(e.message || 'Failed to load tour details');
+      } finally { setLoading(false); }
+    })();
+  }, [backendBaseUrl, selectedTour, tourIdFromQuery]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'numberOfAdults' || name === 'numberOfChildren' ? parseInt(value) : value
-    }));
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
+    setForm(p => ({ ...p, [name]: value }));
+    if (errors[name]) setErrors(p => ({ ...p, [name]: '' }));
   };
 
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required';
-    if (!formData.email.trim()) newErrors.email = 'Email is required';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Invalid email address';
-    if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
-    if (!formData.nationality.trim()) newErrors.nationality = 'Nationality is required';
-    if (!formData.startDate) newErrors.startDate = 'Start date is required';
-    if (!formData.pickupLocation.trim()) newErrors.pickupLocation = 'Pickup location is required';
-    if (formData.numberOfAdults < 1) newErrors.numberOfAdults = 'At least 1 adult is required';
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const validate = () => {
+    const e = {};
+    if (!form.fullName.trim()) e.fullName = 'Required';
+    if (!form.email.trim()) e.email = 'Required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Invalid email';
+    if (!form.phone.trim()) e.phone = 'Required';
+    if (!form.nationality.trim()) e.nationality = 'Required';
+    if (!form.startDate) e.startDate = 'Required';
+    else if (form.startDate < minStartDate) e.startDate = 'Start date must be at least 2 days from today';
+    if (!form.pickupLocation.trim()) e.pickupLocation = 'Required';
+    setErrors(e);
+    return !Object.keys(e).length;
   };
+
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 4500); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
+    if (!validate()) return;
     setIsSubmitting(true);
-    setError(null);
-
     try {
-      // Submit inquiry to backend
-      const response = await axios.post(`${backendBaseUrl}/tour-inquiry`, {
-        tourId: tour.id,
-        fullName: formData.fullName,
-        email: formData.email,
-        phone: formData.phone,
-        nationality: formData.nationality,
-        numberOfAdults: formData.numberOfAdults,
-        numberOfChildren: formData.numberOfChildren,
-        startDate: formData.startDate,
-        pickupLocation: formData.pickupLocation,
-        specialRequests: formData.specialRequests,
-      });
-
-      if (response.data.success) {
-        // Get inquiry data
-        const inquiryData = response.data.data;
-        
-        // Show confirmation message
-        alert(`Inquiry submitted successfully!\nReference: ${inquiryData.inquiryRef}\n\nPlease wait for manager approval.`);
-        
-        // Reset form
-        setFormData({
-          fullName: '',
-          email: '',
-          phone: '',
-          nationality: '',
-          numberOfAdults: 1,
-          numberOfChildren: 0,
-          startDate: '',
-          pickupLocation: '',
-          specialRequests: '',
-        });
-
-        setError(null);
-      } else {
-        setError(response.data.message || 'Failed to submit inquiry');
-      }
-    } catch (error) {
-      console.error('Error submitting inquiry:', error);
-      setError(error.response?.data?.message || 'Failed to submit inquiry. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
+      const res = await axios.post(`${backendBaseUrl}/tour-inquiry`, { tourId: tour.id, ...form });
+      if (res.data.success) {
+        showToast(`Inquiry submitted! Ref: ${res.data.data.inquiryRef}`);
+        setForm({ fullName:'', email:'', phone:'', nationality:'', numberOfAdults:2, numberOfChildren:0, startDate:'', pickupLocation:'', specialRequests:'' });
+      } else setPageError(res.data.message || 'Submission failed');
+    } catch (e) {
+      setPageError(e.response?.data?.message || 'Failed to submit. Please try again.');
+    } finally { setIsSubmitting(false); }
   };
 
-  const calculateTotal = () => {
-    if (!tour) return 0;
-    const finalPrice = tour.discount 
-      ? tour.price - (tour.price * tour.discount / 100)
-      : tour.price;
-    return finalPrice * (formData.numberOfAdults + formData.numberOfChildren);
-  };
+  const finalPrice = tour
+    ? (tour.discount ? tour.price - (tour.price * tour.discount / 100) : tour.price)
+    : 0;
+  const total = finalPrice;
+  const tourLocation = tour?.location || 'Location not specified';
+  const itineraryItems = Array.isArray(tour?.itinerary)
+    ? tour.itinerary
+    : typeof tour?.itinerary === 'string' && tour.itinerary.trim()
+      ? [tour.itinerary]
+      : [];
+  const images = getImages(tour);
+  const isActive = tour?.status === 'active';
 
-  if (loading) {
-    return (
-      <div className="w-full h-full flex flex-col">
-        <Header />
-        <div className="flex-1 flex items-center justify-center bg-gray-50">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="text-gray-600 mt-4">Loading tour details...</p>
-          </div>
+  /* ── Loading ── */
+  if (loading) return (
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      <Header />
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-gray-200 border-t-emerald-600 rounded-full animate-spin mx-auto" />
+          <p className="mt-4 text-sm text-gray-400">Loading tour details…</p>
         </div>
-        <Footer />
       </div>
-    );
-  }
+      <Footer />
+    </div>
+  );
 
-  if (error || !tour) {
-    return (
-      <div className="w-full h-full flex flex-col">
-        <Header />
-        <div className="flex-1 bg-gray-50 flex items-center justify-center">
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl p-6 max-w-md">
-            <p className="font-semibold mb-2">Error</p>
-            <p className="text-sm">{error}</p>
-          </div>
+  if (pageError && !tour) return (
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      <Header />
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-8 max-w-sm text-center">
+          <AlertCircle className="mx-auto mb-3 text-red-400" size={32} />
+          <p className="font-bold text-gray-900 mb-1">Something went wrong</p>
+          <p className="text-sm text-gray-500">{pageError}</p>
         </div>
-        <Footer />
       </div>
-    );
-  }
-
-  const finalPrice = tour.discount 
-    ? tour.price - (tour.price * tour.discount / 100)
-    : tour.price;
+      <Footer />
+    </div>
+  );
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
-      <div className="flex-1 bg-gray-50">
-        <div className="w-full max-w-6xl mx-auto py-8 px-4">
-          
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* Left: Tour Details */}
-            <div className="lg:col-span-2">
-              
-              {/* Tour Hero Image */}
-              <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-6 relative group">
-                {tour.image ? (
-                  <img src={tour.image} alt={tour.packageName} className="w-full h-80 object-cover" />
-                ) : (
-                  <div className="w-full h-80 bg-linear-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-                    <p className="text-white text-center text-2xl font-semibold">{tour.packageName}</p>
-                  </div>
-                )}
-                
-                {/* Wishlist & Share Buttons */}
-                <div className="absolute top-4 right-4 flex gap-2">
-                  <button 
-                    onClick={() => setWishlist(!wishlist)}
-                    className="bg-white hover:bg-red-50 p-3 rounded-full shadow-lg transition-colors"
-                  >
-                    <Heart className={`w-5 h-5 ${wishlist ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
-                  </button>
-                  <button className="bg-white hover:bg-blue-50 p-3 rounded-full shadow-lg transition-colors">
-                    <Share2 className="w-5 h-5 text-gray-400" />
-                  </button>
-                </div>
 
-                {/* Discount Badge */}
-                {tour.discount > 0 && (
-                  <div className="absolute top-4 left-4 bg-red-500 text-white font-bold px-4 py-2 rounded-full shadow-lg">
-                    {tour.discount}% OFF
-                  </div>
-                )}
+      {/* ── Toast ── */}
+      {toast && (
+        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-emerald-900 text-white text-sm px-5 py-3.5 rounded-2xl shadow-2xl max-w-xs">
+          <Check size={15} className="text-yellow-400 shrink-0" />
+          <span>{toast}</span>
+          <button onClick={() => setToast(null)} className="ml-auto text-white/50 hover:text-white transition"><X size={14} /></button>
+        </div>
+      )}
+
+      {/* ══════════════ HERO ══════════════ */}
+      <div className="relative overflow-hidden bg-emerald-950" style={{ height: 'clamp(300px, 60vh, 600px)' }}>
+
+        {images.length > 0 ? (
+          <img
+            src={images[activeImg]}
+            alt={tour?.packageName}
+            className="w-full h-full object-cover transition-transform duration-700 hover:scale-[1.02]"
+          />
+        ) : (
+          <div className="w-full h-full bg-linear-to-br from-emerald-900 to-teal-700 flex items-center justify-center">
+            <p className="text-4xl font-bold text-white/10 text-center px-6">{tour?.packageName}</p>
+          </div>
+        )}
+
+        {/* Dark gradient overlay */}
+        <div
+          className="absolute inset-0"
+          style={{ background: 'linear-gradient(to top, rgba(4,18,10,.92) 0%, rgba(4,18,10,.18) 55%, transparent 100%)' }}
+        />
+
+        {/* Gallery arrows */}
+        {images.length > 1 && (
+          <>
+            <button
+              onClick={() => setActiveImg(i => (i - 1 + images.length) % images.length)}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/15 backdrop-blur-sm border border-white/25 flex items-center justify-center text-white hover:bg-white/30 transition"
+            ><ChevronLeft size={18} /></button>
+            <button
+              onClick={() => setActiveImg(i => (i + 1) % images.length)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/15 backdrop-blur-sm border border-white/25 flex items-center justify-center text-white hover:bg-white/30 transition"
+            ><ChevronRight size={18} /></button>
+          </>
+        )}
+
+        {/* Thumbnails */}
+        {images.length > 1 && (
+          <div className="absolute bottom-20 right-5 flex gap-2 z-10">
+            {images.map((src, i) => (
+              <img
+                key={i} src={src} onClick={() => setActiveImg(i)} alt=""
+                className={`w-14 h-10 object-cover rounded-lg cursor-pointer border-2 transition-all ${i === activeImg ? 'border-yellow-400 opacity-100' : 'border-transparent opacity-55 hover:opacity-80'}`}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Discount */}
+        {tour?.discount > 0 && (
+          <div className="absolute top-5 left-5 z-10 bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow">
+            {tour.discount}% OFF
+          </div>
+        )}
+
+        {/* Wishlist / Share */}
+        <div className="absolute top-5 right-5 z-10 flex gap-2">
+          <button
+            onClick={() => setWishlist(w => !w)}
+            className="w-10 h-10 rounded-full bg-white/15 backdrop-blur-sm border border-white/25 flex items-center justify-center text-white hover:bg-white/30 transition"
+          ><Heart size={16} fill={wishlist ? '#ff6b6b' : 'none'} color={wishlist ? '#ff6b6b' : 'currentColor'} /></button>
+          <button className="w-10 h-10 rounded-full bg-white/15 backdrop-blur-sm border border-white/25 flex items-center justify-center text-white hover:bg-white/30 transition">
+            <Share2 size={16} />
+          </button>
+        </div>
+
+        {/* Hero text */}
+        <div className="absolute bottom-0 left-0 right-0 z-10 px-6 pb-7 md:px-10">
+          <span className="inline-block bg-yellow-400 text-emerald-900 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-3">
+            Sri Lanka Tours
+          </span>
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white leading-tight mb-2">
+            {tour?.packageName}
+          </h1>
+          <div className="flex items-center gap-1.5 text-white/65 text-sm">
+            <MapPin size={13} /><span>{tourLocation}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ══════════════ STATS BAR ══════════════ */}
+      <div className="bg-emerald-900">
+        <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-white/10">
+          {[
+            { icon: <Users size={15} />, label: 'Group size', value: tour?.groupSize ? `Up to ${tour.groupSize}` : '—' },
+            { icon: <Tag size={15} />,   label: 'From',       value: `LKR ${Number(finalPrice).toLocaleString()}` },
+            { icon: <Star size={15} />,  label: 'Status',     value: isActive ? 'Available' : 'Unavailable', cls: isActive ? 'text-emerald-300' : 'text-red-300' },
+            { icon: <Shield size={15} />,label: 'Cancellation', value: 'Free up to 24h' },
+          ].map((s, i) => (
+            <div key={i} className="flex items-center gap-3 px-5 py-4">
+              <span className="text-yellow-400 shrink-0">{s.icon}</span>
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-white/45 font-semibold">{s.label}</p>
+                <p className={`text-sm font-bold ${s.cls || 'text-white'}`}>{s.value}</p>
               </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
-              {/* Tour Overview */}
-              <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
-                <div className="flex justify-between items-start mb-6">
-                  <div>
-                    <h1 className="text-4xl font-bold text-gray-900 mb-2">{tour.packageName}</h1>
-                    {tour.location && (
-                      <div className="flex items-center gap-2 text-gray-600 mb-4">
-                        <MapPin className="w-5 h-5" />
-                        <span className="text-lg">{tour.location}</span>
-                      </div>
-                    )}
+      {/* ══════════════ BODY ══════════════ */}
+      <div className="max-w-6xl mx-auto w-full px-4 md:px-6 py-10 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+
+        {/* ── Left ── */}
+        <div className="lg:col-span-2 space-y-8">
+
+          {/* Tabs card */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="flex border-b border-gray-100">
+              {TABS.map((t, i) => (
+                <button
+                  key={t}
+                  onClick={() => setActiveTab(i)}
+                  className={`flex-1 py-3.5 text-xs sm:text-sm font-bold uppercase tracking-wide transition-colors ${
+                    activeTab === i
+                      ? 'text-emerald-700 border-b-2 border-emerald-600 bg-emerald-50/60'
+                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+                  }`}
+                >{t}</button>
+              ))}
+            </div>
+            <div className="p-6 md:p-8">
+              {activeTab === 0 && (
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">About This Tour</h2>
+                  <p className="text-gray-600 leading-relaxed text-[15px]">{tour?.overview || 'No overview provided.'}</p>
+                  <div className="mt-6 grid gap-5">
+                    <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                      <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Location</p>
+                      <p className="text-sm text-gray-700">{tourLocation}</p>
+                    </div>
+
+                    <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                      <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Itinerary</p>
+                      {itineraryItems.length > 0 ? (
+                        <ul className="space-y-2">
+                          {itineraryItems.map((item, index) => {
+                            const content = typeof item === 'string' ? item : item?.title || item?.name || item?.activity || JSON.stringify(item);
+                            return (
+                              <li key={index} className="text-sm text-gray-700 flex gap-2">
+                                <span className="text-emerald-600 font-semibold">{index + 1}.</span>
+                                <span>{content}</span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-gray-500">No itinerary details provided.</p>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                {/* Key Info */}
-                {tour.groupSize && (
-                  <div className="grid grid-cols-3 gap-4 mb-8 p-4 bg-blue-50 rounded-lg">
-                    <div className="text-center">
-                      <Users className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-                      <p className="text-sm text-gray-600">Group Size</p>
-                      <p className="font-bold text-gray-900">{tour.groupSize} People</p>
-                    </div>
-                    <div className="text-center">
-                      <DollarSign className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-                      <p className="text-sm text-gray-600">Starting Price</p>
-                      <p className="font-bold text-green-600">LKR {Number(finalPrice).toFixed(2)}</p>
-                    </div>
-                    <div className="text-center">
-                      <Calendar className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-                      <p className="text-sm text-gray-600">Status</p>
-                      <p className={`font-bold ${tour.status === 'active' ? 'text-green-600' : 'text-red-600'}`}>
-                        {tour.status === 'active' ? 'Available' : 'Unavailable'}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Overview */}
-                {tour.overview && (
-                  <div className="mb-8">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-4">About This Tour</h3>
-                    <p className="text-gray-600 leading-relaxed text-lg">{tour.overview}</p>
-                  </div>
-                )}
-
-                {/* Includes */}
-                {tour.TourItems && tour.TourItems.length > 0 && (
-                  <div className="mb-8">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-4">What's Included</h3>
-                    <div className="grid grid-cols-2 gap-4">
+              )}
+              {activeTab === 1 && (
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-5">What's Included</h2>
+                  {tour?.TourItems?.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {tour.TourItems.map(item => (
-                        <div key={item.id} className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-                          <Check className="w-5 h-5 text-green-600 shrink-0" />
-                          <span className="text-gray-700 font-medium">{item.name}</span>
+                        <div key={item.id} className="flex items-center gap-3 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3">
+                          <Check size={14} className="text-emerald-600 shrink-0" />
+                          <span className="text-sm font-medium text-gray-800">{item.name}</span>
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <p className="text-gray-400 text-sm">No inclusions listed.</p>
+                  )}
+                </div>
+              )}
+              {activeTab === 2 && (
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Terms & Conditions</h2>
+                  <p className="text-gray-600 text-[15px] leading-relaxed whitespace-pre-wrap">{tour?.termsConditions || 'No terms provided.'}</p>
+                </div>
+              )}
+            </div>
+          </div>
 
-                {/* Terms & Conditions */}
-                {tour.termsConditions && (
-                  <div className="border-t pt-8">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-4">Terms & Conditions</h3>
-                    <p className="text-gray-600 whitespace-pre-wrap leading-relaxed">{tour.termsConditions}</p>
-                  </div>
-                )}
+          {/* Booking Form */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-7">Complete Your Inquiry</h2>
+            <form onSubmit={handleSubmit} className="space-y-8">
+
+              {/* Contact */}
+              <div className="space-y-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100 pb-2">Contact Details</p>
+                <Field label="Full Name *" error={errors.fullName}>
+                  <input name="fullName" value={form.fullName} onChange={handleChange} placeholder="Your full name" className={inputCls(errors.fullName)} />
+                </Field>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field label="Email *" error={errors.email}>
+                    <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="you@email.com" className={inputCls(errors.email)} />
+                  </Field>
+                  <Field label="Phone *" error={errors.phone}>
+                    <input name="phone" type="tel" value={form.phone} onChange={handleChange} placeholder="+94 77 000 0000" className={inputCls(errors.phone)} />
+                  </Field>
+                </div>
+                <Field label="Nationality *" error={errors.nationality}>
+                  <input name="nationality" value={form.nationality} onChange={handleChange} placeholder="e.g. British" className={inputCls(errors.nationality)} />
+                </Field>
               </div>
 
-              {/* Booking Form */}
-              <div className="bg-white rounded-2xl shadow-lg p-8">
-                <h2 className="text-3xl font-bold text-gray-900 mb-8">Book Your Tour</h2>
-                
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  
-                  {/* Full Name */}
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Full Name *</label>
-                    <input
-                      type="text"
-                      name="fullName"
-                      value={formData.fullName}
-                      onChange={handleChange}
-                      placeholder="Enter your full name"
-                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg ${
-                        errors.fullName ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                    />
-                    {errors.fullName && <p className="text-red-500 text-sm mt-1">{errors.fullName}</p>}
-                  </div>
+              {/* Guests */}
+              <div className="space-y-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100 pb-2">Guests</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <Stepper label="Adults *" value={form.numberOfAdults} min={1} onChange={v => setForm(p => ({ ...p, numberOfAdults: v }))} />
+                  <Stepper label="Children" value={form.numberOfChildren} min={0} onChange={v => setForm(p => ({ ...p, numberOfChildren: v }))} />
+                </div>
+              </div>
 
-                  {/* Email */}
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Email *</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      placeholder="Enter your email"
-                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg ${
-                        errors.email ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                    />
-                    {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
-                  </div>
+              {/* Trip */}
+              <div className="space-y-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100 pb-2">Trip Details</p>
+                <Field label="Start Date *" error={errors.startDate}>
+                  <input
+                    name="startDate"
+                    type="date"
+                    min={minStartDate}
+                    value={form.startDate}
+                    onChange={handleChange}
+                    className={inputCls(errors.startDate)}
+                  />
+                </Field>
+                <Field label="Pickup Location *" error={errors.pickupLocation}>
+                  <input name="pickupLocation" value={form.pickupLocation} onChange={handleChange} placeholder="e.g. Colombo City Hotel" className={inputCls(errors.pickupLocation)} />
+                </Field>
+              </div>
 
-                  {/* Phone & Nationality */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">Phone *</label>
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        placeholder="+1 (555) 000-0000"
-                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg ${
-                          errors.phone ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                      />
-                      {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">Nationality *</label>
-                      <input
-                        type="text"
-                        name="nationality"
-                        value={formData.nationality}
-                        onChange={handleChange}
-                        placeholder="Your nationality"
-                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg ${
-                          errors.nationality ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                      />
-                      {errors.nationality && <p className="text-red-500 text-sm mt-1">{errors.nationality}</p>}
-                    </div>
-                  </div>
+              {/* Special requests */}
+              <div className="space-y-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100 pb-2">Special Requests</p>
+                <textarea
+                  name="specialRequests"
+                  value={form.specialRequests}
+                  onChange={handleChange}
+                  rows={3}
+                  placeholder="Dietary requirements, accessibility needs, celebrations…"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 bg-gray-50 outline-none resize-none focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition"
+                />
+              </div>
 
-                  {/* Adults & Children */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">Number of Adults *</label>
-                      <select
-                        name="numberOfAdults"
-                        value={formData.numberOfAdults}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
-                      >
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-                          <option key={num} value={num}>{num}</option>
-                        ))}
-                      </select>
-                      {errors.numberOfAdults && <p className="text-red-500 text-sm mt-1">{errors.numberOfAdults}</p>}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">Number of Children</label>
-                      <select
-                        name="numberOfChildren"
-                        value={formData.numberOfChildren}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
-                      >
-                        {[0, 1, 2, 3, 4, 5, 6].map(num => (
-                          <option key={num} value={num}>{num}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
+              {pageError && (
+                <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">
+                  <AlertCircle size={14} className="shrink-0" />{pageError}
+                </div>
+              )}
 
-                  {/* Start Date */}
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Start Date *</label>
-                    <input
-                      type="date"
-                      name="startDate"
-                      value={formData.startDate}
-                      onChange={handleChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg ${
-                        errors.startDate ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                    />
-                    {errors.startDate && <p className="text-red-500 text-sm mt-1">{errors.startDate}</p>}
-                  </div>
+              <button
+                type="submit"
+                disabled={!isActive || isSubmitting}
+                className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold tracking-wide transition-all ${
+                  isActive && !isSubmitting
+                    ? 'bg-emerald-700 hover:bg-emerald-600 active:scale-[.98] text-white shadow-lg shadow-emerald-100'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                {isSubmitting && <Loader size={14} className="animate-spin" />}
+                {isSubmitting ? 'Submitting…' : isActive ? 'Submit Inquiry' : 'Tour Unavailable'}
+              </button>
+            </form>
+          </div>
+        </div>
 
-                  {/* Pickup Location */}
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Pickup Location *</label>
-                    <input
-                      type="text"
-                      name="pickupLocation"
-                      value={formData.pickupLocation}
-                      onChange={handleChange}
-                      placeholder="Enter pickup location (e.g., Colombo Hotel, Negombo Beach)"
-                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg ${
-                        errors.pickupLocation ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                    />
-                    {errors.pickupLocation && <p className="text-red-500 text-sm mt-1">{errors.pickupLocation}</p>}
-                  </div>
+        {/* ── Sidebar ── */}
+        <div className="lg:col-span-1">
+          <div className="sticky top-5 rounded-2xl overflow-hidden shadow-lg border border-gray-100">
 
-                  {/* Special Requests */}
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Special Requests</label>
-                    <textarea
-                      name="specialRequests"
-                      value={formData.specialRequests}
-                      onChange={handleChange}
-                      placeholder="Any special requirements or requests? (dietary restrictions, accessibility needs, etc.)"
-                      rows="4"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg resize-none"
-                    />
-                  </div>
-
-                  {/* Submit Button */}
-                  <button
-                    type="submit"
-                    disabled={tour.status !== 'active' || isSubmitting}
-                    className={`w-full font-bold py-4 rounded-lg transition-colors text-lg mt-8 flex items-center justify-center gap-2 ${
-                      tour.status === 'active' && !isSubmitting
-                        ? 'bg-green-600 hover:bg-green-700 text-white cursor-pointer'
-                        : 'bg-gray-400 text-gray-700 cursor-not-allowed'
-                    }`}
-                  >
-                    {isSubmitting && <Loader size={20} className="animate-spin" />}
-                    {isSubmitting ? 'Submitting...' : (tour.status === 'active' ? 'Submit Booking' : 'Tour Not Available')}
-                  </button>
-                </form>
+            {/* Header */}
+            <div className="bg-emerald-900 px-6 py-5">
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="text-3xl font-bold text-white">LKR {Number(finalPrice).toLocaleString()}</span>
+                <span className="text-xs text-white/50">/ package</span>
+                {tour?.discount > 0 && (
+                  <>
+                    <span className="text-xs text-white/35 line-through">LKR {Number(tour.price).toLocaleString()}</span>
+                    <span className="ml-auto bg-yellow-400 text-emerald-900 text-[10px] font-bold px-2.5 py-1 rounded-full">−{tour.discount}%</span>
+                  </>
+                )}
+              </div>
+              <div className="flex items-center gap-2 mt-3">
+                <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                <span className="text-xs text-white/55">{isActive ? 'Available to book' : 'Currently unavailable'}</span>
               </div>
             </div>
 
-            {/* Right: Price Summary */}
-            <div className="lg:col-span-1">
-              <div className="bg-white rounded-2xl shadow-lg p-8 sticky top-4 h-fit">
-                <h3 className="text-2xl font-bold text-gray-900 mb-6">Booking Summary</h3>
+            {/* Body */}
+            <div className="bg-white px-6 py-5 space-y-5">
 
-                {/* Price Breakdown */}
-                <div className="space-y-4 mb-6 pb-6 border-b-2 border-gray-200">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Price per person</span>
-                    <span className="font-bold text-lg">LKR {Number(finalPrice).toFixed(2)}</span>
-                  </div>
-                  
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">
-                      Adults: {formData.numberOfAdults}
-                    </span>
-                    <span className="font-bold">LKR {(finalPrice * formData.numberOfAdults).toFixed(2)}</span>
-                  </div>
-
-                  {formData.numberOfChildren > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">
-                        Children: {formData.numberOfChildren} (50%)
-                      </span>
-                      <span className="font-bold">LKR {(finalPrice * 0.5 * formData.numberOfChildren).toFixed(2)}</span>
-                    </div>
-                  )}
+              {/* Price breakdown */}
+              <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 space-y-2.5">
+                <div className="flex justify-between text-sm text-gray-500">
+                  <span>Tour package price</span>
+                  <span className="font-semibold text-gray-800">LKR {Number(finalPrice).toLocaleString()}</span>
                 </div>
-
-                {/* Total */}
-                <div className="mb-6">
-                  <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
-                    <span className="font-bold text-gray-900 text-lg">Total Cost</span>
-                    <span className="font-bold text-blue-600 text-3xl">LKR {calculateTotal().toFixed(2)}</span>
-                  </div>
-                </div>
-
-                {/* Discount */}
-                {tour.discount > 0 && (
-                  <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4 mb-6">
-                    <p className="text-sm text-green-700 font-bold">✓ {tour.discount}% Discount Applied!</p>
-                    <p className="text-xs text-green-600 mt-1">You're saving LKR {(tour.price * tour.discount / 100 * (formData.numberOfAdults + formData.numberOfChildren)).toFixed(2)}</p>
+                {tour?.discount > 0 && (
+                  <div className="flex justify-between text-sm text-emerald-600">
+                    <span>Discount ({tour.discount}%)</span>
+                    <span className="font-semibold">−LKR {(tour.price * tour.discount / 100).toLocaleString()}</span>
                   </div>
                 )}
-
-                {/* Info Cards */}
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <AlertCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-                    <p className="text-xs text-blue-700">Payment will be collected upon tour confirmation</p>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    <Check className="w-5 h-5 text-gray-600 shrink-0 mt-0.5" />
-                    <p className="text-xs text-gray-600">Free cancellation up to 24 hours before</p>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    <Check className="w-5 h-5 text-gray-600 shrink-0 mt-0.5" />
-                    <p className="text-xs text-gray-600">Instant booking confirmation</p>
-                  </div>
+                <div className="flex justify-between items-baseline pt-3 border-t border-gray-200">
+                  <span className="text-sm font-bold text-gray-700">Total</span>
+                  <span className="text-2xl font-bold text-emerald-800">LKR {Number(total).toLocaleString()}</span>
                 </div>
+              </div>
+
+              <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Location</p>
+                <div className="flex items-start gap-2 text-sm text-gray-700">
+                  <MapPin size={14} className="text-emerald-600 mt-0.5 shrink-0" />
+                  <span>{tourLocation}</span>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 px-1">Map</p>
+                <div className="rounded-xl overflow-hidden border border-gray-200">
+                  <iframe
+                    title="Tour location map"
+                    src={`https://maps.google.com/maps?q=${encodeURIComponent(tourLocation)}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
+                    className="w-full h-52"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                </div>
+              </div>
+
+              {/* Trust */}
+              <div className="space-y-2.5">
+                {[
+                  { icon: <Shield size={12} />, text: 'Payment collected after confirmation' },
+                  { icon: <Clock size={12} />,  text: 'Free cancellation up to 24 hours before' },
+                  { icon: <Check size={12} />,  text: 'Instant booking confirmation' },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start gap-2 text-xs text-gray-400">
+                    <span className="text-emerald-500 mt-0.5 shrink-0">{item.icon}</span>
+                    <span>{item.text}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         </div>
+
       </div>
+
       <Footer />
     </div>
   );
