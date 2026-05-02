@@ -42,6 +42,7 @@ export default function TourEdit() {
             const formData = new FormData();
             formData.append("packageName", payload.packageName);
             formData.append("overview", payload.overview);
+            formData.append("duration", payload.duration || "");
             formData.append("price", String(payload.price));
             formData.append("discount", String(payload.discount || 0));
             formData.append("termsConditions", payload.termsConditions);
