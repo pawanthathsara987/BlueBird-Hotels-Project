@@ -14,6 +14,7 @@ import ReceptionPage from "./pages/reception/receptionPage";
 import TourViewPage from "./pages/client/booking/TourViewing";
 import TourDetailsPage from "./pages/client/booking/TourDetailsPage";
 import TourPaymentPage from "./pages/client/booking/TourPaymentPage";
+import FloatingChatbot from "./components/FloatingChatbot";
 import TourCancelPage from "./pages/client/booking/TourCancelPage";
 
 
@@ -41,6 +42,7 @@ export default function App() {
                     <Route path="/reception/*" element={< ReceptionPage />} />
                     <Route path="/*" element={<HomePage />} />
                 </Routes>
+                <FloatingChatbot />
             </div>
         </BrowserRouter>
     );
