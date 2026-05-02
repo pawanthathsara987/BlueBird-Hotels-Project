@@ -13,6 +13,7 @@ import ManagerPage from "./pages/manager/managerPage";
 import ReceptionPage from "./pages/reception/receptionPage";
 import TourViewPage from "./pages/client/booking/TourViewing";
 import TourDetailsPage from "./pages/client/booking/TourDetailsPage";
+import TourInquiryPage from "./pages/client/booking/TourInquiryPage";
 import TourPaymentPage from "./pages/client/booking/TourPaymentPage";
 import TourCancelPage from "./pages/client/booking/TourCancelPage";
 
@@ -28,6 +29,7 @@ export default function App() {
                     <Route path="/booking/process" element={<BookingProcessing />} />
                     <Route path="/booking/tour" element={<BookingTour />} />
                     <Route path="/booking/tour-details" element={<TourDetailsPage />} />
+                    <Route path="/booking/tour-inquiry" element={<TourInquiryPage />} />
                     <Route path="/booking/payment" element={<TourPaymentPage />} />
                     <Route path="/booking/cancel" element={<TourCancelPage />} />
                     <Route path="/tourBooking" element={<TourViewPage />} />
