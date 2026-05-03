@@ -4,7 +4,6 @@ import BookingProcessing from "./pages/client/booking/bookingProcessing";
 import LoginAdmin from "./pages/admin/loginAdmin";
 import LoginReceptionist from "./pages/reception/loginReceptionist";
 import UserRegister from "./pages/userRegister";
-import BookingTour from "./pages/client/booking/tourBooking";
 import AdminPage from "./pages/admin/AdminPage";
 import PasswordResetPage from "./pages/reception/PasswordResetPage";
 import { Toaster } from "react-hot-toast";
@@ -27,16 +26,16 @@ export default function App() {
                 <Routes>
                     <Route path="/booking" element={<BookingRoom />} />
                     <Route path="/booking/process" element={<BookingProcessing />} />
-                    <Route path="/booking/tour" element={<BookingTour />} />
+                    <Route path="/booking/tour" element={<TourViewPage />} />
                     <Route path="/booking/tour-details" element={<TourDetailsPage />} />
                     <Route path="/booking/tour-inquiry" element={<TourInquiryPage />} />
                     <Route path="/booking/payment" element={<TourPaymentPage />} />
+                    <Route path="/booking/tour-payment" element={<TourPaymentPage />} />
                     <Route path="/booking/cancel" element={<TourCancelPage />} />
                     <Route path="/tourBooking" element={<TourViewPage />} />
                     <Route path="/loginAdmin" element={<LoginAdmin />} />
                     <Route path="/loginReceptionist" element={<LoginReceptionist />} />
                     <Route path="/userRegister" element={<UserRegister />} />
-                    <Route path="/booking/tour" element={< BookingTour />} />           
                     <Route path="/reset-password" element={< PasswordResetPage />} />
                     <Route path="/admin/*" element={< AdminPage />} />
                     <Route path="/manager/*" element={< ManagerPage />} />
