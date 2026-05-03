@@ -9,26 +9,27 @@ import nodemailer from 'nodemailer';
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
+    user: process.env.EMAIL_USER || process.env.GMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD || process.env.GMAIL_APP_PASSWORD,
   },
 });
 
 // Helper function to send emails
-const sendEmail = async (email, subject, htmlBody) => {
+export const sendEmail = async ({ to, subject, html, text }) => {
   try {
     const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
+      from: process.env.EMAIL_USER || process.env.GMAIL_USER,
+      to,
       subject: subject,
-      html: htmlBody,
+      html,
+      text,
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log(`[EMAIL SUCCESS] Email sent to ${email}: ${info.response}`);
+    console.log(`[EMAIL SUCCESS] Email sent to ${to}: ${info.response}`);
     return true;
   } catch (error) {
-    console.error(`[EMAIL ERROR] Failed to send email to ${email}:`, error.message);
+    console.error(`[EMAIL ERROR] Failed to send email to ${to}:`, error.message);
     throw error;
   }
 };
@@ -96,7 +97,7 @@ export const sendInquiryConfirmationEmail = async (inquiry) => {
     `;
 
     // Send email using Nodemailer
-    await sendEmail(inquiry.email, subject, emailBody);
+    await sendEmail({ to: inquiry.email, subject, html: emailBody });
     return true;
   } catch (error) {
     console.error("Error sending inquiry confirmation email:", error);
@@ -112,11 +113,9 @@ export const sendInquiryConfirmationEmail = async (inquiry) => {
 export const sendBookingConfirmationEmail = async (inquiry, booking) => {
   try {
     const SITE_URL = process.env.FRONTEND_URL || "http://localhost:5174";
-    const paymentLink = `${SITE_URL}/booking/payment?bookingId=${booking.id}&token=${booking.paymentToken}`;
-    const trackingLink = `${SITE_URL}/booking/track?bookingId=${booking.id}&token=${booking.trackingToken}`;
-    const cancelLink = `${SITE_URL}/booking/cancel?bookingId=${booking.id}&token=${booking.paymentToken}`;
+    const bookingStatusLink = `${SITE_URL}/booking/tour-status`;
 
-    const subject = `Booking Confirmation - Reference: ${booking.bookingRef}`;
+    const subject = `Your Tour Booking is Confirmed - Ref: ${booking.bookingRef}`;
 
     const emailBody = `
       <!DOCTYPE html>
@@ -125,86 +124,109 @@ export const sendBookingConfirmationEmail = async (inquiry, booking) => {
           <style>
             body { font-family: Arial, sans-serif; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background-color: #10b981; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
-            .content { background-color: #f9fafb; padding: 20px; border-radius: 0 0 8px 8px; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 20px; border-radius: 8px 8px 0 0; text-align: center; }
+            .content { background-color: #f9fafb; padding: 30px 20px; }
             .section { margin: 20px 0; }
-            .details { background-color: white; padding: 15px; border-left: 4px solid #10b981; }
-            .pricing { background-color: white; padding: 15px; border: 2px solid #f59e0b; border-radius: 5px; margin: 20px 0; }
-            .button { background-color: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px; }
-            .warning { background-color: #fef3c7; padding: 15px; border-left: 4px solid #f59e0b; border-radius: 3px; margin: 20px 0; }
+            .details { background-color: white; padding: 20px; border-left: 5px solid #667eea; border-radius: 4px; margin: 15px 0; }
+            .pricing { background-color: white; padding: 20px; border: 2px solid #f59e0b; border-radius: 6px; margin: 20px 0; }
+            .pricing table { width: 100%; }
+            .pricing td { padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+            .button { background-color: #10b981; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 15px; font-weight: bold; }
+            .button-secondary { background-color: #3b82f6; color: white; padding: 12px 28px; text-decoration: none; border-radius: 6px; display: inline-block; margin-right: 10px; margin-top: 10px; }
+            .warning { background-color: #fef3c7; padding: 15px; border-left: 5px solid #f59e0b; border-radius: 4px; margin: 20px 0; }
+            .timeline { background-color: white; padding: 20px; border-radius: 6px; margin: 20px 0; }
+            .timeline-item { margin: 15px 0; padding-left: 30px; position: relative; }
+            .timeline-item:before { content: ""; position: absolute; left: 0; width: 20px; height: 20px; background-color: #10b981; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 0 2px #10b981; }
             .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #666; }
+            .button-container { margin: 20px 0; }
+            .highlight { background-color: #fef3c7; padding: 2px 6px; border-radius: 3px; font-weight: bold; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1>🎉 Your Booking is Confirmed!</h1>
-              <p>Get ready for an amazing adventure</p>
+              <h1>🎉 Booking Confirmed!</h1>
+              <p style="margin: 10px 0 0 0; font-size: 16px;">Your tour adventure is ready to begin</p>
             </div>
             
             <div class="content">
               <div class="section">
-                <p>Dear ${inquiry.fullName},</p>
-                <p>Your tour booking has been confirmed! Your adventure awaits. Please complete the payment process within 48 hours to secure your spot.</p>
+                <p>Dear <strong>${inquiry.fullName}</strong>,</p>
+                <p>Congratulations! Your tour inquiry has been accepted and your booking is now confirmed. We're excited to welcome you on this amazing journey!</p>
               </div>
               
-              <div class="section">
-                <h3>Booking Details:</h3>
-                <div class="details">
-                  <p><strong>Booking Reference:</strong> ${booking.bookingRef}</p>
-                  <p><strong>Inquiry Reference:</strong> ${inquiry.inquiryRef}</p>
-                  <p><strong>Tour Date:</strong> ${new Date(inquiry.startDate).toLocaleDateString()}</p>
-                  <p><strong>Travelers:</strong> ${inquiry.numberOfAdults} Adult(s), ${inquiry.numberOfChildren} Child(ren)</p>
-                  <p><strong>Pickup Location:</strong> ${inquiry.pickupLocation}</p>
-                </div>
+              <div class="details">
+                <h3 style="margin-top: 0; color: #667eea;">📋 Booking Reference</h3>
+                <p style="font-size: 18px; font-weight: bold; color: #667eea; margin: 10px 0;">${booking.bookingRef}</p>
+                <p style="font-size: 12px; color: #666; margin: 5px 0;">Save this reference for your records</p>
+              </div>
+              
+              <div class="details">
+                <h3 style="margin-top: 0;">Tour Details</h3>
+                <p><strong>Tour Date:</strong> ${new Date(inquiry.startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                <p><strong>Travelers:</strong> ${inquiry.numberOfAdults} Adult(s)${inquiry.numberOfChildren > 0 ? `, ${inquiry.numberOfChildren} Child(ren)` : ''}</p>
+                <p><strong>Pickup Location:</strong> ${inquiry.pickupLocation}</p>
               </div>
               
               <div class="pricing">
-                <h3>Pricing Breakdown:</h3>
-                <table style="width: 100%; border-collapse: collapse;">
-                  <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td>Total Amount:</td>
-                    <td style="text-align: right;"><strong>LKR ${Number(booking.totalAmount).toLocaleString()}</strong></td>
-                  </tr>
-                  <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td style="color: #059669;"><strong>50% Advance (Pay Now):</strong></td>
-                    <td style="text-align: right; color: #059669;"><strong>LKR ${Number(booking.depositAmount).toLocaleString()}</strong></td>
+                <h3 style="margin-top: 0; margin-bottom: 15px;">💰 Tour Cost</h3>
+                <table>
+                  <tr>
+                    <td><strong>Total Tour Cost:</strong></td>
+                    <td style="text-align: right;"><strong style="font-size: 16px; color: #667eea;">LKR ${Number(booking.totalAmount).toLocaleString()}</strong></td>
                   </tr>
                   <tr>
-                    <td>Remaining Balance:</td>
+                    <td colspan="2" style="border: none; height: 10px;"></td>
+                  </tr>
+                  <tr style="background-color: #f0fdf4;">
+                    <td><span class="highlight">✓ 50% Advance:</span></td>
+                    <td style="text-align: right;"><strong style="font-size: 16px; color: #10b981;">LKR ${Number(booking.depositAmount).toLocaleString()}</strong></td>
+                  </tr>
+                  <tr>
+                    <td>Remaining 50% (Due later):</td>
                     <td style="text-align: right;">LKR ${Number(booking.remainingAmount).toLocaleString()}</td>
                   </tr>
                 </table>
               </div>
               
-              <div class="section">
-                <a href="${paymentLink}" class="button">💳 Complete Payment (50% Advance)</a>
-                <p style="font-size: 12px; color: #666; margin-top: 5px;">Secure payment link expires in 48 hours</p>
+              <div class="warning">
+                <strong>⏰ Action Required:</strong><br>
+                Please visit our website to complete your booking payment. Your payment link will be available on the tour details page.
               </div>
               
-              <div class="warning">
-                <strong>⏰ Important:</strong> Please complete your payment within 48 hours. After that, your booking may be automatically cancelled.
+              <div class="timeline">
+                <h3 style="margin-top: 0; margin-bottom: 20px;">📅 Next Steps</h3>
+                <div class="timeline-item">
+                  <strong>Step 1:</strong> Visit the tour page on our website
+                </div>
+                <div class="timeline-item">
+                  <strong>Step 2:</strong> Click on "Book Now" or "Complete Payment" button
+                </div>
+                <div class="timeline-item">
+                  <strong>Step 3:</strong> Enter your booking reference: <strong>${booking.bookingRef}</strong>
+                </div>
+                <div class="timeline-item">
+                  <strong>Step 4:</strong> Complete your 50% advance payment
+                 </div>
+                 <div class="timeline-item">
+                  <strong>Step 5:</strong> Enjoy your tour on ${new Date(inquiry.startDate).toLocaleDateString()}
+                </div>
               </div>
               
               <div class="section">
                 <h3>Need Help?</h3>
                 <p>
-                  <a href="${trackingLink}" style="color: #3b82f6;">Track Your Booking</a> | 
-                  <a href="${cancelLink}" style="color: #dc2626;">Cancel Booking</a> |
-                  <a href="mailto:support@bluebird-hotels.com" style="color: #3b82f6;">Contact Support</a>
+                  📧 Email: <a href="mailto:support@bluebird-hotels.com">support@bluebird-hotels.com</a><br>
+                  📱 Phone: +94 XXX XXX XXXX<br>
+                  🌐 Visit: <a href="${bookingStatusLink}">Check Your Booking</a>
                 </p>
               </div>
               
               <div class="footer">
-                <p><strong>Payment Terms:</strong></p>
-                <ul>
-                  <li>50% Advance: Due now to confirm booking</li>
-                  <li>Remaining 50%: Due before tour date</li>
-                  <li>Refund eligible only if cancelled at least 4 days before tour start</li>
-                </ul>
-                <p>Payment Link: <a href="${paymentLink}">${paymentLink}</a></p>
-                <p>Cancel Link: <a href="${cancelLink}">${cancelLink}</a></p>
-                <p style="margin-top: 20px;">Best regards,<br/>BlueJay Hotels Team</p>
+                <p style="margin-top: 15px;">
+                  <strong>Refund Policy:</strong> Cancellations are eligible for refunds only if made at least 4 days before the tour start date. For cancellations, please visit your booking status page.
+                </p>
+                <p style="margin-top: 15px;">Best regards,<br><strong>BlueJay Hotels Team</strong></p>
               </div>
             </div>
           </div>
@@ -213,7 +235,7 @@ export const sendBookingConfirmationEmail = async (inquiry, booking) => {
     `;
 
     // Send email using Nodemailer
-    await sendEmail(inquiry.email, subject, emailBody);
+    await sendEmail({ to: inquiry.email, subject, html: emailBody });
     return true;
   } catch (error) {
     console.error("Error sending booking confirmation email:", error);
@@ -292,7 +314,7 @@ export const sendPaymentSuccessEmail = async (inquiry, booking) => {
     `;
 
     // Send email using Nodemailer
-    await sendEmail(inquiry.email, subject, emailBody);
+    await sendEmail({ to: inquiry.email, subject, html: emailBody });
     return true;
   } catch (error) {
     console.error("Error sending payment success email:", error);
@@ -359,7 +381,7 @@ export const sendPaymentReminderEmail = async (inquiry, booking, hoursRemaining)
     `;
 
     // Send email using Nodemailer
-    await sendEmail(inquiry.email, subject, emailBody);
+    await sendEmail({ to: inquiry.email, subject, html: emailBody });
     return true;
   } catch (error) {
     console.error("Error sending payment reminder email:", error);
