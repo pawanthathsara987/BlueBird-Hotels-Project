@@ -27,7 +27,8 @@ export async function registerCustomer(req, res) {
             lastName: data.lastName,
             email: data.email,
             password: hashedPassword,
-            phoneNumber: data.phoneNumber
+            phoneNumber: data.phoneNumber,
+            country: data.country
         });
 
         const userResponse = {
@@ -35,7 +36,8 @@ export async function registerCustomer(req, res) {
             firstName: newCustomer.firstName,
             lastName: newCustomer.lastName,
             email: newCustomer.email,
-            phoneNumber: newCustomer.phoneNumber
+            phoneNumber: newCustomer.phoneNumber,
+            country: newCustomer.country
         };
 
         res.status(201).json({ 
@@ -74,7 +76,8 @@ export async function loginCustomer(req, res) {
             firstName: customer.firstName,
             lastName: customer.lastName,
             email: customer.email,
-            phoneNumber: customer.phoneNumber
+            phoneNumber: customer.phoneNumber,
+            country: customer.country
         };
 
         const token = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
