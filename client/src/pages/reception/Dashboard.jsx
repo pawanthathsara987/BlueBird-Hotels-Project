@@ -1,7 +1,44 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { MdCheckCircle, MdPersonPin, MdHotel, MdCalendarToday } from "react-icons/md";
 
 export default function Dashboard() {
+    const [availableRooms, setAvailableRooms] = useState(0);
+
+    useEffect(() => {
+        gettodayAvailableRooms().then((rooms) => {
+            if (rooms !== null) {
+                setAvailableRooms(rooms);
+            }
+        });
+    }, []);
+
+    async function gettodayAvailableRooms() {
+        try {
+            const response = await fetch("http://localhost:3002/api/reception/available-rooms", {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            
+            if (result.success) {
+                return result.data.availableRoom;
+            } else {
+                console.error("API Error:", result.message);
+                return null;
+            }
+        } catch (error) {
+            console.error("Error fetching available rooms:", error);
+            return null;
+        }
+    }
+
     const stats = [
         {
             label: "Today's Check-Ins",
@@ -17,7 +54,7 @@ export default function Dashboard() {
         },
         {
             label: "Available Rooms",
-            value: "24",
+            value: availableRooms,
             icon: MdHotel,
             color: "bg-green-500",
         },

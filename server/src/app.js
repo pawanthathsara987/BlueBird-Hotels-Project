@@ -7,6 +7,7 @@ import managerRouter from './routes/managerRouter.js';
 import tourInquiryRouter from './routes/tourInquiryRouter.js';
 import tourBookingRouter from './routes/tourBookingRouter.js';
 import tourPaymentRouter from './routes/tourPaymentRouter.js';
+import receptionRouter from './routes/receptionRouter.js';
 
 const app = express();
 
@@ -20,5 +21,6 @@ app.use('/api/tour-payment', tourPaymentRouter);
 app.use('/api/users', userRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/manager', managerRouter);
+app.use('/api/reception', receptionRouter);
 
 export default app;
