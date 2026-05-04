@@ -116,7 +116,7 @@ export default function LoginAdmin() {
 
             <div className="w-[450px] h-fit mb-10 shadow-xl rounded-2xl border border-black/30 flex flex-col items-center">
 
-                <h1 className="text-[30px] font-bold pt-5">Admin Login</h1>
+                <h1 className="text-[30px] font-bold pt-5">Receptionist Login</h1>
 
                 <div className="w-[350px] mt-10">
                     <p>Email</p>

@@ -9,6 +9,7 @@ import tourBookingRouter from './routes/tourBookingRouter.js';
 import tourPaymentRouter from './routes/tourPaymentRouter.js';
 import jwt from 'jsonwebtoken';
 import chatBot from './controllers/chatController.js';
+import customerRouter from './routes/customerRoutes.js';
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use('/api/tour-payment', tourPaymentRouter);
 app.use('/api/users', userRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/manager', managerRouter);
+app.use('/api/customers', customerRouter);
 app.post('/api/chat', chatBot);
 
 export default app;

@@ -13,6 +13,7 @@
     "@tailwindcss/vite": "^4.1.18",
     "axios": "^1.13.6",
     "date-fns": "^4.1.0",
+    "libphonenumber-js": "^1.12.42",
     "lucide-react": "^0.564.0",
     "react": "^19.2.0",
     "react-date-range": "^2.0.1",
