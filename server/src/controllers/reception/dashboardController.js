@@ -44,6 +44,90 @@ async function getAvailableRooms(req, res) {
     }
 }
 
+async function todayCheckIns(req, res) {
+    try {
+        const date = new Date().toISOString().split('T')[0];
+        const query = 'SELECT COUNT(*) AS checkIns FROM booking_room WHERE checkIn = :date AND (status != "checked_out" AND status != "cancelled")';
+
+        const result = await sequelize.query(query, {
+            replacements: { date },
+            type: QueryTypes.SELECT
+        });
+
+        const checkIns = result[0]?.checkIns || 0;
+
+        return res.status(200).json({
+            success: true,
+            message: "Today's check-ins fetched successfully",
+            data: { checkIns }
+        });
+
+    } catch (error) {
+        console.error('Error fetching today check-ins:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+}
+
+async function todayCheckOuts(req, res) {
+    try {
+        const date = new Date().toISOString().split('T')[0];
+        const query = 'SELECT COUNT(*) AS checkOuts FROM booking_room WHERE checkOut = :date AND status = "checked_out"';
+
+        const result = await sequelize.query(query, {
+            replacements: { date },
+            type: QueryTypes.SELECT
+        });
+
+        const checkOuts = result[0]?.checkOuts || 0;
+
+        return res.status(200).json({
+            success: true,
+            message: "Today's check-outs fetched successfully",
+            data: { checkOuts }
+        });
+
+    } catch (error) {
+        console.error('Error fetching today check-outs:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+}
 
 
-export { getAvailableRooms };
+async function getocuupiedRooms(req, res) {
+    try {
+        const date = new Date().toISOString().split('T')[0];
+        const query = 'SELECT COUNT(*) AS occupiedRooms FROM booking_room WHERE checkIn <= :date AND checkOut > :date AND status = "checked_in"';
+
+        const result = await sequelize.query(query, {
+            replacements: { date },
+            type: QueryTypes.SELECT
+        });
+
+        const occupiedRooms = result[0]?.occupiedRooms || 0;
+
+        return res.status(200).json({
+            success: true,
+            message: "Occupied rooms fetched successfully",
+            data: { occupiedRooms }
+        });
+
+    } catch (error) {
+        console.error('Error fetching occupied rooms:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+}
+
+
+export { getAvailableRooms, todayCheckIns, todayCheckOuts, getocuupiedRooms };
