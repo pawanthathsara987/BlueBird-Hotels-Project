@@ -53,6 +53,31 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
   const navigate = useNavigate();
   const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api").replace(/\/$/, "");
 
+  const getInitialItinerary = () => {
+    if (!Array.isArray(initialData.itinerary) || !initialData.itinerary.length) {
+      return [{ day: 1, description: "" }];
+    }
+
+    const mapped = initialData.itinerary
+      .map((entry, idx) => {
+        if (typeof entry === "string") {
+          return { day: idx + 1, description: entry.trim() };
+        }
+
+        if (entry && typeof entry === "object") {
+          return {
+            day: idx + 1,
+            description: (entry.description || entry.activity || entry.title || entry.name || "").toString().trim(),
+          };
+        }
+
+        return { day: idx + 1, description: "" };
+      })
+      .filter((entry) => entry.description);
+
+    return mapped.length ? mapped : [{ day: 1, description: "" }];
+  };
+
   const getInitialItems = () => {
     // In edit mode, prefer record data over local cache.
     if (Array.isArray(initialData.includedItems) && initialData.includedItems.length) {
@@ -76,11 +101,11 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
   const [form, setForm] = useState({
     packageName: initialData.packageName || "",
     overview: initialData.overview || "",
+    duration: initialData.duration || "",
     price: initialData.price || "",
     discount: initialData.discount || "",
     termsConditions: initialData.termsConditions || "",
     location: initialData.location || "",
-    itinerary: Array.isArray(initialData.itinerary) ? initialData.itinerary.join("\n") : (initialData.itinerary || ""),
     groupSize: initialData.groupSize || "",
     status: initialData.status || "active",
   });
@@ -88,6 +113,7 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
   const [image, setImage]   = useState(initialData.image || null);
   const [imageFile, setImageFile] = useState(null);
   const [items, setItems]   = useState(getInitialItems);
+  const [itineraryRows, setItineraryRows] = useState(getInitialItinerary);
   const [errors, setErrors] = useState({});
 
   // Modal state for tour items selection
@@ -158,6 +184,24 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
     if (items.length > 1) setItems(items.filter((_, i) => i !== index));
   };
 
+  const updateItineraryRow = (index, key, value) => {
+    setItineraryRows((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [key]: value };
+      return updated;
+    });
+    setErrors((prev) => ({ ...prev, itinerary: "" }));
+  };
+
+  const addItineraryRow = () => {
+    const nextDay = Math.max(...itineraryRows.map(r => r.day || 0)) + 1;
+    setItineraryRows((prev) => [...prev, { day: nextDay, description: "" }]);
+  };
+
+  const removeItineraryRow = (index) => {
+    setItineraryRows((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
+  };
+
   // Validate all fields, return error map
   const validate = () => {
     const e = {};
@@ -171,6 +215,21 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
     if (form.groupSize && (!Number.isInteger(Number(form.groupSize)) || Number(form.groupSize) <= 0)) {
       e.groupSize = "Group size must be a positive whole number.";
     }
+
+    const cleanedItinerary = itineraryRows
+      .map((entry) => ({
+        day: entry.day,
+        description: entry.description.trim(),
+      }))
+      .filter((entry) => entry.description);
+
+    const hasInvalidItinerary = cleanedItinerary.some((entry) => !entry.day || !entry.description);
+    if (!cleanedItinerary.length) {
+      e.itinerary = "Add at least one day with activity description.";
+    } else if (hasInvalidItinerary) {
+      e.itinerary = "Each day entry needs an activity description.";
+    }
+
     return e;
   };
 
@@ -183,10 +242,12 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
     const payload = {
       ...form,
       includedItems: items.filter(i => i.trim()),
-      itinerary: form.itinerary
-        .split("\n")
-        .map((step) => step.trim())
-        .filter(Boolean),
+      itinerary: itineraryRows
+        .map((entry) => ({
+          day: entry.day,
+          description: entry.description.trim(),
+        }))
+        .filter((entry) => entry.description),
       groupSize: form.groupSize ? Number(form.groupSize) : null,
     };
 
@@ -199,6 +260,7 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
       const formData = new FormData();
       formData.append("packageName", payload.packageName);
       formData.append("overview", payload.overview);
+      formData.append("duration", payload.duration);
       formData.append("price", String(payload.price));
       formData.append("discount", String(payload.discount || 0));
       formData.append("termsConditions", payload.termsConditions);
@@ -276,6 +338,17 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
                   rows={7}
                   placeholder="Describe destinations, highlights, what makes it special..."
                   className={`${inputCls(errors.overview)} resize-none`}
+                />
+              </div>
+
+              <div>
+                <FieldLabel text="Duration" />
+                <input
+                  name="duration"
+                  value={form.duration}
+                  onChange={handleChange}
+                  placeholder="e.g. 2 days / 6 hours"
+                  className={inputCls(false)}
                 />
               </div>
             </Card>
@@ -448,16 +521,42 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
           {/* ── Row 5: Itinerary + Group ── */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <Card>
-              <SectionTitle bg="bg-indigo-100" color="text-indigo-600" Icon={ClipboardCheck} title="Itinerary" />
-              <FieldLabel text="Tour Steps (one step per line)" error={errors.itinerary} />
-              <textarea
-                name="itinerary"
-                value={form.itinerary}
-                onChange={handleChange}
-                rows={6}
-                placeholder={"Pickup from hotel\nBoat ride\nLunch break\nDrop-off"}
-                className={`${inputCls(errors.itinerary)} resize-none`}
-              />
+              <SectionTitle bg="bg-indigo-100" color="text-indigo-600" Icon={ClipboardCheck} title="Daily Itinerary" />
+              <FieldLabel text="Day by Day Activities" required error={errors.itinerary} />
+
+              <div className="space-y-3">
+                {itineraryRows.map((entry, index) => (
+                  <div key={index} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                    <div className="sm:col-span-3 flex items-center px-4 py-2.5 rounded-xl border border-slate-200 bg-indigo-50 font-semibold text-indigo-700">
+                      Day {entry.day}
+                    </div>
+                    <input
+                      type="text"
+                      value={entry.description}
+                      onChange={(e) => updateItineraryRow(index, "description", e.target.value)}
+                      placeholder="e.g. Boat ride at Bentota, visit temple, dinner"
+                      className={`sm:col-span-8 ${inputCls(false)}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeItineraryRow(index)}
+                      disabled={itineraryRows.length === 1}
+                      className="sm:col-span-1 w-full sm:w-9 h-9 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center"
+                      aria-label="Remove itinerary row"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={addItineraryRow}
+                className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-all"
+              >
+                <Plus className="w-3.5 h-3.5" /> Add Day
+              </button>
             </Card>
 
             <Card>
