@@ -33,6 +33,10 @@ Customer.init(
         phoneNumber: {
             type: DataTypes.STRING(20),
             allowNull: true
+        },
+        country: {
+            type: DataTypes.STRING(50),
+            allowNull: true
         }
     },
     {
