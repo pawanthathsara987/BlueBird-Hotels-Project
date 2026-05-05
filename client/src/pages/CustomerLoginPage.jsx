@@ -26,6 +26,15 @@ export default function CustomerLoginPage() {
                 email,
                 password
             });
+
+            const token = res.data.token;
+
+            if (rememberMe) {
+                localStorage.setItem("customerToken", token);
+            } else {
+                sessionStorage.setItem("customerToken", token);
+            }
+
             toast.success("Login successful!.");
             setLoading(false);
             navigate("/");
@@ -72,7 +81,11 @@ export default function CustomerLoginPage() {
                         <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
                         Remember me
                     </label>
-                    <button type="button" className="text-sm text-blue-600 hover:underline hover:cursor-pointer">
+                    <button
+                        type="button"
+                        onClick={() => navigate("/customer-reset-password")}
+                        className="text-sm text-blue-600 hover:underline hover:cursor-pointer"
+                    >
                         Forgot password?
                     </button>
                 </div>
