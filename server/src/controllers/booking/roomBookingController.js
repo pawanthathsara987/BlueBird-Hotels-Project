@@ -443,4 +443,5 @@ export {
     availableRooms,
     getAvailablePackagesByDate,
     getAvailableRoomAssignForPackage,
+    holdRoomForBookingProcess
 }

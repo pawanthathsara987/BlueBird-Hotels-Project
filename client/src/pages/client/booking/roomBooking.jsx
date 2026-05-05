@@ -6,11 +6,15 @@ import "react-datepicker/dist/react-datepicker.css";
 import axios from "axios";
 import RoomDetailsModal from "./RoomDetailsModal";
 import { SiGitconnected } from "react-icons/si";
+import { useLocation, useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 
 const BookingRoom = () => {
     const today = new Date();
     const defaultCheckOut = new Date(today);
     defaultCheckOut.setDate(defaultCheckOut.getDate() + 4);
+    const navigate = useNavigate();
+    const location = useLocation();
 
     const [checkInDate, setCheckInDate] = useState(today);
     const [checkOutDate, setCheckOutDate] = useState(defaultCheckOut);
@@ -20,6 +24,24 @@ const BookingRoom = () => {
     const [reviewPackageList, setRevirePackageList] = useState([]);
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+    useEffect(() => {
+        const saved = localStorage.getItem("bookingDetails");
+
+        if (saved) {
+            const data = JSON.parse(saved);
+
+            const checkIn = new Date(data.checkInDate);
+            const checkOut = new Date(data.checkOutDate);
+            
+            setCheckInDate(checkIn);
+            setCheckOutDate(checkOut);
+            setRooms(data.rooms || []);
+
+            // Fetch available packages for the restored dates
+            getAvailablePackagesByDate(checkIn, checkOut);
+        }
+    }, []);
 
     // getAllAvailable Packages
     const getAllPackages = async () => {
@@ -108,40 +130,71 @@ const BookingRoom = () => {
         setCheckInDate(start);
         setCheckOutDate(end);
         setPackageOptions([]);
+        
+        // Save booking details to localStorage
+        if (start && end) {
+            localStorage.setItem("bookingDetails", JSON.stringify({
+                checkInDate: start.toISOString(),
+                checkOutDate: end.toISOString(),
+                rooms: rooms
+            }));
+        }
     };
 
     const addRoom = () => {
-        setRooms((prev) => [
-            ...prev,
+        const newRooms = [
+            ...rooms,
             {
-                id: Date.now() + prev.length,
+                id: Date.now() + rooms.length,
                 packageId: "",
                 adults: 1,
                 kids: 0,
                 showPackagePicker: false,
             },
-        ]);
+        ];
+        setRooms(newRooms);
+        
+        // Save booking details to localStorage
+        localStorage.setItem("bookingDetails", JSON.stringify({
+            checkInDate: checkInDate.toISOString(),
+            checkOutDate: checkOutDate.toISOString(),
+            rooms: newRooms
+        }));
     };
 
     const removeRoom = (roomId) => {
-        setRooms((prev) => prev.filter((room) => room.id !== roomId));
+        const updatedRooms = rooms.filter((room) => room.id !== roomId);
+        setRooms(updatedRooms);
+        
+        // Save booking details to localStorage
+        localStorage.setItem("bookingDetails", JSON.stringify({
+            checkInDate: checkInDate.toISOString(),
+            checkOutDate: checkOutDate.toISOString(),
+            rooms: updatedRooms
+        }));
     };
 
     const updateRoomPackage = (roomId, packageId) => {
         const selectedPackage = packageOptions.find((item) => item.id === packageId);
-        setRooms((prev) =>
-            prev.map((room) =>
-                room.id === roomId
-                    ? {
-                        ...room,
-                        packageId,
-                        adults: selectedPackage ? 1 : room.adults,
-                        kids: 0,
-                        showPackagePicker: false,
-                    }
-                    : room,
-            ),
+        const updatedRooms = rooms.map((room) =>
+            room.id === roomId
+                ? {
+                    ...room,
+                    packageId,
+                    adults: selectedPackage ? 1 : room.adults,
+                    kids: 0,
+                    showPackagePicker: false,
+                }
+                : room,
         );
+        setRooms(updatedRooms);
+        
+        // Save booking details to localStorage
+        localStorage.setItem("bookingDetails", JSON.stringify({
+            checkInDate: checkInDate.toISOString(),
+            checkOutDate: checkOutDate.toISOString(),
+            rooms: updatedRooms
+        }));
     };
 
     const togglePackagePicker = (roomId, showPackagePicker) => {
@@ -161,9 +214,15 @@ const BookingRoom = () => {
     };
 
     const updateRoomGuests = (roomId, field, value) => {
-        setRooms((prev) =>
-            prev.map((room) => (room.id === roomId ? { ...room, [field]: Number(value) } : room)),
-        );
+        const updatedRooms = rooms.map((room) => (room.id === roomId ? { ...room, [field]: Number(value) } : room));
+        setRooms(updatedRooms);
+        
+        // Save booking details to localStorage
+        localStorage.setItem("bookingDetails", JSON.stringify({
+            checkInDate: checkInDate.toISOString(),
+            checkOutDate: checkOutDate.toISOString(),
+            rooms: updatedRooms
+        }));
     };
 
     const totalAdults = rooms.reduce((sum, room) => sum + (room.packageId ? room.adults : 0), 0);
@@ -195,7 +254,26 @@ const BookingRoom = () => {
     };
 
     const handleBooking = () => {
-        console.log(selectedPackage.id);
+        const token = localStorage.getItem("customerToken") ||
+        sessionStorage.getItem("customerToken");
+
+        if (!token) {
+            // Save booking details for when user returns after login
+            localStorage.setItem("bookingDetails", JSON.stringify({
+                checkInDate: checkInDate.toISOString(),
+                checkOutDate: checkOutDate.toISOString(),
+                rooms
+            }));
+
+            navigate("/customerlogin", {
+                state: { from: location.pathname }
+            });
+            return;
+        }
+
+        const guest = jwtDecode(token);
+        
+
     }
 
     return (

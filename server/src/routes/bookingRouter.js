@@ -1,12 +1,13 @@
 import express from 'express';
-import { 
+import {
    createBooking,
+   holdRoomForBookingProcess,
    getAllBookings,
    getBookingById,
    deleteBookingById,
    updateBooking,
    availableRooms,
-   getAvailablePackagesByDate, 
+   getAvailablePackagesByDate,
    getAvailableRoomAssignForPackage
 } from '../controllers/booking/roomBookingController.js';
 
