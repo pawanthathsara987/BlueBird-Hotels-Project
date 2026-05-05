@@ -6,6 +6,7 @@ import LoginReceptionist from "./pages/reception/loginReceptionist";
 import CustomerRegister from "./pages/CustomerRegister";
 import AdminPage from "./pages/admin/AdminPage";
 import PasswordResetPage from "./pages/reception/PasswordResetPage";
+import CustomerPasswordResetPage from "./pages/customer/PasswordResetPage";
 import { Toaster } from "react-hot-toast";
 import BookingRoom from "./pages/client/booking/roomBooking";
 import ManagerPage from "./pages/manager/managerPage";
@@ -39,6 +40,7 @@ export default function App() {
                     <Route path="/loginReceptionist" element={<LoginReceptionist />} />
                     <Route path="/registerCustomer" element={<CustomerRegister />} />
                     <Route path="/customerLogin" element={<CustomerLoginPage />} />
+                    <Route path="/customer-reset-password" element={<CustomerPasswordResetPage />} />
                     <Route path="/reset-password" element={< PasswordResetPage />} />
                     <Route path="/admin/*" element={< AdminPage />} />
                     <Route path="/manager/*" element={< ManagerPage />} />
