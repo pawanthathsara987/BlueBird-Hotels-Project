@@ -6,7 +6,8 @@ import {
    deleteBookingById,
    updateBooking,
    availableRooms,
-   getAvailablePackagesByDate 
+   getAvailablePackagesByDate, 
+   getAvailableRoomAssignForPackage
 } from '../controllers/booking/roomBookingController.js';
 
 import { getAllPackages } from '../controllers/admin/packageController.js';
@@ -20,6 +21,8 @@ router.delete('/booking/:id', deleteBookingById);
 router.put('/booking/:id', updateBooking);
 router.get('/availableRooms', availableRooms);
 router.get('/getAllPackages', getAllPackages);
-router.get('/available-packages', getAvailablePackagesByDate );
+router.get('/available-packages', getAvailablePackagesByDate);
+router.post('/available-rooms', getAvailableRoomAssignForPackage);
+
 
 export default router;
