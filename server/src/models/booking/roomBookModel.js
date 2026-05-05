@@ -32,7 +32,7 @@ RoomBook.init(
             allowNull: false,
         },
         status: {
-            type: DataTypes.ENUM("reserved", "checked_in", "checked_out", "cancelled"),
+            type: DataTypes.ENUM("reserved", "checked_in", "checked_out", "cancelled", "hold"),
             defaultValue: "reserved",
             allowNull: false,   
         },
@@ -46,6 +46,16 @@ RoomBook.init(
             allowNull: false,
             defaultValue: 0,
         },
+        reservationExpiresAt: {
+            type: DataTypes.TIME,
+            allowNull: true,
+            defaultValue: null,
+        },
+        holdToken: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            defaultValue: null,
+        }
     },
     {
         sequelize,

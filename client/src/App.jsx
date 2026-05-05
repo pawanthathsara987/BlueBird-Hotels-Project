@@ -14,6 +14,7 @@ import TourViewPage from "./pages/client/booking/TourViewing";
 import TourDetailsPage from "./pages/client/booking/TourDetailsPage";
 import TourInquiryPage from "./pages/client/booking/TourInquiryPage";
 import TourPaymentPage from "./pages/client/booking/TourPaymentPage";
+import RoomPaymentPage from "./pages/client/booking/RoomPaymentPage";
 import FloatingChatbot from "./components/FloatingChatbot";
 import TourCancelPage from "./pages/client/booking/TourCancelPage";
 
@@ -33,6 +34,7 @@ export default function App() {
                     <Route path="/booking/payment" element={<TourPaymentPage />} />
                     <Route path="/booking/tour-payment" element={<TourPaymentPage />} />
                     <Route path="/booking/cancel" element={<TourCancelPage />} />
+                    <Route path="/payment" element={<RoomPaymentPage />} />
                     <Route path="/tourBooking" element={<TourViewPage />} />
                     <Route path="/loginAdmin" element={<LoginAdmin />} />
                     <Route path="/loginReceptionist" element={<LoginReceptionist />} />
