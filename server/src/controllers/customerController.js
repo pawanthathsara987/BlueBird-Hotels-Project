@@ -100,6 +100,7 @@ export async function loginCustomer(req, res) {
 
         const token = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
 
+        console.log(token);
         res.status(200).json({
             message: "Customer logged in successfully",
             token: token,
