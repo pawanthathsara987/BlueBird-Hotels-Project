@@ -1,22 +1,40 @@
 import Customer from "../models/User/Customer.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import CustomerOTP from "../models/User/CustomerOTP.js";
+import nodemailer from "nodemailer";
+import dotenv from "dotenv";
+dotenv.config();
+
+
+const transporter = nodemailer.createTransport(
+    {
+        service: "gmail",
+        host: "smtp.gmail.com",
+        port: 587,
+        secure: false,
+        auth: {
+            user: process.env.GMAIL_USER,
+            pass: process.env.GMAIL_APP_PASSWORD
+        }
+    }
+);
 
 export async function registerCustomer(req, res) {
-    
+
     try {
         const data = req.body;
 
         if (data.password !== data.confirmPassword) {
-            return res.status(400).json({ 
-                message: "Passwords do not match" 
+            return res.status(400).json({
+                message: "Passwords do not match"
             });
         }
 
         const existingCustomer = await Customer.findOne({ where: { email: data.email } });
         if (existingCustomer) {
-            return res.status(400).json({ 
-                message: "Email already in exists" 
+            return res.status(400).json({
+                message: "Email already in exists"
             });
         }
 
@@ -40,34 +58,34 @@ export async function registerCustomer(req, res) {
             country: newCustomer.country
         };
 
-        res.status(201).json({ 
+        res.status(201).json({
             message: "Customer registered successfully",
             user: userResponse
         });
 
-    }catch (error) {
+    } catch (error) {
         console.error("Error registering customer:", error);
-        res.status(500).json({ 
-            message: "Internal server error" 
+        res.status(500).json({
+            message: "Internal server error"
         });
     }
 }
 
 export async function loginCustomer(req, res) {
-    try{
+    try {
         const { email, password } = req.body;
 
         const customer = await Customer.findOne({ where: { email } });
         if (!customer) {
-            return res.status(400).json({ 
-                message: "Invalid email or password" 
+            return res.status(400).json({
+                message: "Invalid email or password"
             });
         }
 
         const isPasswordValid = await bcrypt.compare(password, customer.password);
         if (!isPasswordValid) {
-            return res.status(400).json({ 
-                message: "Invalid email or password" 
+            return res.status(400).json({
+                message: "Invalid email or password"
             });
         }
 
@@ -82,16 +100,90 @@ export async function loginCustomer(req, res) {
 
         const token = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
 
-        res.status(200).json({ 
+        console.log(token);
+        res.status(200).json({
             message: "Customer logged in successfully",
             token: token,
             user: userResponse
         });
 
-    }catch (error) {
+    } catch (error) {
         console.error("Error logging in customer:", error);
-        res.status(500).json({ 
-            message: "Internal server error" 
+        res.status(500).json({
+            message: "Internal server error"
         });
     }
+}
+
+export async function sendOTP(req, res) {
+    try {
+        const { email } = req.body;
+
+        const customer = await Customer.findOne({ where: { email } });
+        if (!customer) {
+            return res.status(400).json({
+                message: "User not found"
+            });
+        }
+
+        await CustomerOTP.destroy({ where: { email } });
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+        await CustomerOTP.create({
+            email,
+            otp,
+            expiresAt
+        });
+
+        const message = {
+            from: process.env.GMAIL_USER,
+            to: email,
+            subject: "Password Reset OTP",
+            text: `Your OTP for password reset is: ${otp}`
+        };
+
+        await transporter.sendMail(message);
+        res.status(200).json({
+            message: "OTP sent successfully"
+        });
+
+    } catch (error) {
+        console.error("Error sending OTP:", error);
+        res.status(500).json({
+            message: "Internal server error"
+        });
+    }
+}
+
+export async function verifyOTPAndResetPassword(req, res) {
+
+    try {
+        const otp = req.body.otp;
+        const email = req.body.email;
+        const newPassword = req.body.newPassword;
+
+        const customerOtp = await CustomerOTP.findOne({ where: { email, otp } });
+        if (!customerOtp) {
+            return res.status(400).json({
+                message: "Invalid OTP or OTP has expired"
+            });
+        }
+
+        await CustomerOTP.destroy({ where: { email } });
+
+        const hashedPassword = await bcrypt.hashSync(newPassword, 10);
+        await Customer.update({ password: hashedPassword }, { where: { email } });
+        res.status(200).json({
+            message: "Password reset successfully"
+        });
+
+    } catch (error) {
+        console.error("Error verifying OTP and resetting password:", error);
+        res.status(500).json({
+            message: "Internal server error"
+        });
+    }
+
 }

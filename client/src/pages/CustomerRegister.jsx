@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 
 
 
-export default function UserRegister() {
+export default function CustomerRegister() {
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -93,7 +93,7 @@ export default function UserRegister() {
                 }
             );
             toast.success("Registration successful! Please log in.");
-            navigate("/login");
+            navigate("/customerLogin");
         } catch (error) {
             toast.error(error.response?.data?.message || "Registration failed");
         } finally {
@@ -132,7 +132,7 @@ export default function UserRegister() {
                 <div className="w-112.5 mt-7">
                     <p>Email</p>
                     <input
-                        type="text"
+                        type="email"
                         placeholder="Your email"
                         className="w-full h-12.5 border border-black/20 p-3 rounded-lg"
                         value={email}
@@ -250,7 +250,7 @@ export default function UserRegister() {
                     <span>Already a member?</span>
                     <button
                         type="button"
-                        onClick={() => navigate("/login")}
+                        onClick={() => navigate("/customerLogin")}
                         className="font-semibold text-blue-600 hover:underline hover:cursor-pointer"
                     >
                         Login
