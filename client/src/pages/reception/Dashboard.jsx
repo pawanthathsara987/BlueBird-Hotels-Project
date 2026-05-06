@@ -1,29 +1,82 @@
-import React from "react";
+import axios from "axios";
+import React, { useState, useEffect } from "react";
 import { MdCheckCircle, MdPersonPin, MdHotel, MdCalendarToday } from "react-icons/md";
 
 export default function Dashboard() {
+    const [availableRooms, setAvailableRooms] = useState(0);
+    const [todayCheckIns, setTodayCheckIns] = useState(0);
+    const [todayCheckOuts, setTodayCheckOuts] = useState(0);
+    const [occupiedRooms, setOccupiedRooms] = useState(0);
+
+    const fetchAvailableRooms = async () => {
+        try {
+            const response = await axios.get("http://localhost:3002/api/reception/available-rooms");
+            const result = response.data;
+            setAvailableRooms(result?.data?.availableRoom || result?.data?.count || 0);
+        } catch (error) {
+            console.error("Error fetching available rooms:", error);
+        }
+    };
+
+    const fetchTodayCheckIns = async () => {
+        try {
+            const response = await axios.get("http://localhost:3002/api/reception/today-checkins");
+            const result = response.data;
+            setTodayCheckIns(result?.data?.checkIns || result?.data?.count || 0);
+        } catch (error) {
+            console.error("Error fetching today check-ins:", error);
+        }
+    };
+
+    const fetchTodayCheckOuts = async () => {
+        try {
+            const response = await axios.get("http://localhost:3002/api/reception/today-checkouts");
+            const result = response.data;
+            setTodayCheckOuts(result?.data?.checkOuts || result?.data?.count || 0);
+        } catch (error) {
+            console.error("Error fetching today check-outs:", error);
+        }
+    };
+
+    const fetchOccupiedRooms = async () => {
+        try {
+            const response = await axios.get("http://localhost:3002/api/reception/occupied-rooms");
+            const result = response.data;
+            setOccupiedRooms(result?.data?.occupiedRooms || result?.data?.count || 0);
+        } catch (error) {
+            console.error("Error fetching occupied rooms:", error);
+        }
+    };
+
+    useEffect(() => {
+        fetchAvailableRooms();
+        fetchTodayCheckIns();
+        fetchTodayCheckOuts();
+        fetchOccupiedRooms();
+    }, []);
+
     const stats = [
         {
             label: "Today's Check-Ins",
-            value: "12",
+            value: todayCheckIns,
             icon: MdCheckCircle,
             color: "bg-blue-500",
         },
         {
             label: "Today's Check-Outs",
-            value: "8",
+            value: todayCheckOuts,
             icon: MdPersonPin,
             color: "bg-orange-500",
         },
         {
             label: "Available Rooms",
-            value: "24",
+            value: availableRooms,
             icon: MdHotel,
             color: "bg-green-500",
         },
         {
-            label: "Pending Bookings",
-            value: "5",
+            label: "Occupied Rooms",
+            value: occupiedRooms,
             icon: MdCalendarToday,
             color: "bg-purple-500",
         },

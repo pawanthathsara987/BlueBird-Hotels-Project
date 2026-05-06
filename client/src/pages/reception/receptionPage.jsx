@@ -40,7 +40,7 @@ export default function ReceptionPage() {
                     <Link to="/reception" onClick={() => setSidebarOpen(false)} className="flex items-center gap-3 px-3 md:px-4 py-3 text-sm md:text-base text-white/70 hover:text-white hover:bg-white/10 rounded-r-lg transition"><MdDashboard className="text-lg md:text-2xl flex-shrink-0" /> <span className="truncate">Dashboard</span></Link>
                     <Link to="/reception/checkin" onClick={() => setSidebarOpen(false)} className="flex items-center gap-3 px-3 md:px-4 py-3 text-sm md:text-base text-white/70 hover:text-white hover:bg-white/10 rounded-r-lg transition"><MdCheckCircle className="text-lg md:text-2xl flex-shrink-0" /> <span className="truncate">Check-In</span></Link>
                     <Link to="/reception/checkout" onClick={() => setSidebarOpen(false)} className="flex items-center gap-3 px-3 md:px-4 py-3 text-sm md:text-base text-white/70 hover:text-white hover:bg-white/10 rounded-r-lg transition"><MdCheckCircle className="text-lg md:text-2xl flex-shrink-0" /> <span className="truncate">Check-Out</span></Link>
-                    <Link to="/reception/walkin" onClick={() => setSidebarOpen(false)} className="flex items-center gap-3 px-3 md:px-4 py-3 text-sm md:text-base text-white/70 hover:text-white hover:bg-white/10 rounded-r-lg transition"><GiWalk className="text-lg md:text-2xl flex-shrink-0" /> <span className="truncate">Walk-In</span></Link>
+                    <Link to="/reception/visiting" onClick={() => setSidebarOpen(false)} className="flex items-center gap-3 px-3 md:px-4 py-3 text-sm md:text-base text-white/70 hover:text-white hover:bg-white/10 rounded-r-lg transition"><GiWalk className="text-lg md:text-2xl flex-shrink-0" /> <span className="truncate">Visiting</span></Link>
                     <Link to="/reception/bookings" onClick={() => setSidebarOpen(false)} className="flex items-center gap-3 px-3 md:px-4 py-3 text-sm md:text-base text-white/70 hover:text-white hover:bg-white/10 rounded-r-lg transition"><MdOutlineBookOnline className="text-lg md:text-2xl flex-shrink-0" /> <span className="truncate">Bookings</span></Link>
                     <Link to="/logout" onClick={() => setSidebarOpen(false)} className="flex items-center gap-3 px-3 md:px-4 py-3 text-sm md:text-base text-white/70 hover:text-white hover:bg-white/10 rounded-r-lg transition mt-auto"><MdLogout className="text-lg md:text-2xl flex-shrink-0" /> <span className="truncate">Logout</span></Link>
                 </nav>
@@ -52,7 +52,7 @@ export default function ReceptionPage() {
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/checkin" element={<CheckIn />} />
                     <Route path="/checkout" element={<CheckOut />} />
-                    <Route path="/walkin" element={<VisitorBooking />} />
+                    <Route path="/visiting" element={<VisitorBooking />} />
                     <Route path="/bookings" element={<Booking />} />
                 </Routes>
             </div>

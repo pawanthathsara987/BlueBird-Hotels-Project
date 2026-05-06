@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Logo from "../assets/bluebird logo.png";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation  } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
 
@@ -11,6 +11,7 @@ export default function CustomerLoginPage() {
     const [password, setPassword] = useState("");
     const [rememberMe, setRememberMe] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
 
 
     async function handleLogin() {
@@ -35,9 +36,11 @@ export default function CustomerLoginPage() {
                 sessionStorage.setItem("customerToken", token);
             }
 
+            const from = location.state?.from || "/";
+
             toast.success("Login successful!.");
             setLoading(false);
-            navigate("/");
+            navigate(from);
         } catch (error) {
             setLoading(false);
             toast.error(error.response?.data?.message || "Login failed");

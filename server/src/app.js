@@ -7,6 +7,7 @@ import managerRouter from './routes/managerRouter.js';
 import tourInquiryRouter from './routes/tourInquiryRouter.js';
 import tourBookingRouter from './routes/tourBookingRouter.js';
 import tourPaymentRouter from './routes/tourPaymentRouter.js';
+import receptionRouter from './routes/receptionRouter.js';
 import jwt from 'jsonwebtoken';
 import chatBot from './controllers/chatController.js';
 import customerRouter from './routes/customerRoutes.js';
@@ -23,6 +24,7 @@ app.use('/api/tour-payment', tourPaymentRouter);
 app.use('/api/users', userRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/manager', managerRouter);
+app.use('/api/reception', receptionRouter);
 app.use('/api/customers', customerRouter);
 app.post('/api/chat', chatBot);
 
