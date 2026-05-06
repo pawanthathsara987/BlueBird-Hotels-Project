@@ -448,7 +448,7 @@ export const sendRejectionEmail = async (inquiry, reason) => {
     `;
 
     // Send email using Nodemailer
-    await sendEmail(inquiry.email, subject, emailBody);
+    await sendEmail({ to: inquiry.email, subject, html: emailBody });
     return true;
   } catch (error) {
     console.error("Error sending rejection email:", error);
@@ -514,7 +514,7 @@ export const sendCancellationEmail = async (inquiry, booking, reason) => {
     `;
 
     // Send email using Nodemailer
-    await sendEmail(inquiry.email, subject, emailBody);
+    await sendEmail({ to: inquiry.email, subject, html: emailBody });
     return true;
   } catch (error) {
     console.error("Error sending cancellation email:", error);
