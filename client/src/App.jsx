@@ -19,40 +19,42 @@ import RoomPaymentPage from "./pages/client/booking/RoomPaymentPage";
 import FloatingChatbot from "./components/FloatingChatbot";
 import TourCancelPage from "./pages/client/booking/TourCancelPage";
 import CustomerLoginPage from "./pages/CustomerLoginPage";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import BookingSummary from "./pages/client/booking/BookingSummary";
 
 
 
 export default function App() {
-    return(
-        <BrowserRouter>
-            <Toaster position="top-right" reverseOrder={false} />
-            <div className="w-full h-screen">
-                <Routes>
-                    <Route path="/booking" element={<BookingRoom />} />
-                    <Route path="/booking-summary" element={<BookingSummary />} />
-                    <Route path="/booking/process" element={<BookingProcessing />} />
-                    <Route path="/booking/tour" element={<TourViewPage />} />
-                    <Route path="/booking/tour-details" element={<TourDetailsPage />} />
-                    <Route path="/booking/tour-inquiry" element={<TourInquiryPage />} />
-                    <Route path="/booking/payment" element={<TourPaymentPage />} />
-                    <Route path="/booking/tour-payment" element={<TourPaymentPage />} />
-                    <Route path="/booking/cancel" element={<TourCancelPage />} />
-                    <Route path="/payment" element={<RoomPaymentPage />} />
-                    <Route path="/tourBooking" element={<TourViewPage />} />
-                    <Route path="/signin" element={<LoginAdmin />} />
-                    <Route path="/loginReceptionist" element={<LoginReceptionist />} />
-                    <Route path="/registerCustomer" element={<CustomerRegister />} />
-                    <Route path="/customerLogin" element={<CustomerLoginPage />} />
-                    <Route path="/customer-reset-password" element={<CustomerPasswordResetPage />} />
-                    <Route path="/reset-password" element={< PasswordResetPage />} />
-                    <Route path="/admin/*" element={< AdminPage />} />
-                    <Route path="/manager/*" element={< ManagerPage />} />
-                    <Route path="/reception/*" element={< ReceptionPage />} />
-                    <Route path="/*" element={<HomePage />} />
-                </Routes>
-                <FloatingChatbot />
-            </div>
-        </BrowserRouter>
+    return (
+        <GoogleOAuthProvider clientId="495378641753-0pjhi48q54fugb1l0phuvjk447oi5mol.apps.googleusercontent.com">
+            <BrowserRouter>
+                <Toaster position="top-right" reverseOrder={false} />
+                <div className="w-full h-screen">
+                    <Routes>
+                        <Route path="/booking" element={<BookingRoom />} />
+                        <Route path="/booking/process" element={<BookingProcessing />} />
+                        <Route path="/booking/tour" element={<TourViewPage />} />
+                        <Route path="/booking/tour-details" element={<TourDetailsPage />} />
+                        <Route path="/booking/tour-inquiry" element={<TourInquiryPage />} />
+                        <Route path="/booking/payment" element={<TourPaymentPage />} />
+                        <Route path="/booking/tour-payment" element={<TourPaymentPage />} />
+                        <Route path="/booking/cancel" element={<TourCancelPage />} />
+                        <Route path="/payment" element={<RoomPaymentPage />} />
+                        <Route path="/tourBooking" element={<TourViewPage />} />
+                        <Route path="/loginAdmin" element={<LoginAdmin />} />
+                        <Route path="/loginReceptionist" element={<LoginReceptionist />} />
+                        <Route path="/registerCustomer" element={<CustomerRegister />} />
+                        <Route path="/customerLogin" element={<CustomerLoginPage />} />
+                        <Route path="/customer-reset-password" element={<CustomerPasswordResetPage />} />
+                        <Route path="/reset-password" element={< PasswordResetPage />} />
+                        <Route path="/admin/*" element={< AdminPage />} />
+                        <Route path="/manager/*" element={< ManagerPage />} />
+                        <Route path="/reception/*" element={< ReceptionPage />} />
+                        <Route path="/*" element={<HomePage />} />
+                    </Routes>
+                    <FloatingChatbot />
+                </div>
+            </BrowserRouter>
+        </GoogleOAuthProvider>
     );
 }
