@@ -1,6 +1,6 @@
-import { QueryTypes } from "sequelize";
+import { col, fn, QueryTypes } from "sequelize";
 import sequelize from "../../config/database.js";
-import { Guest, Room, RoomBook, RoomPackage } from "../../models/index.js";
+import { Customer, Room, BookedRoom, RoomPackage, Reservation } from "../../models/index.js";
 
 
 // available room list with packages
@@ -39,329 +39,130 @@ const availableRooms = async (req, res) => {
     }
 };
 
-// add booking
+// Add booking
 const createBooking = async (req, res) => {
-    const t = await Guest.sequelize.transaction();
+    const t = await sequelize.transaction();
     try {
-        const { name, email, country, phone, roomNo, price, checkIn, checkOut, actualAdults, actualKids } = req.body;
+        const { name, email, country, phone, rooms, total_price } = req.body; 
+        // Note: Expecting 'rooms' as an array: [{ roomId, checkIn, checkOut, adults, kids }, ...]
 
-        // Find room by room number
-        const room = await Room.findOne({
-            where: { rnumber: roomNo },
-            transaction: t
-        });
+        // 1. Create Customer
+        const customer = await Customer.create({ name, email, country, pnumber: phone }, { transaction: t });
 
-        if (!room) {
-            await t.rollback();
-            return res.status(404).json({
-                success: false,
-                message: "Room not found",
-            });
-        }
-
-
-        const package_ = await RoomPackage.findByPk(
-            room.packageId,
-            { transaction: t }
-        );
-
-        if (!package_) {
-            await t.rollback();
-            return res.status(404).json({
-                success: false,
-                message: "Package not found",
-            });
-        }
-
-        // Validate capacity
-        if (actualAdults > package_.maxAdults) {
-            await t.rollback();
-            return res.status(400).json({
-                success: false,
-                message: `Package allows max ${package_.maxAdults} adults only`,
-            });
-        }
-
-        if (actualKids > package_.maxKids) {
-            await t.rollback();
-            return res.status(400).json({
-                success: false,
-                message: `Package allows max ${package_.maxKids} kids only`,
-            });
-        }
-
-        // Create guest
-        const guest = await Guest.create({
-            name,
-            email,
-            country,
-            pnumber: phone,
+        // 2. Create Reservation (The Parent Record)
+        const reservation = await Reservation.create({
+            guest_id: customer.id,
+            total_price: total_price,
+            status: 'confirmed'
         }, { transaction: t });
 
-        // Create booking
-        const booking = await RoomBook.create({
-            guest_id: guest.id,
-            roomId: room.id,
-            price,
-            checkIn,
-            checkOut,
-            actualAdults,
-            actualKids,
-        }, { transaction: t });
+        // 3. Loop through requested rooms and create BookedRoom records
+        for (const roomData of rooms) {
+            const { roomId, checkIn, checkOut, actualAdults, actualKids } = roomData;
+
+            // Validate if room exists (Optional: Add your package capacity checks here)
+            const room = await Room.findByPk(roomId, { transaction: t });
+            if (!room) throw new Error(`Room ID ${roomId} not found`);
+
+            await BookedRoom.create({
+                reservation_id: reservation.id,
+                room_id: room.id,
+                checkIn,
+                checkOut,
+                actualAdults,
+                actualKids,
+                status: 'reserved'
+            }, { transaction: t });
+        }
 
         await t.commit();
 
         return res.status(201).json({
             success: true,
-            message: "Booking created successfully",
-            data: { guest, booking }
+            message: "Reservation created successfully",
+            data: { reservationId: reservation.id }
         });
 
     } catch (error) {
         await t.rollback();
-        return res.status(500).json({
-            success: false,
-            message: "Something went wrong in internal server",
-            error: error.message,
-        });
+        return res.status(500).json({ success: false, message: error.message });
     }
-}
+};
 
-// get all booking
+// Get all bookings
 const getAllBookings = async (req, res) => {
     try {
-        const bookings = await RoomBook.findAll({
+        const bookings = await Reservation.findAll({
             include: [
-                {
-                    model: Guest,
-                    attributes: ["id", "name", "email", "country", "pnumber"],
-                },
-                {
-                    model: Room,
-                    attributes: ["id", "rnumber", "rstatus", "packageId"],
+                { model: Customer },
+                { 
+                    model: BookedRoom, 
+                    as: 'bookedRooms',
+                    include: [Room] 
                 }
             ]
         });
-
-        if (bookings.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "No bookings found",
-            });
-        }
-
-        return res.status(200).json({
-            success: true,
-            message: "Bookings found",
-            count: bookings.length,
-            data: bookings,
-        });
-
+        return res.status(200).json({ success: true, data: bookings });
     } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: "Something went wrong in internal server",
-            error: error.message,
-        });
+        return res.status(500).json({ success: false, message: error.message });
     }
-}
+};
 
-
-// get a booking
+// Get single booking
 const getBookingById = async (req, res) => {
     try {
         const { id } = req.params;
-
-        const booking = await RoomBook.findByPk(id, {
+        const booking = await Reservation.findByPk(id, {
             include: [
-                {
-                    model: Guest,
-                    attributes: ["id", "name", "email", "country", "pnumber"],
-                },
-                {
-                    model: Room,
-                    attributes: ["id", "rnumber", "rstatus", "packageId"],
-                }
+                { model: Customer },
+                { model: BookedRoom, as: 'bookedRooms', include: [Room] }
             ]
         });
-
-        if (!booking) {
-            return res.status(404).json({
-                success: false,
-                message: "No booking record found",
-            });
-        }
-
-        return res.status(200).json({
-            success: true,
-            message: "Booking record found",
-            data: booking
-        });
-
+        if (!booking) return res.status(404).json({ message: "Not found" });
+        return res.status(200).json({ success: true, data: booking });
     } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: "Something went wrong in internal server",
-            error: error.message,
-        });
+        return res.status(500).json({ success: false, message: error.message });
     }
-}
+};
 
-// update a booking
+// Update Booking 
 const updateBooking = async (req, res) => {
-    const t = await RoomBook.sequelize.transaction();
+    const t = await sequelize.transaction();
     try {
-        const { id } = req.params;
-        const { name, email, country, phone, roomNo, price, checkIn, checkOut, actualAdults, actualKids } = req.body;
+        const { id } = req.params; // Reservation ID
+        const { status, total_price } = req.body;
 
-        const booking = await RoomBook.findByPk(id, {
-            include: [{ model: Guest }],
-            transaction: t
-        });
+        const reservation = await Reservation.findByPk(id, { transaction: t });
+        if (!reservation) throw new Error("Reservation not found");
 
-        if (!booking) {
-            await t.rollback();
-            return res.status(404).json({
-                success: false,
-                message: "Booking not found",
-            });
-        }
-
-        await booking.Guest.update({
-            name,
-            email,
-            country,
-            pnumber: phone,
-        }, { transaction: t });
-
-        await booking.update({
-            roomId: roomNo,
-            price,
-            checkIn,
-            checkOut,
-            actualAdults,
-            actualKids,
-        }, { transaction: t });
-
+        await reservation.update({ status, total_price }, { transaction: t });
+        
         await t.commit();
-
-        return res.status(200).json({
-            success: true,
-            message: "Booking and guest updated successfully",
-            data: {
-                booking,
-                guest: booking.Guest,
-            }
-        });
-
+        return res.status(200).json({ success: true, message: "Updated" });
     } catch (error) {
         await t.rollback();
-        return res.status(500).json({
-            success: false,
-            message: "Something went wrong in internal server",
-            error: error.message,
-        });
+        return res.status(500).json({ success: false, message: error.message });
     }
-}
+};
 
-// delete a booking
+// Delete Booking 
 const deleteBookingById = async (req, res) => {
-    const t = await RoomBook.sequelize.transaction();
+    const t = await sequelize.transaction();
     try {
         const { id } = req.params;
-
-        const booking = await RoomBook.findByPk(id, {
-            include: [{ model: Guest }],
-            transaction: t
-        });
-
-        if (!booking) {
-            await t.rollback();
-            return res.status(404).json({
-                success: false,
-                message: "No booking record found",
-            });
-        }
-
-        await booking.Guest.destroy({ transaction: t });
-
+        const reservation = await Reservation.findByPk(id, { transaction: t });
+        
+        if (!reservation) throw new Error("Reservation not found");
+        
+        await reservation.destroy({ transaction: t });
         await t.commit();
-
-        return res.status(200).json({
-            success: true,
-            message: "Booking deleted successfully",
-        });
-
+        
+        return res.status(200).json({ success: true, message: "Deleted" });
     } catch (error) {
         await t.rollback();
-        return res.status(500).json({
-            success: false,
-            message: "Something went wrong in internal server",
-            error: error.message,
-        });
+        return res.status(500).json({ success: false, message: error.message });
     }
-}
-
-// get all packages which assign room status = available and not boooking for specific date
-const getAvailablePackagesByDate  = async (req, res) => {
-    try {
-        const { checkIn, checkOut } = req.query;
-
-        if (!checkIn || !checkOut) {
-            return res.status(400).json({
-                success: false,
-                message: "checkin and checkout date are required",
-            });
-        };
-
-        const query =
-            `SELECT 
-                p.id,
-                p.pname,
-                p.pprice,
-                p.pimage,
-                p.maxAdults,
-                p.maxKids,
-                p.description,
-                COUNT(r.id) AS available_room
-            FROM room_package p
-            JOIN room r 
-                ON p.id = r.packageId
-            WHERE r.roomStatus = 'available'
-            AND NOT EXISTS (
-                SELECT 1
-                FROM booking_room br
-                WHERE br.roomId = r.id
-                AND br.status NOT IN ('cancelled', 'checked_out')
-                AND br.checkIn < ?
-                AND br.checkOut > ?
-            )
-            GROUP BY 
-                p.id, p.pname, p.pprice, p.pimage, 
-                p.maxAdults, p.maxKids, p.description`;
-
-        const packagesList = await sequelize.query(query, {
-            replacements: [checkOut, checkIn],
-            type: QueryTypes.SELECT
-        });
-
-        return res.status(200).json({
-            success: true,
-            message: packagesList.length > 0
-                ? "Packages retrieved successfully"
-                : "No available packages for selected dates",
-            count: packagesList.length,
-            data: packagesList
-        });
-
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: "Something went wrong in internal server",
-            error: error.message,
-        });
-    }
-}
+};
 
 // get all available roomlist for specific package and checkin checkout dates no book
 const getAvailableRoomAssignForPackage = async (req, res) => {
@@ -382,6 +183,7 @@ const getAvailableRoomAssignForPackage = async (req, res) => {
             });
         };
 
+        // Updated SQL to reflect 'booked_rooms' table and 'room_id' column
         const query = `
             SELECT 
                 r.id, 
@@ -392,12 +194,12 @@ const getAvailableRoomAssignForPackage = async (req, res) => {
             WHERE r.packageId = ?
             AND r.roomStatus = 'available'
             AND r.id NOT IN (
-                SELECT roomId
-                FROM booking_room
+                SELECT room_id 
+                FROM booked_rooms 
                 WHERE status NOT IN ('cancelled', 'checked_out')
                     AND checkIn < ?
                     AND checkOut > ? 
-            )`;
+            ) LIMIT 1`;
 
         const roomListbyPackageId = await sequelize.query(query, {
             replacements: [packageId, checkOut, checkIn],
@@ -407,8 +209,8 @@ const getAvailableRoomAssignForPackage = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: roomListbyPackageId.length > 0
-                ? "room retrieved successfully"
-                : "No available room for selected dates and package",
+                ? "Rooms retrieved successfully"
+                : "No available rooms for selected dates and package",
             count: roomListbyPackageId.length,
             data: roomListbyPackageId
         });
@@ -422,17 +224,62 @@ const getAvailableRoomAssignForPackage = async (req, res) => {
     }
 }
 
-const holdRoomForBookingProcess = async (req, res) => {
+const getAvailablePackagesByDate = async (req, res) => {
     try {
-        
+        const { checkIn, checkOut } = req.query;
+
+        if (!checkIn || !checkOut) {
+            return res.status(400).json({
+                success: false,
+                message: "checkIn and checkOut dates are required",
+            });
+        }
+
+        const query = `
+            SELECT 
+                p.id, 
+                p.pname, 
+                p.pprice, 
+                p.pimage, 
+                p.maxAdults, 
+                p.maxKids, 
+                p.description, 
+                COUNT(r.id) AS available_room
+            FROM room_package p
+            JOIN room r ON p.id = r.packageId
+            WHERE r.roomStatus = 'available'
+            AND r.id NOT IN (
+                SELECT br.room_id
+                FROM booked_rooms br
+                WHERE br.status NOT IN ('cancelled', 'checked_out')
+                AND br.checkIn < :checkOut
+                AND br.checkOut > :checkIn
+            )
+            GROUP BY p.id, p.pname, p.pprice, p.pimage, p.maxAdults, p.maxKids, p.description
+        `;
+
+        const packagesList = await sequelize.query(query, {
+            replacements: { 
+                checkIn: checkIn, 
+                checkOut: checkOut 
+            },
+            type: QueryTypes.SELECT
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: packagesList.length > 0 ? "Packages found" : "No packages available",
+            data: packagesList
+        });
+
     } catch (error) {
         return res.status(500).json({
             success: false,
-            message: "Something went wrong in internal server",
-            error: error.message,
+            message: "Internal server error",
+            error: error.message
         });
     }
-}
+};
 
 export {
     createBooking,
@@ -441,6 +288,6 @@ export {
     deleteBookingById,
     updateBooking,
     availableRooms,
-    getAvailablePackagesByDate,
     getAvailableRoomAssignForPackage,
+    getAvailablePackagesByDate
 }

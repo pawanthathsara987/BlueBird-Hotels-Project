@@ -20,6 +20,7 @@ import FloatingChatbot from "./components/FloatingChatbot";
 import TourCancelPage from "./pages/client/booking/TourCancelPage";
 import CustomerLoginPage from "./pages/CustomerLoginPage";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import BookingSummary from "./pages/client/booking/BookingSummary";
 
 
 
