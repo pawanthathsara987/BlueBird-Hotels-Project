@@ -3,7 +3,7 @@ import axios from "axios";
 import { ArrowLeft, Check, Plus, Trash2, Edit } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
-export default function TourItemView({ selectionMode = false }) {
+export default function TourItemView({ selectionMode = false, searchQuery = "" }) {
     const navigate = useNavigate();
     const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api").replace(/\/$/, "");
     const [tourAssignments, setTourAssignments] = useState([]);
@@ -56,6 +56,21 @@ export default function TourItemView({ selectionMode = false }) {
 
     const selectedCount = useMemo(() => selectedItems.length, [selectedItems]);
 
+    const normalizedSearch = searchQuery.trim().toLowerCase();
+    const filteredAssignments = useMemo(() => {
+        if (!normalizedSearch) return tourAssignments;
+
+        return tourAssignments.filter((assignment) => {
+            const matchesItemName = (assignment.name || "").toLowerCase().includes(normalizedSearch);
+            const matchesAnyTour = (assignment.assignedTours || []).some((tour) =>
+                (tour.packageName || "").toLowerCase().includes(normalizedSearch) ||
+                (tour.location || "").toLowerCase().includes(normalizedSearch)
+            );
+
+            return matchesItemName || matchesAnyTour;
+        });
+    }, [tourAssignments, normalizedSearch]);
+
     const toggleSelection = (name) => {
         setSelectedItems((prev) =>
             prev.includes(name) ? prev.filter((item) => item !== name) : [...prev, name]
@@ -81,6 +96,10 @@ export default function TourItemView({ selectionMode = false }) {
     const saveSelectedItems = () => {
         localStorage.setItem("selectedTourItems", JSON.stringify(selectedItems));
         navigate("/manager/tours/add");
+    };
+
+    const handleEdit = (itemId) => {
+        navigate(`/manager/tours/item/edit/${itemId}`);
     };
 
     return (
@@ -122,13 +141,15 @@ export default function TourItemView({ selectionMode = false }) {
 
             {loading ? (
                 <div className="p-4 text-sm text-slate-500">Loading tour assignments...</div>
-            ) : tourAssignments.length === 0 ? (
+            ) : filteredAssignments.length === 0 ? (
                 <div className="p-4 rounded-lg border border-dashed border-slate-300 text-slate-500">
-                    No tour items found. Add a new tour item first.
+                    {tourAssignments.length === 0
+                        ? "No tour items found. Add a new tour item first."
+                        : "No tour items match your search."}
                 </div>
             ) : (
                 <div className="flex flex-col gap-2">
-                    {tourAssignments.map((assignment) => {
+                    {filteredAssignments.map((assignment) => {
                         const isSelected = selectedItems.includes(assignment.name);
                         const tourCount = assignment.assignedTours?.length || 0;
 
@@ -156,7 +177,12 @@ export default function TourItemView({ selectionMode = false }) {
                                             </button>
                                         ) : (
                                             <div className="flex gap-2">
-                                                <button className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Edit">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleEdit(assignment.id)}
+                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                    title="Edit"
+                                                >
                                                     <Edit size={18} />
                                                 </button>
                                                 <button 
@@ -174,7 +200,7 @@ export default function TourItemView({ selectionMode = false }) {
                         }
 
                         // If tours assigned, show each tour item-tour pair
-                        return assignment.assignedTours.map((tour, idx) => (
+                        return assignment.assignedTours.map((tour) => (
                             <div key={`${assignment.id}-${tour.id}`} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
                                 <div className="flex justify-between items-start gap-4">
                                     <div className="flex-1">
@@ -198,7 +224,12 @@ export default function TourItemView({ selectionMode = false }) {
 
                                         {!selectionMode && (
                                             <div className="flex gap-2">
-                                                <button className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Edit">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleEdit(assignment.id)}
+                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                    title="Edit"
+                                                >
                                                     <Edit size={18} />
                                                 </button>
                                                 <button 

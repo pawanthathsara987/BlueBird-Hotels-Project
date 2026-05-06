@@ -6,23 +6,26 @@ class TourBooking extends Model {}
 TourBooking.init(
   {
     id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      type: DataTypes.INTEGER,
       primaryKey: true,
+      autoIncrement: true,
       allowNull: false,
     },
     bookingRef: {
       type: DataTypes.STRING,
       unique: true,
       allowNull: false,
-      // e.g. TB-2026-0001
     },
     inquiryId: {
-      type: DataTypes.UUID,
+      type: DataTypes.INTEGER,
       allowNull: false,
-      // Link to TourInquiry
     },
-    // Pricing (calculated when created from accepted inquiry)
+    // Snapshot from inquiry — for date rule checks
+    tourStartDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: false,
+    },
+    // Pricing
     totalAmount: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
@@ -30,12 +33,10 @@ TourBooking.init(
     depositAmount: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
-      // 50% of totalAmount
     },
     remainingAmount: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
-      // 50% of totalAmount
     },
     // Status
     status: {
@@ -48,49 +49,31 @@ TourBooking.init(
       defaultValue: "payment_pending",
       allowNull: false,
     },
-    // Refund
-    refundStatus: {
-      type: DataTypes.ENUM(
-        "not_applicable",
-        "pending",
-        "not_eligible",
-        "approved",
-        "processed"
-      ),
-      defaultValue: "not_applicable",
-      allowNull: false,
-    },
-    refundAmount: {
-      type: DataTypes.DECIMAL(10, 2),
-      allowNull: true,
-    },
-    cancelledAt: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
-    // Secure Tokens (for email links)
+    // Tokens
     paymentToken: {
       type: DataTypes.STRING,
       allowNull: true,
     },
     trackingToken: {
       type: DataTypes.STRING,
+      unique: true,
       allowNull: true,
     },
     tokenExpiresAt: {
       type: DataTypes.DATE,
       allowNull: true,
     },
-    // Manager
-    managerNote: {
-      type: DataTypes.TEXT,
+    paymentLinkSentAt: {
+      type: DataTypes.DATE,
       allowNull: true,
     },
+    // Managerial actions  
     acceptedAt: {
       type: DataTypes.DATE,
       allowNull: true,
     },
-    rejectedAt: {
+    // Cancellation
+    cancelledAt: {
       type: DataTypes.DATE,
       allowNull: true,
     },

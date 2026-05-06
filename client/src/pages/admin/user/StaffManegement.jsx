@@ -67,68 +67,123 @@ export default function StaffManagement() {
 
     return (
         <>
-            <div className="flex flex-row justify-between items-center p-5">
-                <h1 className="p-5 text-2xl font-bold">Staff Management</h1>
-                <Link
-                    to="/admin/users/addStaffMember"
-                    className="w-[200px] bg-blue-500 text-white p-2 rounded-lg text-center"
-                >
-                    + Add Staff
-                </Link>
-            </div>
-            <div className="w-5xl flex flex-row mx-auto justify-between items-center p-5 shadow-2xl rounded-lg">
-                <h3>Staff Members</h3>
-                <input type="search" placeholder="Search staff..." className="w-[250px] border p-2 rounded-lg mb-4"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-            </div>
-            <div className="w-5xl mx-auto">
-                {loading ? (
-                    <Loader />
-                ) : (
-                    <table className="w-full border-collapse">
-                        <thead className="bg-gray-100 border-b">
-                            <tr>
-                                <th className="text-left p-4 font-semibold text-gray-400 text-sm">STAFF MEMBER</th>
-                                <th className="text-left p-4 font-semibold text-gray-400 text-sm">USERNAME</th>
-                                <th className="text-left p-4 font-semibold text-gray-400 text-sm">EMAIL</th>
-                                <th className="text-left p-4 font-semibold text-gray-400 text-sm">ROLE</th>
-                                <th className="text-left p-4 font-semibold text-gray-400 text-sm">PHONE</th>
-                                <th className="text-left p-4 font-semibold text-gray-400 text-sm">ACTIONS</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {staffMembers.map((member, index) => (
-                                <tr key={index}>
-                                    <td className="p-4 border-b">{member.name}</td>
-                                    <td className="p-4 border-b">{member.userName}</td>
-                                    <td className="p-4 border-b">{member.email}</td>
-                                    <td className="p-4 border-b">{member.role}</td>
-                                    <td className="p-4 border-b">{member.phoneNumber}</td>
-                                    <td className="p-4 border-b">
-                                        <div className="flex flex-row gap-2">
-                                            <button
-                                                onClick={() => {
-                                                    navigate("/admin/users/updateStaffMember", { state: { member } });
-                                                }} className="bg-blue-500 text-white p-2 rounded-lg flex items-center gap-1">
-                                                <FaEdit /> Edit
-                                            </button>
-                                            <button
-                                                onClick={() => onDeleteClick(member)}
-                                                className="bg-red-500 text-white p-2 rounded-lg flex items-center gap-1">
-                                                <FaTrash /> Delete
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )
+            <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 lg:px-8">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <h1 className="text-2xl font-bold">Staff Management</h1>
+                    <Link
+                        to="/admin/users/addStaffMember"
+                        className="w-full rounded-lg bg-blue-500 p-3 text-center text-white md:w-50"
+                    >
+                        + Add Staff
+                    </Link>
+                </div>
 
-                }
+                <div className="mt-4 rounded-lg bg-white p-4 shadow-2xl">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <h3 className="text-lg font-semibold">Staff Members</h3>
+                        <input
+                            type="search"
+                            placeholder="Search staff..."
+                            className="w-full rounded-lg border p-2 sm:max-w-xs"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
 
+                    <div className="mt-4">
+                        {loading ? (
+                            <Loader />
+                        ) : (
+                            <>
+                                <div className="hidden overflow-x-auto md:block">
+                                    <table className="w-full border-collapse">
+                                        <thead className="border-b bg-gray-100">
+                                            <tr>
+                                                <th className="p-4 text-left text-sm font-semibold text-gray-400">STAFF MEMBER</th>
+                                                <th className="p-4 text-left text-sm font-semibold text-gray-400">USERNAME</th>
+                                                <th className="p-4 text-left text-sm font-semibold text-gray-400">EMAIL</th>
+                                                <th className="p-4 text-left text-sm font-semibold text-gray-400">ROLE</th>
+                                                <th className="p-4 text-left text-sm font-semibold text-gray-400">PHONE</th>
+                                                <th className="p-4 text-left text-sm font-semibold text-gray-400">ACTIONS</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {staffMembers.map((member, index) => (
+                                                <tr key={index}>
+                                                    <td className="border-b p-4">{member.name}</td>
+                                                    <td className="border-b p-4">{member.userName}</td>
+                                                    <td className="border-b p-4">{member.email}</td>
+                                                    <td className="border-b p-4">{member.role}</td>
+                                                    <td className="border-b p-4">{member.phoneNumber}</td>
+                                                    <td className="border-b p-4">
+                                                        <div className="flex flex-wrap gap-2">
+                                                            <button
+                                                                onClick={() => {
+                                                                    navigate("/admin/users/updateStaffMember", { state: { member } });
+                                                                }}
+                                                                className="flex items-center gap-1 rounded-lg bg-blue-500 px-3 py-2 text-white"
+                                                            >
+                                                                <FaEdit /> Edit
+                                                            </button>
+                                                            <button
+                                                                onClick={() => onDeleteClick(member)}
+                                                                className="flex items-center gap-1 rounded-lg bg-red-500 px-3 py-2 text-white"
+                                                            >
+                                                                <FaTrash /> Delete
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div className="space-y-3 md:hidden">
+                                    {staffMembers.length > 0 ? (
+                                        staffMembers.map((member, index) => (
+                                            <div key={index} className="rounded-lg border bg-gray-50 p-4 shadow-sm">
+                                                <div className="flex flex-col gap-3">
+                                                    <div>
+                                                        <p className="text-base font-semibold text-gray-900">{member.name}</p>
+                                                        <p className="text-sm text-gray-500">{member.userName}</p>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 gap-2 text-sm text-gray-700 sm:grid-cols-2">
+                                                        <p><span className="font-semibold">Email:</span> {member.email}</p>
+                                                        <p><span className="font-semibold">Role:</span> {member.role}</p>
+                                                        <p><span className="font-semibold">Phone:</span> {member.phoneNumber}</p>
+                                                    </div>
+
+                                                    <div className="flex flex-col gap-2 sm:flex-row">
+                                                        <button
+                                                            onClick={() => {
+                                                                navigate("/admin/users/updateStaffMember", { state: { member } });
+                                                            }}
+                                                            className="flex w-full items-center justify-center gap-1 rounded-lg bg-blue-500 px-3 py-2 text-white"
+                                                        >
+                                                            <FaEdit /> Edit
+                                                        </button>
+                                                        <button
+                                                            onClick={() => onDeleteClick(member)}
+                                                            className="flex w-full items-center justify-center gap-1 rounded-lg bg-red-500 px-3 py-2 text-white"
+                                                        >
+                                                            <FaTrash /> Delete
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="rounded-lg border border-dashed p-6 text-center text-sm text-gray-500">
+                                            No staff members found.
+                                        </p>
+                                    )}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
             </div>
 
             <DeleteStaffModal

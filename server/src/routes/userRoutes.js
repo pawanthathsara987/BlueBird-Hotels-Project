@@ -1,5 +1,6 @@
 import express from "express";
 import {registerUser, getAllUsers, updateUser, deleteUser, searchUsers, verifyEmail, registerStaffMember, sendOtp, verifyOtpAndResetPassword, userLogin} from "../controllers/userController.js";
+import {requireAuth, requireRole} from "../middleware/authMiddleware.js";
 
 const userRouter = express.Router();
 

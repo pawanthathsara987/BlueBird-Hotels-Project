@@ -1,5 +1,6 @@
 import { TourInquiry, Tour, TourBooking, TourPayment } from "../../models/index.js";
 import { Op } from "sequelize";
+import crypto from "crypto";
 import { generateSecureToken, getTokenExpiry } from "../../utils/tokenUtils.js";
 import {
   validateEmail,
@@ -10,7 +11,28 @@ import {
   sendBookingConfirmationEmail,
   sendRejectionEmail,
 } from "../../services/emailService.js";
-import { sendInquiryAcceptedEmail, sendInquiryRejectedEmail } from "../../middleware/EmailSender.js";
+
+const buildReferenceCode = (prefix) => {
+  const year = new Date().getFullYear();
+  const randomPart = crypto.randomBytes(4).toString("hex").toUpperCase();
+  return `${prefix}-${year}-${randomPart}`;
+};
+
+const generateUniqueReferenceCode = async (model, fieldName, prefix, maxAttempts = 10) => {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const referenceCode = buildReferenceCode(prefix);
+    const existingRecord = await model.findOne({
+      where: { [fieldName]: referenceCode },
+      attributes: ["id"],
+    });
+
+    if (!existingRecord) {
+      return referenceCode;
+    }
+  }
+
+  throw new Error(`Unable to generate a unique ${fieldName} after ${maxAttempts} attempts`);
+};
 
 // Create new tour inquiry
 export const createTourInquiry = async (req, res) => {
@@ -78,10 +100,7 @@ export const createTourInquiry = async (req, res) => {
     }
 
     // Generate unique inquiry reference
-    const inquiryCount = await TourInquiry.count();
-    const inquiryRef = `TI-${new Date().getFullYear()}-${String(
-      inquiryCount + 1
-    ).padStart(4, "0")}`;
+    const inquiryRef = await generateUniqueReferenceCode(TourInquiry, "inquiryRef", "TI");
 
     // Create inquiry
     const inquiry = await TourInquiry.create({
@@ -121,11 +140,12 @@ export const createTourInquiry = async (req, res) => {
 // Get all inquiries (for manager/admin)
 export const getAllInquiries = async (req, res) => {
   try {
-    const { status, tourId, page = 1, limit = 10 } = req.query;
+    const { status, tourId, email, page = 1, limit = 10 } = req.query;
 
     const where = {};
     if (status) where.status = status;
     if (tourId) where.tourId = tourId;
+    if (email) where.email = email;
 
     const offset = (page - 1) * limit;
 
@@ -243,10 +263,7 @@ export const acceptInquiry = async (req, res) => {
     const remainingAmount = totalAmount - depositAmount;
 
     // Generate booking reference
-    const bookingCount = await TourBooking.count();
-    const bookingRef = `TB-${new Date().getFullYear()}-${String(
-      bookingCount + 1
-    ).padStart(4, "0")}`;
+    const bookingRef = await generateUniqueReferenceCode(TourBooking, "bookingRef", "TB");
 
     // Generate secure tokens
     const paymentToken = generateSecureToken();
@@ -261,7 +278,7 @@ export const acceptInquiry = async (req, res) => {
       depositAmount,
       remainingAmount,
       status: "payment_pending",
-      managerNote: managerNote || null,
+      tourStartDate: inquiry.startDate,
       paymentToken,
       trackingToken,
       tokenExpiresAt,
@@ -334,7 +351,7 @@ export const rejectInquiry = async (req, res) => {
 
     await inquiry.update({
       status: "rejected",
-      managerNote: reason || null,
+      rejectionReason: reason || null,
     });
 
     // Send rejection email to guest

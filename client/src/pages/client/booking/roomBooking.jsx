@@ -14,6 +14,7 @@ const BookingRoom = () => {
 
     const [checkInDate, setCheckInDate] = useState(today);
     const [checkOutDate, setCheckOutDate] = useState(defaultCheckOut);
+    const [selectedPackage, setSelectedPackage] = useState([]);
     const [rooms, setRooms] = useState([]);
     const [packageOptions, setPackageOptions] = useState([]);
     const [reviewPackageList, setRevirePackageList] = useState([]);

@@ -4,11 +4,11 @@ import sequelize from "../../config/database.js";
 class TourInquiry extends Model {}
 
 TourInquiry.init(
-  {
-    id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      {
+        id: {
+      type: DataTypes.INTEGER,
       primaryKey: true,
+      autoIncrement: true,
       allowNull: false,
     },
     inquiryRef: {
@@ -66,6 +66,10 @@ TourInquiry.init(
       defaultValue: "pending",
       allowNull: false,
     },
+    rejectionReason: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
   },
   {
     sequelize,

@@ -12,6 +12,38 @@ export default function TourBookingsManagement() {
 
   const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3002/api').replace(/\/$/, '');
 
+  const formatLkr = (value) => `LKR ${Number(value || 0).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  const formatDate = (value) => {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'N/A';
+    return date.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
+  const formatDateTime = (value) => {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'N/A';
+    return date.toLocaleString('en-GB');
+  };
+
+  const getGuestName = (booking) => {
+    const inquiry = booking.TourInquiry || booking.tourInquiry || {};
+    return (
+      inquiry.fullName ||
+      inquiry.name ||
+      inquiry.customerName ||
+      [inquiry.firstName, inquiry.lastName].filter(Boolean).join(' ') ||
+      'Guest name not provided'
+    );
+  };
+
+  const getTourName = (booking) => {
+    const inquiry = booking.TourInquiry || booking.tourInquiry || {};
+    return inquiry.Tour?.packageName || inquiry.tour?.packageName || booking.Tour?.packageName || 'Tour package not found';
+  };
+
   useEffect(() => {
     fetchBookings();
     fetchStats();
@@ -56,7 +88,7 @@ export default function TourBookingsManagement() {
   };
 
   const handleCancel = async (bookingId) => {
-    if (!window.confirm('Are you sure you want to cancel this booking?')) return;
+    if (!window.confirm('Are you sure you want to cancel this booking? Refund is only eligible if cancelled at least 4 days before tour start.')) return;
     
     setCanceling(bookingId);
     try {
@@ -210,7 +242,9 @@ export default function TourBookingsManagement() {
                     <div className="flex items-center gap-4 flex-1 text-left">
                       <div>
                         <p className="font-bold text-gray-900">Booking Ref: {booking.bookingRef}</p>
-                        <p className="text-sm text-gray-600">Total: ${Number(booking.totalAmount)?.toFixed(2)}</p>
+                        <p className="text-sm text-gray-700">Guest: {getGuestName(booking)}</p>
+                        <p className="text-sm text-gray-700">Tour: {getTourName(booking)}</p>
+                        <p className="text-sm text-gray-600">Total: {formatLkr(booking.totalAmount)} • Start: {formatDate(booking.tourStartDate || booking.TourInquiry?.startDate)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -235,6 +269,22 @@ export default function TourBookingsManagement() {
                           <h4 className="font-bold text-gray-900 mb-3">Booking Details</h4>
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
+                              <span className="text-gray-600">Guest Name:</span>
+                              <span className="font-semibold">{getGuestName(booking)}</span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <span className="text-gray-600">Tour Package:</span>
+                              <span className="font-semibold text-right">{getTourName(booking)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Tour Date:</span>
+                              <span className="font-semibold">{formatDate(booking.tourStartDate || booking.TourInquiry?.startDate)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Guests:</span>
+                              <span className="font-semibold">{booking.TourInquiry ? `${booking.TourInquiry.numberOfAdults || 0} Adult(s), ${booking.TourInquiry.numberOfChildren || 0} Child(ren)` : 'N/A'}</span>
+                            </div>
+                            <div className="flex justify-between">
                               <span className="text-gray-600">Booking Ref:</span>
                               <span className="font-semibold">{booking.bookingRef}</span>
                             </div>
@@ -244,7 +294,7 @@ export default function TourBookingsManagement() {
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-600">Token Expires:</span>
-                              <span>{new Date(booking.tokenExpiresAt).toLocaleString()}</span>
+                              <span>{formatDateTime(booking.tokenExpiresAt)}</span>
                             </div>
                           </div>
                         </div>
@@ -255,15 +305,15 @@ export default function TourBookingsManagement() {
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
                               <span className="text-gray-600">Total Amount:</span>
-                              <span className="font-semibold">${Number(booking.totalAmount)?.toFixed(2)}</span>
+                              <span className="font-semibold">{formatLkr(booking.totalAmount)}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-600">50% Advance:</span>
-                              <span className="font-semibold text-blue-600">${Number(booking.depositAmount)?.toFixed(2)}</span>
+                              <span className="font-semibold text-blue-600">{formatLkr(booking.depositAmount)}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-600">Remaining (50%):</span>
-                              <span className="font-semibold text-green-600">${Number(booking.remainingAmount)?.toFixed(2)}</span>
+                              <span className="font-semibold text-green-600">{formatLkr(booking.remainingAmount)}</span>
                             </div>
                           </div>
                         </div>
@@ -288,7 +338,7 @@ export default function TourBookingsManagement() {
                             </div>
                             <div className="flex justify-between">
                               <span>Refund Amount:</span>
-                              <span className="font-semibold">${Number(booking.refundAmount)?.toFixed(2) || '0.00'}</span>
+                              <span className="font-semibold">{formatLkr(booking.refundAmount)}</span>
                             </div>
                           </div>
                         </div>

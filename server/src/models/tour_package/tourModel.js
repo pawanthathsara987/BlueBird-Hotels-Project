@@ -44,6 +44,10 @@ Tour.init(
         type: DataTypes.STRING(500),
         allowNull: true
     },
+    duration: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
     status: {
         type: DataTypes.ENUM('active', 'inactive'),
         allowNull: false,
