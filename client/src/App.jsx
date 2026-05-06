@@ -17,6 +17,7 @@ import TourPaymentPage from "./pages/client/booking/TourPaymentPage";
 import RoomPaymentPage from "./pages/client/booking/RoomPayment";
 import TourCancelPage from "./pages/client/booking/TourCancelPage";
 import CustomerLoginPage from "./pages/CustomerLoginPage";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import BookingSummary from "./pages/client/booking/BookingSummary";
 import BookingConfirmation from "./pages/client/booking/BookingConfirmation";
 
@@ -49,8 +50,7 @@ export default function App() {
                     <Route path="/manager/*" element={< ManagerPage />} />
                     <Route path="/reception/*" element={< ReceptionPage />} />
                     <Route path="/*" element={<HomePage />} />
-                </Routes>
-                
+                </Routes> 
             </div>
         </BrowserRouter>
     );

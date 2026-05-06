@@ -1,8 +1,11 @@
 import { useState } from "react";
 import Logo from "../assets/bluebird logo.png";
-import { useNavigate, useLocation  } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { useGoogleLogin } from "@react-oauth/google";
+import { FcGoogle } from "react-icons/fc";
+import { AppleIcon } from "lucide-react";
 
 export default function CustomerLoginPage() {
     const [showPassword, setShowPassword] = useState(false);
@@ -12,6 +15,42 @@ export default function CustomerLoginPage() {
     const [rememberMe, setRememberMe] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
+
+    const googleLogin = useGoogleLogin(
+        {
+            onSuccess: async (response) => {
+                try {
+
+                    setLoading(true);
+
+                    const res = await axios.post(import.meta.env.VITE_BACKEND_URL + "/customers/google-login", {
+                        token: response.access_token
+                    });
+
+                    if (rememberMe) {
+                        localStorage.setItem("customerToken", res.data.token);
+                    } else {
+                        sessionStorage.setItem("customerToken", res.data.token);
+                    }
+
+                    const from = location.state?.from || "/";
+
+                    toast.success("Google login successful!");
+                    navigate(from);
+
+                } catch (error) {
+                    console.error("Google login error:", error);
+                    toast.error("Google login failed");
+                } finally {
+                    setLoading(false);
+                }
+            },
+            onError: (error) => {
+                console.error("Google login error:", error);
+                toast.error("Google login failed");
+            }
+        }
+    );
 
 
     async function handleLogin() {
@@ -38,7 +77,7 @@ export default function CustomerLoginPage() {
 
             const from = location.state?.from || "/";
 
-            toast.success("Login successful!.");
+            toast.success("Login successful!");
             setLoading(false);
             navigate(from);
         } catch (error) {
@@ -101,6 +140,22 @@ export default function CustomerLoginPage() {
                disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {loading ? "Logging in..." : "Login"}
+                    </button>
+
+                    <div className="my-4 flex items-center gap-3 text-sm text-gray-400">
+                        <div className="h-px flex-1 bg-gray-200" />
+                        <span>or</span>
+                        <div className="h-px flex-1 bg-gray-200" />
+                    </div>
+
+                    <button
+                        type="button"
+                        disabled={loading}
+                        onClick={() => googleLogin()}
+                        className="w-full h-12.5 border border-black/20 rounded-lg flex items-center justify-center gap-3 font-semibold hover:bg-gray-50 transition-colors"
+                    >
+                        <FcGoogle className="text-xl" />
+                        Continue with Google
                     </button>
                 </div>
                 <div className="pb-6 text-sm text-gray-600 flex items-center gap-2">
