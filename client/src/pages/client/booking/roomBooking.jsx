@@ -7,6 +7,7 @@ import axios from "axios";
 import RoomDetailsModal from "./RoomDetailsModal";
 import { SiGitconnected } from "react-icons/si";
 import { useLocation, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { jwtDecode } from "jwt-decode";
 
 const BookingRoom = () => {
@@ -24,6 +25,9 @@ const BookingRoom = () => {
     const [reviewPackageList, setRevirePackageList] = useState([]);
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+    // store the currently selected booking details for reuse
+    const [selectedBookPackage, setSelectedBookPackage] = useState({});
 
     useEffect(() => {
         const saved = localStorage.getItem("bookingDetails");
@@ -131,7 +135,7 @@ const BookingRoom = () => {
         setCheckOutDate(end);
         setPackageOptions([]);
         
-        // Save booking details to localStorage
+        // save booking details in localstorage to retrieve data again
         if (start && end) {
             localStorage.setItem("bookingDetails", JSON.stringify({
                 checkInDate: start.toISOString(),
@@ -175,27 +179,54 @@ const BookingRoom = () => {
     };
 
     const updateRoomPackage = (roomId, packageId) => {
-        const selectedPackage = packageOptions.find((item) => item.id === packageId);
-        const updatedRooms = rooms.map((room) =>
-            room.id === roomId
-                ? {
-                    ...room,
+    const pkg = packageOptions.find((item) => item.id === packageId);
+    setSelectedPackage(pkg);
+
+    const nights = checkInDate && checkOutDate
+        ? Math.max(1, Math.ceil((new Date(checkOutDate) - new Date(checkInDate)) / (1000 * 60 * 60 * 24)))
+        : 1;
+    const totalPrice = Number(pkg?.price ?? 0) * nights;
+
+    const updatedRooms = rooms.map((room) =>
+        room.id === roomId
+            ? { ...room, packageId, adults: pkg ? 1 : room.adults, kids: 0, showPackagePicker: false }
+            : room,
+    );
+    setRooms(updatedRooms);
+
+    localStorage.setItem("bookingDetails", JSON.stringify({
+        checkInDate: checkInDate.toISOString(),
+        checkOutDate: checkOutDate.toISOString(),
+        rooms: updatedRooms
+    }));
+
+    if (pkg) {
+        // ✅ Wait for backend room ID, then set selectedBookPackage once with the real roomId
+        getRoomIdForSelectedPackage(packageId).then((backendId) => {
+            if (backendId) {
+                setRooms((prev) =>
+                    prev.map((room) =>
+                        room.id === roomId ? { ...room, roomId: backendId } : room
+                    )
+                );
+
+                const roomDetails = updatedRooms.find((r) => r.id === roomId) || {};
+                setSelectedBookPackage({
                     packageId,
-                    adults: selectedPackage ? 1 : room.adults,
-                    kids: 0,
-                    showPackagePicker: false,
-                }
-                : room,
-        );
-        setRooms(updatedRooms);
-        
-        // Save booking details to localStorage
-        localStorage.setItem("bookingDetails", JSON.stringify({
-            checkInDate: checkInDate.toISOString(),
-            checkOutDate: checkOutDate.toISOString(),
-            rooms: updatedRooms
-        }));
-    };
+                    roomId: backendId,          // ✅ always the backend ID e.g. 37
+                    checkInDate: checkInDate?.toISOString() || null,
+                    checkOutDate: checkOutDate?.toISOString() || null,
+                    adults: roomDetails.adults ?? 0,
+                    kids: roomDetails.kids ?? 0,
+                    nights,
+                    totalPrice,
+                });
+            }
+        }).catch((err) => {
+            console.error('Failed to get backend room id', err);
+        });
+    }
+};
 
     const togglePackagePicker = (roomId, showPackagePicker) => {
         if (showPackagePicker) {
@@ -216,13 +247,23 @@ const BookingRoom = () => {
     const updateRoomGuests = (roomId, field, value) => {
         const updatedRooms = rooms.map((room) => (room.id === roomId ? { ...room, [field]: Number(value) } : room));
         setRooms(updatedRooms);
-        
+
         // Save booking details to localStorage
         localStorage.setItem("bookingDetails", JSON.stringify({
             checkInDate: checkInDate.toISOString(),
             checkOutDate: checkOutDate.toISOString(),
             rooms: updatedRooms
         }));
+
+        // If the changed room matches the currently selected booking, keep it in sync
+        if (selectedBookPackage && selectedBookPackage.roomId === roomId) {
+            const roomDetails = updatedRooms.find((r) => r.id === roomId) || {};
+            setSelectedBookPackage((prev) => ({
+                ...prev,
+                adults: roomDetails.adults ?? prev.adults ?? 0,
+                kids: roomDetails.kids ?? prev.kids ?? 0,
+            }));
+        }
     };
 
     const totalAdults = rooms.reduce((sum, room) => sum + (room.packageId ? room.adults : 0), 0);
@@ -253,6 +294,41 @@ const BookingRoom = () => {
         setSelectedRoom(null);
     };
 
+    // Request backend for an actual room id for the selected package + dates.
+    const getRoomIdForSelectedPackage = async (packageId) => {
+        try {
+            if (!checkInDate || !checkOutDate) {
+                toast.error("Select check-in and check-out dates");
+                return null;
+            }
+
+            const response = await axios.post(
+                `${import.meta.env.VITE_BACKEND_URL}/roomBook/available-rooms`,
+                {
+                    packageId,
+                    checkIn: checkInDate.toISOString(),
+                    checkOut: checkOutDate.toISOString(),
+                }
+            );
+
+            const rooms = response?.data?.data;
+
+            if (!Array.isArray(rooms) || rooms.length === 0) {
+                toast.error("No available rooms");
+                return null;
+            }
+
+            // ✅ Pick first available room
+            console.log(rooms[0].id);
+            return rooms[0].id;
+
+        } catch (error) {
+            console.error("getRoomIdForSelectedPackage error", error);
+            toast.error("Failed to fetch available rooms");
+            return null;
+        }
+    };
+
     const handleBooking = () => {
         const token = localStorage.getItem("customerToken") ||
         sessionStorage.getItem("customerToken");
@@ -272,8 +348,49 @@ const BookingRoom = () => {
         }
 
         const guest = jwtDecode(token);
-        
 
+        // Build complete booking data for all selected rooms
+        const selectedRoomsData = rooms
+            .filter((room) => room.packageId)
+            .map((room) => {
+                const pkg = packageOptions.find((p) => p.id === room.packageId);
+                const nights = checkInDate && checkOutDate
+                    ? Math.max(1, Math.ceil((new Date(checkOutDate) - new Date(checkInDate)) / (1000 * 60 * 60 * 24)))
+                    : 1;
+                const pricePerNight = Number(pkg?.price ?? 0);
+                const totalPrice = pricePerNight * nights;
+
+                return {
+                    packageId: room.packageId,
+                    packageName: pkg?.name || 'Unknown Package',
+                    roomId: room.roomId || null,
+                    frontendRoomId: room.id,
+                    adults: room.adults,
+                    kids: room.kids,
+                    nights,
+                    totalPrice,
+                    checkInDate: checkInDate?.toISOString() || null,
+                    checkOutDate: checkOutDate?.toISOString() || null,
+                };
+            });
+
+        const bookingData = {
+            checkInDate: checkInDate?.toISOString() || null,
+            checkOutDate: checkOutDate?.toISOString() || null,
+            nights: checkInDate && checkOutDate
+                ? Math.max(1, Math.ceil((new Date(checkOutDate) - new Date(checkInDate)) / (1000 * 60 * 60 * 24)))
+                : 0,
+            totalPrice: selectedRoomsData.reduce((sum, room) => sum + room.totalPrice, 0),
+        };
+
+        // Navigate to booking summary
+        navigate("/booking-summary", {
+            state: {
+                bookingData,
+                selectedRooms: selectedRoomsData,
+                guestInfo: guest,
+            }
+        });
     }
 
     return (

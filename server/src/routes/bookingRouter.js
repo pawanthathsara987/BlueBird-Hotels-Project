@@ -1,7 +1,6 @@
 import express from 'express';
 import {
    createBooking,
-   holdRoomForBookingProcess,
    getAllBookings,
    getBookingById,
    deleteBookingById,
