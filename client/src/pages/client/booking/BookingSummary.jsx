@@ -29,7 +29,7 @@ const BookingSummary = () => {
     const totalCost = selectedRooms.reduce((sum, room) => sum + calculateRoomTotal(room), 0);
 
     const handleGoBack = () => {
-        navigate(-1);
+        navigate("/booking");
     };
 
     const handleConfirmBooking = async () => {
@@ -42,7 +42,13 @@ const BookingSummary = () => {
                 selectedRooms,
                 totalCost,
             });
-            // navigate to payment or confirmation page
+            navigate("/payment", {
+                state: {
+                    bookingData,
+                    selectedRooms, // 🔥 IMPORTANT
+                }
+            });
+            
         } catch (error) {
             console.error('Booking error:', error);
         } finally {
@@ -99,7 +105,7 @@ const BookingSummary = () => {
                                         Check-in
                                     </p>
                                     <p className="font-semibold text-stone-900">
-                                        {checkIn ? format(checkIn, 'dd MMM yyyy, HH:mm') : 'N/A'}
+                                        {checkIn ? format(checkIn, 'dd MMM yyyy') : 'N/A'}
                                     </p>
                                 </div>
                                 <div className="rounded-xl bg-stone-50 p-4">
@@ -108,7 +114,7 @@ const BookingSummary = () => {
                                         Check-out
                                     </p>
                                     <p className="font-semibold text-stone-900">
-                                        {checkOut ? format(checkOut, 'dd MMM yyyy, HH:mm') : 'N/A'}
+                                        {checkOut ? format(checkOut, 'dd MMM yyyy') : 'N/A'}
                                     </p>
                                 </div>
                                 <div className="rounded-xl bg-stone-50 p-4">
@@ -159,7 +165,7 @@ const BookingSummary = () => {
                                                             Check-in
                                                         </p>
                                                         <p className="font-semibold text-stone-900">
-                                                            {roomCheckIn ? format(roomCheckIn, 'dd MMM, HH:mm') : 'N/A'}
+                                                            {roomCheckIn ? format(roomCheckIn, 'dd MMM') : 'N/A'}
                                                         </p>
                                                     </div>
                                                     <div>
@@ -168,7 +174,7 @@ const BookingSummary = () => {
                                                             Check-out
                                                         </p>
                                                         <p className="font-semibold text-stone-900">
-                                                            {roomCheckOut ? format(roomCheckOut, 'dd MMM, HH:mm') : 'N/A'}
+                                                            {roomCheckOut ? format(roomCheckOut, 'dd MMM') : 'N/A'}
                                                         </p>
                                                     </div>
                                                 </div>

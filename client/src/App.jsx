@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import HomePage from "./pages/homePage";
-import BookingProcessing from "./pages/client/booking/bookingProcessing";
 import LoginAdmin from "./pages/admin/loginAdmin";
 import LoginReceptionist from "./pages/reception/loginReceptionist";
 import CustomerRegister from "./pages/CustomerRegister";
@@ -15,11 +14,11 @@ import TourViewPage from "./pages/client/booking/TourViewing";
 import TourDetailsPage from "./pages/client/booking/TourDetailsPage";
 import TourInquiryPage from "./pages/client/booking/TourInquiryPage";
 import TourPaymentPage from "./pages/client/booking/TourPaymentPage";
-import RoomPaymentPage from "./pages/client/booking/RoomPaymentPage";
-import FloatingChatbot from "./components/FloatingChatbot";
+import RoomPaymentPage from "./pages/client/booking/RoomPayment";
 import TourCancelPage from "./pages/client/booking/TourCancelPage";
 import CustomerLoginPage from "./pages/CustomerLoginPage";
 import BookingSummary from "./pages/client/booking/BookingSummary";
+import BookingConfirmation from "./pages/client/booking/BookingConfirmation";
 
 
 
@@ -31,7 +30,7 @@ export default function App() {
                 <Routes>
                     <Route path="/booking" element={<BookingRoom />} />
                     <Route path="/booking-summary" element={<BookingSummary />} />
-                    <Route path="/booking/process" element={<BookingProcessing />} />
+                    <Route path="/booking-confirm" element={<BookingConfirmation />} />
                     <Route path="/booking/tour" element={<TourViewPage />} />
                     <Route path="/booking/tour-details" element={<TourDetailsPage />} />
                     <Route path="/booking/tour-inquiry" element={<TourInquiryPage />} />
@@ -51,7 +50,7 @@ export default function App() {
                     <Route path="/reception/*" element={< ReceptionPage />} />
                     <Route path="/*" element={<HomePage />} />
                 </Routes>
-                <FloatingChatbot />
+                
             </div>
         </BrowserRouter>
     );
