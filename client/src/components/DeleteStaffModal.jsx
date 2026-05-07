@@ -1,6 +1,6 @@
 import { FaTrash } from "react-icons/fa";
 
-export default function DeleteStaffModal({ isOpen, member, onCancel, onConfirm }) {
+export default function DeleteStaffModal({ isOpen, member, onCancel, onConfirm, isDeleting }) {
     if (!isOpen || !member) {
         return null;
     }
@@ -27,15 +27,17 @@ export default function DeleteStaffModal({ isOpen, member, onCancel, onConfirm }
                 <div className="px-6 pb-6 flex justify-end gap-3">
                     <button
                         onClick={onCancel}
-                        className="px-7 py-3 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 font-semibold"
+                        disabled={isDeleting}
+                        className="px-7 py-3 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 font-semibold disabled:opacity-50"
                     >
                         Cancel
                     </button>
                     <button
                         onClick={onConfirm}
-                        className="px-7 py-3 rounded-xl bg-red-500 text-white hover:bg-red-600 font-semibold flex items-center gap-2"
+                        disabled={isDeleting}
+                        className="px-7 py-3 rounded-xl bg-red-500 text-white hover:bg-red-600 font-semibold flex items-center gap-2 disabled:opacity-50"
                     >
-                        <FaTrash /> Delete Member
+                        <FaTrash /> {isDeleting ? "Deleting..." : "Delete Member"}
                     </button>
                 </div>
             </div>
