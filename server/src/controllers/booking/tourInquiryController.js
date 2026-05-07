@@ -8,9 +8,15 @@ import {
   validateInquiryForm,
 } from "../../utils/validationUtils.js";
 import {
-  sendBookingConfirmationEmail,
+  sendAcceptedInquiryQuoteEmail,
   sendRejectionEmail,
 } from "../../services/emailService.js";
+
+const getBasePricePerGuest = (tour) => {
+  const price = Number(tour?.price || 0);
+  const discount = Number(tour?.discount || 0);
+  return discount > 0 ? price - (price * discount) / 100 : price;
+};
 
 const buildReferenceCode = (prefix) => {
   const year = new Date().getFullYear();
@@ -227,7 +233,6 @@ export const getInquiryById = async (req, res) => {
 export const acceptInquiry = async (req, res) => {
   try {
     const { id } = req.params;
-    const { managerNote } = req.body;
 
     const inquiry = await TourInquiry.findByPk(id, {
       include: [Tour],
@@ -252,13 +257,13 @@ export const acceptInquiry = async (req, res) => {
       status: "accepted",
     });
 
-    // Calculate pricing
+    // Calculate pricing (tour.price is the full package price, not per guest)
     const tour = inquiry.Tour;
-    const totalGuests = inquiry.numberOfAdults + inquiry.numberOfChildren;
-    const pricePerGuest = tour.discount
-      ? tour.price - (tour.price * tour.discount) / 100
-      : tour.price;
-    const totalAmount = pricePerGuest * totalGuests;
+    const basePrice = Number(tour?.price || 0);
+    const discount = Number(tour?.discount || 0);
+    const totalAmount = discount > 0 
+      ? basePrice - (basePrice * discount / 100)
+      : basePrice;
     const depositAmount = totalAmount * 0.5;
     const remainingAmount = totalAmount - depositAmount;
 
@@ -293,17 +298,9 @@ export const acceptInquiry = async (req, res) => {
       paymentStatus: "pending",
     });
 
-    // Send booking confirmation email to guest
-    try {
-      await sendBookingConfirmationEmail(inquiry, booking);
-    } catch (emailError) {
-      console.error("Warning: Email sending failed, but booking was created:", emailError);
-      // Don't fail the entire request if email fails
-    }
-
     res.status(200).json({
       success: true,
-      message: "Inquiry accepted and booking created. Confirmation email sent to guest.",
+      message: "Inquiry accepted and booking created. You can now send the quote email to the guest.",
       data: {
         inquiry,
         booking: {
@@ -322,6 +319,180 @@ export const acceptInquiry = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error accepting inquiry",
+      error: error.message,
+    });
+  }
+};
+
+// Send accepted inquiry email with optional custom price, group size, and tour date
+export const sendAcceptedInquiryEmail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      pricePerGuest,
+      numberOfAdults,
+      numberOfChildren,
+      tourStartDate,
+      managerNote,
+    } = req.body;
+
+    const inquiry = await TourInquiry.findByPk(id, {
+      include: [
+        {
+          model: Tour,
+          attributes: ["id", "packageName", "price", "discount"],
+        },
+        {
+          model: TourBooking,
+          attributes: [
+            "id",
+            "bookingRef",
+            "status",
+            "totalAmount",
+            "depositAmount",
+            "remainingAmount",
+          ],
+        },
+      ],
+    });
+
+    if (!inquiry) {
+      return res.status(404).json({
+        success: false,
+        message: "Inquiry not found",
+      });
+    }
+
+    if (inquiry.status !== "accepted") {
+      return res.status(400).json({
+        success: false,
+        message: "Only accepted inquiries can send quote emails",
+      });
+    }
+
+    if (!inquiry.TourBooking) {
+      return res.status(400).json({
+        success: false,
+        message: "Booking does not exist for this inquiry",
+      });
+    }
+
+    const adults =
+      numberOfAdults !== undefined ? Number(numberOfAdults) : Number(inquiry.numberOfAdults || 0);
+    const children =
+      numberOfChildren !== undefined ? Number(numberOfChildren) : Number(inquiry.numberOfChildren || 0);
+    const tourDate = tourStartDate || inquiry.startDate;
+
+    if (!tourDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Tour start date is required",
+      });
+    }
+
+    if (!Number.isInteger(adults) || adults < 1) {
+      return res.status(400).json({
+        success: false,
+        message: "numberOfAdults must be an integer greater than or equal to 1",
+      });
+    }
+
+    if (!Number.isInteger(children) || children < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "numberOfChildren must be an integer greater than or equal to 0",
+      });
+    }
+
+    const basePricePerGuest = getBasePricePerGuest(inquiry.Tour);
+    const basePrice = (() => {
+      const bp = Number(inquiry.Tour?.price || 0);
+      const disc = Number(inquiry.Tour?.discount || 0);
+      return disc > 0 ? bp - (bp * disc / 100) : bp;
+    })();
+    const selectedTotalPrice =
+      pricePerGuest !== undefined ? Number(pricePerGuest) : basePrice;
+
+    if (!Number.isFinite(selectedTotalPrice) || selectedTotalPrice <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Total tour price must be a positive number",
+      });
+    }
+
+    const totalGuests = adults + children;
+    const totalAmount = Number(selectedTotalPrice.toFixed(2));
+    const depositAmount = Number((totalAmount * 0.5).toFixed(2));
+    const remainingAmount = Number((totalAmount - depositAmount).toFixed(2));
+
+    if (numberOfAdults !== undefined || numberOfChildren !== undefined || tourStartDate) {
+      await inquiry.update({
+        numberOfAdults: adults,
+        numberOfChildren: children,
+        startDate: tourDate,
+      });
+    }
+
+    await inquiry.TourBooking.update({
+      totalAmount,
+      depositAmount,
+      remainingAmount,
+      tourStartDate: tourDate,
+    });
+
+    const depositPayment = await TourPayment.findOne({
+      where: {
+        bookingId: inquiry.TourBooking.id,
+        paymentType: "deposit",
+        paymentStatus: "pending",
+      },
+      order: [["createdAt", "DESC"]],
+    });
+
+    if (depositPayment) {
+      await depositPayment.update({ amount: depositAmount });
+    }
+
+    const tourBasePrice = (() => {
+      const bp = Number(inquiry.Tour?.price || 0);
+      const disc = Number(inquiry.Tour?.discount || 0);
+      return disc > 0 ? bp - (bp * disc / 100) : bp;
+    })();
+
+    await sendAcceptedInquiryQuoteEmail(
+      inquiry,
+      inquiry.TourBooking,
+      {
+        packageName: inquiry.Tour?.packageName,
+        tourBasePrice,
+        totalAmount,
+        adults,
+        children,
+        tourStartDate: tourDate,
+        managerNote,
+      }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Quote email sent successfully to guest",
+      data: {
+        inquiryId: inquiry.id,
+        bookingId: inquiry.TourBooking.id,
+        bookingRef: inquiry.TourBooking.bookingRef,
+        totalGuests,
+        tourPackagePrice: totalAmount,
+        tourStartDate: tourDate,
+        totalAmount,
+        depositAmount,
+        remainingAmount,
+      },
+    });
+  } catch (error) {
+    console.error("Error sending accepted inquiry email:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error sending accepted inquiry email",
       error: error.message,
     });
   }
