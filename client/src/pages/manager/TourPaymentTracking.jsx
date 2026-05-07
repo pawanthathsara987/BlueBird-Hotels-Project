@@ -11,7 +11,7 @@ export default function TourPaymentTracking() {
 
   const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3002/api').replace(/\/$/, '');
 
-  const formatLkr = (value) => `LKR ${Number(value || 0).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatCurrency = (value) => `$${Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const fetchPayments = useCallback(async () => {
     try {
@@ -194,7 +194,7 @@ export default function TourPaymentTracking() {
                       <div>
                         <p className="font-bold text-gray-900">{getPaymentTypeLabel(payment.paymentType)}</p>
                         <p className="text-sm text-gray-700">Booking Ref: {getBookingRef(payment)}</p>
-                        <p className="text-sm text-gray-600">Amount: {formatLkr(payment.amount)}</p>
+                        <p className="text-sm text-gray-600">Amount: {formatCurrency(payment.amount)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -232,7 +232,7 @@ export default function TourPaymentTracking() {
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-600">Amount:</span>
-                              <span className="font-bold text-blue-600">{formatLkr(payment.amount)}</span>
+                              <span className="font-bold text-blue-600">{formatCurrency(payment.amount)}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-600">Method:</span>

@@ -133,7 +133,7 @@ export default function TourView({ searchQuery = "" }) {
                                 </div>
 
                                 <p className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-800 border border-emerald-100 px-3 py-1 text-sm font-bold mb-4">
-                                    LKR {Number(tour.price || 0).toFixed(2)}
+${Number(tour.price || 0).toFixed(2)}
                                 </p>
 
                                 {Array.isArray(tour.TourItems) && tour.TourItems.length > 0 && (

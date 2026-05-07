@@ -27,7 +27,7 @@ export default function TourInquiriesManagement() {
 
   const formatLkr = (amount) => {
     if (amount === null || amount === undefined || Number.isNaN(Number(amount))) return 'N/A';
-    return `LKR ${Number(amount).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `$${Number(amount).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const getInquiryName = (inquiry) => {
@@ -409,7 +409,7 @@ export default function TourInquiriesManagement() {
                             </div>
                             <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2">
                               <AlertCircle className="h-4 w-4 text-slate-500" />
-                              <span><strong className="text-slate-900">Quoted Price:</strong> {formatLkr(inquiry.Tour?.price)}</span>
+                              <span><strong className="text-slate-900">Quoted Price:</strong> {formatCurrency(inquiry.Tour?.price)}</span>
                             </div>
                             <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2">
                               <Calendar className="h-4 w-4 text-slate-500" />
@@ -502,7 +502,7 @@ export default function TourInquiriesManagement() {
 
                               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                                 <div>
-                                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Total Package Price (LKR) *</label>
+                                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Total Package Price (USD) *</label>
                                   <p className="mb-2 text-xs text-slate-500">Final total for the entire package</p>
                                   <input
                                     type="number"

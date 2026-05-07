@@ -309,7 +309,7 @@ export default function TourInquiryPage() {
             <div className="pt-3 border-t border-gray-100">
               <p className="text-xs text-gray-500 mb-1">Package Price</p>
               <p className="text-2xl font-bold text-emerald-800">
-                LKR {Number(tour?.discount ? tour.price - (tour.price * tour.discount / 100) : tour?.price || 0).toLocaleString()}
+${Number(tour?.discount ? tour.price - (tour.price * tour.discount / 100) : tour?.price || 0).toLocaleString()}
               </p>
             </div>
           </div>
