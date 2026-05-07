@@ -23,13 +23,13 @@ export default function Header() {
         </div>
 
         <div className="hidden lg:flex items-center justify-center gap-8 font-medium">
-          <Link className="hover:text-blue-600">HOME</Link>
+          <Link to="/" className="hover:text-blue-600">HOME</Link>
           <Link className="hover:text-blue-600">HOTELS</Link>
           <Link className="hover:text-blue-600">PAGES</Link>
 
           <img src={logo} alt="logo" className="h-20 object-contain" />
 
-          <Link className="hover:text-blue-600">TRAVELS</Link>
+          <Link to="/tourBooking" className="hover:text-blue-600">TRAVELS</Link>
           <Link className="hover:text-blue-600">GALLERY</Link>
           <Link className="hover:text-blue-600">CONTACT</Link>
         </div>
@@ -71,7 +71,7 @@ export default function Header() {
               <Link className="hover:text-blue-600 transition" to="/" onClick={() => setSideBarOpen(false)}>
                 PAGES
               </Link>
-              <Link className="hover:text-blue-600 transition" to="/" onClick={() => setSideBarOpen(false)}>
+              <Link className="hover:text-blue-600 transition" to="/tourBooking" onClick={() => setSideBarOpen(false)}>
                 TRAVELS
               </Link>
               <Link className="hover:text-blue-600 transition" to="/" onClick={() => setSideBarOpen(false)}>
