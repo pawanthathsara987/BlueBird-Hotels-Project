@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { ArrowLeft, Check, Plus, Trash2, Edit } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 export default function TourItemView({ selectionMode = false, searchQuery = "" }) {
     const navigate = useNavigate();
@@ -9,6 +10,8 @@ export default function TourItemView({ selectionMode = false, searchQuery = "" }
     const [tourAssignments, setTourAssignments] = useState([]);
     const [selectedItems, setSelectedItems] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         const savedItems = localStorage.getItem("selectedTourItems");
@@ -77,20 +80,27 @@ export default function TourItemView({ selectionMode = false, searchQuery = "" }
         );
     };
 
-    const handleDelete = async (itemId) => {
-        if (!window.confirm("Are you sure you want to delete this tour item?")) {
-            return;
-        }
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
 
         try {
-            await axios.delete(`${backendBaseUrl}/manager/tour-items/${itemId}`);
-            
-            // Remove deleted item from list
-            setTourAssignments(prev => prev.filter(item => item.id !== itemId));
+            setIsDeleting(true);
+            await axios.delete(`${backendBaseUrl}/manager/tour-items/${deleteTarget.id}`);
+
+            setTourAssignments((prev) => prev.filter((item) => item.id !== deleteTarget.id));
+            setSelectedItems((prev) => prev.filter((item) => item !== deleteTarget.name));
+            toast.success(`Tour item "${deleteTarget.name}" deleted successfully.`);
+            setDeleteTarget(null);
         } catch (error) {
             console.error("Failed to delete tour item:", error);
-            alert("Failed to delete tour item");
+            toast.error(error.response?.data?.message || "Could not delete the tour item. Please try again.");
+        } finally {
+            setIsDeleting(false);
         }
+    };
+
+    const openDeleteModal = (assignment) => {
+        setDeleteTarget(assignment);
     };
 
     const saveSelectedItems = () => {
@@ -186,7 +196,7 @@ export default function TourItemView({ selectionMode = false, searchQuery = "" }
                                                     <Edit size={18} />
                                                 </button>
                                                 <button 
-                                                    onClick={() => handleDelete(assignment.id)}
+                                                    onClick={() => openDeleteModal(assignment)}
                                                     className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors" 
                                                     title="Delete"
                                                 >
@@ -233,7 +243,7 @@ export default function TourItemView({ selectionMode = false, searchQuery = "" }
                                                     <Edit size={18} />
                                                 </button>
                                                 <button 
-                                                    onClick={() => handleDelete(assignment.id)}
+                                                    onClick={() => openDeleteModal(assignment)}
                                                     className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors" 
                                                     title="Delete"
                                                 >
@@ -245,6 +255,50 @@ export default function TourItemView({ selectionMode = false, searchQuery = "" }
                             </div>
                         ));
                     })}
+                </div>
+            )}
+            {deleteTarget && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4">
+                    <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+                        <div className="flex items-center gap-4 bg-red-500 px-6 py-5">
+                            <div className="rounded-full bg-red-600/70 p-3 text-white">
+                                <Trash2 size={22} />
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-bold text-white">Delete Tour Item</h3>
+                                <p className="text-sm text-red-100">This action cannot be undone.</p>
+                            </div>
+                        </div>
+
+                        <div className="px-6 py-5">
+                            <p className="text-lg font-semibold text-slate-800">
+                                Remove <span className="font-bold">{deleteTarget.name}</span>?
+                            </p>
+                            <p className="mt-2 text-sm leading-6 text-slate-500">
+                                The item will be removed from the tour item list. If it is linked to tours, those tours may need to be updated.
+                            </p>
+                        </div>
+
+                        <div className="flex justify-end gap-3 border-t border-slate-100 px-6 py-4">
+                            <button
+                                type="button"
+                                onClick={() => setDeleteTarget(null)}
+                                disabled={isDeleting}
+                                className="rounded-xl bg-slate-100 px-5 py-2.5 font-semibold text-slate-700 transition-colors hover:bg-slate-200 disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                            >
+                                <Trash2 size={16} />
+                                {isDeleting ? "Deleting..." : "Delete Item"}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

@@ -260,13 +260,13 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
     if (!form.overview.trim())                                           e.overview        = "Overview is required.";
     if (!form.price || isNaN(form.price) || +form.price <= 0)           e.price           = "Enter a valid price.";
     if (form.discount && (+form.discount < 0 || +form.discount > 100))  e.discount        = "Must be 0–100.";
+    if (!form.duration || isNaN(form.duration) || +form.duration <= 0)  e.duration        = "Duration must be a positive number.";
     if (!items.filter(i => i.trim()).length)                             e.items           = "Add at least one inclusion.";
     if (!form.termsConditions.trim())                                    e.termsConditions = "Terms and conditions are required.";
-    if (form.groupSize && (!Number.isInteger(Number(form.groupSize)) || Number(form.groupSize) <= 0)) {
+    if (String(form.groupSize ?? "").trim() !== "" && (!Number.isInteger(Number(form.groupSize)) || Number(form.groupSize) <= 0)) {
       e.groupSize = "Group size must be a positive whole number.";
-
     }
-    if (!form.groupSize.trim()) {
+    if (!String(form.groupSize ?? "").trim()) {
       e.groupSize = "Group size is required.";
     }
     if (!form.location.trim()) {
@@ -410,15 +410,16 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
               </div>
 
               <div>
-                <FieldLabel text="Duration" />
+                <FieldLabel text="Duration" error={errors.duration} />
                 <div className="grid grid-cols-3 gap-2">
                   <input
                     name="duration"
                     type="number"
+                    min="1"
                     value={form.duration}
                     onChange={handleChange}
                     placeholder="e.g. 6"
-                    className={`col-span-2 ${inputCls(false)}`}
+                    className={`col-span-2 ${inputCls(errors.duration)}`}
                   />
                   <select
                     name="durationType"
