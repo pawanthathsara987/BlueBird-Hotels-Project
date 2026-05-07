@@ -4,7 +4,12 @@ import crypto from "crypto";
 import { generateSecureToken, getTokenExpiry } from "../../utils/tokenUtils.js";
 import {
   validateEmail,
+  validatePhone,
   validateTourDate,
+  validateGuestCount,
+  validatePickupLocation,
+  validateName,
+  validateNationality,
   validateInquiryForm,
 } from "../../utils/validationUtils.js";
 import {
@@ -56,35 +61,109 @@ export const createTourInquiry = async (req, res) => {
       specialRequests,
     } = req.body;
 
-    // Validate required fields
-    if (
-      !tourId ||
-      !fullName ||
-      !email ||
-      !phone ||
-      !nationality ||
-      !startDate ||
-      !pickupLocation
-    ) {
+    // Validate required fields are present
+    if (!tourId) {
       return res.status(400).json({
         success: false,
-        message: "All required fields must be provided",
+        message: "Tour selection is required",
+        field: "tourId",
       });
+    }
+
+    if (!fullName) {
+      return res.status(400).json({
+        success: false,
+        message: "Full name is required",
+        field: "fullName",
+      });
+    }
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+        field: "email",
+      });
+    }
+
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number is required",
+        field: "phone",
+      });
+    }
+
+    if (!nationality) {
+      return res.status(400).json({
+        success: false,
+        message: "Nationality is required",
+        field: "nationality",
+      });
+    }
+
+    if (!startDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Travel start date is required",
+        field: "startDate",
+      });
+    }
+
+    if (!pickupLocation) {
+      return res.status(400).json({
+        success: false,
+        message: "Pickup location is required",
+        field: "pickupLocation",
+      });
+    }
+
+    // Use validation utilities for detailed validation
+    const validationErrors = {};
+
+    // Validate full name
+    if (!validateName(fullName)) {
+      validationErrors.fullName = "Full name must be at least 2 characters";
     }
 
     // Validate email format
     if (!validateEmail(email)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid email format",
-      });
+      validationErrors.email = "Invalid email format";
+    }
+
+    // Validate phone format
+    if (!validatePhone(phone)) {
+      validationErrors.phone = "Invalid phone number format";
+    }
+
+    // Validate nationality
+    if (!validateNationality(nationality)) {
+      validationErrors.nationality = "Nationality must be at least 2 characters";
     }
 
     // Validate tour date (minimum 2 days ahead)
     if (!validateTourDate(startDate)) {
+      validationErrors.startDate = "Tour date must be at least 2 days from today";
+    }
+
+    // Validate pickup location
+    if (!validatePickupLocation(pickupLocation)) {
+      validationErrors.pickupLocation = "Pickup location must be at least 3 characters";
+    }
+
+    // Validate guest count
+    const numAdults = Number(numberOfAdults) || 1;
+    const numChildren = Number(numberOfChildren) || 0;
+    if (!validateGuestCount(numAdults, numChildren)) {
+      validationErrors.numberOfAdults = "Total guests must be between 1 and 100";
+    }
+
+    // Return validation errors if any
+    if (Object.keys(validationErrors).length > 0) {
       return res.status(400).json({
         success: false,
-        message: "Tour date must be at least 2 days from today",
+        message: "Validation failed",
+        errors: validationErrors,
       });
     }
 
@@ -94,6 +173,7 @@ export const createTourInquiry = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Tour not found",
+        field: "tourId",
       });
     }
 
@@ -101,7 +181,8 @@ export const createTourInquiry = async (req, res) => {
     if (tour.status !== "active") {
       return res.status(400).json({
         success: false,
-        message: "This tour is not currently available",
+        message: "This tour is not currently available for inquiries",
+        field: "tourId",
       });
     }
 
@@ -116,8 +197,8 @@ export const createTourInquiry = async (req, res) => {
       email,
       phone,
       nationality,
-      numberOfAdults: numberOfAdults || 1,
-      numberOfChildren: numberOfChildren || 0,
+      numberOfAdults: numAdults,
+      numberOfChildren: numChildren,
       startDate,
       pickupLocation,
       specialRequests,

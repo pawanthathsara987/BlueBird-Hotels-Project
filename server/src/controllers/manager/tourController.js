@@ -104,7 +104,7 @@ const resolveTourItems = async (includedItems, transaction) => {
 const buildTourData = (body, existingTour = null) => ({
   packageName: (body.packageName ?? existingTour?.packageName ?? "").trim(),
   overview: (body.overview ?? existingTour?.overview ?? "").trim() || null,
-  duration: (body.duration ?? existingTour?.duration ?? "").trim() || null,
+  duration: parseNumberField(body.duration, existingTour?.duration ?? null),
     durationType: body.durationType || existingTour?.durationType || 'days',
   location: (body.location ?? existingTour?.location ?? "").trim() || null,
   price: parseNumberField(body.price, existingTour?.price ?? null),
@@ -207,6 +207,16 @@ export const createTour = async (req, res) => {
     }
 
     const image = req.file ? await uploadImageToSupabase(req.file) : null;
+
+    // If the DB table lacks the durationType column, don't include it in the payload
+    try {
+      const tableDesc = await sequelize.getQueryInterface().describeTable('tours');
+      if (tableDesc && !Object.prototype.hasOwnProperty.call(tableDesc, 'durationType')) {
+        delete payload.durationType;
+      }
+    } catch (err) {
+      // ignore - if describeTable fails, proceed without modifying payload
+    }
 
     const tour = await Tour.create(
       {
@@ -319,6 +329,16 @@ export const updateTour = async (req, res) => {
     if (req.file) {
       await deleteImageFromSupabase(tour.image);
       image = await uploadImageToSupabase(req.file);
+    }
+
+    // If the DB table lacks the durationType column, don't include it in the update payload
+    try {
+      const tableDesc = await sequelize.getQueryInterface().describeTable('tours');
+      if (tableDesc && !Object.prototype.hasOwnProperty.call(tableDesc, 'durationType')) {
+        delete payload.durationType;
+      }
+    } catch (err) {
+      // ignore and proceed
     }
 
     await tour.update(
