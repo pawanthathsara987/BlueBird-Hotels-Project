@@ -11,6 +11,10 @@ export default function TourInquiriesManagement() {
   const [processing, setProcessing] = useState(null);
   const [emailingInquiryId, setEmailingInquiryId] = useState(null);
   const [emailFormByInquiry, setEmailFormByInquiry] = useState({});
+  const [emailSentByInquiry, setEmailSentByInquiry] = useState(() => {
+    const saved = localStorage.getItem('emailSentByInquiry');
+    return saved ? JSON.parse(saved) : {};
+  });
 
   const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3002/api').replace(/\/$/, '');
 
@@ -29,6 +33,8 @@ export default function TourInquiriesManagement() {
     if (amount === null || amount === undefined || Number.isNaN(Number(amount))) return 'N/A';
     return `$${Number(amount).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
+
+  const formatCurrency = (value) => `$${Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const getInquiryName = (inquiry) => {
     return (
@@ -49,6 +55,19 @@ export default function TourInquiriesManagement() {
     const discount = Number(inquiry?.Tour?.discount || 0);
     if (!Number.isFinite(basePrice)) return 0;
     return discount > 0 ? basePrice - (basePrice * discount / 100) : basePrice;
+  };
+
+  const hasAcceptedEmailSent = (inquiry) => {
+    if (!inquiry || !inquiry.id) return false;
+    if (emailSentByInquiry[inquiry.id]) return true;
+
+    // Support backend fields if added later, without breaking current payloads.
+    return Boolean(
+      inquiry.acceptedEmailSentAt ||
+      inquiry.quoteEmailSentAt ||
+      inquiry.emailSentAt ||
+      inquiry.lastEmailSentAt
+    );
   };
 
   const statusCounts = useMemo(() => {
@@ -85,6 +104,11 @@ export default function TourInquiriesManagement() {
   useEffect(() => {
     fetchInquiries();
   }, [fetchInquiries]);
+
+  // Save emailSentByInquiry to localStorage
+  useEffect(() => {
+    localStorage.setItem('emailSentByInquiry', JSON.stringify(emailSentByInquiry));
+  }, [emailSentByInquiry]);
 
   useEffect(() => {
     const filtered = allInquiries.filter((inq) => {
@@ -215,6 +239,10 @@ export default function TourInquiriesManagement() {
       const data = await response.json();
       if (data.success) {
         alert(`Email sent to ${inquiry.email}`);
+        setEmailSentByInquiry((prev) => ({
+          ...prev,
+          [inquiry.id]: true,
+        }));
         setEmailingInquiryId(null);
         await fetchInquiries();
       } else {
@@ -351,6 +379,11 @@ export default function TourInquiriesManagement() {
                           <span className={`rounded-full px-3 py-1 text-xs font-bold ${getStatusBadge(inquiry.status)}`}>
                             {inquiry.status.charAt(0).toUpperCase() + inquiry.status.slice(1)}
                           </span>
+                          {inquiry.status === 'accepted' && hasAcceptedEmailSent(inquiry) && (
+                            <span className="rounded-full border border-sky-300 bg-sky-100 px-3 py-1 text-xs font-bold text-sky-800">
+                              Email Sent
+                            </span>
+                          )}
                         </div>
                         <p className="mt-1 text-sm text-slate-500">Ref: {inquiry.inquiryRef} • Submitted: {formatDate(inquiry.createdAt)}</p>
                         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
@@ -423,6 +456,19 @@ export default function TourInquiriesManagement() {
                               <MapPin className="h-4 w-4 text-slate-500" />
                               <span><strong className="text-slate-900">Pickup:</strong> {inquiry.pickupLocation}</span>
                             </div>
+                            {inquiry.status === 'accepted' && (
+                              <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2">
+                                <Mail className="h-4 w-4 text-slate-500" />
+                                <span>
+                                  <strong className="text-slate-900">Email Status:</strong>{' '}
+                                  {hasAcceptedEmailSent(inquiry) ? (
+                                    <span className="font-semibold text-emerald-700">Sent</span>
+                                  ) : (
+                                    <span className="font-semibold text-amber-700">Not sent yet</span>
+                                  )}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -485,7 +531,7 @@ export default function TourInquiriesManagement() {
                               ) : (
                                 <Mail className="w-4 h-4" />
                               )}
-                              Send Email to Guest
+                              {hasAcceptedEmailSent(inquiry) ? 'Send Email Again' : 'Send Email to Guest'}
                             </button>
                           ) : (
                             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

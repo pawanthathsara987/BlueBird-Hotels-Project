@@ -13,7 +13,7 @@ function Stepper({ label, value, onChange, min = 0 }) {
         <button
           type="button"
           onClick={() => onChange(Math.max(min, value - 1))}
-          className="w-10 h-10 flex items-center justify-center text-lg text-emerald-700 hover:bg-gray-200 transition-colors font-semibold"
+          className="w-10 h-10 flex items-center justify-center text-lg text-blue-700 hover:bg-gray-200 transition-colors font-semibold"
         >
           -
         </button>
@@ -21,7 +21,7 @@ function Stepper({ label, value, onChange, min = 0 }) {
         <button
           type="button"
           onClick={() => onChange(value + 1)}
-          className="w-10 h-10 flex items-center justify-center text-lg text-emerald-700 hover:bg-gray-200 transition-colors font-semibold"
+          className="w-10 h-10 flex items-center justify-center text-lg text-blue-700 hover:bg-gray-200 transition-colors font-semibold"
         >
           +
         </button>
@@ -41,7 +41,7 @@ function Field({ label, error, children }) {
 }
 
 const inputCls = (err) =>
-  `w-full px-3.5 py-2.5 rounded-xl border text-sm text-gray-800 bg-gray-50 outline-none transition focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 ${err ? 'border-red-400 bg-red-50' : 'border-gray-200'}`;
+  `w-full px-3.5 py-2.5 rounded-xl border text-sm text-gray-800 bg-gray-50 outline-none transition focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${err ? 'border-red-400 bg-red-50' : 'border-gray-200'}`;
 
 export default function TourInquiryPage() {
   const location = useLocation();
@@ -169,7 +169,17 @@ export default function TourInquiryPage() {
         setPageError(res.data.message || 'Submission failed');
       }
     } catch (e) {
-      setPageError(e.response?.data?.message || 'Failed to submit. Please try again.');
+      const backendErrors = e.response?.data?.errors || {};
+      const hasFieldErrors = Object.keys(backendErrors).length > 0;
+
+      if (hasFieldErrors) {
+        // Set backend validation errors to errors state for field-level display
+        setErrors(backendErrors);
+        setPageError(e.response?.data?.message || 'Please fix the errors below');
+      } else {
+        // Generic error message
+        setPageError(e.response?.data?.message || 'Failed to submit. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -181,7 +191,7 @@ export default function TourInquiryPage() {
         <Header />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className="w-10 h-10 border-4 border-gray-200 border-t-emerald-600 rounded-full animate-spin mx-auto" />
+            <div className="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mx-auto" />
             <p className="mt-4 text-sm text-gray-400">Loading inquiry page...</p>
           </div>
         </div>
@@ -195,7 +205,7 @@ export default function TourInquiryPage() {
       <Header />
 
       {toast && (
-        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-emerald-900 text-white text-sm px-5 py-3.5 rounded-2xl shadow-2xl max-w-xs">
+        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-blue-900 text-white text-sm px-5 py-3.5 rounded-2xl shadow-2xl max-w-xs">
           <Check size={15} className="text-yellow-400 shrink-0" />
           <span>{toast}</span>
           <button onClick={() => setToast(null)} className="ml-auto text-white/50 hover:text-white transition">
@@ -214,7 +224,7 @@ export default function TourInquiryPage() {
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="text-sm font-semibold text-emerald-700 hover:text-emerald-600"
+              className="text-sm font-semibold text-blue-700 hover:text-blue-600"
             >
               Back to Details
             </button>
@@ -272,7 +282,7 @@ export default function TourInquiryPage() {
                 onChange={handleChange}
                 rows={3}
                 placeholder="Dietary requirements, accessibility needs, celebrations..."
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 bg-gray-50 outline-none resize-none focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 bg-gray-50 outline-none resize-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
               />
             </div>
 
@@ -288,7 +298,7 @@ export default function TourInquiryPage() {
               disabled={!tour || isSubmitting || tour?.status !== 'active'}
               className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold tracking-wide transition-all ${
                 tour && tour?.status === 'active' && !isSubmitting
-                  ? 'bg-emerald-700 hover:bg-emerald-600 active:scale-[.98] text-white shadow-lg shadow-emerald-100'
+                  ? 'bg-blue-700 hover:bg-blue-600 active:scale-[.98] text-white shadow-lg shadow-blue-100'
                   : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
             >
@@ -303,12 +313,12 @@ export default function TourInquiryPage() {
             <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Selected Tour</p>
             <h2 className="text-xl font-bold text-gray-900">{tour?.packageName || 'Tour not found'}</h2>
             <div className="flex items-start gap-2 text-sm text-gray-700">
-              <MapPin size={14} className="text-emerald-600 mt-0.5 shrink-0" />
+              <MapPin size={14} className="text-blue-600 mt-0.5 shrink-0" />
               <span>{tour?.location || 'Location not specified'}</span>
             </div>
             <div className="pt-3 border-t border-gray-100">
               <p className="text-xs text-gray-500 mb-1">Package Price</p>
-              <p className="text-2xl font-bold text-emerald-800">
+              <p className="text-2xl font-bold text-blue-800">
 ${Number(tour?.discount ? tour.price - (tour.price * tour.discount / 100) : tour?.price || 0).toLocaleString()}
               </p>
             </div>

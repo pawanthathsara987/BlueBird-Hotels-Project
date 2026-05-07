@@ -24,7 +24,7 @@ export default function TourDetailsPage() {
   const [pageError, setPageError] = useState(null);
   const [wishlist, setWishlist] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
-  const [toast, setToast] = useState(null);
+  const [toastLocal, setToastLocal] = useState(null);
   const [activeImg, setActiveImg] = useState(0);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingRef, setBookingRef] = useState('');
@@ -34,7 +34,7 @@ export default function TourDetailsPage() {
   // Availability modal state
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [availDate, setAvailDate] = useState('');
-  const [availAdults, setAvailAdults] = useState(String(tour?.groupSize || 1));
+  const [availAdults, setAvailAdults] = useState('1');
   const [availChildren, setAvailChildren] = useState('0');
   const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [availabilityResult, setAvailabilityResult] = useState(null);
@@ -107,33 +107,56 @@ export default function TourDetailsPage() {
       }
     };
 
-  const finalPrice = tour
-    ? (tour.discount ? tour.price - (tour.price * tour.discount / 100) : tour.price)
-    : 0;
+  const tourPrice = Number(tour?.price || 0);
+  const finalPrice = tour ? (tour?.discount ? tourPrice - (tourPrice * Number(tour.discount || 0) / 100) : tourPrice) : 0;
   const total = finalPrice;
   const tourLocation = tour?.location || 'Location not specified';
-  const itineraryItems = (Array.isArray(tour?.itinerary)
-    ? tour.itinerary
-    : typeof tour?.itinerary === 'string' && tour.itinerary.trim()
-      ? [tour.itinerary]
-      : [])
-    .map((item) => {
-      if (typeof item === 'string') {
-        return { date: '', activity: item };
-      }
+  // Normalize itinerary to a simple shape depending on durationType
+  const itineraryItems = (() => {
+    const raw = tour?.itinerary;
+    const type = tour?.durationType || 'days';
 
-      if (item && typeof item === 'object') {
-        return {
-          date: item.date || item.day || '',
-          activity: item.activity || item.title || item.name || item.description || '',
-        };
-      }
+    if (!raw) return [];
 
-      return { date: '', activity: '' };
-    })
-    .filter((item) => item.date || item.activity);
+    // Hours mode: present as a flat activity list
+    if (type === 'hours') {
+      const items = Array.isArray(raw) ? raw : (typeof raw === 'string' ? raw.split('\n') : []);
+      return items
+        .map((it) => {
+          if (typeof it === 'string') return { activity: it.toString().trim() };
+          if (it && typeof it === 'object') return { activity: (it.description || it.activity || it.title || it.name || '').toString().trim() };
+          return { activity: '' };
+        })
+        .filter((i) => i.activity);
+    }
+
+    // Days mode: keep day/date ordering
+    const list = Array.isArray(raw) ? raw : (typeof raw === 'string' ? [raw] : []);
+    return list
+      .map((entry, idx) => {
+        if (typeof entry === 'string') {
+          return { date: `Day ${idx + 1}`, activity: entry.toString().trim() };
+        }
+        if (entry && typeof entry === 'object') {
+          const dateLabel = entry.date || (entry.day ? `Day ${entry.day}` : `Day ${idx + 1}`);
+          return {
+            date: dateLabel,
+            activity: (entry.activity || entry.title || entry.name || entry.description || '').toString().trim(),
+          };
+        }
+        return { date: `Day ${idx + 1}`, activity: '' };
+      })
+      .filter((i) => i.activity || i.date);
+  })();
   const images = getImages(tour);
   const isActive = tour?.status === 'active';
+
+  // Sync availability defaults when tour loads
+  useEffect(() => {
+    if (tour) {
+      setAvailAdults(String(tour.groupSize || 1));
+    }
+  }, [tour]);
 
   /* ── Loading ── */
   if (loading) return (
@@ -141,7 +164,7 @@ export default function TourDetailsPage() {
       <Header />
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-10 h-10 border-4 border-gray-200 border-t-emerald-600 rounded-full animate-spin mx-auto" />
+          <div className="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mx-auto" />
           <p className="mt-4 text-sm text-gray-400">Loading tour details…</p>
         </div>
       </div>
@@ -168,16 +191,16 @@ export default function TourDetailsPage() {
       <Header />
 
       {/* ── Toast ── */}
-      {toast && (
-        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-emerald-900 text-white text-sm px-5 py-3.5 rounded-2xl shadow-2xl max-w-xs">
+      {toastLocal && (
+        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-blue-900 text-white text-sm px-5 py-3.5 rounded-2xl shadow-2xl max-w-xs">
           <Check size={15} className="text-yellow-400 shrink-0" />
-          <span>{toast}</span>
-          <button onClick={() => setToast(null)} className="ml-auto text-white/50 hover:text-white transition"><X size={14} /></button>
+          <span>{toastLocal}</span>
+          <button onClick={() => setToastLocal(null)} className="ml-auto text-white/50 hover:text-white transition"><X size={14} /></button>
         </div>
       )}
 
       {/* ══════════════ HERO ══════════════ */}
-      <div className="relative overflow-hidden bg-emerald-950" style={{ height: 'clamp(300px, 60vh, 600px)' }}>
+      <div className="relative overflow-hidden bg-blue-950" style={{ height: 'clamp(300px, 60vh, 600px)' }}>
 
         {images.length > 0 ? (
           <img
@@ -186,7 +209,7 @@ export default function TourDetailsPage() {
             className="w-full h-full object-cover transition-transform duration-700 hover:scale-[1.02]"
           />
         ) : (
-          <div className="w-full h-full bg-linear-to-br from-emerald-900 to-teal-700 flex items-center justify-center">
+          <div className="w-full h-full bg-linear-to-br from-blue-900 to-blue-700 flex items-center justify-center">
             <p className="text-4xl font-bold text-white/10 text-center px-6">{tour?.packageName}</p>
           </div>
         )}
@@ -243,7 +266,7 @@ export default function TourDetailsPage() {
 
         {/* Hero text */}
         <div className="absolute bottom-0 left-0 right-0 z-10 px-6 pb-7 md:px-10">
-          <span className="inline-block bg-yellow-400 text-emerald-900 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-3">
+          <span className="inline-block bg-yellow-400 text-blue-900 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-3">
             Sri Lanka Tours
           </span>
           <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white leading-tight mb-2">
@@ -256,13 +279,13 @@ export default function TourDetailsPage() {
       </div>
 
       {/* ══════════════ STATS BAR ══════════════ */}
-      <div className="bg-emerald-900">
+      <div className="bg-blue-900">
         <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-white/10">
           {[
             { icon: <Users size={15} />, label: 'Group size', value: tour?.groupSize ? `Up to ${tour.groupSize}` : '—' },
             { icon: <Tag size={15} />,   label: 'From',       value: `$${Number(finalPrice).toLocaleString()}` },
-            { icon: <Star size={15} />,  label: 'Status',     value: isActive ? 'Available' : 'Unavailable', cls: isActive ? 'text-emerald-300' : 'text-red-300' },
-            { icon: <Shield size={15} />,label: 'Cancellation', value: 'Free up to 24h' },
+            { icon: <Star size={15} />,  label: 'Status',     value: isActive ? 'Available' : 'Unavailable', cls: isActive ? 'text-blue-300' : 'text-red-300' },
+            { icon: <Clock size={15} />, label: 'Duration',   value: tour?.duration ? `${tour.duration} ${tour?.durationType === 'hours' ? 'hours' : 'days'}` : '—' },
           ].map((s, i) => (
             <div key={i} className="flex items-center gap-3 px-5 py-4">
               <span className="text-yellow-400 shrink-0">{s.icon}</span>
@@ -290,7 +313,7 @@ export default function TourDetailsPage() {
                   onClick={() => setActiveTab(i)}
                   className={`flex-1 py-3.5 text-xs sm:text-sm font-bold uppercase tracking-wide transition-colors ${
                     activeTab === i
-                      ? 'text-emerald-700 border-b-2 border-emerald-600 bg-emerald-50/60'
+                      ? 'text-blue-700 border-b-2 border-blue-600 bg-blue-50/60'
                       : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
                   }`}
                 >{t}</button>
@@ -310,19 +333,25 @@ export default function TourDetailsPage() {
                     <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
                       <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Itinerary</p>
                       {itineraryItems.length > 0 ? (
-                        <ul className="space-y-2">
-                          {itineraryItems.map((item, index) => {
-                            return (
-                              <li key={index} className="text-sm text-gray-700 flex gap-2">
-                                <span className="text-emerald-600 font-semibold">{index + 1}.</span>
-                                <span>
-                                  {item.date ? <span className="font-semibold text-gray-900">{item.date}: </span> : null}
-                                  {item.activity || 'Activity details not provided.'}
-                                </span>
+                        // Render differently for hours vs days
+                        tour?.durationType === 'hours' ? (
+                          <ul className="space-y-2 list-inside list-disc text-sm text-gray-700">
+                            {itineraryItems.map((item, index) => (
+                              <li key={index} className="truncate">{item.activity}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <ul className="space-y-3">
+                            {itineraryItems.map((item, index) => (
+                              <li key={index} className="text-sm text-gray-700">
+                                <div className="flex gap-2">
+                                  <span className="text-blue-600 font-semibold">{item.date || `Day ${index + 1}`}</span>
+                                  <span className="truncate">{item.activity || 'Activity details not provided.'}</span>
+                                </div>
                               </li>
-                            );
-                          })}
-                        </ul>
+                            ))}
+                          </ul>
+                        )
                       ) : (
                         <p className="text-sm text-gray-500">No itinerary details provided.</p>
                       )}
@@ -336,8 +365,8 @@ export default function TourDetailsPage() {
                   {tour?.TourItems?.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {tour.TourItems.map(item => (
-                        <div key={item.id} className="flex items-center gap-3 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3">
-                          <Check size={14} className="text-emerald-600 shrink-0" />
+                        <div key={item.id} className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+                          <Check size={14} className="text-blue-600 shrink-0" />
                           <span className="text-sm font-medium text-gray-800">{item.name}</span>
                         </div>
                       ))}
@@ -368,7 +397,7 @@ export default function TourDetailsPage() {
               disabled={!isActive}
               className={`w-full py-3.5 rounded-xl text-sm font-bold tracking-wide transition-all ${
                 isActive
-                  ? 'bg-emerald-700 hover:bg-emerald-600 active:scale-[.98] text-white shadow-lg shadow-emerald-100'
+                  ? 'bg-blue-700 hover:bg-blue-600 active:scale-[.98] text-white shadow-lg shadow-blue-100'
                   : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
             >
@@ -382,19 +411,25 @@ export default function TourDetailsPage() {
           <div className="sticky top-5 rounded-2xl overflow-hidden shadow-lg border border-gray-100">
 
             {/* Header */}
-            <div className="bg-emerald-900 px-6 py-5">
+            <div className="bg-blue-900 px-6 py-5">
               <div className="flex items-baseline gap-2 flex-wrap">
                 <span className="text-3xl font-bold text-white">${Number(finalPrice).toLocaleString()}</span>
                 <span className="text-xs text-white/50">/ package</span>
                 {tour?.discount > 0 && (
                   <>
                     <span className="text-xs text-white/35 line-through">${Number(tour.price).toLocaleString()}</span>
-                    <span className="ml-auto bg-yellow-400 text-emerald-900 text-[10px] font-bold px-2.5 py-1 rounded-full">−{tour.discount}%</span>
+                    <span className="ml-auto bg-yellow-400 text-blue-900 text-[10px] font-bold px-2.5 py-1 rounded-full">−{tour.discount}%</span>
                   </>
+                )}
+                {tour?.duration && (
+                  <div className="w-full mt-2">
+                    <p className="text-xs text-white/55">Duration</p>
+                    <p className="text-sm font-semibold text-white">{tour.duration} {tour?.durationType === 'hours' ? 'hours' : 'days'}</p>
+                  </div>
                 )}
               </div>
               <div className="flex items-center gap-2 mt-3">
-                <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-blue-400' : 'bg-red-400'}`} />
                 <span className="text-xs text-white/55">{isActive ? 'Available to book' : 'Currently unavailable'}</span>
               </div>
             </div>
@@ -409,21 +444,31 @@ export default function TourDetailsPage() {
                   <span className="font-semibold text-gray-800">${Number(finalPrice).toLocaleString()}</span>
                 </div>
                 {tour?.discount > 0 && (
-                  <div className="flex justify-between text-sm text-emerald-600">
+                  <div className="flex justify-between text-sm text-blue-600">
                     <span>Discount ({tour.discount}%)</span>
                     <span className="font-semibold">−${(tour.price * tour.discount / 100).toLocaleString()}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-baseline pt-3 border-t border-gray-200">
                   <span className="text-sm font-bold text-gray-700">Total</span>
-                  <span className="text-2xl font-bold text-emerald-800">${Number(total).toLocaleString()}</span>
+                  <span className="text-2xl font-bold text-blue-800">${Number(total).toLocaleString()}</span>
+                </div>
+
+                <div className="mt-3">
+                  <button
+                    onClick={() => setShowAvailabilityModal(true)}
+                    type="button"
+                    className="w-full py-2.5 rounded-lg text-sm font-bold tracking-wide bg-blue-700 hover:bg-blue-600 text-white transition-all shadow-md"
+                  >
+                    🔎 Check Availability
+                  </button>
                 </div>
               </div>
 
               <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Location</p>
                 <div className="flex items-start gap-2 text-sm text-gray-700">
-                  <MapPin size={14} className="text-emerald-600 mt-0.5 shrink-0" />
+                  <MapPin size={14} className="text-blue-600 mt-0.5 shrink-0" />
                   <span>{tourLocation}</span>
                 </div>
               </div>
@@ -449,7 +494,7 @@ export default function TourDetailsPage() {
                   { icon: <Check size={12} />,  text: 'Instant booking confirmation' },
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-2 text-xs text-gray-400">
-                    <span className="text-emerald-500 mt-0.5 shrink-0">{item.icon}</span>
+                    <span className="text-blue-500 mt-0.5 shrink-0">{item.icon}</span>
                     <span>{item.text}</span>
                   </div>
                 ))}
@@ -457,18 +502,7 @@ export default function TourDetailsPage() {
 
                 {/* Book Now / Complete Payment */}
                 <div className="space-y-2.5 border-t border-gray-200 pt-4">
-                    <div>
-                      <button
-                        onClick={() => setShowAvailabilityModal(true)}
-                        type="button"
-                        className="w-full py-2.5 rounded-lg text-sm font-bold tracking-wide bg-emerald-700 hover:bg-emerald-600 text-white transition-all shadow-md"
-                      >
-                        🔎 Check Availability
-                      </button>
-                    </div>
-                  <p className="text-xs text-gray-500 text-center">
-                    Have a booking reference? Complete your payment here.
-                  </p>
+                
                 </div>
             </div>
           </div>
@@ -482,7 +516,7 @@ export default function TourDetailsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
             {/* Header */}
-            <div className="bg-emerald-700 text-white px-6 py-4 flex justify-between items-center">
+            <div className="bg-blue-700 text-white px-6 py-4 flex justify-between items-center">
               <h3 className="text-lg font-bold">Your Booking</h3>
               <button onClick={() => { setShowBookingModal(false); setFoundBooking(null); setBookingRef(''); setBookingError(''); }} className="text-white/70 hover:text-white">
                 <X size={20} />
@@ -504,7 +538,7 @@ export default function TourDetailsPage() {
                       value={bookingRef}
                       onChange={(e) => { setBookingRef(e.target.value); setBookingError(''); }}
                       onKeyPress={(e) => e.key === 'Enter' && handleSearchBooking()}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
                     />
                   </div>
                   {bookingError && (
@@ -516,16 +550,16 @@ export default function TourDetailsPage() {
                   <button
                     onClick={handleSearchBooking}
                     disabled={searchingBooking}
-                    className="w-full bg-emerald-700 hover:bg-emerald-600 disabled:bg-gray-400 text-white py-2.5 rounded-lg font-bold text-sm transition"
+                    className="w-full bg-blue-700 hover:bg-blue-600 disabled:bg-gray-400 text-white py-2.5 rounded-lg font-bold text-sm transition"
                   >
                     {searchingBooking ? 'Searching...' : 'Search Booking'}
                   </button>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                    <p className="text-xs text-emerald-700 font-bold mb-1">Booking Found</p>
-                    <p className="text-sm font-bold text-emerald-900">{foundBooking.bookingRef}</p>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-xs text-blue-700 font-bold mb-1">Booking Found</p>
+                    <p className="text-sm font-bold text-blue-900">{foundBooking.bookingRef}</p>
                   </div>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
@@ -534,12 +568,12 @@ export default function TourDetailsPage() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Status:</span>
-                      <span className="font-bold text-emerald-700">{foundBooking.status}</span>
+                      <span className="font-bold text-blue-700">{foundBooking.status}</span>
                     </div>
                   </div>
                   <button
                     onClick={handleProceedToPayment}
-                    className="w-full bg-emerald-700 hover:bg-emerald-600 text-white py-2.5 rounded-lg font-bold text-sm transition"
+                    className="w-full bg-blue-700 hover:bg-blue-600 text-white py-2.5 rounded-lg font-bold text-sm transition"
                   >
                     Proceed to Payment
                   </button>
@@ -559,7 +593,7 @@ export default function TourDetailsPage() {
       {showAvailabilityModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
-            <div className="bg-emerald-700 text-white px-6 py-4 flex justify-between items-center rounded-t-2xl">
+            <div className="bg-blue-700 text-white px-6 py-4 flex justify-between items-center rounded-t-2xl">
               <h3 className="text-lg font-bold">Check Availability</h3>
               <button onClick={() => { setShowAvailabilityModal(false); setAvailabilityResult(null); }} className="text-white/70 hover:text-white">
                 <X size={20} />
@@ -640,14 +674,14 @@ export default function TourDetailsPage() {
                       }
                     }}
                     disabled={checkingAvailability}
-                    className="w-full bg-emerald-700 hover:bg-emerald-600 text-white py-2.5 rounded-lg font-bold"
+                    className="w-full bg-blue-700 hover:bg-blue-600 text-white py-2.5 rounded-lg font-bold"
                   >
                     {checkingAvailability ? 'Checking...' : 'Check Availability'}
                   </button>
                 </div>
 
                 {availabilityResult && (
-                  <div className={`p-3 rounded-lg ${availabilityResult.ok ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-rose-50 border border-rose-200 text-rose-800'}`}>
+                  <div className={`p-3 rounded-lg ${availabilityResult.ok ? 'bg-blue-50 border border-blue-200 text-blue-800' : 'bg-rose-50 border border-rose-200 text-rose-800'}`}>
                     <p className="text-sm font-semibold">{availabilityResult.ok ? 'Available' : 'Unavailable'}</p>
                     <p className="text-sm mt-1">{availabilityResult.message}</p>
                   </div>
