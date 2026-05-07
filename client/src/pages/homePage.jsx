@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import Footer from "../components/footer";
 import Header from "../components/header";
 import HomeLandingPage from "./homeLandingPage";
+import FloatingChatbot from "./../components/FloatingChatbot";
 
 
 export default function HomePage(){
@@ -13,6 +14,7 @@ export default function HomePage(){
                     <Route path="/" element={<HomeLandingPage />} />
                 </Routes>
             </div>
+            <FloatingChatbot />
             <Footer />
         </div>
     );
