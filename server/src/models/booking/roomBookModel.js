@@ -1,40 +1,44 @@
 import { Model, DataTypes } from "sequelize";
 import sequelize from "../../config/database.js";
 
-class RoomBook extends Model {}
+class BookedRoom extends Model {}
 
-RoomBook.init(
+BookedRoom.init(
     {
-        booking_id: {
+        id: {
             type: DataTypes.INTEGER,
             autoIncrement: true,
             primaryKey: true,
             allowNull: false,
         },
-        guest_id: {
+        reservation_id: {
             type: DataTypes.INTEGER,
             allowNull: false,
+            references: {
+                model: 'reservations',
+                key: 'id'
+            }
         },
-        roomId: {
+        room_id: {
             type: DataTypes.INTEGER,
             allowNull: false,
+            references: {
+                model: 'room', 
+                key: 'id'
+            }
         },
-        price: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-        },
-        checkIn: {                          
+        checkIn: {
             type: DataTypes.DATEONLY,
             allowNull: false,
         },
-        checkOut: {                         
+        checkOut: {
             type: DataTypes.DATEONLY,
             allowNull: false,
         },
         status: {
             type: DataTypes.ENUM("reserved", "checked_in", "checked_out", "cancelled", "hold"),
             defaultValue: "reserved",
-            allowNull: false,   
+            allowNull: false,
         },
         actualAdults: {
             type: DataTypes.INTEGER,
@@ -45,24 +49,14 @@ RoomBook.init(
             type: DataTypes.INTEGER,
             allowNull: false,
             defaultValue: 0,
-        },
-        reservationExpiresAt: {
-            type: DataTypes.TIME,
-            allowNull: true,
-            defaultValue: null,
-        },
-        holdToken: {
-            type: DataTypes.STRING,
-            allowNull: true,
-            defaultValue: null,
         }
     },
     {
         sequelize,
-        modelName: "RoomBook",
-        tableName: "booking_room",
+        modelName: "BookedRoom",
+        tableName: "booked_rooms",
         timestamps: true,
     }
 );
 
-export default RoomBook;
+export default BookedRoom;

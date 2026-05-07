@@ -6,11 +6,18 @@ import "react-datepicker/dist/react-datepicker.css";
 import axios from "axios";
 import RoomDetailsModal from "./RoomDetailsModal";
 import { SiGitconnected } from "react-icons/si";
+import { useLocation, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import { jwtDecode } from "jwt-decode";
+import FloatingChatbot from "./../../../components/FloatingChatbot"
 
 const BookingRoom = () => {
     const today = new Date();
     const defaultCheckOut = new Date(today);
     defaultCheckOut.setDate(defaultCheckOut.getDate() + 4);
+    const navigate = useNavigate();
+    const location = useLocation();
+    const customerToken = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
 
     const [checkInDate, setCheckInDate] = useState(today);
     const [checkOutDate, setCheckOutDate] = useState(defaultCheckOut);
@@ -20,6 +27,34 @@ const BookingRoom = () => {
     const [reviewPackageList, setRevirePackageList] = useState([]);
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+
+    useEffect(() => {
+        const saved = localStorage.getItem("bookingDetails");
+
+        if (!saved) return;
+
+        const data = JSON.parse(saved);
+
+        const checkIn = new Date(data.checkInDate);
+        const checkOut = new Date(data.checkOutDate);
+
+        setCheckInDate(checkIn);
+        setCheckOutDate(checkOut);
+
+        // TEMP set rooms first
+        setRooms(data.rooms || []);
+
+        // 🔥 THEN fetch packages and re-sync
+        getAvailablePackagesByDate(checkIn, checkOut).then(() => {
+            setRooms((prevRooms) =>
+                prevRooms.map((room) => ({
+                    ...room,
+                    showPackagePicker: false // reset UI state
+                }))
+            );
+        });
+    }, []);
 
     // getAllAvailable Packages
     const getAllPackages = async () => {
@@ -67,12 +102,8 @@ const BookingRoom = () => {
         available: pkg.available_room ?? pkg.available ?? 0,
     });
 
-    const getAvailablePackagesByDate = async (startDate = checkInDate, endDate = checkOutDate) => {
+    const getAvailablePackagesByDate = async (startDate, endDate) => {
         try {
-            if (!startDate || !endDate) {
-                return;
-            }
-
             const response = await axios.get(
                 `${import.meta.env.VITE_BACKEND_URL}/roombook/available-packages`,
                 {
@@ -84,16 +115,21 @@ const BookingRoom = () => {
             );
 
             const packageList = response?.data?.data;
+
             if (!Array.isArray(packageList)) {
                 setPackageOptions([]);
-                return;
+                return [];
             }
 
-            setPackageOptions(packageList.map(normalizePackage));
-        } catch (error) {
+            const normalized = packageList.map(normalizePackage);
+            setPackageOptions(normalized);
+
+            return normalized; // ✅ IMPORTANT
+        } catch {
             setPackageOptions([]);
+            return [];
         }
-    }
+    };
 
 
     useEffect(() => {
@@ -105,43 +141,72 @@ const BookingRoom = () => {
 
     const handleRangeChange = (dates) => {
         const [start, end] = dates;
-        setCheckInDate(start);
-        setCheckOutDate(end);
+        const normalizedStart = normalizeDate(start);
+        const normalizedEnd = normalizeDate(end);
+
+        setCheckInDate(normalizedStart);
+        setCheckOutDate(normalizedEnd);
         setPackageOptions([]);
+        
+        // save booking details in localstorage to retrieve data again
+        if (normalizedStart && normalizedEnd) {
+            localStorage.setItem("bookingDetails", JSON.stringify({
+                checkInDate: normalizedStart.toISOString(),
+                checkOutDate: normalizedEnd.toISOString(),
+                rooms: rooms
+            }));
+        }
     };
 
     const addRoom = () => {
-        setRooms((prev) => [
-            ...prev,
+        const updatedRooms = [
+            ...rooms,
             {
-                id: Date.now() + prev.length,
+                id: Date.now(),
                 packageId: "",
+                roomId: null,
                 adults: 1,
                 kids: 0,
                 showPackagePicker: false,
             },
-        ]);
+        ];
+
+        setRooms(updatedRooms);
+        saveBookingToStorage(updatedRooms); // ✅ ADD THIS
     };
 
     const removeRoom = (roomId) => {
-        setRooms((prev) => prev.filter((room) => room.id !== roomId));
+        const updatedRooms = rooms.filter((room) => room.id !== roomId);
+        setRooms(updatedRooms);
+        saveBookingToStorage(updatedRooms);
     };
 
-    const updateRoomPackage = (roomId, packageId) => {
-        const selectedPackage = packageOptions.find((item) => item.id === packageId);
-        setRooms((prev) =>
-            prev.map((room) =>
-                room.id === roomId
-                    ? {
-                        ...room,
-                        packageId,
-                        adults: selectedPackage ? 1 : room.adults,
-                        kids: 0,
-                        showPackagePicker: false,
-                    }
-                    : room,
-            ),
+    const updateRoomPackage = async (roomId, packageId) => {
+        const pkg = packageOptions.find((p) => p.id === packageId);
+        if (!pkg) return;
+
+        const backendRoomId = await getRoomIdForSelectedPackage(packageId);
+
+        if (!backendRoomId) {
+            toast.error("No rooms available");
+            return;
+        }
+
+        const updatedRooms = rooms.map((room) =>
+            room.id === roomId
+                ? {
+                    ...room,
+                    packageId,
+                    roomId: backendRoomId,
+                    adults: 1,
+                    kids: 0,
+                    showPackagePicker: false,
+                }
+                : room
         );
+
+        setRooms(updatedRooms);
+        saveBookingToStorage(updatedRooms); // ✅ CRITICAL
     };
 
     const togglePackagePicker = (roomId, showPackagePicker) => {
@@ -161,10 +226,16 @@ const BookingRoom = () => {
     };
 
     const updateRoomGuests = (roomId, field, value) => {
-        setRooms((prev) =>
-            prev.map((room) => (room.id === roomId ? { ...room, [field]: Number(value) } : room)),
+        const updatedRooms = rooms.map((room) =>
+            room.id === roomId
+                ? { ...room, [field]: Number(value) }
+                : room
         );
+
+        setRooms(updatedRooms);
+        saveBookingToStorage(updatedRooms); // ✅ ADD THIS
     };
+
 
     const totalAdults = rooms.reduce((sum, room) => sum + (room.packageId ? room.adults : 0), 0);
     const totalKids = rooms.reduce((sum, room) => sum + (room.packageId ? room.kids : 0), 0);
@@ -194,9 +265,106 @@ const BookingRoom = () => {
         setSelectedRoom(null);
     };
 
+    const normalizeDate = (date) => {
+        if (!date) return null;
+        const normalized = new Date(date);
+        normalized.setHours(0, 0, 0, 0);
+        return normalized;
+    };
+
+    const saveBookingToStorage = (updatedRooms, start = checkInDate, end = checkOutDate) => {
+        localStorage.setItem("bookingDetails", JSON.stringify({
+            checkInDate: start.toISOString(),
+            checkOutDate: end.toISOString(),
+            rooms: updatedRooms
+        }));
+    };
+
+    // Request backend for an actual room id for the selected package + dates.
+    const getRoomIdForSelectedPackage = async (packageId) => {
+        try {
+            const res = await axios.post(
+                `${import.meta.env.VITE_BACKEND_URL}/roomBook/available-rooms`,
+                {
+                    packageId,
+                    checkIn: checkInDate.toISOString(),
+                    checkOut: checkOutDate.toISOString(),
+                }
+            );
+            return res?.data?.data?.[0]?.id || null;
+        } catch {
+            return null;
+        }
+    };
+
     const handleBooking = () => {
-        console.log(selectedPackage.id);
-    }
+        if (!customerToken) {
+            navigate("/customerlogin", {
+                state: { from: location.pathname },
+            });
+            return;
+        }
+
+        const guest = jwtDecode(customerToken);
+
+        const nights =
+            checkInDate && checkOutDate
+                ? Math.max(
+                    1,
+                    Math.ceil(
+                        (new Date(checkOutDate) - new Date(checkInDate)) /
+                            (1000 * 60 * 60 * 24)
+                    )
+                )
+                : 0;
+
+        const selectedRoomsData = rooms
+            .filter((room) => room.packageId && room.roomId) // 🔥 MUST HAVE backend roomId
+            .map((room) => {
+                const pkg = packageOptions.find(
+                    (p) => p.id === room.packageId
+                );
+
+                const pricePerNight = Number(pkg?.price ?? 0);
+                const totalPrice = pricePerNight * nights;
+
+                return {
+                    packageId: room.packageId,
+                    packageName: pkg?.name || "Unknown Package",
+                    roomId: room.roomId, // ✅ REAL BACKEND ID
+                    frontendRoomId: room.id,
+                    adults: room.adults,
+                    kids: room.kids,
+                    nights,
+                    totalPrice,
+                    checkInDate: checkInDate?.toISOString(),
+                    checkOutDate: checkOutDate?.toISOString(),
+                };
+            });
+
+        if (selectedRoomsData.length === 0) {
+            toast.error("Please select valid rooms before booking");
+            return;
+        }
+
+        const bookingData = {
+            checkInDate: checkInDate?.toISOString(),
+            checkOutDate: checkOutDate?.toISOString(),
+            nights,
+            totalPrice: selectedRoomsData.reduce(
+                (sum, room) => sum + room.totalPrice,
+                0
+            ),
+        };
+
+        navigate("/booking-summary", {
+            state: {
+                bookingData,
+                selectedRooms: selectedRoomsData,
+                guestInfo: guest,
+            },
+        });
+    };
 
     return (
         <div
@@ -215,19 +383,34 @@ const BookingRoom = () => {
                 <div className="absolute inset-0 bg-linear-to-r from-black/70 via-black/35 to-transparent" />
 
                 <div className="absolute left-0 top-0 w-full px-4 pt-8 sm:px-8 lg:px-14">
-                    <div className="mx-auto max-w-7xl">
-                        <p className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white backdrop-blur-sm">
-                            <Sparkles className="h-3.5 w-3.5" /> Island Luxury Collection
-                        </p>
-                        <h1 className="mt-4 max-w-3xl text-4xl font-black leading-tight text-white sm:text-5xl lg:text-6xl">
-                            Escape To Places
-                            <br />
-                            You Will Never Forget
-                        </h1>
-                        <p className="mt-4 max-w-xl text-sm text-stone-100 sm:text-base">
-                            Discover curated beachfront, city, and hillside stays with a streamlined booking
-                            experience designed for quick decisions.
-                        </p>
+                    <div className="mx-auto max-w-7xl w-full flex justify-between items-start">
+                        <div className="flex-1">
+                            <p className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white backdrop-blur-sm">
+                                <Sparkles className="h-3.5 w-3.5" /> Island Luxury Collection
+                            </p>
+                            <h1 className="mt-4 max-w-3xl text-4xl font-black leading-tight text-white sm:text-5xl lg:text-6xl">
+                                Escape To Places
+                                <br />
+                                You Will Never Forget
+                            </h1>
+                            <p className="mt-4 max-w-xl text-sm text-stone-100 sm:text-base">
+                                Discover curated beachfront, city, and hillside stays with a streamlined booking
+                                experience designed for quick decisions.
+                            </p>
+                        </div>
+                        {customerToken == null && (
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    navigate("/customerlogin", {
+                                        state: { from: location.pathname },
+                                    })
+                                }
+                                className="rounded-lg bg-emerald-600 px-6 py-3 text-sm font-extrabold uppercase tracking-wider text-white transition hover:bg-emerald-700 shadow-lg"
+                            >
+                                Sign In
+                            </button>
+                        )}
                     </div>
                 </div>
             </section>
@@ -642,6 +825,8 @@ const BookingRoom = () => {
                     onClose={closePackageDetails}
                 />
             }
+
+            <FloatingChatbot />
         </div>
     );
 };

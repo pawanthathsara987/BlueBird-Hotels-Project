@@ -1,21 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, Lock, AlertCircle, Check, ArrowLeft, Loader } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import Header from '../../../components/header';
-import Footer from '../../../components/footer';
+import axios from 'axios';
+import { jwtDecode } from 'jwt-decode';
 
-export default function RoomPaymentPage() {
+const RoomPayment = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const bookingData = location.state?.bookingData || null;
+  console.log(bookingData);
   const bookingConfirmation = location.state?.bookingConfirmation || null;
 
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  
-  const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3002/api').replace(/\/$/, '');
 
   const [cardData, setCardData] = useState({
     cardName: '',
@@ -38,10 +37,16 @@ export default function RoomPaymentPage() {
     }
   }, []);
 
-  const booking = bookingData || JSON.parse(localStorage.getItem("currentBooking") || '{}');
+  const selectedRooms = location.state?.selectedRooms || [];
+  const passedBookingData = location.state?.bookingData || {};
+  
+  // Calculate rooms and adults, kids from selectedRooms
+  const totalRooms = selectedRooms.length;
+  const totalAdults = selectedRooms.reduce((sum, r) => sum + (r.adults || 0), 0);
+  const totalKids = selectedRooms.reduce((sum, r) => sum + (r.kids || 0), 0);
   
   // Calculate 50% advance payment
-  const totalAmount = Number(booking?.totalPrice || 0);
+  const totalAmount = Number(passedBookingData?.totalPrice || 0);
   const advanceAmount = Number((totalAmount * 0.5).toFixed(2));
   const remainingAmount = Number((totalAmount - advanceAmount).toFixed(2));
 
@@ -111,18 +116,37 @@ export default function RoomPaymentPage() {
 
     setProcessing(true);
 
+    const token = localStorage.getItem("customerToken") ||
+                  sessionStorage.getItem("customerToken");
+
+    if (!token) {
+      setError("User not authenticated");
+      return;
+    }
+    let guest;
+
+    try {
+      guest = jwtDecode(token);
+    } catch (err) {
+      setError("Invalid session. Please login again.");
+      return;
+    }
+
+    if (!guest?.id) {
+      setError("Invalid user data in token");
+      return;
+    }
+
     try {
       const paymentPayload = {
         bookingId: bookingConfirmation?.booking_id,
-        userId: localStorage.getItem('userId'),
+        userId: guest.id,
         amount: advanceAmount,
         paymentMethod,
         bookingType: 'room',
         ...(paymentMethod === 'card' && { card: cardData }),
         ...(paymentMethod === 'bank' && { bank: bankData }),
       };
-
-      console.log('💳 Processing payment:', paymentPayload);
 
       // Simulate payment processing (replace with actual API call)
       const response = await new Promise((resolve) => {
@@ -138,28 +162,40 @@ export default function RoomPaymentPage() {
       });
 
       if (response.success) {
-        setSuccessMessage('✅ Payment successful! Your room booking is confirmed.');
-        
-        // Save payment confirmation
-        localStorage.setItem('paymentConfirmation', JSON.stringify({
-          paymentId: response.paymentId,
-          amount: advanceAmount,
-          method: paymentMethod,
-          timestamp: new Date().toISOString(),
-          status: 'completed'
-        }));
+        try {
+          const saveRes = await axios.post(
+            `${import.meta.env.VITE_BACKEND_URL}/roombook/booking`,
+            {
+              guestId: guest.id,
+              total_price: Number(totalAmount),
+              rooms: selectedRooms.map(r => ({
+                roomId: r.roomId,
+                checkIn: r.checkInDate,
+                checkOut: r.checkOutDate,
+                adults: r.adults,
+                kids: r.kids
+              }))
+            }
+          );
 
-        console.log('✅ Payment completed successfully');
+        } catch (err) {
+          console.error("❌ Failed to save booking:", err);
+          setError("Payment done, but booking save failed");
+          return;
+        }
+
+        setSuccessMessage('✅ Payment successful! Your room booking is confirmed.');
 
         // Redirect to booking confirmation after 2 seconds
         setTimeout(() => {
-          navigate('/booking-confirmation', {
+          localStorage.removeItem("bookingDetails");
+          navigate('/booking-confirm', {
             state: {
-              bookingData,
+              bookingData: passedBookingData,
+              selectedRooms,
               bookingConfirmation,
               paymentConfirmation: response.data
-            },
-            replace: true
+            }
           });
         }, 2000);
       } else {
@@ -176,7 +212,6 @@ export default function RoomPaymentPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-stone-50">
-      <Header />
 
       <main className="flex-grow py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
@@ -410,22 +445,35 @@ export default function RoomPaymentPage() {
                 <h3 className="text-xl font-bold text-stone-900 mb-6">Booking Summary</h3>
 
                 <div className="space-y-4 mb-6 pb-6 border-b border-stone-200">
+
                   <div className="flex justify-between text-sm">
                     <span className="text-stone-600">Check-in:</span>
-                    <span className="font-semibold text-stone-900">{booking?.checkIn}</span>
+                    <span className="font-semibold text-stone-900">
+                      {passedBookingData?.checkInDate ? new Date(passedBookingData.checkInDate).toLocaleDateString() : "N/A"}
+                    </span>
                   </div>
+
                   <div className="flex justify-between text-sm">
                     <span className="text-stone-600">Check-out:</span>
-                    <span className="font-semibold text-stone-900">{booking?.checkOut}</span>
+                    <span className="font-semibold text-stone-900">
+                      {passedBookingData?.checkOutDate ? new Date(passedBookingData.checkOutDate).toLocaleDateString() : "N/A"}
+                    </span>
                   </div>
+
                   <div className="flex justify-between text-sm">
                     <span className="text-stone-600">Rooms:</span>
-                    <span className="font-semibold text-stone-900">{booking?.totalRooms}</span>
+                    <span className="font-semibold text-stone-900">
+                      {totalRooms}
+                    </span>
                   </div>
+
                   <div className="flex justify-between text-sm">
                     <span className="text-stone-600">Guests:</span>
-                    <span className="font-semibold text-stone-900">{booking?.totalAdults} Adults, {booking?.totalKids} Kids</span>
+                    <span className="font-semibold text-stone-900">
+                      {totalAdults} Adults, {totalKids} Kids
+                    </span>
                   </div>
+
                 </div>
 
                 <div className="space-y-2 mb-6">
@@ -459,8 +507,9 @@ export default function RoomPaymentPage() {
           </div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }
+
+
+export default RoomPayment;

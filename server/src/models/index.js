@@ -1,5 +1,6 @@
-import Guest from "./booking/roomBookGuestModel.js";
-import RoomBook from "./booking/roomBookModel.js";
+import Customer from "./User/Customer.js";
+import BookedRoom from "./booking/roomBookModel.js";
+import Reservation from "./booking/reservationModel.js";
 import StaffMember from "./User/StaffMember.js";
 import Room from "./room_package/roomModel.js";
 import RoomPackage from "./room_package/packageModel.js";
@@ -17,24 +18,28 @@ import TourRefund from "./tour_package/TourRefund.js";
 
 export function initModels() {
 
-    // Guest -> RoomBook
-    Guest.hasMany(RoomBook, {
-        foreignKey: "guest_id",
+    // Reservation -> BookedRoom
+    Reservation.hasMany(BookedRoom, {
+        foreignKey: "reservation_id",
+        as: "bookedRooms",
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
-    });
-    RoomBook.belongsTo(Guest, {
-        foreignKey: "guest_id",
     });
 
-    // Room -> RoomBook
-    Room.hasMany(RoomBook, {
-        foreignKey: "roomId",
+    BookedRoom.belongsTo(Reservation, {
+        foreignKey: "reservation_id",
+        as: "reservation",
+    });
+
+    // Room -> BookedRoom
+    Room.hasMany(BookedRoom, {
+        foreignKey: "room_id",
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
     });
-    RoomBook.belongsTo(Room, {
-        foreignKey: "roomId",
+
+    BookedRoom.belongsTo(Room, {
+        foreignKey: "room_id",
     });
 
     // Package -> Room
@@ -137,8 +142,8 @@ export function initModels() {
         foreignKey: "bookingId",
     });
 
-    return { Guest, RoomBook, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourBooking, TourPayment, PackageImage, TourRefund };
+    return { Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourBooking, TourPayment, PackageImage, TourRefund };
 }
-export { Guest, RoomBook, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourBooking, TourPayment, PackageImage, TourRefund };
+export { Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourBooking, TourPayment, PackageImage, TourRefund };
 
 
