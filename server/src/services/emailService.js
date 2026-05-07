@@ -244,6 +244,124 @@ export const sendBookingConfirmationEmail = async (inquiry, booking) => {
 };
 
 /**
+ * Send accepted inquiry quote email with manager-adjusted details
+ * @param {Object} inquiry - Tour inquiry object
+ * @param {Object} booking - Tour booking object
+ * @param {Object} options - Additional email customizations
+ */
+export const sendAcceptedInquiryQuoteEmail = async (inquiry, booking, options = {}) => {
+  try {
+    const {
+      packageName = "Selected Tour",
+      tourBasePrice,
+      totalAmount,
+      adults,
+      children,
+      tourStartDate,
+      managerNote,
+    } = options;
+
+    const totalGuests = Number(adults || 0) + Number(children || 0);
+
+    const subject = `Tour Quote Ready - Ref: ${booking.bookingRef}`;
+
+    const emailBody = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #0f766e; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+            .content { background-color: #f9fafb; padding: 20px; border-radius: 0 0 8px 8px; }
+            .section { margin: 20px 0; }
+            .details { background-color: white; padding: 15px; border-left: 4px solid #0f766e; }
+            .pricing { background-color: #ecfeff; border: 1px solid #99f6e4; padding: 15px; border-radius: 6px; }
+            .note { background-color: #fffbeb; border: 1px solid #fde68a; padding: 12px; border-radius: 6px; }
+            .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Your Tour Inquiry Was Accepted</h1>
+              <p>We have prepared your personalized quote</p>
+            </div>
+
+            <div class="content">
+              <div class="section">
+                <p>Dear ${inquiry.fullName},</p>
+                <p>Great news! Your inquiry has been accepted and your booking quote is now ready.</p>
+              </div>
+
+              <div class="section details">
+                <h3 style="margin-top: 0;">📍 Tour Package Details</h3>
+                <p style="font-size: 16px; font-weight: bold; color: #0f766e; margin: 8px 0;">${packageName}</p>
+                <p style="margin: 8px 0;"><strong>Booking Reference:</strong> ${booking.bookingRef}</p>
+                <p style="margin: 8px 0;"><strong>Tour Date:</strong> ${new Date(tourStartDate || inquiry.startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                <p style="margin: 8px 0;"><strong>Travelers:</strong> ${Number(adults || 0)} Adult(s), ${Number(children || 0)} Child(ren)</p>
+                <p style="margin: 8px 0;"><strong>Total Group Size:</strong> ${totalGuests}</p>
+              </div>
+
+              <div class="section pricing" style="background-color: #ecfeff; border: 2px solid #0f766e;">
+                <h3 style="margin-top: 0; color: #0f766e;">💰 Full Price - Complete Tour Package</h3>
+                
+                <div style="background-color: white; padding: 12px; border-radius: 6px; margin-bottom: 12px;">
+                  <p style="margin: 0; font-size: 13px; color: #666;"><strong>Tour Package Standard Price:</strong></p>
+                  <p style="margin: 4px 0; font-size: 18px; font-weight: bold; color: #0f766e;">LKR ${Number(tourBasePrice || 0).toLocaleString()}</p>
+                </div>
+
+                ${tourBasePrice !== totalAmount ? `
+                <div style="background-color: #f0fdf4; padding: 12px; border-radius: 6px; margin-bottom: 12px; border-left: 4px solid #059669;">
+                  <p style="margin: 0; font-size: 13px; color: #666;"><strong>Your Customized Tour Package Price:</strong></p>
+                  <p style="margin: 4px 0; font-size: 18px; font-weight: bold; color: #059669;">LKR ${Number(totalAmount || 0).toLocaleString()}</p>
+                </div>
+                ` : ''}
+
+                <hr style="border: none; border-top: 2px solid #e5e7eb; margin: 12px 0;">
+
+                <div style="background-color: white; padding: 12px; border-radius: 6px;">
+                  <p style="margin: 8px 0; font-size: 14px;"><strong>📍 Tour Package Includes ${totalGuests} Guest(s)</strong></p>
+                  <table style="width: 100%; font-size: 14px; margin-top: 10px;">
+                    <tr>
+                      <td><strong>Total Tour Package Cost:</strong></td>
+                      <td style="text-align: right;"><strong style="font-size: 16px; color: #0f766e;">LKR ${Number(booking.totalAmount || 0).toLocaleString()}</strong></td>
+                    </tr>
+                  </table>
+
+                  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 12px 0;">
+
+                  <p style="margin: 6px 0; font-size: 13px;"><strong>📌 Advance Payment (50%):</strong> <span style="color: #059669; font-weight: bold; font-size: 15px;">LKR ${Number(booking.depositAmount || 0).toLocaleString()}</span></p>
+                  <p style="margin: 6px 0; font-size: 13px;"><strong>📌 Remaining (50%, Due Later):</strong> <span style="font-weight: bold;">LKR ${Number(booking.remainingAmount || 0).toLocaleString()}</span></p>
+                </div>
+              </div>
+
+              ${managerNote ? `
+                <div class="section note">
+                  <h3 style="margin-top: 0;">Note From Our Team</h3>
+                  <p style="white-space: pre-wrap;">${managerNote}</p>
+                </div>
+              ` : ""}
+
+              <div class="footer">
+                <p>Please use your booking reference for future communication.</p>
+                <p>Best regards,<br/>BlueJay Hotels Team</p>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    await sendEmail({ to: inquiry.email, subject, html: emailBody });
+    return true;
+  } catch (error) {
+    console.error("Error sending accepted inquiry quote email:", error);
+    throw error;
+  }
+};
+
+/**
  * Send payment successful email
  * @param {Object} inquiry - Tour inquiry object
  * @param {Object} booking - Tour booking object
@@ -448,7 +566,7 @@ export const sendRejectionEmail = async (inquiry, reason) => {
     `;
 
     // Send email using Nodemailer
-    await sendEmail(inquiry.email, subject, emailBody);
+    await sendEmail({ to: inquiry.email, subject, html: emailBody });
     return true;
   } catch (error) {
     console.error("Error sending rejection email:", error);
@@ -514,7 +632,7 @@ export const sendCancellationEmail = async (inquiry, booking, reason) => {
     `;
 
     // Send email using Nodemailer
-    await sendEmail(inquiry.email, subject, emailBody);
+    await sendEmail({ to: inquiry.email, subject, html: emailBody });
     return true;
   } catch (error) {
     console.error("Error sending cancellation email:", error);

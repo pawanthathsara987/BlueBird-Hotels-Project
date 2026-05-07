@@ -31,6 +31,13 @@ export default function TourDetailsPage() {
   const [foundBooking, setFoundBooking] = useState(null);
   const [bookingError, setBookingError] = useState('');
   const [searchingBooking, setSearchingBooking] = useState(false);
+  // Availability modal state
+  const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
+  const [availDate, setAvailDate] = useState('');
+  const [availAdults, setAvailAdults] = useState(String(tour?.groupSize || 1));
+  const [availChildren, setAvailChildren] = useState('0');
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
+  const [availabilityResult, setAvailabilityResult] = useState(null);
 
   const getImages = (t) => {
     if (!t) return [];
@@ -450,13 +457,15 @@ export default function TourDetailsPage() {
 
                 {/* Book Now / Complete Payment */}
                 <div className="space-y-2.5 border-t border-gray-200 pt-4">
-                  <button
-                    onClick={() => setShowBookingModal(true)}
-                    type="button"
-                    className="w-full py-2.5 rounded-lg text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-md"
-                  >
-                    📋 Check Your Booking
-                  </button>
+                    <div>
+                      <button
+                        onClick={() => setShowAvailabilityModal(true)}
+                        type="button"
+                        className="w-full py-2.5 rounded-lg text-sm font-bold tracking-wide bg-emerald-700 hover:bg-emerald-600 text-white transition-all shadow-md"
+                      >
+                        🔎 Check Availability
+                      </button>
+                    </div>
                   <p className="text-xs text-gray-500 text-center">
                     Have a booking reference? Complete your payment here.
                   </p>
@@ -500,7 +509,7 @@ export default function TourDetailsPage() {
                   </div>
                   {bookingError && (
                     <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex gap-2">
-                      <AlertCircle size={16} className="text-red-600 flex-shrink-0 mt-0.5" />
+                      <AlertCircle size={16} className="text-red-600 shrink-0 mt-0.5" />
                       <span className="text-xs text-red-700">{bookingError}</span>
                     </div>
                   )}
@@ -542,6 +551,108 @@ export default function TourDetailsPage() {
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ════════ AVAILABILITY MODAL ════════ */}
+      {showAvailabilityModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+            <div className="bg-emerald-700 text-white px-6 py-4 flex justify-between items-center rounded-t-2xl">
+              <h3 className="text-lg font-bold">Check Availability</h3>
+              <button onClick={() => { setShowAvailabilityModal(false); setAvailabilityResult(null); }} className="text-white/70 hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="px-6 py-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-2">Travel Date</label>
+                  <input
+                    type="date"
+                    value={availDate}
+                    onChange={(e) => setAvailDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-2">Adults</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={availAdults}
+                      onChange={(e) => setAvailAdults(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-2">Children</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={availChildren}
+                      onChange={(e) => setAvailChildren(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <button
+                    onClick={async () => {
+                      // client-side validation
+                      setAvailabilityResult(null);
+                      if (!availDate) {
+                        setAvailabilityResult({ ok: false, message: 'Please select a date' });
+                        return;
+                      }
+                      if (!Number.isFinite(Number(availAdults)) || Number(availAdults) < 1) {
+                        setAvailabilityResult({ ok: false, message: 'Adults must be 1 or more' });
+                        return;
+                      }
+
+                      setCheckingAvailability(true);
+                      try {
+                        const payload = {
+                          tourId: tour?.id,
+                          date: availDate,
+                          adults: Number(availAdults),
+                          children: Number(availChildren || 0),
+                        };
+
+                        // Attempt backend check (endpoint may not exist yet)
+                        const res = await axios.post(`${backendBaseUrl}/tour-availability/check`, payload).catch(err => ({ data: null, error: err }));
+                        if (res && res.data && res.data.success) {
+                          setAvailabilityResult({ ok: !!res.data.available, message: res.data.message || (res.data.available ? 'Available' : 'Not available') });
+                        } else if (res && res.data === null) {
+                          setAvailabilityResult({ ok: false, message: 'Availability API not configured on server' });
+                        } else {
+                          setAvailabilityResult({ ok: false, message: (res.data && res.data.message) || 'Not available' });
+                        }
+                      } catch (err) {
+                        setAvailabilityResult({ ok: false, message: err.message || 'Error checking availability' });
+                      } finally {
+                        setCheckingAvailability(false);
+                      }
+                    }}
+                    disabled={checkingAvailability}
+                    className="w-full bg-emerald-700 hover:bg-emerald-600 text-white py-2.5 rounded-lg font-bold"
+                  >
+                    {checkingAvailability ? 'Checking...' : 'Check Availability'}
+                  </button>
+                </div>
+
+                {availabilityResult && (
+                  <div className={`p-3 rounded-lg ${availabilityResult.ok ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-rose-50 border border-rose-200 text-rose-800'}`}>
+                    <p className="text-sm font-semibold">{availabilityResult.ok ? 'Available' : 'Unavailable'}</p>
+                    <p className="text-sm mt-1">{availabilityResult.message}</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
