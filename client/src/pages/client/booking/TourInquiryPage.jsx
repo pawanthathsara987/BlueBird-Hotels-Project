@@ -61,7 +61,7 @@ export default function TourInquiryPage() {
     email: '',
     phone: '',
     nationality: '',
-    numberOfAdults: 2,
+    numberOfAdults: 1,
     numberOfChildren: 0,
     startDate: '',
     pickupLocation: '',
@@ -69,7 +69,7 @@ export default function TourInquiryPage() {
   });
   const [errors, setErrors] = useState({});
 
-  const minStartDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
+  const minStartDate = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000)
     .toISOString()
     .split('T')[0];
 
@@ -110,14 +110,14 @@ export default function TourInquiryPage() {
 
   const validate = () => {
     const nextErrors = {};
-    if (!form.fullName.trim()) nextErrors.fullName = 'Required';
-    if (!form.email.trim()) nextErrors.email = 'Required';
+    if (!form.fullName.trim()) nextErrors.fullName = 'Name is required';
+    if (!form.email.trim()) nextErrors.email = 'Email is required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) nextErrors.email = 'Invalid email';
-    if (!form.phone.trim()) nextErrors.phone = 'Required';
-    if (!form.nationality.trim()) nextErrors.nationality = 'Required';
-    if (!form.startDate) nextErrors.startDate = 'Required';
-    else if (form.startDate < minStartDate) nextErrors.startDate = 'Start date must be at least 2 days from today';
-    if (!form.pickupLocation.trim()) nextErrors.pickupLocation = 'Required';
+    if (!form.phone.trim()) nextErrors.phone = 'Phone is required';
+    if (!form.nationality.trim()) nextErrors.nationality = 'Nationality is required';
+    if (!form.startDate) nextErrors.startDate = 'Start date is required';
+    else if (form.startDate < minStartDate) nextErrors.startDate = 'Start date must be at least 4 days from today';
+    if (!form.pickupLocation.trim()) nextErrors.pickupLocation = 'Pickup location is required';
 
     setErrors(nextErrors);
     return !Object.keys(nextErrors).length;
@@ -129,7 +129,7 @@ export default function TourInquiryPage() {
       email: '',
       phone: '',
       nationality: '',
-      numberOfAdults: 2,
+      numberOfAdults: 1,
       numberOfChildren: 0,
       startDate: '',
       pickupLocation: '',

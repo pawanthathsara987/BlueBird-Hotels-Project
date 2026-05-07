@@ -141,9 +141,9 @@ export const createTourInquiry = async (req, res) => {
       validationErrors.nationality = "Nationality must be at least 2 characters";
     }
 
-    // Validate tour date (minimum 2 days ahead)
+    // Validate tour date (minimum 4 days ahead)
     if (!validateTourDate(startDate)) {
-      validationErrors.startDate = "Tour date must be at least 2 days from today";
+      validationErrors.startDate = "Tour date must be at least 4 days from today";
     }
 
     // Validate pickup location
