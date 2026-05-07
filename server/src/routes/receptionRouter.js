@@ -1,6 +1,6 @@
 import express from 'express';
 import { getAvailableRooms, todayCheckIns, todayCheckOuts, getOccupiedRooms, recentCheckins, recentCheckouts, recentBookings } from '../controllers/reception/dashboardController.js';
-import { setCheckIn, setCheckOut } from '../controllers/reception/receptionBookingController.js';
+import { setCheckIn, setCheckOut, getPendingCheckins, getPendingCheckOuts } from '../controllers/reception/receptionBookingController.js';
 
 const router = express.Router();
 
@@ -14,7 +14,10 @@ router.get('/recent-checkouts', recentCheckouts);
 router.get('/recent-bookings', recentBookings);
 
 // receptionBookingController
-router.patch('/bookings/:id/checkin', setCheckIn);
-router.patch('/bookings/:id/checkout', setCheckOut);
+router.get('/pending-checkins', getPendingCheckins);
+router.post('/check-in/:reservation_id', setCheckIn);
+router.get("/pending-checkouts", getPendingCheckOuts);
+router.patch("/bookings/:id/checkout", setCheckOut);
 
-export default router;
+
+export default router;  
