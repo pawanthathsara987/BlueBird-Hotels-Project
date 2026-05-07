@@ -13,6 +13,7 @@ export default function StaffManagement() {
     const [selectedMember, setSelectedMember] = useState(null);
     const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const navigate = useNavigate();
 
 
@@ -48,20 +49,32 @@ export default function StaffManagement() {
 
     // Handlers for delete modal actions    
     const onCancelDelete = () => {
+        if (isDeleting) {
+            return;
+        }
+
         setShowDeleteModal(false);
         setSelectedMember(null);
     };
 
     // Handler for confirming deletion of a staff member
     const onConfirmDelete = async () => {
+        if (!selectedMember || isDeleting) {
+            return;
+        }
+
         try {
+            setIsDeleting(true);
             await axios.delete(import.meta.env.VITE_BACKEND_URL + "/users/delete/" + selectedMember.userId);
             toast.success("Staff member deleted successfully");
-            onCancelDelete();
+            setShowDeleteModal(false);
+            setSelectedMember(null);
             loadStaffMembers();
         } catch (error) {
             toast.error("Failed to delete staff member");
             console.error("Delete failed:", error);
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -191,6 +204,7 @@ export default function StaffManagement() {
                 member={selectedMember}
                 onCancel={onCancelDelete}
                 onConfirm={onConfirmDelete}
+                isDeleting={isDeleting}
             />
         </>
     );

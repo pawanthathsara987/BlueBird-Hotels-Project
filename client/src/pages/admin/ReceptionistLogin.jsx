@@ -4,7 +4,7 @@ import Logo from "../../assets/bluebird logo.png";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 
-export default function LoginAdmin() {
+export default function ReceptionistLogin() {
 
     const [emailVerified, setEmailVerified] = useState(false);
     const [shouldRegister, setShouldRegister] = useState(false);
@@ -71,7 +71,7 @@ export default function LoginAdmin() {
             });
 
             toast.success(res?.data?.message || "Login successful.");
-            navigate("/");
+            navigate("/reception");
         } catch (error) {
             toast.error(error?.response?.data?.message || "Login failed.");
         }

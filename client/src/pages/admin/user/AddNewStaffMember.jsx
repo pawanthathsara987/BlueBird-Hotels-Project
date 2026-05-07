@@ -11,16 +11,22 @@ export default function AddNewStaffMember() {
     const [email, setEmail] = useState("");
     const [role, setRole] = useState("");
     const [phoneNumber, setPhoneNumber] = useState("");
+    const [loading, setLoading] = useState(false);
 
     const navigate = useNavigate();
 
     async function addMember() {
+        if (loading) {
+            return;
+        }
+
         if (userName == "" || name == "" || email == "" || role == "" || phoneNumber == "") {
             toast.error("Please fill in all fields");
             return;
         }
 
         try {
+            setLoading(true);
 
             await axios.post(import.meta.env.VITE_BACKEND_URL + "/users/create", {
                 userName: userName,
@@ -36,7 +42,8 @@ export default function AddNewStaffMember() {
         } catch (err) {
             toast.error("Failed to add staff member");
             console.error(err);
-            return;
+        } finally {
+            setLoading(false);
         }
 
     }
@@ -75,8 +82,9 @@ export default function AddNewStaffMember() {
                         name="username"
                         value={userName}
                         onChange={(e) => setUserName(e.target.value)}
+                        disabled={loading}
                         placeholder="e.g. jsmith"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                     />
                 </div>
                 <div className="m-5">
@@ -88,8 +96,9 @@ export default function AddNewStaffMember() {
                         name="name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
+                        disabled={loading}
                         placeholder="Full name"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                     />
                 </div>
 
@@ -102,8 +111,9 @@ export default function AddNewStaffMember() {
                         name="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        disabled={loading}
                         placeholder="staff@hotel.com"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                     />
                 </div>
 
@@ -116,7 +126,8 @@ export default function AddNewStaffMember() {
                             name="role"
                             value={role}
                             onChange={(e) => setRole(e.target.value)}
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                            disabled={loading}
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
                         >
                             <option value="">Select a role...</option>
                             <option value="staff_member">Staff Member</option>
@@ -132,8 +143,9 @@ export default function AddNewStaffMember() {
                             name="phoneNumber"
                             value={phoneNumber}
                             onChange={(e) => setPhoneNumber(e.target.value)}
+                            disabled={loading}
                             placeholder="+94 777 666 555"
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                         />
                     </div>
                 </div>
@@ -141,6 +153,11 @@ export default function AddNewStaffMember() {
                 <div className="flex justify-end gap-4 pt-4 m-5">
                     <Link
                         to="/admin/users"
+                        onClick={(e) => {
+                            if (loading) {
+                                e.preventDefault();
+                            }
+                        }}
                         className="px-6 py-3 text-gray-700 hover:text-gray-900 font-medium"
                     >
                         Cancel
@@ -148,9 +165,10 @@ export default function AddNewStaffMember() {
                     <button
                         onClick={addMember}
                         type="button"
-                        className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                        disabled={loading}
+                        className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                        + Add Staff Member
+                        {loading ? "Saving..." : "+ Add Staff Member"}
                     </button>
                 </div>
             </div>
