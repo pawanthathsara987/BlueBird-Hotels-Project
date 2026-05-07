@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import HomePage from "./pages/homePage";
-import LoginAdmin from "./pages/admin/loginAdmin";
-import LoginReceptionist from "./pages/reception/loginReceptionist";
+import ReceptionistLogin from "./pages/admin/ReceptionistLogin";
 import CustomerRegister from "./pages/CustomerRegister";
 import AdminPage from "./pages/admin/AdminPage";
 import PasswordResetPage from "./pages/reception/PasswordResetPage";
@@ -40,8 +39,7 @@ export default function App() {
                     <Route path="/booking/cancel" element={<TourCancelPage />} />
                     <Route path="/payment" element={<RoomPaymentPage />} />
                     <Route path="/tourBooking" element={<TourViewPage />} />
-                    <Route path="/signin" element={<LoginAdmin />} />
-                    <Route path="/loginReceptionist" element={<LoginReceptionist />} />
+                    <Route path="/receptionistLogin" element={<ReceptionistLogin />} />
                     <Route path="/registerCustomer" element={<CustomerRegister />} />
                     <Route path="/customerLogin" element={<CustomerLoginPage />} />
                     <Route path="/customer-reset-password" element={<CustomerPasswordResetPage />} />
