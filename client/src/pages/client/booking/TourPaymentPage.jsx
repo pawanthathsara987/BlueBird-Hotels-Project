@@ -514,24 +514,24 @@ export default function TourPaymentPage() {
                 <div className="space-y-4 mb-6 pb-6 border-b-2 border-gray-200">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Total Amount</span>
-                    <span className="font-bold text-lg">LKR {totalAmount.toFixed(2)}</span>
+                    <span className="font-bold text-lg">${totalAmount.toFixed(2)}</span>
                   </div>
                   
                   <div className="flex justify-between">
                     <span className="text-gray-600 font-semibold">50% Advance</span>
-                    <span className="font-bold text-lg text-green-600">LKR {advanceAmount.toFixed(2)}</span>
+                    <span className="font-bold text-lg text-green-600">${advanceAmount.toFixed(2)}</span>
                   </div>
 
                   <div className="flex justify-between">
                     <span className="text-gray-600">Remaining</span>
-                    <span className="font-semibold">LKR {remainingAmount.toFixed(2)}</span>
+                    <span className="font-semibold">${remainingAmount.toFixed(2)}</span>
                   </div>
                 </div>
 
                 {/* Total to Pay */}
                 <div className="mb-6 p-4 bg-green-50 rounded-lg border-2 border-green-200">
                   <p className="text-sm text-gray-600 mb-1">You Will Pay Now</p>
-                  <p className="text-3xl font-bold text-green-600">LKR {advanceAmount.toFixed(2)}</p>
+                  <p className="text-3xl font-bold text-green-600">${advanceAmount.toFixed(2)}</p>
                 </div>
 
                 {/* Info */}
@@ -544,7 +544,7 @@ export default function TourPaymentPage() {
 
                   <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                     <p className="text-xs text-gray-600">
-                      <span className="font-bold">Remaining Balance:</span> LKR {remainingAmount.toFixed(2)} due before tour date
+                      <span className="font-bold">Remaining Balance:</span> ${remainingAmount.toFixed(2)} due before tour date
                     </p>
                   </div>
 

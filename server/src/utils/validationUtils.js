@@ -25,17 +25,17 @@ export const validatePhone = (phone) => {
 };
 
 /**
- * Validate tour date (minimum 2 days ahead)
+ * Validate tour date (minimum 4 days ahead)
  * @param {string|Date} startDate - Tour start date
  * @returns {boolean} True if date is valid
  */
 export const validateTourDate = (startDate) => {
   const tourDate = new Date(startDate);
   const today = new Date();
-  const twoDaysLater = new Date();
-  twoDaysLater.setDate(twoDaysLater.getDate() + 2);
+  const fourDaysLater = new Date();
+  fourDaysLater.setDate(fourDaysLater.getDate() + 4);
 
-  return tourDate >= twoDaysLater;
+  return tourDate >= fourDaysLater;
 };
 
 /**
@@ -112,7 +112,7 @@ export const validateInquiryForm = (formData) => {
   if (!formData.startDate) {
     errors.startDate = "Tour date is required";
   } else if (!validateTourDate(formData.startDate)) {
-    errors.startDate = "Tour date must be at least 2 days from today";
+    errors.startDate = "Tour date must be at least 4 days from today";
   }
 
   // Validate pickup location

@@ -173,18 +173,18 @@ export const sendBookingConfirmationEmail = async (inquiry, booking) => {
                 <table>
                   <tr>
                     <td><strong>Total Tour Cost:</strong></td>
-                    <td style="text-align: right;"><strong style="font-size: 16px; color: #667eea;">LKR ${Number(booking.totalAmount).toLocaleString()}</strong></td>
+                    <td style="text-align: right;"><strong style="font-size: 16px; color: #667eea;">${Number(booking.totalAmount).toLocaleString()}</strong></td>
                   </tr>
                   <tr>
                     <td colspan="2" style="border: none; height: 10px;"></td>
                   </tr>
                   <tr style="background-color: #f0fdf4;">
                     <td><span class="highlight">✓ 50% Advance:</span></td>
-                    <td style="text-align: right;"><strong style="font-size: 16px; color: #10b981;">LKR ${Number(booking.depositAmount).toLocaleString()}</strong></td>
+                    <td style="text-align: right;"><strong style="font-size: 16px; color: #10b981;">${Number(booking.depositAmount).toLocaleString()}</strong></td>
                   </tr>
                   <tr>
                     <td>Remaining 50% (Due later):</td>
-                    <td style="text-align: right;">LKR ${Number(booking.remainingAmount).toLocaleString()}</td>
+                    <td style="text-align: right;">${Number(booking.remainingAmount).toLocaleString()}</td>
                   </tr>
                 </table>
               </div>
@@ -308,13 +308,13 @@ export const sendAcceptedInquiryQuoteEmail = async (inquiry, booking, options = 
                 
                 <div style="background-color: white; padding: 12px; border-radius: 6px; margin-bottom: 12px;">
                   <p style="margin: 0; font-size: 13px; color: #666;"><strong>Tour Package Standard Price:</strong></p>
-                  <p style="margin: 4px 0; font-size: 18px; font-weight: bold; color: #0f766e;">LKR ${Number(tourBasePrice || 0).toLocaleString()}</p>
+                  <p style="margin: 4px 0; font-size: 18px; font-weight: bold; color: #0f766e;">$${Number(tourBasePrice || 0).toLocaleString()}</p>
                 </div>
 
                 ${tourBasePrice !== totalAmount ? `
                 <div style="background-color: #f0fdf4; padding: 12px; border-radius: 6px; margin-bottom: 12px; border-left: 4px solid #059669;">
                   <p style="margin: 0; font-size: 13px; color: #666;"><strong>Your Customized Tour Package Price:</strong></p>
-                  <p style="margin: 4px 0; font-size: 18px; font-weight: bold; color: #059669;">LKR ${Number(totalAmount || 0).toLocaleString()}</p>
+                  <p style="margin: 4px 0; font-size: 18px; font-weight: bold; color: #059669;">$${Number(totalAmount || 0).toLocaleString()}</p>
                 </div>
                 ` : ''}
 
@@ -325,14 +325,14 @@ export const sendAcceptedInquiryQuoteEmail = async (inquiry, booking, options = 
                   <table style="width: 100%; font-size: 14px; margin-top: 10px;">
                     <tr>
                       <td><strong>Total Tour Package Cost:</strong></td>
-                      <td style="text-align: right;"><strong style="font-size: 16px; color: #0f766e;">LKR ${Number(booking.totalAmount || 0).toLocaleString()}</strong></td>
+                      <td style="text-align: right;"><strong style="font-size: 16px; color: #0f766e;">$${Number(booking.totalAmount || 0).toLocaleString()}</strong></td>
                     </tr>
                   </table>
 
                   <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 12px 0;">
 
-                  <p style="margin: 6px 0; font-size: 13px;"><strong>📌 Advance Payment (50%):</strong> <span style="color: #059669; font-weight: bold; font-size: 15px;">LKR ${Number(booking.depositAmount || 0).toLocaleString()}</span></p>
-                  <p style="margin: 6px 0; font-size: 13px;"><strong>📌 Remaining (50%, Due Later):</strong> <span style="font-weight: bold;">LKR ${Number(booking.remainingAmount || 0).toLocaleString()}</span></p>
+                  <p style="margin: 6px 0; font-size: 13px;"><strong>📌 Advance Payment (50%):</strong> <span style="color: #059669; font-weight: bold; font-size: 15px;">$${Number(booking.depositAmount || 0).toLocaleString()}</span></p>
+                  <p style="margin: 6px 0; font-size: 13px;"><strong>📌 Remaining (50%, Due Later):</strong> <span style="font-weight: bold;">$${Number(booking.remainingAmount || 0).toLocaleString()}</span></p>
                 </div>
               </div>
 
@@ -403,8 +403,8 @@ export const sendPaymentSuccessEmail = async (inquiry, booking) => {
               
               <div class="details">
                 <p><strong>Booking Reference:</strong> ${booking.bookingRef}</p>
-                <p><strong>Amount Paid:</strong> LKR ${Number(booking.depositAmount).toLocaleString()}</p>
-                <p><strong>Remaining Balance:</strong> LKR ${Number(booking.remainingAmount).toLocaleString()}</p>
+                <p><strong>Amount Paid:</strong> $${Number(booking.depositAmount).toLocaleString()}</p>
+                <p><strong>Remaining Balance:</strong> $${Number(booking.remainingAmount).toLocaleString()}</p>
                 <p><strong>Tour Date:</strong> ${new Date(inquiry.startDate).toLocaleDateString()}</p>
               </div>
               
@@ -482,7 +482,7 @@ export const sendPaymentReminderEmail = async (inquiry, booking, hoursRemaining)
               <p>This is a reminder that your payment is due to secure your tour booking.</p>
               
               <p><strong>Booking Reference:</strong> ${booking.bookingRef}</p>
-              <p><strong>Amount Due:</strong> LKR ${Number(booking.depositAmount).toLocaleString()}</p>
+              <p><strong>Amount Due:</strong> $${Number(booking.depositAmount).toLocaleString()}</p>
               <p><strong>Tour Date:</strong> ${new Date(inquiry.startDate).toLocaleDateString()}</p>
               
               <p style="margin-top: 30px;">
@@ -614,7 +614,7 @@ export const sendCancellationEmail = async (inquiry, booking, reason) => {
               
               ${booking.refundStatus === "approved" ? `
                 <p style="margin-top: 20px; color: #059669;">
-                  <strong>✓ Your refund of LKR ${Number(booking.refundAmount).toLocaleString()} will be processed within 5-7 business days.</strong>
+                  <strong>✓ Your refund of $${Number(booking.refundAmount).toLocaleString()} will be processed within 5-7 business days.</strong>
                 </p>
               ` : `
                 <p style="margin-top: 20px; color: #dc2626;">
