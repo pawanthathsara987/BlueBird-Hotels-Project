@@ -30,7 +30,7 @@ export default function Header() {
 
           <Link className="hover:text-blue-600">TRAVELS</Link>
           <Link className="hover:text-blue-600">GALLERY</Link>
-          <Link className="hover:text-blue-600">CONTACT</Link>
+          <Link to="/contact" className="hover:text-blue-600">CONTACT</Link>
         </div>
 
         <div className="flex lg:hidden justify-end items-center col-start-3">
