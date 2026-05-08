@@ -20,6 +20,7 @@ import CustomerLoginPage from "./pages/CustomerLoginPage";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import BookingSummary from "./pages/client/booking/BookingSummary";
 import BookingConfirmation from "./pages/client/booking/BookingConfirmation";
+import ContactPage from "./pages/Contact_us";
 
 
 
@@ -49,6 +50,7 @@ export default function App() {
                     <Route path="/admin/*" element={< AdminPage />} />
                     <Route path="/manager/*" element={< ManagerPage />} />
                     <Route path="/reception/*" element={< ReceptionPage />} />
+                    <Route path="/contact" element={<ContactPage />} />
                     <Route path="/*" element={<HomePage />} />
                 </Routes> 
             </div>
