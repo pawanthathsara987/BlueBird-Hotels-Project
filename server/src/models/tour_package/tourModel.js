@@ -48,6 +48,11 @@ Tour.init(
         type: DataTypes.INTEGER,
         allowNull: true
     },
+    durationType: {
+        type: DataTypes.ENUM('hours', 'days'),
+        allowNull: true,
+        defaultValue: 'days'
+    },
     status: {
         type: DataTypes.ENUM('active', 'inactive'),
         allowNull: false,

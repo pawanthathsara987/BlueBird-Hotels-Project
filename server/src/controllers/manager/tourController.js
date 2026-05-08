@@ -104,7 +104,8 @@ const resolveTourItems = async (includedItems, transaction) => {
 const buildTourData = (body, existingTour = null) => ({
   packageName: (body.packageName ?? existingTour?.packageName ?? "").trim(),
   overview: (body.overview ?? existingTour?.overview ?? "").trim() || null,
-  duration: (body.duration ?? existingTour?.duration ?? "").trim() || null,
+  duration: parseNumberField(body.duration, existingTour?.duration ?? null),
+    durationType: body.durationType || existingTour?.durationType || 'days',
   location: (body.location ?? existingTour?.location ?? "").trim() || null,
   price: parseNumberField(body.price, existingTour?.price ?? null),
   discount: parseNumberField(body.discount, existingTour?.discount ?? 0) ?? 0,
@@ -114,9 +115,51 @@ const buildTourData = (body, existingTour = null) => ({
   status: body.status || existingTour?.status || "active",
 });
 
-const validateTour = (payload) => {
-  if (!payload.packageName) return "Tour package name is required";
-  if (!Number.isFinite(payload.price) || payload.price <= 0) return "Tour price must be greater than 0";
+const validateTour = (payload, options = {}) => {
+  const { hasImage = false, hasItems = false, hasItinerary = false, isNew = false } = options;
+  
+  // Required fields
+  if (!payload.packageName?.trim()) return "Tour package name is required";
+  if (!payload.overview?.trim()) return "Overview is required";
+  if (!payload.termsConditions?.trim()) return "Terms and conditions are required";
+  if (!payload.location?.trim()) return "Location is required";
+  
+  // Price validation
+  if (!Number.isFinite(payload.price) || payload.price <= 0) {
+    return "Tour price must be a positive number";
+  }
+  
+  // Discount validation (0-100)
+  if (payload.discount !== null && payload.discount !== undefined) {
+    const discount = Number(payload.discount);
+    if (!Number.isFinite(discount) || discount < 0 || discount > 100) {
+      return "Discount must be between 0 and 100";
+    }
+  }
+  
+  // Group size validation (if provided, must be positive integer)
+  if (payload.groupSize !== null && payload.groupSize !== undefined) {
+    if (!Number.isInteger(payload.groupSize) || payload.groupSize <= 0) {
+      return "Group size must be a positive whole number";
+    }
+  }
+  
+  // Image requirement for new tours
+  if (isNew && !hasImage) {
+    return "Tour image is required";
+  }
+  
+  // Items validation (at least one)
+  if (!hasItems) {
+    return "Add at least one inclusion";
+  }
+  
+  // Itinerary validation (at least one day)
+  if (!hasItinerary) {
+    return "Add at least one day with activity description";
+  }
+
+  
   return null;
 };
 
@@ -138,7 +181,25 @@ export const createTour = async (req, res) => {
 
   try {
     const payload = buildTourData(req.body);
-    const validationError = validateTour(payload);
+    
+    // Check for items and itinerary before full validation
+    const itemsArray = parseJsonField(req.body.includedItems, []);
+    const hasItems = itemsArray.filter(i => i && String(i).trim()).length > 0;
+    
+    const itineraryArray = parseJsonField(req.body.itinerary, []);
+    const hasItinerary = itineraryArray.some(entry => 
+      entry && entry.description && String(entry.description).trim()
+    );
+    
+    const hasImage = !!req.file;
+    
+    // Validate with all options
+    const validationError = validateTour(payload, {
+      hasImage,
+      hasItems,
+      hasItinerary,
+      isNew: true,
+    });
 
     if (validationError) {
       await transaction.rollback();
@@ -146,6 +207,16 @@ export const createTour = async (req, res) => {
     }
 
     const image = req.file ? await uploadImageToSupabase(req.file) : null;
+
+    // If the DB table lacks the durationType column, don't include it in the payload
+    try {
+      const tableDesc = await sequelize.getQueryInterface().describeTable('tours');
+      if (tableDesc && !Object.prototype.hasOwnProperty.call(tableDesc, 'durationType')) {
+        delete payload.durationType;
+      }
+    } catch (err) {
+      // ignore - if describeTable fails, proceed without modifying payload
+    }
 
     const tour = await Tour.create(
       {
@@ -214,7 +285,7 @@ export const updateTour = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
-    const tour = await Tour.findByPk(req.params.id, { transaction });
+    const tour = await Tour.findByPk(req.params.id, { include: includeTourItems, transaction });
 
     if (!tour) {
       await transaction.rollback();
@@ -222,7 +293,32 @@ export const updateTour = async (req, res) => {
     }
 
     const payload = buildTourData(req.body, tour);
-    const validationError = validateTour(payload);
+    
+    // Check for items (use provided or existing)
+    const itemsArray = parseJsonField(
+      req.body.includedItems,
+      tour.TourItems?.map(item => item.id) || []
+    );
+    const hasItems = itemsArray.filter(i => i && String(i).trim()).length > 0;
+    
+    // Check for itinerary (use provided or existing)
+    const itineraryArray = parseJsonField(
+      req.body.itinerary,
+      tour.itinerary || []
+    );
+    const hasItinerary = itineraryArray.some(entry => 
+      entry && entry.description && String(entry.description).trim()
+    );
+    
+    const hasImage = !!req.file || !!tour.image;
+    
+    // Validate with all options (isNew: false for updates)
+    const validationError = validateTour(payload, {
+      hasImage,
+      hasItems,
+      hasItinerary,
+      isNew: false,
+    });
 
     if (validationError) {
       await transaction.rollback();
@@ -233,6 +329,16 @@ export const updateTour = async (req, res) => {
     if (req.file) {
       await deleteImageFromSupabase(tour.image);
       image = await uploadImageToSupabase(req.file);
+    }
+
+    // If the DB table lacks the durationType column, don't include it in the update payload
+    try {
+      const tableDesc = await sequelize.getQueryInterface().describeTable('tours');
+      if (tableDesc && !Object.prototype.hasOwnProperty.call(tableDesc, 'durationType')) {
+        delete payload.durationType;
+      }
+    } catch (err) {
+      // ignore and proceed
     }
 
     await tour.update(
