@@ -1,7 +1,5 @@
-import { TourInquiry, Tour, TourBooking, TourPayment } from "../../models/index.js";
-import { Op } from "sequelize";
+import { TourInquiry, Tour } from "../../models/index.js";
 import crypto from "crypto";
-import { generateSecureToken, getTokenExpiry } from "../../utils/tokenUtils.js";
 import {
   validateEmail,
   validatePhone,
@@ -281,10 +279,6 @@ export const getInquiryById = async (req, res) => {
           model: Tour,
           attributes: ["id", "packageName", "price", "discount", "overview"],
         },
-        {
-          model: TourBooking,
-          attributes: ["id", "bookingRef", "status", "totalAmount"],
-        },
       ],
     });
 
@@ -310,7 +304,7 @@ export const getInquiryById = async (req, res) => {
   }
 };
 
-// Accept inquiry and create booking
+// Accept inquiry and update status only
 export const acceptInquiry = async (req, res) => {
   try {
     const { id } = req.params;
@@ -338,62 +332,10 @@ export const acceptInquiry = async (req, res) => {
       status: "accepted",
     });
 
-    // Calculate pricing (tour.price is the full package price, not per guest)
-    const tour = inquiry.Tour;
-    const basePrice = Number(tour?.price || 0);
-    const discount = Number(tour?.discount || 0);
-    const totalAmount = discount > 0 
-      ? basePrice - (basePrice * discount / 100)
-      : basePrice;
-    const depositAmount = totalAmount * 0.5;
-    const remainingAmount = totalAmount - depositAmount;
-
-    // Generate booking reference
-    const bookingRef = await generateUniqueReferenceCode(TourBooking, "bookingRef", "TB");
-
-    // Generate secure tokens
-    const paymentToken = generateSecureToken();
-    const trackingToken = generateSecureToken();
-    const tokenExpiresAt = getTokenExpiry();
-
-    // Create booking with tokens
-    const booking = await TourBooking.create({
-      bookingRef,
-      inquiryId: inquiry.id,
-      totalAmount,
-      depositAmount,
-      remainingAmount,
-      status: "payment_pending",
-      tourStartDate: inquiry.startDate,
-      paymentToken,
-      trackingToken,
-      tokenExpiresAt,
-      acceptedAt: new Date(),
-    });
-
-    // Create initial payment record for deposit
-    await TourPayment.create({
-      bookingId: booking.id,
-      paymentType: "deposit",
-      amount: depositAmount,
-      paymentStatus: "pending",
-    });
-
     res.status(200).json({
       success: true,
-      message: "Inquiry accepted and booking created. You can now send the quote email to the guest.",
-      data: {
-        inquiry,
-        booking: {
-          id: booking.id,
-          bookingRef: booking.bookingRef,
-          status: booking.status,
-          totalAmount: booking.totalAmount,
-          depositAmount: booking.depositAmount,
-          remainingAmount: booking.remainingAmount,
-          tokenExpiresAt: booking.tokenExpiresAt,
-        },
-      },
+      message: "Inquiry accepted successfully.",
+      data: { inquiry },
     });
   } catch (error) {
     console.error("Error accepting inquiry:", error);
@@ -423,17 +365,6 @@ export const sendAcceptedInquiryEmail = async (req, res) => {
           model: Tour,
           attributes: ["id", "packageName", "price", "discount"],
         },
-        {
-          model: TourBooking,
-          attributes: [
-            "id",
-            "bookingRef",
-            "status",
-            "totalAmount",
-            "depositAmount",
-            "remainingAmount",
-          ],
-        },
       ],
     });
 
@@ -448,13 +379,6 @@ export const sendAcceptedInquiryEmail = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Only accepted inquiries can send quote emails",
-      });
-    }
-
-    if (!inquiry.TourBooking) {
-      return res.status(400).json({
-        success: false,
-        message: "Booking does not exist for this inquiry",
       });
     }
 
@@ -485,14 +409,12 @@ export const sendAcceptedInquiryEmail = async (req, res) => {
       });
     }
 
-    const basePricePerGuest = getBasePricePerGuest(inquiry.Tour);
     const basePrice = (() => {
       const bp = Number(inquiry.Tour?.price || 0);
       const disc = Number(inquiry.Tour?.discount || 0);
       return disc > 0 ? bp - (bp * disc / 100) : bp;
     })();
-    const selectedTotalPrice =
-      pricePerGuest !== undefined ? Number(pricePerGuest) : basePrice;
+    const selectedTotalPrice = pricePerGuest !== undefined ? Number(pricePerGuest) : basePrice;
 
     if (!Number.isFinite(selectedTotalPrice) || selectedTotalPrice <= 0) {
       return res.status(400).json({
@@ -506,46 +428,19 @@ export const sendAcceptedInquiryEmail = async (req, res) => {
     const depositAmount = Number((totalAmount * 0.5).toFixed(2));
     const remainingAmount = Number((totalAmount - depositAmount).toFixed(2));
 
-    if (numberOfAdults !== undefined || numberOfChildren !== undefined || tourStartDate) {
-      await inquiry.update({
-        numberOfAdults: adults,
-        numberOfChildren: children,
-        startDate: tourDate,
-      });
-    }
-
-    await inquiry.TourBooking.update({
+    const quoteBooking = {
+      bookingRef: `${inquiry.inquiryRef}-QUOTE`,
       totalAmount,
       depositAmount,
       remainingAmount,
-      tourStartDate: tourDate,
-    });
-
-    const depositPayment = await TourPayment.findOne({
-      where: {
-        bookingId: inquiry.TourBooking.id,
-        paymentType: "deposit",
-        paymentStatus: "pending",
-      },
-      order: [["createdAt", "DESC"]],
-    });
-
-    if (depositPayment) {
-      await depositPayment.update({ amount: depositAmount });
-    }
-
-    const tourBasePrice = (() => {
-      const bp = Number(inquiry.Tour?.price || 0);
-      const disc = Number(inquiry.Tour?.discount || 0);
-      return disc > 0 ? bp - (bp * disc / 100) : bp;
-    })();
+    };
 
     await sendAcceptedInquiryQuoteEmail(
       inquiry,
-      inquiry.TourBooking,
+      quoteBooking,
       {
         packageName: inquiry.Tour?.packageName,
-        tourBasePrice,
+        tourBasePrice: basePrice,
         totalAmount,
         adults,
         children,
@@ -559,8 +454,7 @@ export const sendAcceptedInquiryEmail = async (req, res) => {
       message: "Quote email sent successfully to guest",
       data: {
         inquiryId: inquiry.id,
-        bookingId: inquiry.TourBooking.id,
-        bookingRef: inquiry.TourBooking.bookingRef,
+        bookingRef: quoteBooking.bookingRef,
         totalGuests,
         tourPackagePrice: totalAmount,
         tourStartDate: tourDate,
