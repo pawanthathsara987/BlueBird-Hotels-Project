@@ -8,6 +8,7 @@ import tourInquiryRouter from './routes/tourInquiryRouter.js';
 import receptionRouter from './routes/receptionRouter.js';
 import chatBot from './controllers/chatController.js';
 import customerRouter from './routes/customerRoutes.js';
+import vehicleRouter from './routes/vehicleRouter.js';
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/manager', managerRouter);
 app.use('/api/reception', receptionRouter);
 app.use('/api/customers', customerRouter);
+app.use('/api/vehicles', vehicleRouter);
 app.post('/api/chat', chatBot);
 
 export default app;
