@@ -1,6 +1,6 @@
 // models/Vehicle.js
 import { Model, DataTypes } from 'sequelize';
-import sequelize from '../config/database.js';
+import sequelize from '../../config/database.js';
 
 class Vehicle extends Model {}
 
