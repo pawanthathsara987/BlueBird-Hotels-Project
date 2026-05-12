@@ -7,6 +7,7 @@ import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 import e from "express";
 import sequelize from "../config/database.js";
+import Role from "../models/User/Role.js";
 dotenv.config();
 
 const transporter = nodemailer.createTransport(
@@ -63,7 +64,7 @@ export async function registerUser(req, res) {
                 userName: data.userName,
                 email: data.email,
                 phoneNumber: data.phoneNumber,
-                role: data.role,
+                roleId: data.roleId,
             }
         );
 
@@ -115,7 +116,14 @@ export async function registerStaffMember(req, res) {
 export async function getAllUsers(req, res) {
     try {
 
-        const users = await StaffMember.findAll();
+        const users = await StaffMember.findAll({
+            include: [
+                {
+                    model: Role,
+                    attributes: ['roleId', 'roleName']
+                }
+            ]
+        });
         res.json(users);
 
     } catch (error) {
@@ -195,7 +203,18 @@ export async function searchUsers(req, res) {
                     { email: { [Op.like]: `%${query}%` } },
                     { phoneNumber: { [Op.like]: `%${query}%` } }
                 ]
-            }
+            },
+            include: [
+                {
+                    model: Role,
+                    where: {
+                        roleName: {
+                            [Op.like]: `%${query}%`
+                        }
+                    },
+                    required: false
+                }
+            ]
         });
 
         return res.json(users);
@@ -228,7 +247,13 @@ export async function verifyEmail(req, res) {
             where: {
                 email: email,
                 role: "receptionist"
-            }
+            },
+            include: [
+                {
+                    model: Role,
+                    where: { roleName: "receptionist" },
+                }
+            ]
         });
 
         if (staffMember) {
@@ -338,6 +363,34 @@ export async function verifyOtpAndResetPassword(req, res) {
     } catch (error) {
         res.status(500).json({
             message: "Failed to reset password",
+            error: error.message
+        });
+    }
+}
+
+export async function addUserRoles(req, res) {
+    try {
+        const { roleName } = req.body;
+        const newRole = await Role.create({ roleName: roleName });
+        res.json({
+            message: "Role added successfully",
+            role: newRole
+        });
+    }catch (error) {
+        res.status(500).json({
+            message: "Failed to add role",
+            error: error.message
+        });
+    }
+}
+
+export async function getAllRoles(req, res) {
+    try {
+        const roles = await Role.findAll();
+        res.json(roles);
+    }catch (error) {
+        res.status(500).json({
+            message: "Failed to fetch roles",
             error: error.message
         });
     }
