@@ -42,6 +42,18 @@ export function initModels() {
         foreignKey: "room_id",
     });
 
+    // Customer -> Reservations
+    Customer.hasMany(Reservation, {
+        foreignKey: "guest_id",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+    });
+    
+    Reservation.belongsTo(Customer, {
+        foreignKey: "guest_id",
+    });
+
+
     // Package -> Room
     RoomPackage.hasMany(Room, {
         foreignKey: "packageId",

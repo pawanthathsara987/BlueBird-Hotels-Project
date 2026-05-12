@@ -27,6 +27,7 @@ const BookingRoom = () => {
     const [reviewPackageList, setRevirePackageList] = useState([]);
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [personalRequest, setPersonalRequest] = useState("");
 
 
     useEffect(() => {
@@ -42,15 +43,13 @@ const BookingRoom = () => {
         setCheckInDate(checkIn);
         setCheckOutDate(checkOut);
 
-        // TEMP set rooms first
         setRooms(data.rooms || []);
 
-        // 🔥 THEN fetch packages and re-sync
         getAvailablePackagesByDate(checkIn, checkOut).then(() => {
             setRooms((prevRooms) =>
                 prevRooms.map((room) => ({
                     ...room,
-                    showPackagePicker: false // reset UI state
+                    showPackagePicker: false
                 }))
             );
         });
@@ -141,20 +140,32 @@ const BookingRoom = () => {
 
     const handleRangeChange = (dates) => {
         const [start, end] = dates;
+
         const normalizedStart = normalizeDate(start);
         const normalizedEnd = normalizeDate(end);
+
+        if (normalizedStart && normalizedEnd && normalizedStart.toDateString == normalizedEnd.toDateString) {
+            normalizedEnd.setDate(
+                normalizedEnd.getDate() + 1
+            )
+        }
 
         setCheckInDate(normalizedStart);
         setCheckOutDate(normalizedEnd);
         setPackageOptions([]);
-        
-        // save booking details in localstorage to retrieve data again
+
+        // Save booking details in localStorage
         if (normalizedStart && normalizedEnd) {
-            localStorage.setItem("bookingDetails", JSON.stringify({
-                checkInDate: normalizedStart.toISOString(),
-                checkOutDate: normalizedEnd.toISOString(),
-                rooms: rooms
-            }));
+            localStorage.setItem(
+                "bookingDetails",
+                JSON.stringify({
+                    checkInDate:
+                        normalizedStart.toISOString(),
+                    checkOutDate:
+                        normalizedEnd.toISOString(),
+                    rooms: rooms,
+                })
+            );
         }
     };
 
@@ -356,6 +367,10 @@ const BookingRoom = () => {
                 0
             ),
         };
+
+        if (personalRequest && personalRequest.trim() != "") {
+            localStorage.setItem("personalRequest", personalRequest);
+        }
 
         navigate("/booking-summary", {
             state: {
@@ -722,6 +737,24 @@ const BookingRoom = () => {
                                 </div>
                             </div>
                         }
+
+                        <div className="mt-5 w-full">
+                            <label
+                                htmlFor="personalRequest"
+                                className="text-lg font-bold md:text-xl"
+                            >
+                                Personal Request
+                            </label>
+
+                            <textarea
+                                id="personalRequest"
+                                rows={5}
+                                value={personalRequest}
+                                onChange={(e) => setPersonalRequest(e.target.value)}
+                                placeholder="Enter any special requests. We’ll do our best to accommodate them."
+                                className="mt-2 w-full rounded-md border border-slate-300 p-4 outline-none transition focus:border-cyan-500"
+                            ></textarea>
+                        </div>
                     </div>
 
                     <div className="border-t border-stone-200 p-4 sm:p-5">
