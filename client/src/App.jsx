@@ -4,7 +4,7 @@ import ReceptionistLogin from "./pages/admin/ReceptionistLogin";
 import CustomerRegister from "./pages/CustomerRegister";
 import AdminPage from "./pages/admin/AdminPage";
 import PasswordResetPage from "./pages/reception/PasswordResetPage";
-import CustomerPasswordResetPage from "./pages/customer/PasswordResetPage";
+import CustomerPasswordResetPage from "./pages/client/PasswordResetPage";
 import { Toaster } from "react-hot-toast";
 import BookingRoom from "./pages/client/booking/roomBooking";
 import ManagerPage from "./pages/manager/managerPage";
