@@ -136,7 +136,7 @@ ${Number(tour.price).toFixed(2)}
             }}
             className="w-full bg-cyan-700 hover:bg-cyan-800 active:bg-cyan-800 text-white px-4 py-2.5 rounded-xl text-sm font-semibold border border-cyan-700 transition-colors"
           >
-            Book Now
+            View Details
           </button>
         </div>
       </div>
