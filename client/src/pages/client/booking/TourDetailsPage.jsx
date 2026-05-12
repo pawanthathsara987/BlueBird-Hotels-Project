@@ -26,11 +26,6 @@ export default function TourDetailsPage() {
   const [activeTab, setActiveTab] = useState(0);
   const [toastLocal, setToastLocal] = useState(null);
   const [activeImg, setActiveImg] = useState(0);
-  const [showBookingModal, setShowBookingModal] = useState(false);
-  const [bookingRef, setBookingRef] = useState('');
-  const [foundBooking, setFoundBooking] = useState(null);
-  const [bookingError, setBookingError] = useState('');
-  const [searchingBooking, setSearchingBooking] = useState(false);
   // Availability modal state
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [availDate, setAvailDate] = useState('');
@@ -70,42 +65,6 @@ export default function TourDetailsPage() {
     const query = tour?.id ? `?tourId=${tour.id}` : '';
     navigate(`/booking/tour-inquiry${query}`, { state: { tour } });
   };
-
-    const handleSearchBooking = async () => {
-      if (!bookingRef.trim()) {
-        setBookingError('Please enter your booking reference');
-        return;
-      }
-    
-      setSearchingBooking(true);
-      setBookingError('');
-    
-      try {
-        const res = await axios.get(`${backendBaseUrl}/tour-booking/ref/${bookingRef.trim()}`);
-        if (res.data.success && res.data.data) {
-          setFoundBooking(res.data.data);
-        } else {
-          setBookingError(res.data.message || 'Booking not found');
-          setFoundBooking(null);
-        }
-      } catch (err) {
-        setBookingError(err.message || 'Failed to search booking');
-        setFoundBooking(null);
-      } finally {
-        setSearchingBooking(false);
-      }
-    };
-
-    const handleProceedToPayment = () => {
-      if (foundBooking) {
-        navigate('/booking/tour-payment', {
-          state: {
-            bookingId: foundBooking.id,
-            bookingData: foundBooking
-          }
-        });
-      }
-    };
 
   const tourPrice = Number(tour?.price || 0);
   const finalPrice = tour ? (tour?.discount ? tourPrice - (tourPrice * Number(tour.discount || 0) / 100) : tourPrice) : 0;
@@ -489,9 +448,9 @@ export default function TourDetailsPage() {
               {/* Trust */}
               <div className="space-y-2.5">
                 {[
-                  { icon: <Shield size={12} />, text: 'Payment collected after confirmation' },
+                  { icon: <Shield size={12} />, text: 'Inquiry reviewed before confirmation' },
                   { icon: <Clock size={12} />,  text: 'Free cancellation up to 24 hours before' },
-                  { icon: <Check size={12} />,  text: 'Instant booking confirmation' },
+                  { icon: <Check size={12} />,  text: 'Prompt inquiry response from our team' },
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-2 text-xs text-gray-400">
                     <span className="text-blue-500 mt-0.5 shrink-0">{item.icon}</span>
@@ -500,7 +459,7 @@ export default function TourDetailsPage() {
                 ))}
               </div>
 
-                {/* Book Now / Complete Payment */}
+                {/* Inquiry flow handled above */}
                 <div className="space-y-2.5 border-t border-gray-200 pt-4">
                 
                 </div>
@@ -511,84 +470,6 @@ export default function TourDetailsPage() {
       </div>
 
       <Footer />
-      {/* ════════ BOOKING MODAL ════════ */}
-      {showBookingModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
-            {/* Header */}
-            <div className="bg-blue-700 text-white px-6 py-4 flex justify-between items-center">
-              <h3 className="text-lg font-bold">Your Booking</h3>
-              <button onClick={() => { setShowBookingModal(false); setFoundBooking(null); setBookingRef(''); setBookingError(''); }} className="text-white/70 hover:text-white">
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="px-6 py-6">
-              {!foundBooking ? (
-                <div className="space-y-4">
-                  <p className="text-sm text-gray-600">
-                    Enter your booking reference to find your booking and complete payment.
-                  </p>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-2">Booking Reference</label>
-                    <input
-                      type="text"
-                      placeholder="e.g., TB-2026-0001"
-                      value={bookingRef}
-                      onChange={(e) => { setBookingRef(e.target.value); setBookingError(''); }}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSearchBooking()}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    />
-                  </div>
-                  {bookingError && (
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex gap-2">
-                      <AlertCircle size={16} className="text-red-600 shrink-0 mt-0.5" />
-                      <span className="text-xs text-red-700">{bookingError}</span>
-                    </div>
-                  )}
-                  <button
-                    onClick={handleSearchBooking}
-                    disabled={searchingBooking}
-                    className="w-full bg-blue-700 hover:bg-blue-600 disabled:bg-gray-400 text-white py-2.5 rounded-lg font-bold text-sm transition"
-                  >
-                    {searchingBooking ? 'Searching...' : 'Search Booking'}
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p className="text-xs text-blue-700 font-bold mb-1">Booking Found</p>
-                    <p className="text-sm font-bold text-blue-900">{foundBooking.bookingRef}</p>
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Total Amount:</span>
-                      <span className="font-bold">${Number(foundBooking.totalAmount || 0).toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Status:</span>
-                      <span className="font-bold text-blue-700">{foundBooking.status}</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleProceedToPayment}
-                    className="w-full bg-blue-700 hover:bg-blue-600 text-white py-2.5 rounded-lg font-bold text-sm transition"
-                  >
-                    Proceed to Payment
-                  </button>
-                  <button
-                    onClick={() => { setFoundBooking(null); setBookingRef(''); setBookingError(''); }}
-                    className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 py-2.5 rounded-lg font-bold text-sm transition"
-                  >
-                    Search Another
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
       {/* ════════ AVAILABILITY MODAL ════════ */}
       {showAvailabilityModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">

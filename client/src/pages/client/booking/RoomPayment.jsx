@@ -150,6 +150,12 @@ const RoomPayment = () => {
 
         setSuccessMessage('✅ Payment successful! Your room booking is confirmed.');
 
+        try {
+          
+        } catch (error) {
+          
+        }
+
         // Redirect to booking confirmation after 2 seconds
         setTimeout(() => {
           localStorage.removeItem("bookingDetails");

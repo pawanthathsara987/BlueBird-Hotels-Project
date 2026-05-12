@@ -105,7 +105,7 @@ const buildTourData = (body, existingTour = null) => ({
   packageName: (body.packageName ?? existingTour?.packageName ?? "").trim(),
   overview: (body.overview ?? existingTour?.overview ?? "").trim() || null,
   duration: parseNumberField(body.duration, existingTour?.duration ?? null),
-    durationType: body.durationType || existingTour?.durationType || 'days',
+  durationType: body.durationType || existingTour?.durationType || 'days',
   location: (body.location ?? existingTour?.location ?? "").trim() || null,
   price: parseNumberField(body.price, existingTour?.price ?? null),
   discount: parseNumberField(body.discount, existingTour?.discount ?? 0) ?? 0,
