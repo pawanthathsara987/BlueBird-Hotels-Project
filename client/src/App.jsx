@@ -4,7 +4,7 @@ import ReceptionistLogin from "./pages/admin/ReceptionistLogin";
 import CustomerRegister from "./pages/CustomerRegister";
 import AdminPage from "./pages/admin/AdminPage";
 import PasswordResetPage from "./pages/reception/PasswordResetPage";
-import CustomerPasswordResetPage from "./pages/customer/PasswordResetPage";
+import CustomerPasswordResetPage from "./pages/client/PasswordResetPage";
 import { Toaster } from "react-hot-toast";
 import BookingRoom from "./pages/client/booking/roomBooking";
 import ManagerPage from "./pages/manager/managerPage";
@@ -17,6 +17,7 @@ import CustomerLoginPage from "./pages/CustomerLoginPage";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import BookingSummary from "./pages/client/booking/BookingSummary";
 import BookingConfirmation from "./pages/client/booking/BookingConfirmation";
+import ContactPage from "./pages/Contact_us";
 
 
 
@@ -43,6 +44,7 @@ export default function App() {
                         <Route path="/manager/*" element={< ManagerPage />} />
                         <Route path="/reception/*" element={< ReceptionPage />} />
                         <Route path="/*" element={<HomePage />} />
+                        <Route path="/contact" element={<ContactPage />} />
                     </Routes>
                 </div>
             </BrowserRouter>

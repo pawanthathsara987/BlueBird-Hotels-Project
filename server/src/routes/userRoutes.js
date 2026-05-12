@@ -1,10 +1,12 @@
 import express from "express";
-import {registerUser, getAllUsers, updateUser, deleteUser, searchUsers, verifyEmail, registerStaffMember, sendOtp, verifyOtpAndResetPassword, userLogin} from "../controllers/userController.js";
+import {registerUser, getAllUsers, updateUser, deleteUser, searchUsers, verifyEmail, registerStaffMember, sendOtp, verifyOtpAndResetPassword, userLogin, addUserRoles, getAllRoles} from "../controllers/userController.js";
 import {requireAuth, requireRole} from "../middleware/authMiddleware.js";
 
 const userRouter = express.Router();
 
 userRouter.post("/create", registerUser);
+userRouter.post("/add-role", addUserRoles);
+userRouter.get("/getAll-roles", getAllRoles);
 userRouter.get("/search/:query", searchUsers);
 userRouter.get("/getAll", getAllUsers);
 userRouter.put("/update/:id", updateUser);

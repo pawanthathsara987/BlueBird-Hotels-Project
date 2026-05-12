@@ -12,11 +12,11 @@ Customer.init(
         },
         firstName: {
             type: DataTypes.STRING(50),
-            allowNull: false
+            allowNull: true
         },
         lastName: {
             type: DataTypes.STRING(50),
-            allowNull: false
+            allowNull: true
         },
         email: {
             type: DataTypes.STRING(255),
@@ -30,6 +30,13 @@ Customer.init(
             type: DataTypes.STRING(255),
             allowNull: true
         },
+
+        googleAuth: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false
+        }, 
+        
         phoneNumber: {
             type: DataTypes.STRING(20),
             allowNull: true

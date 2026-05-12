@@ -1,10 +1,11 @@
-import { Link, useNavigate,useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { FaUserCircle } from "react-icons/fa";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import axios from "axios";
+import Select from "react-select";
 
-export default function UpdateStaffMember(){
+export default function UpdateStaffMember() {
 
     const location = useLocation();
 
@@ -12,13 +13,23 @@ export default function UpdateStaffMember(){
     const [userName, setUserName] = useState(location.state.member.userName);
     const [name, setName] = useState(location.state.member.name);
     const [email, setEmail] = useState(location.state.member.email);
-    const [role, setRole] = useState(location.state.member.role);
+    const [role, setRole] = useState(location.state.member.roleId);
+    const [roles, setRoles] = useState([]);
     const [phoneNumber, setPhoneNumber] = useState(location.state.member.phoneNumber);
     const [loading, setLoading] = useState(false);
 
     const navigate = useNavigate();
 
-    async function updateMember(){
+    useEffect(() => {
+        getRoles();
+    }, []);
+
+    async function getRoles() {
+        const response = await axios.get(import.meta.env.VITE_BACKEND_URL + "/users/getAll-roles");
+        setRoles(response.data);
+    }
+
+    async function updateMember() {
         if (loading) {
             return;
         }
@@ -31,18 +42,18 @@ export default function UpdateStaffMember(){
         try {
             setLoading(true);
 
-            await axios.put(import.meta.env.VITE_BACKEND_URL + "/users/update/"+ userId, {
+            await axios.put(import.meta.env.VITE_BACKEND_URL + "/users/update/" + userId, {
                 userName: userName,
                 name: name,
                 email: email,
-                role: role,
+                roleId: role,
                 phoneNumber: phoneNumber
             });
 
             toast.success("Staff member updated successfully");
             navigate("/admin/users");
 
-        }catch (err) {
+        } catch (err) {
             toast.error("Failed to update staff member");
             console.error(err);
         } finally {
@@ -62,9 +73,9 @@ export default function UpdateStaffMember(){
                 <h1 className="text-2xl font-bold text-gray-800">Edit Staff Member</h1>
                 <p className="text-gray-500 mt-1">Fill in the details to update the staff member's information</p>
             </div>
-        
+
             <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
-                
+
                 <div className="bg-[#2c4a6b] p-6 flex items-center gap-4">
                     <div className="bg-[#4a6a8a] rounded-full p-3">
                         <FaUserCircle className="text-3xl text-white" />
@@ -124,17 +135,27 @@ export default function UpdateStaffMember(){
                         <label className="block text-sm font-semibold text-gray-600 mb-2 uppercase">
                             Role
                         </label>
-                        <select
-                            name="role"
-                            value={role}
-                            onChange={(e) => setRole(e.target.value)}
-                            disabled={loading}
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
-                        >
-                            <option value="">Select a role...</option>
-                            <option value="staff_member">Staff Member</option>
-                            <option value="receptionist">Receptionist</option>
-                        </select>
+                        <Select
+                            options={roles.map(roleItem => ({
+                                value: roleItem.roleId,
+                                label: roleItem.roleName
+                            }))}
+
+                            value={roles
+                                .map(roleItem => ({
+                                    value: roleItem.roleId,
+                                    label: roleItem.roleName
+                                }))
+                                .find(option => option.value === role)
+                            }
+
+                            onChange={(selected) => setRole(selected.value)}
+
+                            menuPortalTarget={document.body}
+                            menuPosition="fixed"
+                            maxMenuHeight={200}
+                            isDisabled={loading}
+                        />
                     </div>
                     <div>
                         <label className="block text-sm font-semibold text-gray-600 mb-2 uppercase">

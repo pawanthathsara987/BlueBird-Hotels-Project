@@ -7,10 +7,12 @@ export default function Dashboard() {
     const [todayCheckIns, setTodayCheckIns] = useState(0);
     const [todayCheckOuts, setTodayCheckOuts] = useState(0);
     const [occupiedRooms, setOccupiedRooms] = useState(0);
+    const [recentCheckIns, setRecentCheckIns] = useState([]);
+    const [recentBookings, setRecentBookings] = useState([]);
 
     const fetchAvailableRooms = async () => {
         try {
-            const response = await axios.get("http://localhost:3002/api/reception/available-rooms");
+            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/available-rooms`);
             const result = response.data;
             setAvailableRooms(result?.data?.availableRoom || result?.data?.count || 0);
         } catch (error) {
@@ -20,7 +22,7 @@ export default function Dashboard() {
 
     const fetchTodayCheckIns = async () => {
         try {
-            const response = await axios.get("http://localhost:3002/api/reception/today-checkins");
+            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/today-checkins`);
             const result = response.data;
             setTodayCheckIns(result?.data?.checkIns || result?.data?.count || 0);
         } catch (error) {
@@ -30,7 +32,7 @@ export default function Dashboard() {
 
     const fetchTodayCheckOuts = async () => {
         try {
-            const response = await axios.get("http://localhost:3002/api/reception/today-checkouts");
+            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/today-checkouts`);
             const result = response.data;
             setTodayCheckOuts(result?.data?.checkOuts || result?.data?.count || 0);
         } catch (error) {
@@ -40,11 +42,31 @@ export default function Dashboard() {
 
     const fetchOccupiedRooms = async () => {
         try {
-            const response = await axios.get("http://localhost:3002/api/reception/occupied-rooms");
+            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/occupied-rooms`);
             const result = response.data;
             setOccupiedRooms(result?.data?.occupiedRooms || result?.data?.count || 0);
         } catch (error) {
             console.error("Error fetching occupied rooms:", error);
+        }
+    };
+
+    const fetchRecentCheckIns = async () => {
+        try {
+            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/recent-checkins`);
+            const result = response.data;
+            setRecentCheckIns(result?.data || []);
+        } catch (error) {
+            console.error("Error fetching recent check-ins:", error);
+        }
+    };
+
+    const fetchRecentBookings = async () => {
+        try {
+            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/recent-bookings`);
+            const result = response.data;
+            setRecentBookings(result?.data || []);
+        } catch (error) {
+            console.error("Error fetching recent bookings:", error);
         }
     };
 
@@ -53,6 +75,8 @@ export default function Dashboard() {
         fetchTodayCheckIns();
         fetchTodayCheckOuts();
         fetchOccupiedRooms();
+        fetchRecentCheckIns();
+        fetchRecentBookings();
     }, []);
 
     const stats = [
@@ -112,30 +136,60 @@ export default function Dashboard() {
             {/* Recent Activity */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                 {/* Recent Check-Ins */}
-                <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
-                    <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-4">Recent Check-Ins</h2>
-                    <div className="space-y-3 md:space-y-4">
-                        <div className="flex items-center justify-between pb-3 md:pb-4 border-b">
-                            <div className="min-w-0">
-                                <p className="font-semibold text-gray-800 text-sm md:text-base">John Doe</p>
-                                <p className="text-xs md:text-sm text-gray-600">Room 101</p>
+                <div className="bg-white p-5 rounded-2xl shadow-md">
+                    <h2 className="text-lg font-bold text-gray-800 mb-4">
+                        Recent Check-Ins
+                    </h2>
+
+                    <div className="space-y-4">
+                        {recentCheckIns.map((item) => (
+                            <div
+                                key={item.reservation_id}
+                                className="border rounded-xl p-4 hover:shadow-md transition"
+                            >
+                                {/* HEADER */}
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h3 className="font-semibold text-gray-800 text-base">
+                                            {item.firstName} {item.lastName}
+                                        </h3>
+                                    </div>
+
+                                    <span className="bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full">
+                                        Checked In
+                                    </span>
+                                </div>
+
+                                {/* ROOMS */}
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    {item.rooms?.split(",").map((room, i) => (
+                                        <span
+                                            key={i}
+                                            className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-md"
+                                        >
+                                            Room {room}
+                                        </span>
+                                    ))}
+                                </div>
+
+                                {/* DETAILS */}
+                                <div className="mt-3 grid grid-cols-2 text-xs text-gray-600">
+                                    <p>
+                                        Check-In:{" "}
+                                        <span className="font-medium text-gray-800">
+                                            {item.checkIn}
+                                        </span>
+                                    </p>
+
+                                    <p>
+                                        Rooms:{" "}
+                                        <span className="font-medium text-gray-800">
+                                            {item.totalRooms}
+                                        </span>
+                                    </p>
+                                </div>
                             </div>
-                            <span className="text-xs bg-green-100 text-green-800 px-2 md:px-3 py-1 rounded-full ml-2 flex-shrink-0">10:30 AM</span>
-                        </div>
-                        <div className="flex items-center justify-between pb-3 md:pb-4 border-b">
-                            <div className="min-w-0">
-                                <p className="font-semibold text-gray-800 text-sm md:text-base">Jane Smith</p>
-                                <p className="text-xs md:text-sm text-gray-600">Room 205</p>
-                            </div>
-                            <span className="text-xs bg-green-100 text-green-800 px-2 md:px-3 py-1 rounded-full ml-2 flex-shrink-0">11:15 AM</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="min-w-0">
-                                <p className="font-semibold text-gray-800 text-sm md:text-base">Michael Johnson</p>
-                                <p className="text-xs md:text-sm text-gray-600">Room 312</p>
-                            </div>
-                            <span className="text-xs bg-green-100 text-green-800 px-2 md:px-3 py-1 rounded-full ml-2 flex-shrink-0">12:45 PM</span>
-                        </div>
+                        ))}
                     </div>
                 </div>
 
@@ -143,27 +197,65 @@ export default function Dashboard() {
                 <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
                     <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-4">Recent Bookings</h2>
                     <div className="space-y-3 md:space-y-4">
-                        <div className="flex items-center justify-between pb-3 md:pb-4 border-b">
-                            <div className="min-w-0">
-                                <p className="font-semibold text-gray-800 text-sm md:text-base">Emily Wilson</p>
-                                <p className="text-xs md:text-sm text-gray-600">Check-in: Apr 25</p>
-                            </div>
-                            <span className="text-xs bg-blue-100 text-blue-800 px-2 md:px-3 py-1 rounded-full ml-2 flex-shrink-0">Confirmed</span>
-                        </div>
-                        <div className="flex items-center justify-between pb-3 md:pb-4 border-b">
-                            <div className="min-w-0">
-                                <p className="font-semibold text-gray-800 text-sm md:text-base">David Brown</p>
-                                <p className="text-xs md:text-sm text-gray-600">Check-in: Apr 26</p>
-                            </div>
-                            <span className="text-xs bg-yellow-100 text-yellow-800 px-2 md:px-3 py-1 rounded-full ml-2 flex-shrink-0">Pending</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="min-w-0">
-                                <p className="font-semibold text-gray-800 text-sm md:text-base">Sarah Davis</p>
-                                <p className="text-xs md:text-sm text-gray-600">Check-in: Apr 27</p>
-                            </div>
-                            <span className="text-xs bg-blue-100 text-blue-800 px-2 md:px-3 py-1 rounded-full ml-2 flex-shrink-0">Confirmed</span>
-                        </div>
+                        {recentBookings.length > 0 ? (
+                            recentBookings.map((booking, index) => (
+                                <div
+                                    key={booking.reservation_id}
+                                    className="border rounded-xl p-4 hover:shadow-md transition"
+                                >
+                                    {/* HEADER */}
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="font-semibold text-gray-800 text-sm md:text-base">
+                                                {booking.firstName} {booking.lastName}
+                                            </p>
+
+                                            <p className="text-xs md:text-sm text-gray-600">
+                                                Check-in: {new Date(booking.checkIn).toLocaleDateString()}
+                                            </p>
+                                        </div>
+
+                                        <span className={`text-xs px-3 py-1 rounded-full ${
+                                            booking.roomStatuses?.includes('checked_in') ? 'bg-green-100 text-green-800' :
+                                            booking.roomStatuses?.includes('reserved') ? 'bg-blue-100 text-blue-800' :
+                                            booking.roomStatuses?.includes('checked_out') ? 'bg-gray-100 text-gray-800' :
+                                            'bg-yellow-100 text-yellow-800'
+                                        }`}>
+                                            {
+                                                booking.roomStatuses?.includes('checked_in') ? 'Checked In' :
+                                                booking.roomStatuses?.includes('reserved') ? 'Reserved' :
+                                                booking.roomStatuses?.includes('checked_out') ? 'Checked Out' :
+                                                'Pending'
+                                            }
+                                        </span>
+                                    </div>
+
+                                    {/* ROOMS */}
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        {booking.rooms?.split(",").map((room, i) => (
+                                            <span
+                                                key={i}
+                                                className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-md"
+                                            >
+                                                Room {room}
+                                            </span>
+                                        ))}
+                                    </div>
+
+                                    {/* DETAILS */}
+                                    <div className="mt-3 text-xs text-gray-600">
+                                        <p>
+                                            Total Rooms:{" "}
+                                            <span className="font-medium text-gray-800">
+                                                {booking.totalRooms}
+                                            </span>
+                                        </p>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-gray-600 text-sm">No recent bookings</p>
+                        )}
                     </div>
                 </div>
             </div>
