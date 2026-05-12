@@ -14,6 +14,7 @@ import TourBooking from "./tour_package/TourBooking.js";
 import TourPayment from "./tour_package/TourPayment.js";
 import PackageImage from "./room_package/packageImageModel.js";
 import TourRefund from "./tour_package/TourRefund.js";
+import Role from "./User/Role.js";
 
 
 export function initModels() {
@@ -142,8 +143,18 @@ export function initModels() {
         foreignKey: "bookingId",
     });
 
-    return { Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourBooking, TourPayment, PackageImage, TourRefund };
+    // Role -> StaffMember
+    Role.hasMany(StaffMember, {
+        foreignKey: "roleId",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+    });
+    StaffMember.belongsTo(Role, {
+        foreignKey: "roleId",
+    });
+
+    return { Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourBooking, TourPayment, PackageImage, TourRefund, Role };
 }
-export { Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourBooking, TourPayment, PackageImage, TourRefund };
+export { Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourBooking, TourPayment, PackageImage, TourRefund, Role };
 
 
