@@ -202,35 +202,50 @@ export async function verifyOTPAndResetPassword(req, res) {
 
 }
 
-export async function googleLogin(req, res){
+export async function googleLogin(req, res) {
 
     const accessToken = req.body.token;
 
-    if(!accessToken){
+    if (!accessToken) {
         return res.status(400).json({
             message: "Access token is required"
         });
     }
 
-    try{
+    try {
 
-        const response = await axios.get("https://www.googleapis.com/oauth2/v3/userinfo", {
-            headers: {
-                Authorization: `Bearer ${accessToken}`
+        const response = await axios.get(
+            "https://www.googleapis.com/oauth2/v3/userinfo",
+            {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`
+                }
+            }
+        );
+
+        if (!response.data.email) {
+            console.log("NO EMAIL");
+
+            return res.status(400).json({
+                message: "No email returned from Google"
+            });
+        }
+
+        const user = await Customer.findOne({
+            where: {
+                email: response.data.email
             }
         });
 
-        console.log(response.data);
-
-        const user = await Customer.findOne({ where: { email: response.data.email } });
-
         if (user && !user.googleAuth) {
+
             return res.status(400).json({
                 message: "Please login using email & password"
             });
         }
 
-        if(user == null){
+        if (user == null) {
+
             const newCustomer = await Customer.create({
                 firstName: response.data.given_name,
                 lastName: response.data.family_name,
@@ -238,39 +253,31 @@ export async function googleLogin(req, res){
                 googleAuth: true
             });
 
-            const userResponse = {
-                id: newCustomer.customerId,
-                firstName: newCustomer.firstName,
-                lastName: newCustomer.lastName,
-                email: newCustomer.email
-            };
-            const token = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
-
-            res.status(200).json({
-                message: "Customer logged in successfully",
-                token: token,
-                user: userResponse
-            });
-        } else {
-            const userResponse = {
-                id: user.customerId,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                email: user.email
-            };
-            const token = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
-
-            res.status(200).json({
-                message: "Customer logged in successfully",
-                token: token,
-                user: userResponse
+            return res.json({
+                message: "Created"
             });
         }
+        
+        const userResponse = {
+            id: user.customerId,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            phoneNumber: user.phoneNumber,
+            country: user.country
+        };
+
+        const token = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+
+        return res.status(200).json({
+            message: "Customer logged in successfully",
+            token: token,
+            user: userResponse
+        });
 
     } catch (error) {
-        console.error("Error during Google login:", error);
-        res.status(401).json({
-            message: "Google authentication failed"
+        return res.status(500).json({
+            message: "Google auth failed"
         });
     }
 }

@@ -27,10 +27,13 @@ StaffMember.init(
                 isEmail: true
             }
         },
-        role: {
-            type: DataTypes.ENUM('staff_member', 'receptionist'),
+        roleId: {
+            type: DataTypes.INTEGER,
             allowNull: false,
-            defaultValue: 'receptionist'
+            references: {
+                model: "roles",
+                key: "roleId"
+            }
         },
         phoneNumber: {
             type: DataTypes.STRING(20),
