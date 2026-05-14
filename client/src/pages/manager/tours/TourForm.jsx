@@ -67,7 +67,7 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
           }
 
           if (entry && typeof entry === "object") {
-            return (entry.description || entry.activity || entry.title || entry.name || "").toString().trim();
+            return (entry.description || "").toString().trim();
           }
 
           return "";
@@ -87,7 +87,7 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
         if (entry && typeof entry === "object") {
           return {
             day: idx + 1,
-            description: (entry.description || entry.activity || entry.title || entry.name || "").toString().trim(),
+            description: (entry.description || "").toString().trim(),
           };
         }
 
