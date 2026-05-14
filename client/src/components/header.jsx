@@ -34,19 +34,21 @@ export default function Header() {
           <Link to="/contact" className="hover:text-blue-600">CONTACT</Link>
         </div>
 
-        <div className="flex lg:hidden justify-end items-center col-start-3">
-           <img src={logo} alt="logo" className="h-12 object-contain" />
-        </div>
-
-        <div className="hidden lg:flex justify-end font-semibold">
-          <button
-            onClick={() => {
-              navigate("/booking")
-            }}
-            className="inline-flex items-center justify-center rounded-2xl bg-linear-to-r from-sky-600 via-blue-600 to-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
-            Book Now
-          </button>
+        <div className="flex items-center gap-4 justify-end col-start-3">
+          <div className=" lg:flex justify-end font-semibold">
+            <button
+              onClick={() => {
+                navigate("/booking")
+              }}
+              className="inline-flex items-center justify-center rounded-2xl bg-linear-to-r from-sky-600 via-blue-600 to-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              Book Now
+            </button>
+          </div>
+          
+          <div className="flex lg:hidden items-center col-start-3">
+            <img src={logo} alt="logo" className="h-12 object-contain" />
+          </div>
         </div>
       </div>
 

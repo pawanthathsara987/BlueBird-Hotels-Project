@@ -1,710 +1,295 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { QueryTypes } from 'sequelize';
-import sequelize from '../config/database.js';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { QueryTypes } from "sequelize";
+import sequelize from "../config/database.js";
 
 import {
-    Amenities,
-    Room,
-    RoomAmenities,
-    RoomPackage,
-} from '../models/index.js';
+  Room,
+  RoomPackage,
+  Tour, // ✅ FIX: you MUST import Tour model
+} from "../models/index.js";
+
+/* ======================================================
+   MODEL SETTINGS
+====================================================== */
 
 const MODEL_FALLBACK_CHAIN = [
-    'gemini-2.5-flash',
-    'gemini-1.5-flash',
-    'gemini-1.5-pro',
+  "gemini-2.5-flash",
+  "gemini-1.5-flash",
+  "gemini-1.5-pro",
 ];
 
 const MAX_RETRIES_PER_MODEL = 2;
-
 const BASE_BACKOFF_MS = 600;
 
-const sleep = (ms) =>
-    new Promise((resolve) =>
-        setTimeout(resolve, ms)
-    );
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const normalize = (value = '') =>
-    String(value)
-        .trim()
-        .toLowerCase();
+const normalize = (value = "") => String(value).trim().toLowerCase();
 
-const isRetryableGeminiError = (
-    error
-) => {
-    const status = Number(
-        error?.status
-    );
-
-    return [429, 500, 503, 504].includes(
-        status
-    );
+const isRetryableGeminiError = (error) => {
+  const status = Number(error?.status);
+  return [429, 500, 503, 504].includes(status);
 };
 
 /* ======================================================
-   PACKAGE QUESTION DETECTION
+   ROOM DETECTION
 ====================================================== */
 
-const isPackageRelatedQuestion = (
-    message
-) => {
-    const text = normalize(message);
+const isRoomQuestion = (message) => {
+  const text = normalize(message);
 
-    const keywords = [
-        'package',
-        'room',
-        'price',
-        'cost',
-        'amenity',
-        'facility',
-        'available',
-        'availability',
-        'adult',
-        'kid',
-        'family',
-        'suite',
-        'cheap',
-        'budget',
-        'luxury',
-        'today',
-        'tomorrow',
-    ];
+  const keywords = [
+    "room",
+    "suite",
+    "hotel room",
+    "stay",
+    "night",
+    "check in",
+    "check out",
+    "family room",
+    "deluxe",
+    "amenity",
+    "facility",
+    "bed",
+    "price room",
+  ];
 
-    return keywords.some((keyword) =>
-        text.includes(keyword)
-    );
-};
-
-const hasAvailabilityIntent = (
-    message
-) => {
-    const text = normalize(message);
-
-    return /(availability|available|vacant|free room|rooms available|today|tomorrow|book on|for date)/.test(
-        text
-    );
+  return keywords.some((k) => text.includes(k));
 };
 
 /* ======================================================
-   DATE HELPERS
+   TOUR DETECTION (FIXED)
 ====================================================== */
 
-const getTodayIso = () => {
-    return new Date()
-        .toISOString()
-        .slice(0, 10);
-};
+const isTourQuestion = (message) => {
+  const text = normalize(message);
 
-const addDaysIso = (
-    isoDate,
-    days = 1
-) => {
-    const date = new Date(
-        `${isoDate}T00:00:00Z`
-    );
+  const keywords = [
+    "tour",
+    "tour package",
+    "travel",
+    "trip",
+    "safari",
+    "city tour",
+    "beach tour",
+    "day tour",
+    "round tour",
+    "excursion",
+    "adventure",
+    "pickup",
+    "drop",
+    "guide",
+    "airport transfer",
+    "tour booking",
+    "tour package price",
+    "cheap tour",
+    "luxury tour",
+  ];
 
-    if (
-        Number.isNaN(date.getTime())
-    ) {
-        return null;
-    }
-
-    date.setUTCDate(
-        date.getUTCDate() + days
-    );
-
-    return date
-        .toISOString()
-        .slice(0, 10);
-};
-
-const toIsoDate = (
-    year,
-    month,
-    day
-) => {
-    const date = new Date(
-        Date.UTC(
-            Number(year),
-            Number(month) - 1,
-            Number(day)
-        )
-    );
-
-    if (
-        Number.isNaN(date.getTime())
-    ) {
-        return null;
-    }
-
-    return date
-        .toISOString()
-        .slice(0, 10);
+  return keywords.some((k) => text.includes(k));
 };
 
 /* ======================================================
-   EXTRACT DATE
+   TOUR DATA FETCH
 ====================================================== */
 
-const extractRequestedDate = (
-    message
-) => {
-    const text = normalize(message);
+const getAllTourPackages = async () => {
+  const tours = await Tour.findAll({
+    where: { status: "active" },
+    attributes: [
+      "id",
+      "packageName",
+      "overview",
+      "location",
+      "price",
+      "discount",
+      "duration",
+      "durationType",
+      "groupSize",
+      "image",
+    ],
+    order: [["createdAt", "DESC"]],
+  });
 
-    // TODAY
-    if (/\btoday\b/.test(text)) {
-        return getTodayIso();
-    }
-
-    // TOMORROW
-    if (/\btomorrow\b/.test(text)) {
-        return addDaysIso(
-            getTodayIso(),
-            1
-        );
-    }
-
-    // YYYY-MM-DD
-    const isoMatch = text.match(
-        /\b(\d{4}-\d{2}-\d{2})\b/
-    );
-
-    if (isoMatch?.[1]) {
-        return isoMatch[1];
-    }
-
-    // DD/MM/YYYY OR MM/DD/YYYY
-    const slashMatch = text.match(
-        /\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/
-    );
-
-    if (slashMatch) {
-        const first = Number(
-            slashMatch[1]
-        );
-
-        const second = Number(
-            slashMatch[2]
-        );
-
-        const year = Number(
-            slashMatch[3]
-        );
-
-        const day =
-            first > 12
-                ? first
-                : second;
-
-        const month =
-            first > 12
-                ? second
-                : first;
-
-        return toIsoDate(
-            year,
-            month,
-            day
-        );
-    }
-
-    return null;
+  return tours.map((tour) => ({
+    id: tour.id,
+    name: tour.packageName,
+    overview: tour.overview,
+    location: tour.location,
+    price: tour.price,
+    discount: tour.discount,
+    duration: tour.duration,
+    durationType: tour.durationType,
+    groupSize: tour.groupSize,
+    image: tour.image,
+  }));
 };
 
 /* ======================================================
-   GET AVAILABLE PACKAGES
+   ROOM DATA FETCH
 ====================================================== */
 
-const getAvailablePackagesForDate =
-    async (checkInDate) => {
-        let checkOutDate =
-            addDaysIso(
-                checkInDate,
-                1
-            );
+const getRoomPackages = async () => {
+  const rows = await RoomPackage.findAll({
+    attributes: [
+      "id",
+      "pname",
+      "pprice",
+      "pimage",
+      "maxAdults",
+      "maxKids",
+      "description",
+    ],
+    include: [
+      {
+        model: Room,
+        attributes: ["id", "roomStatus"],
+        required: false,
+      },
+    ],
+  });
 
-        // SAFETY CHECK
-        if (
-            !checkOutDate ||
-            checkOutDate ===
-                checkInDate
-        ) {
-            checkOutDate =
-                addDaysIso(
-                    checkInDate,
-                    1
-                );
-        }
+  return rows.map((row) => {
+    const plain = row.get({ plain: true });
 
-        const query = `
-        SELECT
-            rp.id,
-            rp.pname,
-            rp.pprice,
-            rp.pimage,
-            rp.maxAdults,
-            rp.maxKids,
-            rp.description,
+    const rooms = plain.Rooms || [];
 
-            COUNT(r.id) AS availableRooms
+    const availableRooms = rooms.filter(
+      (r) => r.roomStatus === "available",
+    ).length;
 
-        FROM room r
-
-        JOIN room_package rp
-            ON r.packageId = rp.id
-
-        WHERE r.roomStatus = 'available'
-
-        AND r.id NOT IN (
-            SELECT br.room_id
-            FROM booked_rooms br
-            WHERE br.status IN (
-                'reserved',
-                'checked_in',
-                'hold'
-            )
-            AND (
-                (:checkInDate < br.checkOut)
-                AND (:checkOutDate > br.checkIn)
-            )
-        )
-
-        GROUP BY rp.id
-    `;
-
-        const rows =
-            await sequelize.query(
-                query,
-                {
-                    replacements: {
-                        checkInDate,
-                        checkOutDate,
-                    },
-                    type: QueryTypes.SELECT,
-                }
-            );
-
-        return rows.map((row) => ({
-            id: row.id,
-            name: row.pname,
-            price: row.pprice,
-            image: row.pimage,
-            maxAdults:
-                row.maxAdults,
-            maxKids: row.maxKids,
-            description:
-                row.description,
-            availableRooms:
-                Number(
-                    row.availableRooms
-                ) || 0,
-        }));
+    return {
+      id: plain.id,
+      name: plain.pname,
+      price: plain.pprice,
+      image: plain.pimage,
+      maxAdults: plain.maxAdults,
+      maxKids: plain.maxKids,
+      description: plain.description,
+      availableRooms,
     };
-
-/* ======================================================
-   ALL PACKAGE RECORDS
-====================================================== */
-
-const getPackageRecords =
-    async () => {
-        const rows =
-            await RoomPackage.findAll(
-                {
-                    attributes: [
-                        'id',
-                        'pname',
-                        'pprice',
-                        'pimage',
-                        'maxAdults',
-                        'maxKids',
-                        'description',
-                    ],
-
-                    include: [
-                        {
-                            model: Room,
-                            attributes: [
-                                'id',
-                                'roomStatus',
-                            ],
-                            required: false,
-                        },
-                    ],
-
-                    order: [
-                        ['pprice', 'ASC'],
-                    ],
-                }
-            );
-
-        return rows.map((row) => {
-            const plain = row.get({
-                plain: true,
-            });
-
-            const rooms =
-                Array.isArray(
-                    plain.Rooms
-                )
-                    ? plain.Rooms
-                    : [];
-
-            const availableRooms =
-                rooms.filter(
-                    (room) =>
-                        room.roomStatus ===
-                        'available'
-                ).length;
-
-            return {
-                id: plain.id,
-                name: plain.pname,
-                image: plain.pimage,
-                price: plain.pprice,
-                maxAdults:
-                    plain.maxAdults,
-                maxKids:
-                    plain.maxKids,
-                description:
-                    plain.description,
-                availableRooms,
-            };
-        });
-    };
-
-/* ======================================================
-   FILTER PACKAGES
-====================================================== */
-
-const filterPackagesByQuestion = (
-    packages,
-    message
-) => {
-    if (!packages.length)
-        return packages;
-
-    const text = normalize(message);
-
-    if (
-        /(cheap|budget|low price|affordable)/.test(
-            text
-        )
-    ) {
-        return [...packages]
-            .sort(
-                (a, b) =>
-                    a.price -
-                    b.price
-            )
-            .slice(0, 5);
-    }
-
-    if (
-        /(luxury|premium|best|expensive)/.test(
-            text
-        )
-    ) {
-        return [...packages]
-            .sort(
-                (a, b) =>
-                    b.price -
-                    a.price
-            )
-            .slice(0, 5);
-    }
-
-    return packages.slice(0, 5);
+  });
 };
 
 /* ======================================================
    GEMINI
 ====================================================== */
 
-const generateReplyWithGemini =
-    async (
-        userMessage,
-        packageContext
-    ) => {
-        if (
-            !process.env
-                .GEMINI_API_KEY
-        )
-            return null;
+const generateReplyWithGemini = async (message, context = null) => {
+  if (!process.env.GEMINI_API_KEY) return null;
 
-        const genAI =
-            new GoogleGenerativeAI(
-                process.env
-                    .GEMINI_API_KEY
-            );
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-        let lastError;
+  const systemInstruction = `
+        You are BlueBird Hotels assistant.
 
-        const systemInstruction = `
-You are BlueBird Hotels assistant.
+        Rules:
+        - Do NOT invent prices
+        - Only use provided data
+        - Be concise
+    `;
 
-IMPORTANT HOTEL RULES:
+  const prompt = context ? `User: ${message}\n\nData:\n${context}` : message;
 
-- Hotel bookings are charged per night.
-- Even if guest stays only 1 hour or 2 hours, full night payment is required.
-- Check-in and check-out cannot be the same date.
-- If customer asks for availability today, automatically assume checkout is tomorrow.
-- Never suggest same-day checkout.
-- Only use provided package data.
-- Do not invent prices or rooms.
-`;
+  let lastError;
 
-        const prompt =
-            packageContext
-                ? `
-Customer message:
-${userMessage}
+  for (const model of MODEL_FALLBACK_CHAIN) {
+    const aiModel = genAI.getGenerativeModel({
+      model,
+      systemInstruction,
+    });
 
-Verified package data:
-${packageContext}
+    for (let i = 0; i < MAX_RETRIES_PER_MODEL; i++) {
+      try {
+        const result = await aiModel.generateContent(prompt);
+        return result.response.text();
+      } catch (err) {
+        lastError = err;
 
-Write a short helpful reply.
-`
-                : userMessage;
-
-        for (const modelName of MODEL_FALLBACK_CHAIN) {
-            const model =
-                genAI.getGenerativeModel(
-                    {
-                        model:
-                            modelName,
-                        systemInstruction,
-                    }
-                );
-
-            for (
-                let attempt = 1;
-                attempt <=
-                MAX_RETRIES_PER_MODEL;
-                attempt += 1
-            ) {
-                try {
-                    const result =
-                        await model.generateContent(
-                            prompt
-                        );
-
-                    const response =
-                        await result.response;
-
-                    return response.text();
-                } catch (error) {
-                    const status =
-                        Number(
-                            error?.status
-                        );
-
-                    if (
-                        status === 404
-                    ) {
-                        lastError =
-                            error;
-                        break;
-                    }
-
-                    lastError =
-                        error;
-
-                    if (
-                        isRetryableGeminiError(
-                            error
-                        ) &&
-                        attempt <
-                            MAX_RETRIES_PER_MODEL
-                    ) {
-                        await sleep(
-                            BASE_BACKOFF_MS *
-                                Math.pow(
-                                    2,
-                                    attempt -
-                                        1
-                                )
-                        );
-
-                        continue;
-                    }
-
-                    break;
-                }
-            }
+        if (isRetryableGeminiError(err) && i < MAX_RETRIES_PER_MODEL - 1) {
+          await sleep(BASE_BACKOFF_MS * (i + 1));
+          continue;
         }
 
-        if (lastError) {
-            console.warn(
-                'Gemini failed:',
-                lastError.message
-            );
-        }
+        break;
+      }
+    }
+  }
 
-        return null;
-    };
+  console.log("Gemini error:", lastError?.message);
+  return null;
+};
 
 /* ======================================================
-   CONTROLLER
+   MAIN CONTROLLER
 ====================================================== */
 
-const chatBot = async (
-    req,
-    res
-) => {
-    const { message } = req.body;
+const chatBot = async (req, res) => {
+  const { message } = req.body;
 
-    if (
-        !message ||
-        typeof message !==
-            'string'
-    ) {
-        return res.status(400).json(
-            {
-                error: 'Message is required',
-            }
-        );
+  if (!message) {
+    return res.status(400).json({
+      error: "Message required",
+    });
+  }
+
+  try {
+    const text = message.trim();
+
+    /* ======================================================
+           1. TOUR CHECK FIRST (IMPORTANT FIX)
+        ====================================================== */
+
+    if (isTourQuestion(text)) {
+      const tours = await getAllTourPackages();
+
+      const aiReply = await generateReplyWithGemini(
+        text,
+        JSON.stringify(tours),
+      );
+
+      return res.json({
+        reply: aiReply || "Here are our tour packages",
+        tours,
+        source: "tour",
+      });
     }
 
-    try {
-        const cleanMessage =
-            message.trim();
+    /* ======================================================
+           2. ROOM CHECK
+        ====================================================== */
 
-        const requestedDate =
-            extractRequestedDate(
-                cleanMessage
-            );
+    if (isRoomQuestion(text)) {
+      const rooms = await getRoomPackages();
 
-        /* ==========================================
-           AVAILABILITY
-        ========================================== */
+      const aiReply = await generateReplyWithGemini(
+        text,
+        JSON.stringify(rooms),
+      );
 
-        if (
-            requestedDate &&
-            hasAvailabilityIntent(
-                cleanMessage
-            )
-        ) {
-            const availablePackages =
-                await getAvailablePackagesForDate(
-                    requestedDate
-                );
-
-            const matchedPackages =
-                filterPackagesByQuestion(
-                    availablePackages,
-                    cleanMessage
-                );
-
-            const aiReply =
-                await generateReplyWithGemini(
-                    cleanMessage,
-                    JSON.stringify(
-                        matchedPackages
-                    )
-                );
-
-            return res.status(200).json(
-                {
-                    reply:
-                        aiReply ||
-                        'Here are the available room packages.',
-
-                    packages:
-                        matchedPackages,
-
-                    source:
-                        'availability',
-
-                    checkIn:
-                        requestedDate,
-
-                    checkOut:
-                        addDaysIso(
-                            requestedDate,
-                            1
-                        ),
-                }
-            );
-        }
-
-        /* ==========================================
-           PACKAGE QUESTIONS
-        ========================================== */
-
-        if (
-            isPackageRelatedQuestion(
-                cleanMessage
-            )
-        ) {
-            const packageRows =
-                await getPackageRecords();
-
-            const matchedPackages =
-                filterPackagesByQuestion(
-                    packageRows,
-                    cleanMessage
-                );
-
-            const aiReply =
-                await generateReplyWithGemini(
-                    cleanMessage,
-                    JSON.stringify(
-                        matchedPackages
-                    )
-                );
-
-            return res.status(200).json(
-                {
-                    reply:
-                        aiReply ||
-                        'Here are our available packages.',
-
-                    packages:
-                        matchedPackages,
-
-                    source:
-                        'database',
-                }
-            );
-        }
-
-        /* ==========================================
-           NORMAL GEMINI CHAT
-        ========================================== */
-
-        const aiReply =
-            await generateReplyWithGemini(
-                cleanMessage
-            );
-
-        if (aiReply) {
-            return res.status(200).json(
-                {
-                    reply: aiReply,
-                    source: 'gemini',
-                }
-            );
-        }
-
-        return res.status(200).json(
-            {
-                reply:
-                    'I can help with room packages, availability, pricing, and hotel information.',
-                source:
-                    'fallback',
-            }
-        );
-    } catch (error) {
-        console.error(
-            'Chat controller error:',
-            error
-        );
-
-        return res.status(500).json({
-            error:
-                'Unable to process request right now.',
-        });
+      return res.json({
+        reply: aiReply || "Here are room packages",
+        packages: rooms,
+        source: "rooms",
+      });
     }
+
+    /* ======================================================
+           3. GENERAL CHAT
+        ====================================================== */
+
+    const aiReply = await generateReplyWithGemini(text);
+
+    return res.json({
+      reply: aiReply || "I can help with rooms and tours",
+      source: "gemini",
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      error: "Server error",
+    });
+  }
 };
 
 export default chatBot;

@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../../components/header';
 import Footer from '../../../components/footer';
+import FloatingChatbot from '../../../components/FloatingChatbot';
 
 /* ===================================
    TOUR CARD COMPONENT
@@ -575,6 +576,7 @@ export default function TourViewPage() {
         </div>
         </div>
       </div>
+      <FloatingChatbot />
       <Footer />
     </div>
   );
