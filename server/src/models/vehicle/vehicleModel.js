@@ -13,31 +13,28 @@ Vehicle.init(
       allowNull: false,
     },
 
-    // ── Identity ─────────────────────────────────────────
     plateNumber: {                          // ← ADD (unique, needed for bookings)
       type: DataTypes.STRING(30),
       allowNull: false,
       unique: true,
     },
-    brand: {                                // ← ADD (e.g. "Toyota", "Nissan")
+    brand: {                                
       type: DataTypes.STRING(100),
       allowNull: true,
     },
-    vehicleType: {                          // ✓ keep
+    vehicleType: {                          
       type: DataTypes.STRING,
       allowNull: false,
     },
-    model: {                                // ✓ keep
+    model: {                                
       type: DataTypes.STRING,
       allowNull: false,
     },
-    year: {                                 // ← ADD
+    year: {                                 
       type: DataTypes.INTEGER,
       allowNull: true,
     },
-
-    // ── Specs ─────────────────────────────────────────────
-    capacity: {                             // ✓ keep
+    capacity: {                             
       type: DataTypes.INTEGER,
       allowNull: false,
     },
@@ -49,34 +46,31 @@ Vehicle.init(
       type: DataTypes.ENUM('automatic', 'manual'),
       allowNull: true,
     },
-    color: {                                // ← ADD
+    color: {                               
       type: DataTypes.STRING(50),
       allowNull: true,
     },
 
-    // ── Pricing ───────────────────────────────────────────
-    pricePerDay: {                          // ✓ keep
+    pricePerDay: {                          
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
     },
 
-    // ── Status ────────────────────────────────────────────
-    status: {                               // ← RENAME + expand ENUM
+    status: {                             
       type: DataTypes.ENUM('available', 'unavailable', 'maintenance', 'retired'),
       allowNull: false,
       defaultValue: 'available',
     },
 
-    // ── Content ───────────────────────────────────────────
-    description: {                          // ← ADD
+    description: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
-    imageUrl: {                             // ✓ keep
+    image: {
       type: DataTypes.STRING(500),
       allowNull: true,
     },
-    features: {                             // ← ADD (e.g. ["AC","GPS","WiFi"])
+    features: {// ← ADD (["AC","GPS","WiFi"])
       type: DataTypes.JSON,
       allowNull: true,
       defaultValue: [],
