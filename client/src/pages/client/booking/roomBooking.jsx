@@ -479,7 +479,6 @@ const BookingRoom = () => {
                                 <Users className="h-4 w-4 text-emerald-700" />
                                 {totalAdults} Adult{totalAdults !== 1 ? "s" : ""}, {totalKids} Kid
                                 {totalKids !== 1 ? "s" : ""}
-                                <ChevronDown className="ml-auto h-4 w-4 text-stone-500" />
                             </p>
                         </div>
                     </div>

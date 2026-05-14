@@ -8,6 +8,7 @@ import dotenv from "dotenv";
 import e from "express";
 import sequelize from "../config/database.js";
 import Role from "../models/User/Role.js";
+import DeletedStaffMember from "../models/User/DeletedStaffMember.js";
 dotenv.config();
 
 const transporter = nodemailer.createTransport(
@@ -158,12 +159,27 @@ export async function deleteUser(req, res) {
         const deletedCount = await sequelize.transaction(async (transaction) => {
             const staffMember = await StaffMember.findOne({
                 where: { userId: userId },
+                include: [
+                    {
+                        model: Role,
+                        attributes: ['roleId', 'roleName']
+                    }
+                ],
                 transaction
             });
 
             if (!staffMember) {
-                return 0;
+                return res.status(404).json({ message: "User not found" });
             }
+
+            await DeletedStaffMember.create({
+                name: staffMember.name,
+                userName: staffMember.userName,
+                email: staffMember.email,
+                roleId: staffMember.Role.roleId,
+                roleName: staffMember.Role.roleName,
+                phoneNumber: staffMember.phoneNumber
+            });
 
             await UserRegisterModel.destroy({
                 where: { email: staffMember.email },
@@ -391,6 +407,47 @@ export async function getAllRoles(req, res) {
     }catch (error) {
         res.status(500).json({
             message: "Failed to fetch roles",
+            error: error.message
+        });
+    }
+}
+
+export async function searchDeletedUsers(req, res) {
+
+    const query = req.params.query || "";
+
+    try {
+
+        const users = await DeletedStaffMember.findAll({
+            where: {
+                [Op.or]: [
+                    { name: { [Op.like]: `%${query}%` } },
+                    { userName: { [Op.like]: `%${query}%` } },
+                    { email: { [Op.like]: `%${query}%` } },
+                    { phoneNumber: { [Op.like]: `%${query}%` } },
+                    { roleName: { [Op.like]: `%${query}%` } }
+                ]
+            }
+        });
+
+        res.json(users);
+
+    } catch (error) {
+
+        res.status(500).json({
+            message: "Failed to search deleted users",
+            error: error.message
+        });
+    }
+}
+
+export async function getAllDeletedUsers(req, res) {
+    try {
+        const users = await DeletedStaffMember.findAll();
+        res.json(users);
+    }catch (error) {
+        res.status(500).json({
+            message: "Failed to fetch deleted users",
             error: error.message
         });
     }

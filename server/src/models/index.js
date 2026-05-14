@@ -12,6 +12,7 @@ import RoomAmenities from "./room_package/roomAmenities.js";
 import TourInquiry from "./tour_package/TourInquiry.js";
 import PackageImage from "./room_package/packageImageModel.js";
 import Vehicle from "./vehicle/vehicleModel.js";
+import Role from "./User/Role.js";
 
 
 export function initModels() {
@@ -122,8 +123,19 @@ export function initModels() {
         foreignKey: "tourId",
     });
 
-    return { Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle };
+
+    //StaffMember -> Role (Many-to-One)
+    StaffMember.belongsTo(Role, {
+        foreignKey: "roleId"
+    });
+
+    Role.hasMany(StaffMember, {
+        foreignKey: "roleId"
+    });
+
+
+    return { Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, Role };
 }
-export { Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle };
+export { Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, Role };
 
 
