@@ -84,6 +84,21 @@ const RoomPayment = () => {
     const token = localStorage.getItem("customerToken") ||
                   sessionStorage.getItem("customerToken");
 
+    let savedBookingDetails = {};
+    let airportPickup = null;
+
+    try {
+      savedBookingDetails = JSON.parse(localStorage.getItem("bookingDetails"));
+    } catch {
+      savedBookingDetails = {};
+    }
+
+    try {
+      airportPickup = JSON.parse(localStorage.getItem("airportPickUp"));
+    } catch {
+      airportPickup = null;
+    }
+
     if (!token) {
       setError("User not authenticated");
       return;
@@ -131,6 +146,8 @@ const RoomPayment = () => {
             `${import.meta.env.VITE_BACKEND_URL}/roombook/booking`,
             {
               guestId: guest.id,
+              checkInDate:
+                passedBookingData?.checkInDate || savedBookingDetails?.checkInDate,
               total_price: Number(totalAmount),
               rooms: selectedRooms.map(r => ({
                 roomId: r.roomId,
@@ -138,7 +155,15 @@ const RoomPayment = () => {
                 checkOut: r.checkOutDate,
                 adults: r.adults,
                 kids: r.kids
-              }))
+              })),
+              airportPickup: airportPickup?.enabled
+                ? {
+                    enabled: true,
+                    pickupDate:
+                      passedBookingData?.checkInDate || savedBookingDetails?.checkInDate || null,
+                    pickupTime: airportPickup?.time || "",
+                  }
+                : null,
             }
           );
 
@@ -150,15 +175,10 @@ const RoomPayment = () => {
 
         setSuccessMessage('✅ Payment successful! Your room booking is confirmed.');
 
-        try {
-          
-        } catch (error) {
-          
-        }
-
         // Redirect to booking confirmation after 2 seconds
         setTimeout(() => {
           localStorage.removeItem("bookingDetails");
+          localStorage.removeItem("airportPickUp");
           navigate('/booking-confirm', {
             state: {
               bookingData: passedBookingData,

@@ -1,6 +1,6 @@
 import { col, fn, Op, QueryTypes } from "sequelize";
 import sequelize from "../../config/database.js";
-import { Customer, Room, BookedRoom, RoomPackage, Reservation } from "../../models/index.js";
+import { Customer, Room, BookedRoom, RoomPackage, Reservation, AirPortPickup } from "../../models/index.js";
 
 
 // available room list with packages
@@ -46,8 +46,10 @@ const createBooking = async (req, res) => {
     try {
         const {
             guestId,
+            checkInDate,
             total_price,
-            rooms
+            rooms,
+            airportPickup
         } = req.body;
 
         // -----------------------------
@@ -57,6 +59,13 @@ const createBooking = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "guestId is required"
+            });
+        }
+
+        if (!checkInDate) {
+            return res.status(400).json({
+                success: false,
+                message: "checkInDate is required"
             });
         }
 
@@ -80,6 +89,7 @@ const createBooking = async (req, res) => {
         const reservation = await Reservation.create(
             {
                 guest_id: guestId,
+                check_in_date: checkInDate,
                 total_price,
                 status: "confirmed"
             },
@@ -148,6 +158,21 @@ const createBooking = async (req, res) => {
         // 4. Bulk insert booked rooms
         // -----------------------------
         await BookedRoom.bulkCreate(bookedRoomEntries, { transaction: t });
+
+        if (airportPickup?.enabled) {
+            if (!airportPickup.pickupDate || !airportPickup.pickupTime) {
+                throw new Error("Airport pickup date and time are required");
+            }
+
+            await AirPortPickup.create(
+                {
+                    guest_id: guestId,
+                    pickup_date: airportPickup.pickupDate,
+                    pickup_time: airportPickup.pickupTime,
+                },
+                { transaction: t }
+            );
+        }
 
         await t.commit();
 
