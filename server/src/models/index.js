@@ -10,11 +10,11 @@ import Tour from "./tour_package/tourModel.js";
 import TourItem from "./tour_package/tourItemsModel.js";
 import RoomAmenities from "./room_package/roomAmenities.js";
 import TourInquiry from "./tour_package/TourInquiry.js";
-import TourBooking from "./tour_package/TourBooking.js";
-import TourPayment from "./tour_package/TourPayment.js";
 import PackageImage from "./room_package/packageImageModel.js";
 import TourRefund from "./tour_package/TourRefund.js";
 import AirPortPickup from './booking/airPortPickupModel.js';
+import Vehicle from "./vehicle/vehicleModel.js";
+import Role from "./User/Role.js";
 
 
 export function initModels() {
@@ -136,38 +136,18 @@ export function initModels() {
         foreignKey: "tourId",
     });
 
-    // TourInquiry -> TourBooking (One-to-One)
-    TourInquiry.hasOne(TourBooking, {
-        foreignKey: "inquiryId",
-        onDelete: "CASCADE",
-        onUpdate: "CASCADE",
-    });
-    TourBooking.belongsTo(TourInquiry, {
-        foreignKey: "inquiryId",
+
+    //StaffMember -> Role (Many-to-One)
+    StaffMember.belongsTo(Role, {
+        foreignKey: "roleId"
     });
 
-    // TourBooking -> TourPayment (One-to-Many)
-    TourBooking.hasMany(TourPayment, {
-        foreignKey: "bookingId",
-        onDelete: "CASCADE",
-        onUpdate: "CASCADE",
-    });
-    TourPayment.belongsTo(TourBooking, {
-        foreignKey: "bookingId",
+    Role.hasMany(StaffMember, {
+        foreignKey: "roleId"
     });
 
-    // TourBooking -> TourRefund (One-to-One)
-    TourBooking.hasOne(TourRefund, {
-        foreignKey: "bookingId",
-        onDelete: "CASCADE",
-        onUpdate: "CASCADE",
-    });
-    TourRefund.belongsTo(TourBooking, {
-        foreignKey: "bookingId",
-    });
-
-    return { AirPortPickup, Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourBooking, TourPayment, PackageImage, TourRefund };
+    return { AirPortPickup, Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourBooking, TourPayment, PackageImage, TourRefund, Vehicle, Role };
 }
-export { AirPortPickup, Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourBooking, TourPayment, PackageImage, TourRefund };
+export { AirPortPickup, Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourBooking, TourPayment, PackageImage, TourRefund, Vehicle, Role };
 
 

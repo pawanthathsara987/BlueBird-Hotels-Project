@@ -12,9 +12,7 @@ import ReceptionPage from "./pages/reception/receptionPage";
 import TourViewPage from "./pages/client/booking/TourViewing";
 import TourDetailsPage from "./pages/client/booking/TourDetailsPage";
 import TourInquiryPage from "./pages/client/booking/TourInquiryPage";
-import TourPaymentPage from "./pages/client/booking/TourPaymentPage";
 import RoomPaymentPage from "./pages/client/booking/RoomPayment";
-import TourCancelPage from "./pages/client/booking/TourCancelPage";
 import CustomerLoginPage from "./pages/CustomerLoginPage";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import BookingSummary from "./pages/client/booking/BookingSummary";
@@ -36,11 +34,7 @@ export default function App() {
                         <Route path="/booking/tour" element={<TourViewPage />} />
                         <Route path="/booking/tour-details" element={<TourDetailsPage />} />
                         <Route path="/booking/tour-inquiry" element={<TourInquiryPage />} />
-                        <Route path="/booking/payment" element={<TourPaymentPage />} />
-                        <Route path="/booking/tour-payment" element={<TourPaymentPage />} />
-                        <Route path="/booking/cancel" element={<TourCancelPage />} />
                         <Route path="/payment" element={<RoomPaymentPage />} />
-                        <Route path="/tourBooking" element={<TourViewPage />} />
                         <Route path="/receptionistLogin" element={<ReceptionistLogin />} />
                         <Route path="/registerCustomer" element={<CustomerRegister />} />
                         <Route path="/customerLogin" element={<CustomerLoginPage />} />

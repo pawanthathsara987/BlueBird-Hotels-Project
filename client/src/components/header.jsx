@@ -29,7 +29,7 @@ export default function Header() {
 
           <img src={logo} alt="logo" className="h-20 object-contain" />
 
-          <Link to="/tourBooking" className="hover:text-blue-600">TRAVELS</Link>
+          <Link to="/booking/tour" className="hover:text-blue-600">TRAVELS</Link>
           <Link className="hover:text-blue-600">GALLERY</Link>
           <Link to="/contact" className="hover:text-blue-600">CONTACT</Link>
         </div>
@@ -73,7 +73,7 @@ export default function Header() {
               <Link className="hover:text-blue-600 transition" to="/" onClick={() => setSideBarOpen(false)}>
                 PAGES
               </Link>
-              <Link className="hover:text-blue-600 transition" to="/tourBooking" onClick={() => setSideBarOpen(false)}>
+              <Link className="hover:text-blue-600 transition" to="/booking/tour" onClick={() => setSideBarOpen(false)}>
                 TRAVELS
               </Link>
               <Link className="hover:text-blue-600 transition" to="/" onClick={() => setSideBarOpen(false)}>

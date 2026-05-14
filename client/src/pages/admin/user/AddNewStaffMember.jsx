@@ -1,14 +1,17 @@
 import { Link, useNavigate } from "react-router-dom";
 import { FaUserCircle } from "react-icons/fa";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import axios from "axios";
+import { set } from "date-fns";
+import Select from "react-select";
 
 export default function AddNewStaffMember() {
 
     const [userName, setUserName] = useState("");
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
+    const [roles, setRoles] = useState([]);
     const [role, setRole] = useState("");
     const [phoneNumber, setPhoneNumber] = useState("");
     const [loading, setLoading] = useState(false);
@@ -32,7 +35,7 @@ export default function AddNewStaffMember() {
                 userName: userName,
                 name: name,
                 email: email,
-                role: role,
+                roleId: role,
                 phoneNumber: phoneNumber,
             });
 
@@ -48,6 +51,15 @@ export default function AddNewStaffMember() {
 
     }
 
+    useEffect(() => {
+        getRoles();
+    }, []);
+
+    async function getRoles() {
+        const response = await axios.get(import.meta.env.VITE_BACKEND_URL + "/users/getAll-roles");
+        setRoles(response.data);
+    }
+
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
@@ -60,9 +72,9 @@ export default function AddNewStaffMember() {
                 <h1 className="text-2xl font-bold text-gray-800">Add Staff Member</h1>
                 <p className="text-gray-500 mt-1">Fill in the details to register a new staff member</p>
             </div>
-        
+
             <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
-                
+
                 <div className="bg-[#2c4a6b] p-6 flex items-center gap-4">
                     <div className="bg-[#4a6a8a] rounded-full p-3">
                         <FaUserCircle className="text-3xl text-white" />
@@ -122,17 +134,17 @@ export default function AddNewStaffMember() {
                         <label className="block text-sm font-semibold text-gray-600 mb-2 uppercase">
                             Role
                         </label>
-                        <select
-                            name="role"
-                            value={role}
-                            onChange={(e) => setRole(e.target.value)}
-                            disabled={loading}
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
-                        >
-                            <option value="">Select a role...</option>
-                            <option value="staff_member">Staff Member</option>
-                            <option value="receptionist">Receptionist</option>
-                        </select>
+                        <Select
+                            options={roles.map(role => ({
+                                value: role.roleId,
+                                label: role.roleName
+                            }))}
+                            onChange={(selected) => setRole(selected.value)}
+
+                            menuPortalTarget={document.body}
+                            menuPosition="fixed"
+                            maxMenuHeight={200}
+                        />
                     </div>
                     <div>
                         <label className="block text-sm font-semibold text-gray-600 mb-2 uppercase">

@@ -10,6 +10,7 @@ import TourItemSelectPage from "./tours/TourItemSelectPage";
 import TourManagement from "./tours/tourManagement";
 import TourInquiriesManagement from "./TourInquiriesManagement";
 import ManagerDashboard from "./ManagerDashboard";
+import VehicleManagement from "./vehicle/VehicleManagement";
 
 export default function ManagerPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -52,7 +53,7 @@ export default function ManagerPage() {
                     <Route path="/tours/add" element={<AddTour />} />
                     <Route path="/tours/edit/:id" element={<TourEdit />} />
                     <Route path="/tour-inquiries" element={<TourInquiriesManagement />} />
-                    <Route path="/vehicles" element={<h1 className="text-2xl font-bold">Manage Vehicles</h1>} />
+                    <Route path="/vehicles" element={<VehicleManagement />} />
                     <Route path="/reports" element={<h1 className="text-2xl font-bold">View Reports</h1>} />
                     <Route path="/tours/item/add" element={<TourItemForm />} />
                     <Route path="/tours/item/edit/:itemId" element={<TourItemForm />} />

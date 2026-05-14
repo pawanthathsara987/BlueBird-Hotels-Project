@@ -1,9 +1,9 @@
-import { Model, DataTypes } from 'sequelize';
+import {Model, DataTypes} from 'sequelize';
 import sequelize from '../../config/database.js';
 
-class StaffMember extends Model { }
+class DeletedStaffMember extends Model{}
 
-StaffMember.init(
+DeletedStaffMember.init(
     {
         userId: {
             type: DataTypes.INTEGER,
@@ -30,10 +30,10 @@ StaffMember.init(
         roleId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            references: {
-                model: "roles",
-                key: "roleId"
-            }
+        },
+        roleName: {
+            type: DataTypes.STRING(50),
+            allowNull: false
         },
         phoneNumber: {
             type: DataTypes.STRING(20),
@@ -42,10 +42,10 @@ StaffMember.init(
     },
     {
         sequelize,
-        modelName: 'StaffMember',
-        tableName: 'staff_members',
+        modelName: 'DeletedStaffMember',
+        tableName: 'deleted_staff_members',
         timestamps: true
     }
 );
 
-export default StaffMember;
+export default DeletedStaffMember;

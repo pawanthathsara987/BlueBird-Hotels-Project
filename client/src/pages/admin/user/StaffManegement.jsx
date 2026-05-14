@@ -83,12 +83,21 @@ export default function StaffManagement() {
             <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 lg:px-8">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <h1 className="text-2xl font-bold">Staff Management</h1>
-                    <Link
-                        to="/admin/users/addStaffMember"
-                        className="w-full rounded-lg bg-blue-500 p-3 text-center text-white md:w-50"
-                    >
-                        + Add Staff
-                    </Link>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                        <Link
+                            to="/admin/users/viewDeletedStaff"
+                            className="w-full rounded-lg bg-gray-500 p-3 text-center text-white md:w-50"
+                        >
+                            View Deleted Staff
+                        </Link>
+                        <Link
+                            to="/admin/users/addStaffMember"
+                            className="w-full rounded-lg bg-blue-500 p-3 text-center text-white md:w-50"
+                        >
+                            + Add Staff
+                        </Link>
+                    </div>
+
                 </div>
 
                 <div className="mt-4 rounded-lg bg-white p-4 shadow-2xl">
@@ -126,7 +135,7 @@ export default function StaffManagement() {
                                                     <td className="border-b p-4">{member.name}</td>
                                                     <td className="border-b p-4">{member.userName}</td>
                                                     <td className="border-b p-4">{member.email}</td>
-                                                    <td className="border-b p-4">{member.role}</td>
+                                                    <td className="border-b p-4">{member.Role?.roleName}</td>
                                                     <td className="border-b p-4">{member.phoneNumber}</td>
                                                     <td className="border-b p-4">
                                                         <div className="flex flex-wrap gap-2">
@@ -164,7 +173,7 @@ export default function StaffManagement() {
 
                                                     <div className="grid grid-cols-1 gap-2 text-sm text-gray-700 sm:grid-cols-2">
                                                         <p><span className="font-semibold">Email:</span> {member.email}</p>
-                                                        <p><span className="font-semibold">Role:</span> {member.role}</p>
+                                                        <p><span className="font-semibold">Role:</span> {member.Role?.roleName}</p>
                                                         <p><span className="font-semibold">Phone:</span> {member.phoneNumber}</p>
                                                     </div>
 
