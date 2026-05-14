@@ -1,11 +1,54 @@
 // controllers/vehicleController.js
 import { Op } from 'sequelize';
+import multer from 'multer';
 import Vehicle from '../../models/vehicle/vehicleModel.js';
+import supabase from '../../config/supabaseClient.js';
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 const calcDays = (pickupDate, returnDate) => {
   const ms = new Date(returnDate) - new Date(pickupDate);
   return Math.ceil(ms / (1000 * 60 * 60 * 24));
+};
+
+// Configure multer to store uploads in memory (required for Supabase)
+const storage = multer.memoryStorage();
+export const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Only image files are allowed'));
+  },
+});
+
+// Use the same Supabase bucket as tours
+const VEHICLE_IMAGE_BUCKET = 'Blue-Bird';
+
+const uploadImageToSupabase = async (file) => {
+  if (!file) return null;
+  const fileName = `${Date.now()}-${file.originalname}`;
+
+  const { error } = await supabase.storage.from(VEHICLE_IMAGE_BUCKET).upload(
+    `images/${fileName}`,
+    file.buffer,
+    { contentType: file.mimetype, upsert: false }
+  );
+
+  if (error) {
+    throw new Error(`Image upload failed: ${error.message}`);
+  }
+
+  const { data } = supabase.storage.from(VEHICLE_IMAGE_BUCKET).getPublicUrl(`images/${fileName}`);
+  return data.publicUrl;
+};
+
+const deleteImageFromSupabase = async (imageUrl) => {
+  if (!imageUrl || !imageUrl.includes(`/${VEHICLE_IMAGE_BUCKET}/`)) return;
+
+  const oldPath = imageUrl.split(`/${VEHICLE_IMAGE_BUCKET}/`)[1];
+  if (!oldPath) return;
+
+  await supabase.storage.from(VEHICLE_IMAGE_BUCKET).remove([oldPath]);
 };
 
 // VEHICLE CRUD  —  manager only (except GET)
@@ -125,10 +168,20 @@ export const createVehicle = async (req, res) => {
       });
     }
 
-    // Handle image upload (if using multer / cloudinary)
-    if (req.file) req.body.imageUrl = req.file.path;
+    // Upload image to Supabase if provided
+    let image = null;
+    if (req.file) {
+      try {
+        image = await uploadImageToSupabase(req.file);
+      } catch (err) {
+        return res.status(400).json({ success: false, message: err.message });
+      }
+    }
 
-    const vehicle = await Vehicle.create(req.body);
+    const vehicle = await Vehicle.create({
+      ...req.body,
+      image,
+    });
     res.status(201).json({ success: true, data: vehicle });
   } catch (err) {
     if (err.name === 'SequelizeUniqueConstraintError') {
@@ -153,9 +206,26 @@ export const updateVehicle = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Vehicle not found' });
     }
 
-    if (req.file) req.body.imageUrl = req.file.path;
+    // If new image uploaded, delete old and upload new to Supabase
+    let image = vehicle.image;
+    if (req.file) {
+      try {
+        await deleteImageFromSupabase(vehicle.image);
+      } catch (err) {
+        console.error('Error deleting old vehicle image:', err);
+      }
 
-    await vehicle.update(req.body);
+      try {
+        image = await uploadImageToSupabase(req.file);
+      } catch (err) {
+        return res.status(400).json({ success: false, message: err.message });
+      }
+    }
+
+    await vehicle.update({
+      ...req.body,
+      image,
+    });
     res.json({ success: true, data: vehicle });
   } catch (err) {
     if (err.name === 'SequelizeUniqueConstraintError') {
@@ -178,6 +248,13 @@ export const deleteVehicle = async (req, res) => {
     const vehicle = await Vehicle.findByPk(req.params.id);
     if (!vehicle) {
       return res.status(404).json({ success: false, message: 'Vehicle not found' });
+    }
+
+    // Delete image from Supabase if exists
+    try {
+      await deleteImageFromSupabase(vehicle.image);
+    } catch (err) {
+      console.error('Error deleting vehicle image from Supabase:', err);
     }
 
     await vehicle.destroy();
