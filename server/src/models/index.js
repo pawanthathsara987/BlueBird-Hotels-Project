@@ -124,6 +124,7 @@ export function initModels() {
     });
 
 
+    //StaffMember -> Role (Many-to-One)
     StaffMember.belongsTo(Role, {
         foreignKey: "roleId"
     });
@@ -131,6 +132,7 @@ export function initModels() {
     Role.hasMany(StaffMember, {
         foreignKey: "roleId"
     });
+
 
     return { Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, Role };
 }

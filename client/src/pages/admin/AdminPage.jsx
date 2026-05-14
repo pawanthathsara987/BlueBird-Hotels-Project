@@ -9,6 +9,7 @@ import PackageImageForm from "./rooms/PackageImageForm";
 import StaffManagement from "./user/StaffManegement";
 import AddNewStaffMember from "./user/AddNewStaffMember";
 import UpdateStaffMember from "./user/UpdateStaffMember";
+import ViewDeletedStaff from "./user/ViewDeletedStaff";
 
 export default function AdminPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -63,6 +64,7 @@ export default function AdminPage() {
                     <Route path="/users" element={<StaffManagement />} />
                     <Route path="/users/addStaffMember" element={<AddNewStaffMember />} />
                     <Route path="/users/updateStaffMember" element={<UpdateStaffMember />}/>
+                    <Route path="/users/viewDeletedStaff" element={<ViewDeletedStaff />}/>
                     <Route path="/settings" element={<h1 className="p-5">Settings</h1>} />
                 </Routes>
             </div>

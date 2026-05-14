@@ -411,3 +411,44 @@ export async function getAllRoles(req, res) {
         });
     }
 }
+
+export async function searchDeletedUsers(req, res) {
+
+    const query = req.params.query || "";
+
+    try {
+
+        const users = await DeletedStaffMember.findAll({
+            where: {
+                [Op.or]: [
+                    { name: { [Op.like]: `%${query}%` } },
+                    { userName: { [Op.like]: `%${query}%` } },
+                    { email: { [Op.like]: `%${query}%` } },
+                    { phoneNumber: { [Op.like]: `%${query}%` } },
+                    { roleName: { [Op.like]: `%${query}%` } }
+                ]
+            }
+        });
+
+        res.json(users);
+
+    } catch (error) {
+
+        res.status(500).json({
+            message: "Failed to search deleted users",
+            error: error.message
+        });
+    }
+}
+
+export async function getAllDeletedUsers(req, res) {
+    try {
+        const users = await DeletedStaffMember.findAll();
+        res.json(users);
+    }catch (error) {
+        res.status(500).json({
+            message: "Failed to fetch deleted users",
+            error: error.message
+        });
+    }
+}
