@@ -29,10 +29,6 @@ export default function TourInquiriesManagement() {
     });
   };
 
-  const formatLkr = (amount) => {
-    if (amount === null || amount === undefined || Number.isNaN(Number(amount))) return 'N/A';
-    return `$${Number(amount).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
 
   const formatCurrency = (value) => `$${Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
