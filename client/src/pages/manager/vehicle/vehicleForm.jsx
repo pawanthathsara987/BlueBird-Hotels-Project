@@ -49,7 +49,8 @@ const defaultVehicle = {
 	pricePerDay: "",
 	status: "available",
 	description: "",
-	imageUrl: "",
+	image: null,
+	imagePreview: null,
 	features: "",
 };
 
@@ -75,7 +76,8 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 			pricePerDay: vehicle.pricePerDay ? String(vehicle.pricePerDay) : "",
 			status: vehicle.status || "available",
 			description: vehicle.description || "",
-			imageUrl: vehicle.imageUrl || "",
+			image: null,
+			imagePreview: vehicle.image || null,
 			features: Array.isArray(vehicle.features) ? vehicle.features.join(", ") : "",
 		};
 	}, [vehicle]);
@@ -90,8 +92,15 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 	}, [initialValues]);
 
 	const handleChange = (event) => {
-		const { name, value } = event.target;
-		setForm((prev) => ({ ...prev, [name]: value }));
+		const { name, value, type, files } = event.target;
+		
+		if (type === "file") {
+			const file = files?.[0] || null;
+			const preview = file ? URL.createObjectURL(file) : null;
+			setForm((prev) => ({ ...prev, image: file, imagePreview: preview }));
+		} else {
+			setForm((prev) => ({ ...prev, [name]: value }));
+		}
 		setErrors((prev) => ({ ...prev, [name]: "" }));
 	};
 
@@ -127,33 +136,43 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 			return;
 		}
 
-		const payload = {
-			plateNumber: form.plateNumber.trim(),
-			brand: form.brand.trim() || null,
-			vehicleType: form.vehicleType.trim(),
-			model: form.model.trim(),
-			year: form.year ? Number(form.year) : null,
-			capacity: Number(form.capacity),
-			fuelType: form.fuelType || null,
-			transmission: form.transmission || null,
-			color: form.color.trim() || null,
-			pricePerDay: Number(form.pricePerDay),
-			status: form.status,
-			description: form.description.trim() || null,
-			imageUrl: form.imageUrl.trim() || null,
-			features: form.features
-				.split(",")
-				.map((feature) => feature.trim())
-				.filter(Boolean),
-		};
+		const formData = new FormData();
+		formData.append("plateNumber", form.plateNumber.trim());
+		formData.append("brand", form.brand.trim() || null);
+		formData.append("vehicleType", form.vehicleType.trim());
+		formData.append("model", form.model.trim());
+		formData.append("year", form.year ? Number(form.year) : null);
+		formData.append("capacity", Number(form.capacity));
+		formData.append("fuelType", form.fuelType || null);
+		formData.append("transmission", form.transmission || null);
+		formData.append("color", form.color.trim() || null);
+		formData.append("pricePerDay", Number(form.pricePerDay));
+		formData.append("status", form.status);
+		formData.append("description", form.description.trim() || null);
+		formData.append(
+			"features",
+			JSON.stringify(
+				form.features
+					.split(",")
+					.map((feature) => feature.trim())
+					.filter(Boolean)
+			)
+		);
+
+		if (form.image) {
+			formData.append("image", form.image);
+		}
 
 		try {
 			setIsSubmitting(true);
 			const token = localStorage.getItem("managerToken") || localStorage.getItem("token") || localStorage.getItem("accessToken");
-			const config = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
+			const config = token
+				? { headers: { Authorization: `Bearer ${token}` } }
+				: {};
+
 			const request = isEditMode
-				? axios.put(`${backendBaseUrl}/vehicles/${vehicle.id}`, payload, config)
-				: axios.post(`${backendBaseUrl}/vehicles`, payload, config);
+				? axios.put(`${backendBaseUrl}/vehicles/${vehicle.id}`, formData, config)
+				: axios.post(`${backendBaseUrl}/vehicles`, formData, config);
 
 			const response = await request;
 			const savedVehicle = response.data?.data;
@@ -355,15 +374,25 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 					</div>
 
 					<div>
-						<FieldLabel text="Image URL" error={errors.imageUrl} />
-						<input
-							type="text"
-							name="imageUrl"
-							value={form.imageUrl}
-							onChange={handleChange}
-							className={inputClassName(!!errors.imageUrl)}
-							placeholder="https://..."
-						/>
+						<FieldLabel text="Vehicle Image" error={errors.image} />
+						<div className="flex gap-4 items-start">
+							<input
+								type="file"
+								name="image"
+								onChange={handleChange}
+								accept="image/*"
+								className={`${baseInput} border border-slate-200 bg-slate-50 hover:bg-white file:mr-3 file:py-1.5 file:px-3 file:border-0 file:rounded-lg file:bg-blue-50 file:text-blue-600 file:font-semibold file:cursor-pointer`}
+							/>
+						</div>
+						{form.imagePreview && (
+							<div className="mt-3 rounded-lg overflow-hidden border border-slate-200">
+								<img
+									src={form.imagePreview}
+									alt="Preview"
+									className="w-full h-40 object-cover"
+								/>
+							</div>
+						)}
 					</div>
 
 					<div>
