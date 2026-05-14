@@ -54,6 +54,25 @@ const defaultVehicle = {
 	features: "",
 };
 
+const normalizeFeaturesForInput = (features) => {
+	if (Array.isArray(features)) {
+		return features.map((feature) => String(feature).trim()).filter(Boolean).join(", ");
+	}
+
+	if (typeof features === "string") {
+		try {
+			const parsed = JSON.parse(features);
+			if (Array.isArray(parsed)) {
+				return parsed.map((feature) => String(feature).trim()).filter(Boolean).join(", ");
+			}
+		} catch {
+			return features;
+		}
+	}
+
+	return "";
+};
+
 export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 	const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api").replace(/\/$/, "");
 	const isEditMode = Boolean(vehicle?.id);
@@ -78,7 +97,7 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 			description: vehicle.description || "",
 			image: null,
 			imagePreview: vehicle.image || null,
-			features: Array.isArray(vehicle.features) ? vehicle.features.join(", ") : "",
+			features: normalizeFeaturesForInput(vehicle.features),
 		};
 	}, [vehicle]);
 

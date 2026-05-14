@@ -51,6 +51,31 @@ const deleteImageFromSupabase = async (imageUrl) => {
   await supabase.storage.from(VEHICLE_IMAGE_BUCKET).remove([oldPath]);
 };
 
+const parseFeatures = (features) => {
+  if (features == null || features === '') return [];
+
+  if (Array.isArray(features)) {
+    return features.map((feature) => String(feature).trim()).filter(Boolean);
+  }
+
+  if (typeof features === 'string') {
+    try {
+      const parsed = JSON.parse(features);
+      if (Array.isArray(parsed)) {
+        return parsed.map((feature) => String(feature).trim()).filter(Boolean);
+      }
+    } catch {
+      // Fallback for comma-separated values
+      return features
+        .split(',')
+        .map((feature) => feature.trim())
+        .filter(Boolean);
+    }
+  }
+
+  return [];
+};
+
 // VEHICLE CRUD  —  manager only (except GET)
 
 // GET /api/vehicles
@@ -180,6 +205,7 @@ export const createVehicle = async (req, res) => {
 
     const vehicle = await Vehicle.create({
       ...req.body,
+      features: parseFeatures(req.body.features),
       image,
     });
     res.status(201).json({ success: true, data: vehicle });
@@ -222,10 +248,16 @@ export const updateVehicle = async (req, res) => {
       }
     }
 
-    await vehicle.update({
+    const payload = {
       ...req.body,
       image,
-    });
+    };
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'features')) {
+      payload.features = parseFeatures(req.body.features);
+    }
+
+    await vehicle.update(payload);
     res.json({ success: true, data: vehicle });
   } catch (err) {
     if (err.name === 'SequelizeUniqueConstraintError') {
