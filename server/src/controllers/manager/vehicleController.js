@@ -76,6 +76,82 @@ const parseFeatures = (features) => {
   return [];
 };
 
+const ALLOWED_FUEL_TYPES = ['petrol', 'diesel', 'electric', 'hybrid'];
+const ALLOWED_TRANSMISSIONS = ['automatic', 'manual'];
+const ALLOWED_STATUSES = ['available', 'unavailable', 'maintenance', 'retired'];
+
+const buildVehicleValidationErrors = (body, { requireImage = false, imageFile = null } = {}) => {
+  const errors = {};
+  const features = parseFeatures(body.features);
+
+  if (!String(body.plateNumber || '').trim()) errors.plateNumber = 'Plate number is required.';
+  if (!String(body.brand || '').trim()) errors.brand = 'Brand is required.';
+  if (!String(body.vehicleType || '').trim()) errors.vehicleType = 'Vehicle type is required.';
+  if (!String(body.model || '').trim()) errors.model = 'Model is required.';
+
+  if (!String(body.year || '').trim()) {
+    errors.year = 'Year is required.';
+  } else if (Number.isNaN(Number(body.year))) {
+    errors.year = 'Year must be a number.';
+  } else if (Number(body.year) < 1900) {
+    errors.year = 'Year must be 1900 or later.';
+  }
+
+  if (!String(body.capacity || '').trim()) {
+    errors.capacity = 'Capacity is required.';
+  } else if (Number.isNaN(Number(body.capacity))) {
+    errors.capacity = 'Capacity must be a number.';
+  } else if (Number(body.capacity) <= 0) {
+    errors.capacity = 'Capacity must be greater than zero.';
+  }
+
+  if (!String(body.pricePerDay || '').trim()) {
+    errors.pricePerDay = 'Price per day is required.';
+  } else if (Number.isNaN(Number(body.pricePerDay))) {
+    errors.pricePerDay = 'Price per day must be a number.';
+  } else if (Number(body.pricePerDay) <= 0) {
+    errors.pricePerDay = 'Price per day must be greater than zero.';
+  }
+
+  if (!String(body.fuelType || '').trim()) {
+    errors.fuelType = 'Fuel type is required.';
+  } else if (!ALLOWED_FUEL_TYPES.includes(body.fuelType)) {
+    errors.fuelType = 'Select a valid fuel type.';
+  }
+
+  if (!String(body.transmission || '').trim()) {
+    errors.transmission = 'Transmission is required.';
+  } else if (!ALLOWED_TRANSMISSIONS.includes(body.transmission)) {
+    errors.transmission = 'Select a valid transmission.';
+  }
+
+  if (!String(body.color || '').trim()) errors.color = 'Color is required.';
+
+  if (!String(body.status || '').trim()) {
+    errors.status = 'Status is required.';
+  } else if (!ALLOWED_STATUSES.includes(body.status)) {
+    errors.status = 'Select a valid status.';
+  }
+
+  if (!String(body.description || '').trim()) errors.description = 'Description is required.';
+  if (!features.length) errors.features = 'Add at least one feature.';
+
+  if (requireImage && !imageFile) {
+    errors.image = 'Vehicle image is required.';
+  }
+
+  if (imageFile) {
+    if (!imageFile.mimetype?.startsWith('image/')) {
+      errors.image = 'Only image files are allowed.';
+    }
+    if (imageFile.size > 5 * 1024 * 1024) {
+      errors.image = 'Image must be 5MB or smaller.';
+    }
+  }
+
+  return errors;
+};
+
 // VEHICLE CRUD  —  manager only (except GET)
 
 // GET /api/vehicles
@@ -184,12 +260,12 @@ export const checkAvailability = async (req, res) => {
 // Manager only — add a new vehicle
 export const createVehicle = async (req, res) => {
   try {
-    const { plateNumber, vehicleType, model, capacity, pricePerDay } = req.body;
-
-    if (!plateNumber || !vehicleType || !model || !capacity || !pricePerDay) {
+    const validationErrors = buildVehicleValidationErrors(req.body, { requireImage: true, imageFile: req.file });
+    if (Object.keys(validationErrors).length > 0) {
       return res.status(400).json({
         success: false,
-        message: 'plateNumber, vehicleType, model, capacity and pricePerDay are required',
+        message: 'Validation failed',
+        errors: validationErrors,
       });
     }
 
@@ -230,6 +306,15 @@ export const updateVehicle = async (req, res) => {
     const vehicle = await Vehicle.findByPk(req.params.id);
     if (!vehicle) {
       return res.status(404).json({ success: false, message: 'Vehicle not found' });
+    }
+
+    const validationErrors = buildVehicleValidationErrors(req.body, { requireImage: false, imageFile: req.file });
+    if (Object.keys(validationErrors).length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: validationErrors,
+      });
     }
 
     // If new image uploaded, delete old and upload new to Supabase

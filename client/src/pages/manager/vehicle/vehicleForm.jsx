@@ -54,6 +54,11 @@ const defaultVehicle = {
 	features: "",
 };
 
+const ALLOWED_FUEL_TYPES = ["petrol", "diesel", "electric", "hybrid"];
+const ALLOWED_TRANSMISSIONS = ["automatic", "manual"];
+const ALLOWED_STATUSES = ["available", "unavailable", "maintenance", "retired"];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
 const normalizeFeaturesForInput = (features) => {
 	if (Array.isArray(features)) {
 		return features.map((feature) => String(feature).trim()).filter(Boolean).join(", ");
@@ -125,23 +130,74 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 
 	const validate = () => {
 		const nextErrors = {};
+		const normalizedFeatures = form.features
+			.split(",")
+			.map((feature) => feature.trim())
+			.filter(Boolean);
 
 		if (!form.plateNumber.trim()) nextErrors.plateNumber = "Plate number is required.";
+		if (!form.brand.trim()) nextErrors.brand = "Brand is required.";
 		if (!form.vehicleType.trim()) nextErrors.vehicleType = "Vehicle type is required.";
 		if (!form.model.trim()) nextErrors.model = "Model is required.";
+		if (!String(form.year).trim()) nextErrors.year = "Year is required.";
 		if (!String(form.capacity).trim()) nextErrors.capacity = "Capacity is required.";
 		if (!String(form.pricePerDay).trim()) nextErrors.pricePerDay = "Price per day is required.";
+		if (!form.fuelType) nextErrors.fuelType = "Fuel type is required.";
+		if (!form.transmission) nextErrors.transmission = "Transmission is required.";
+		if (!form.color.trim()) nextErrors.color = "Color is required.";
+		if (!form.status) nextErrors.status = "Status is required.";
+		if (!form.description.trim()) nextErrors.description = "Description is required.";
+		if (!normalizedFeatures.length) nextErrors.features = "Add at least one feature.";
+		if (!isEditMode && !form.image) nextErrors.image = "Vehicle image is required.";
+
+		if (form.image && !form.image.type.startsWith("image/")) {
+			nextErrors.image = "Only image files are allowed.";
+		}
+
+		if (form.image && form.image.size > MAX_IMAGE_SIZE) {
+			nextErrors.image = "Image must be 5MB or smaller.";
+		}
 
 		if (form.year && Number.isNaN(Number(form.year))) {
 			nextErrors.year = "Year must be a number.";
+		} else if (form.year && Number(form.year) < 1900) {
+			nextErrors.year = "Year must be 1900 or later.";
 		}
 
 		if (form.capacity && Number.isNaN(Number(form.capacity))) {
 			nextErrors.capacity = "Capacity must be a number.";
+		} else if (form.capacity && Number(form.capacity) <= 0) {
+			nextErrors.capacity = "Capacity must be greater than zero.";
 		}
 
 		if (form.pricePerDay && Number.isNaN(Number(form.pricePerDay))) {
 			nextErrors.pricePerDay = "Price per day must be a number.";
+		} else if (form.pricePerDay && Number(form.pricePerDay) <= 0) {
+			nextErrors.pricePerDay = "Price per day must be greater than zero.";
+		}
+
+		if (form.fuelType && !ALLOWED_FUEL_TYPES.includes(form.fuelType)) {
+			nextErrors.fuelType = "Select a valid fuel type.";
+		}
+
+		if (form.transmission && !ALLOWED_TRANSMISSIONS.includes(form.transmission)) {
+			nextErrors.transmission = "Select a valid transmission.";
+		}
+
+		if (form.status && !ALLOWED_STATUSES.includes(form.status)) {
+			nextErrors.status = "Select a valid status.";
+		}
+
+		if (form.brand && form.brand.trim().length > 100) {
+			nextErrors.brand = "Brand cannot exceed 100 characters.";
+		}
+
+		if (form.color && form.color.trim().length > 50) {
+			nextErrors.color = "Color cannot exceed 50 characters.";
+		}
+
+		if (form.description && form.description.trim().length > 2000) {
+			nextErrors.description = "Description is too long.";
 		}
 
 		setErrors(nextErrors);
@@ -205,8 +261,13 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 			}
 		} catch (error) {
 			const message = error.response?.data?.message || error.message || "Failed to save vehicle.";
+			const apiErrors = error.response?.data?.errors;
 			toast.error(message);
-			setErrors((prev) => ({ ...prev, form: message }));
+			setErrors((prev) => ({
+				...prev,
+				...(apiErrors && typeof apiErrors === "object" ? apiErrors : {}),
+				form: message,
+			}));
 		} finally {
 			setIsSubmitting(false);
 		}
