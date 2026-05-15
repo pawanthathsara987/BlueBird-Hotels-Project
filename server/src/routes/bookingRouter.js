@@ -10,11 +10,14 @@ import {
    getAvailableRoomAssignForPackage
 } from '../controllers/booking/roomBookingController.js';
 
+import { createVisitorBooking } from '../controllers/reception/visitingBookingController.js';
+
 import { getAllPackages } from '../controllers/admin/packageController.js';
 
 const router = express.Router();
 
 router.post('/booking', createBooking);
+router.post('/visitor-booking', createVisitorBooking);
 router.get('/bookings', getAllBookings);
 router.get('/booking/:id', getBookingById);
 router.delete('/booking/:id', deleteBookingById);
