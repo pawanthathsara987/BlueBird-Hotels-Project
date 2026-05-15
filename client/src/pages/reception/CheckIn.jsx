@@ -22,6 +22,7 @@ export default function CheckIn() {
         fetchPendingCheckIns();
     }, []);
 
+    
     const filteredGuests = pendingCheckIns.filter((guest) => {
         const name = `${guest.firstName || ""} ${guest.lastName || ""}`.toLowerCase();
         return name.includes(searchTerm.toLowerCase());
