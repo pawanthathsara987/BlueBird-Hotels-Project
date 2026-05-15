@@ -1,6 +1,6 @@
 import { col, fn, Op, QueryTypes } from "sequelize";
 import sequelize from "../../config/database.js";
-import { sendEmail } from "../../services/emailService.js";
+import { sendEmail, sendBookingConfirmationEmail } from "../../services/emailService.js";
 import { Customer, Room, BookedRoom, RoomPackage, Reservation, AirPortPickup } from "../../models/index.js";
 
 
@@ -177,6 +177,30 @@ const createBooking = async (req, res) => {
         }
 
         await t.commit();
+
+        try {
+            const confirmedBooking = await Reservation.findByPk(reservation.id, {
+                include: [
+                    { model: Customer },
+                    {
+                        model: BookedRoom,
+                        as: "bookedRooms",
+                        include: [
+                            {
+                                model: Room,
+                                include: [RoomPackage],
+                            },
+                        ],
+                    },
+                ],
+            });
+
+            if (confirmedBooking) {
+                await sendBookingConfirmationEmail(confirmedBooking);
+            }
+        } catch (emailError) {
+            console.error("BOOKING CONFIRMATION EMAIL ERROR:", emailError);
+        }
 
         if (personalRequest && personalRequest != null) {
             await sendEmail({

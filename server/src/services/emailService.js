@@ -100,6 +100,103 @@ export const sendInquiryConfirmationEmail = async (inquiry) => {
   }
 };
 
+/**
+ * Send room booking confirmation email after a successful payment
+ * @param {Object} booking - Reservation object with customer and booked rooms
+ */
+export const sendBookingConfirmationEmail = async (booking) => {
+  try {
+    const customer = booking.Customer;
+    if (!customer?.email) {
+      throw new Error("Customer email not found for booking confirmation");
+    }
+
+    const bookedRooms = Array.isArray(booking.bookedRooms) ? booking.bookedRooms : [];
+    const roomSummary = bookedRooms
+      .map((roomBooking, index) => {
+        const room = roomBooking.Room;
+        const packageName = room?.RoomPackage?.pname || room?.RoomPackage?.packageName || "Room";
+        const roomLabel = room?.roomNo || room?.roomNumber || room?.id || `Room ${index + 1}`;
+
+        return `
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${packageName}</td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">${roomLabel}</td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">${roomBooking.checkIn} to ${roomBooking.checkOut}</td>
+          </tr>
+        `;
+      })
+      .join("");
+
+    const subject = `Room Booking Confirmed - Reservation #${booking.id}`;
+    const guestName = [customer.firstName, customer.lastName].filter(Boolean).join(" ") || "Guest";
+
+    const emailBody = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; background: #f8fafc; color: #1f2937; }
+            .container { max-width: 640px; margin: 0 auto; background: #ffffff; padding: 24px; border-radius: 16px; }
+            .header { background: #0f766e; color: #ffffff; padding: 24px; border-radius: 12px; }
+            .section { margin-top: 24px; }
+            .card { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; }
+            .summary { width: 100%; border-collapse: collapse; font-size: 14px; }
+            .summary th { text-align: left; color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; padding-bottom: 8px; }
+            .footer { margin-top: 28px; font-size: 12px; color: #6b7280; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0; font-size: 24px;">Payment Received</h1>
+              <p style="margin: 8px 0 0;">Your room booking is confirmed.</p>
+            </div>
+
+            <div class="section">
+              <p>Dear ${guestName},</p>
+              <p>We have received your payment successfully and your room reservation is now confirmed.</p>
+            </div>
+
+            <div class="section card">
+              <p style="margin: 0 0 8px;"><strong>Reservation ID:</strong> #${booking.id}</p>
+              <p style="margin: 0 0 8px;"><strong>Total Amount:</strong> $${Number(booking.total_price || 0).toLocaleString()}</p>
+              <p style="margin: 0;"><strong>Guest Email:</strong> ${customer.email}</p>
+            </div>
+
+            <div class="section">
+              <h3 style="margin: 0 0 12px;">Booking Details</h3>
+              <table class="summary">
+                <thead>
+                  <tr>
+                    <th>Room Type</th>
+                    <th style="text-align: right;">Room</th>
+                    <th style="text-align: right;">Stay Period</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${roomSummary || `<tr><td colspan="3" style="padding: 12px 0; color: #6b7280;">No room details available.</td></tr>`}
+                </tbody>
+              </table>
+            </div>
+
+            <div class="footer">
+              <p>Please keep this email for your records. Our team will contact you if any additional information is needed.</p>
+              <p>Best regards,<br/>BlueJay Hotels Team</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    await sendEmail({ to: customer.email, subject, html: emailBody });
+    return true;
+  } catch (error) {
+    console.error("Error sending booking confirmation email:", error);
+    throw error;
+  }
+};
+
 
 
 
