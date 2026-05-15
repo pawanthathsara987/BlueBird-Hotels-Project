@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { Check, X, AlertCircle, Loader, ChevronDown, Mail, Phone, MapPin, Users, Calendar } from 'lucide-react';
+import axios from 'axios';
 
 export default function TourInquiriesManagement() {
   const [allInquiries, setAllInquiries] = useState([]);
@@ -79,10 +80,8 @@ export default function TourInquiriesManagement() {
   const fetchInquiries = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${backendBaseUrl}/tour-inquiry`);
-      const data = await response.json();
-      
-      if (data.success) {
+      const { data } = await axios.get(`${backendBaseUrl}/tour-inquiry`);
+      if (data && data.success) {
         setAllInquiries(data.data || []);
         setError(null);
       } else {
@@ -119,17 +118,12 @@ export default function TourInquiriesManagement() {
   const handleAccept = async (inquiryId) => {
     setProcessing(inquiryId);
     try {
-      const response = await fetch(`${backendBaseUrl}/tour-inquiry/${inquiryId}/accept`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      const data = await response.json();
-      if (data.success) {
+      const { data } = await axios.put(`${backendBaseUrl}/tour-inquiry/${inquiryId}/accept`);
+      if (data && data.success) {
         alert('Inquiry accepted. You can now send a customized email to the guest.');
         await fetchInquiries();
       } else {
-        alert(data.message || 'Failed to accept inquiry');
+        alert((data && data.message) || 'Failed to accept inquiry');
       }
     } catch (err) {
       console.error('Error accepting inquiry:', err);
@@ -144,17 +138,12 @@ export default function TourInquiriesManagement() {
     
     setProcessing(inquiryId);
     try {
-      const response = await fetch(`${backendBaseUrl}/tour-inquiry/${inquiryId}/reject`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      const data = await response.json();
-      if (data.success) {
+      const { data } = await axios.put(`${backendBaseUrl}/tour-inquiry/${inquiryId}/reject`);
+      if (data && data.success) {
         alert('Inquiry rejected');
         await fetchInquiries();
       } else {
-        alert(data.message || 'Failed to reject inquiry');
+        alert((data && data.message) || 'Failed to reject inquiry');
       }
     } catch (err) {
       console.error('Error rejecting inquiry:', err);
@@ -226,14 +215,8 @@ export default function TourInquiriesManagement() {
 
     setProcessing(inquiry.id);
     try {
-      const response = await fetch(`${backendBaseUrl}/tour-inquiry/${inquiry.id}/send-accepted-email`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
-      if (data.success) {
+      const { data } = await axios.put(`${backendBaseUrl}/tour-inquiry/${inquiry.id}/send-accepted-email`, payload);
+      if (data && data.success) {
         alert(`Email sent to ${inquiry.email}`);
         setEmailSentByInquiry((prev) => ({
           ...prev,
@@ -242,7 +225,7 @@ export default function TourInquiriesManagement() {
         setEmailingInquiryId(null);
         await fetchInquiries();
       } else {
-        alert(data.message || 'Failed to send email');
+        alert((data && data.message) || 'Failed to send email');
       }
     } catch (err) {
       console.error('Error sending accepted inquiry email:', err);
