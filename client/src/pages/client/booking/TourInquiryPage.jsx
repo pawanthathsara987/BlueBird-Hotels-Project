@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AlertCircle, Check, Loader, MapPin, X } from 'lucide-react';
+import { AlertCircle, Calculator, Check, Loader, MapPin, X } from 'lucide-react';
 import axios from 'axios';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '../../../components/header';
@@ -43,6 +43,12 @@ function Field({ label, error, children }) {
 const inputCls = (err) =>
   `w-full px-3.5 py-2.5 rounded-xl border text-sm text-gray-800 bg-gray-50 outline-none transition focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${err ? 'border-red-400 bg-red-50' : 'border-gray-200'}`;
 
+const refundGuide = [
+  { label: 'Cancel 7+ days before', value: '60% refund' },
+  { label: 'Cancel 1 day before', value: '20% refund' },
+  { label: 'Same-day cancellation', value: 'No refund' },
+];
+
 export default function TourInquiryPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -54,7 +60,11 @@ export default function TourInquiryPage() {
   const [loadingTour, setLoadingTour] = useState(!selectedTour);
   const [pageError, setPageError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingRefund, setIsCheckingRefund] = useState(false);
   const [toast, setToast] = useState(null);
+  const [refundInquiryCode, setRefundInquiryCode] = useState('');
+  const [refundQuote, setRefundQuote] = useState(null);
+  const [isSavingRefund, setIsSavingRefund] = useState(false);
 
   const [form, setForm] = useState({
     fullName: '',
@@ -141,6 +151,75 @@ export default function TourInquiryPage() {
   const showToast = (message) => {
     setToast(message);
     setTimeout(() => setToast(null), 4500);
+  };
+
+  const formatHoursToDaysTime = (hours) => {
+    if (hours === null || hours === undefined || isNaN(hours)) return 'N/A';
+    const h = Number(hours);
+    if (h < 0) {
+      const abs = Math.abs(h);
+      const d = Math.floor(abs / 24);
+      const hr = abs % 24;
+      if (d > 0) return `Started ${d}d ${hr}h ago`;
+      return `Started ${hr}h ago`;
+    }
+    const d = Math.floor(h / 24);
+    const hr = h % 24;
+    if (d > 0) return `${d} day(s) ${hr} hour(s)`;
+    return `${hr} hour(s)`;
+  };
+
+  const handleCheckRefund = async () => {
+    setPageError(null);
+    setRefundQuote(null);
+
+    if (!refundInquiryCode.trim()) {
+      setPageError('Inquiry code is required');
+      return;
+    }
+
+    setIsCheckingRefund(true);
+    try {
+      const res = await axios.get(`${backendBaseUrl}/tour-inquiry/refund-quote/${encodeURIComponent(refundInquiryCode.trim())}`);
+
+      if (res.data.success) {
+        setRefundQuote(res.data.data);
+        showToast('Refund quote loaded');
+      } else {
+        setPageError(res.data.message || 'Failed to load refund quote');
+      }
+    } catch (e) {
+      // Log full error for debugging
+      console.error('Refund quote lookup failed:', e);
+
+      const status = e.response?.status;
+      const backendMessage = e.response?.data?.message || e.message || 'Failed to load refund quote';
+
+      // If not found and user entered a numeric id, try numeric-ID fallback
+      if (status === 404 && /^\d+$/.test(refundInquiryCode.trim())) {
+        try {
+          const byId = await axios.get(`${backendBaseUrl}/tour-inquiry/${encodeURIComponent(refundInquiryCode.trim())}`);
+          if (byId.data && byId.data.success && byId.data.data && byId.data.data.inquiryRef) {
+            // Retry refund-quote with the authoritative inquiryRef from the record
+            const inferredRef = byId.data.data.inquiryRef;
+            const retry = await axios.get(`${backendBaseUrl}/tour-inquiry/refund-quote/${encodeURIComponent(inferredRef)}`);
+            if (retry.data && retry.data.success) {
+              setRefundQuote(retry.data.data);
+              showToast('Refund quote loaded (via numeric-id fallback)');
+              return;
+            }
+          }
+        } catch (fallbackErr) {
+          console.error('Numeric fallback failed:', fallbackErr);
+          setPageError(fallbackErr.response?.data?.message || fallbackErr.message || backendMessage);
+          return;
+        }
+      }
+
+      setPageError(backendMessage);
+    } finally {
+      setIsCheckingRefund(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -316,6 +395,119 @@ export default function TourInquiryPage() {
               <MapPin size={14} className="text-blue-600 mt-0.5 shrink-0" />
               <span>{tour?.location || 'Location not specified'}</span>
             </div>
+
+            <div className="rounded-xl border border-amber-100 bg-amber-50 p-4 space-y-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700 mb-1">Terms & Conditions</p>
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                  {tour?.termsConditions || 'No terms provided by the manager yet.'}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700">Refund guide</p>
+                {refundGuide.map((item) => (
+                  <div key={item.label} className="flex items-center justify-between gap-3 rounded-lg bg-white/80 px-3 py-2 text-sm border border-amber-100">
+                    <span className="text-gray-600">{item.label}</span>
+                    <span className="font-semibold text-amber-700">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-2 border-t border-amber-100 space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700">Check refund by inquiry code</p>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    value={refundInquiryCode}
+                    onChange={(e) => setRefundInquiryCode(e.target.value)}
+                    placeholder="Enter inquiry code"
+                    className="w-full px-3 py-2 rounded-lg border border-amber-200 bg-white text-sm text-gray-800 outline-none focus:ring-2 focus:ring-amber-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCheckRefund}
+                    disabled={isCheckingRefund}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-500 disabled:cursor-not-allowed disabled:bg-amber-300"
+                  >
+                    {isCheckingRefund ? <Loader size={14} className="animate-spin" /> : <Calculator size={14} />}
+                    {isCheckingRefund ? 'Checking...' : 'Check Refund'}
+                  </button>
+                </div>
+              </div>
+
+              {refundQuote && (
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4 space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Verified refund quote</p>
+                  <div className="flex items-center justify-between gap-3 text-sm rounded-lg bg-white/80 px-3 py-2 border border-emerald-100">
+                    <span className="text-gray-600">Package</span>
+                    <span className="font-semibold text-gray-800">{refundQuote.packageName || 'Tour package'}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-gray-600">Inquiry code</span>
+                    <span className="font-semibold text-gray-800">{refundQuote.inquiryRef}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-gray-600">Inquiry sent</span>
+                    <span className="font-semibold text-gray-800">{refundQuote.inquiryCreatedAt ? new Date(refundQuote.inquiryCreatedAt).toLocaleString() : 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-gray-600">Tour date</span>
+                    <span className="font-semibold text-gray-800">{new Date(refundQuote.tourDate).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-gray-600">Time until tour</span>
+                    <span className="font-semibold text-gray-800">{formatHoursToDaysTime(refundQuote.hoursUntilTour)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-gray-600">Refund percentage</span>
+                    <span className="font-semibold text-emerald-700">{refundQuote.refundPercentage}%</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-gray-600">Refund price</span>
+                    <span className="font-bold text-emerald-700">${Number(refundQuote.refundAmount || 0).toLocaleString()}</span>
+                  </div>
+                  <p className="text-xs text-emerald-700/80 pt-1">This amount is calculated from the matched inquiry code and the saved tour date.</p>
+                  <div className="pt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setPageError(null);
+                        setIsSavingRefund(true);
+                        try {
+                          const payload = {
+                            inquiryRef: refundQuote.inquiryRef,
+                            notes: form.specialRequests,
+                          };
+
+                          const res = await axios.post(`${backendBaseUrl}/tour-inquiry/refunds`, payload);
+                          if (res.data && res.data.success) {
+                            showToast(`Refund saved: ${res.data.data.refundRef}`);
+                          } else {
+                            setPageError(res.data?.message || 'Failed to save refund');
+                          }
+                        } catch (err) {
+                          console.error('Save refund failed:', err);
+                          if (err.response?.status === 409 && err.response?.data?.data) {
+                            // existing record
+                            const existing = err.response.data.data;
+                            setRefundQuote(existing);
+                            showToast('Refund already exists');
+                          } else {
+                            setPageError(err.response?.data?.message || err.message || 'Failed to save refund');
+                          }
+                        } finally {
+                          setIsSavingRefund(false);
+                        }
+                      }}
+                      disabled={isSavingRefund}
+                      className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {isSavingRefund ? <Loader size={14} className="animate-spin" /> : 'Save refund'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="pt-3 border-t border-gray-100">
               <p className="text-xs text-gray-500 mb-1">Package Price</p>
               <p className="text-2xl font-bold text-blue-800">

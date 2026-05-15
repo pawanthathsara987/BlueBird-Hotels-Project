@@ -1,4 +1,4 @@
-import { TourInquiry, Tour } from "../../models/index.js";
+import { TourInquiry, Tour, TourRefund } from "../../models/index.js";
 import crypto from "crypto";
 import {
   validateEmail,
@@ -41,6 +41,22 @@ const generateUniqueReferenceCode = async (model, fieldName, prefix, maxAttempts
   }
 
   throw new Error(`Unable to generate a unique ${fieldName} after ${maxAttempts} attempts`);
+};
+
+const calculateRefundPercentage = (tourDate) => {
+  // tourDate may be YYYY-MM-DD or full datetime; parse into JS Date
+  const start = new Date(tourDate);
+  if (isNaN(start.getTime())) {
+    return { hoursUntilTour: null, refundPercentage: 0 };
+  }
+
+  const now = new Date();
+  const msUntil = start.getTime() - now.getTime();
+  const hoursUntilTour = Math.floor(msUntil / (1000 * 60 * 60));
+
+  if (hoursUntilTour >= 24 * 7) return { hoursUntilTour, refundPercentage: 60 };
+  if (hoursUntilTour >= 24 * 4) return { hoursUntilTour, refundPercentage: 20 };
+  return { hoursUntilTour, refundPercentage: 0 };
 };
 
 // Create new tour inquiry
@@ -301,6 +317,174 @@ export const getInquiryById = async (req, res) => {
       message: "Error fetching inquiry",
       error: error.message,
     });
+  }
+};
+
+export const getRefundQuoteByInquiryCode = async (req, res) => {
+  try {
+    const { inquiryRef } = req.params;
+
+    if (!inquiryRef) {
+      return res.status(400).json({
+        success: false,
+        message: "Inquiry code is required",
+        field: "inquiryRef",
+      });
+    }
+
+    const inquiry = await TourInquiry.findOne({
+      where: { inquiryRef },
+      include: [
+        {
+          model: Tour,
+          attributes: ["id", "packageName", "price", "discount"],
+        },
+      ],
+    });
+
+    if (!inquiry) {
+      return res.status(404).json({
+        success: false,
+        message: "Inquiry not found",
+      });
+    }
+
+    const tourPrice = Number(inquiry.Tour?.price || 0);
+    const discount = Number(inquiry.Tour?.discount || 0);
+    const packagePrice = discount > 0 ? tourPrice - (tourPrice * discount) / 100 : tourPrice;
+    const { hoursUntilTour, refundPercentage } = calculateRefundPercentage(inquiry.startDate);
+    const refundAmount = Number(((packagePrice * refundPercentage) / 100).toFixed(2));
+
+    return res.status(200).json({
+      success: true,
+      message: "Refund quote retrieved successfully",
+      data: {
+        inquiryRef: inquiry.inquiryRef,
+        inquiryCreatedAt: inquiry.createdAt ? new Date(inquiry.createdAt).toISOString() : null,
+        tourDate: inquiry.startDate,
+        packageName: inquiry.Tour?.packageName || null,
+        packagePrice: Number(packagePrice.toFixed(2)),
+        refundPercentage,
+        refundAmount,
+        hoursUntilTour,
+        customerName: inquiry.fullName,
+        customerEmail: inquiry.email,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching refund quote:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching refund quote",
+      error: error.message,
+    });
+  }
+};
+
+// Save a refund record to the database
+export const saveRefundRecord = async (req, res) => {
+  try {
+    // Only accept inquiryRef and optional notes from client. Recalculate values server-side.
+    const { inquiryRef, notes } = req.body;
+    if (!inquiryRef) return res.status(400).json({ success: false, message: 'inquiryRef is required' });
+
+    // Find inquiry and related tour
+    const inquiry = await TourInquiry.findOne({
+      where: { inquiryRef },
+      include: [{ model: Tour, attributes: ['id', 'price', 'discount'] }],
+    });
+
+    if (!inquiry) return res.status(404).json({ success: false, message: 'Inquiry not found' });
+
+    // Prevent duplicate refund records for the same inquiryRef
+    const existing = await TourRefund.findOne({ where: { inquiryRef } });
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: 'A refund record for this inquiry already exists',
+        data: {
+          id: existing.id,
+          refundRef: existing.refundRef,
+          inquiryRef: existing.inquiryRef,
+          tourId: existing.tourId,
+          customerName: existing.customerName,
+          email: existing.email,
+          startDate: existing.startDate,
+          tourDate: existing.startDate,
+          daysUntilTour: Number(existing.daysUntilTour),
+          packagePrice: Number(existing.packagePrice),
+          refundPercentage: Number(existing.refundPercentage),
+          refundAmount: Number(existing.refundAmount),
+          status: existing.status,
+          notes: existing.notes,
+          createdAt: existing.createdAt,
+        },
+      });
+    }
+
+    const tour = inquiry.Tour;
+    const tourPrice = Number(tour?.price || 0);
+    const discount = Number(tour?.discount || 0);
+    const packagePrice = discount > 0 ? tourPrice - (tourPrice * discount) / 100 : tourPrice;
+
+    const { daysUntilTour, refundPercentage } = calculateRefundPercentage(inquiry.startDate);
+    const refundAmount = Number(((packagePrice * refundPercentage) / 100).toFixed(2));
+
+    const refundRef = await generateUniqueReferenceCode(TourRefund, 'refundRef', 'TR');
+
+    const record = await TourRefund.create({
+      refundRef,
+      inquiryRef,
+      tourId: inquiry.tourId,
+      customerName: inquiry.fullName,
+      email: inquiry.email,
+      startDate: (new Date(inquiry.startDate)).toISOString().split('T')[0],
+      daysUntilTour,
+      packagePrice: Number(packagePrice.toFixed(2)),
+      refundPercentage,
+      refundAmount,
+      status: 'requested',
+      notes: notes || null,
+    });
+
+    return res.status(201).json({ success: true, message: 'Refund saved', data: { id: record.id, refundRef: record.refundRef } });
+  } catch (error) {
+    console.error('Error saving refund record:', error);
+    return res.status(500).json({ success: false, message: 'Failed to save refund', error: error.message });
+  }
+};
+
+// Get refund by refundRef
+export const getRefundByRef = async (req, res) => {
+  try {
+    const { refundRef } = req.params;
+    if (!refundRef) return res.status(400).json({ success: false, message: 'refundRef is required' });
+
+    const refund = await TourRefund.findOne({ where: { refundRef } });
+    if (!refund) return res.status(404).json({ success: false, message: 'Refund not found' });
+
+    // Normalize numeric fields and createdAt
+    const normalized = {
+      id: refund.id,
+      refundRef: refund.refundRef,
+      inquiryRef: refund.inquiryRef,
+      tourId: refund.tourId,
+      customerName: refund.customerName,
+      email: refund.email,
+      tourDate: refund.startDate,
+      daysUntilTour: Number(refund.daysUntilTour),
+      packagePrice: Number(refund.packagePrice),
+      refundPercentage: Number(refund.refundPercentage),
+      refundAmount: Number(refund.refundAmount),
+      status: refund.status,
+      notes: refund.notes,
+      createdAt: refund.createdAt ? new Date(refund.createdAt).toISOString() : null,
+    };
+
+    return res.status(200).json({ success: true, message: 'Refund retrieved', data: normalized });
+  } catch (error) {
+    console.error('Error fetching refund:', error);
+    return res.status(500).json({ success: false, message: 'Error fetching refund', error: error.message });
   }
 };
 

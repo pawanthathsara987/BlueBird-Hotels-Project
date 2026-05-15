@@ -10,6 +10,7 @@ import Tour from "./tour_package/tourModel.js";
 import TourItem from "./tour_package/tourItemsModel.js";
 import RoomAmenities from "./room_package/roomAmenities.js";
 import TourInquiry from "./tour_package/TourInquiry.js";
+import TourRefund from "./tour_package/TourRefund.js";
 import PackageImage from "./room_package/packageImageModel.js";
 import AirPortPickup from './booking/airPortPickupModel.js';
 import Vehicle from "./vehicle/vehicleModel.js";
@@ -135,6 +136,16 @@ export function initModels() {
         foreignKey: "tourId",
     });
 
+    // Tour -> TourRefund (One-to-Many)
+    Tour.hasMany(TourRefund, {
+        foreignKey: "tourId",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+    });
+    TourRefund.belongsTo(Tour, {
+        foreignKey: "tourId",
+    });
+
 
     //StaffMember -> Role (Many-to-One)
     StaffMember.belongsTo(Role, {
@@ -145,8 +156,8 @@ export function initModels() {
         foreignKey: "roleId"
     });
 
-    return { AirPortPickup, Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, Role };
+    return { AirPortPickup, Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourRefund, PackageImage, Vehicle, Role };
 }
-export { AirPortPickup, Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, Role };
+export { AirPortPickup, Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourRefund, PackageImage, Vehicle, Role };
 
 

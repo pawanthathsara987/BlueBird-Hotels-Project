@@ -3,6 +3,9 @@ import {
   createTourInquiry,
   getAllInquiries,
   getInquiryById,
+  getRefundQuoteByInquiryCode,
+  saveRefundRecord,
+  getRefundByRef,
   acceptInquiry,
   sendAcceptedInquiryEmail,
   rejectInquiry,
@@ -23,6 +26,15 @@ router.get('/stats', getInquiryStats);
 
 // Get inquiries for specific tour
 router.get('/tour/:tourId', getInquiriesByTour);
+
+// Get refund quote by inquiry code
+router.get('/refund-quote/:inquiryRef', getRefundQuoteByInquiryCode);
+
+// Persist refund record
+router.post('/refunds', saveRefundRecord);
+
+// Get refund by reference
+router.get('/refunds/:refundRef', getRefundByRef);
 
 // Get inquiry by ID
 router.get('/:id', getInquiryById);
