@@ -15,10 +15,10 @@ export default function AdminPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const sidebarLinkClass = ({ isActive }) =>
-        `flex items-center gap-2 p-3 text-lg rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/40 ${
+        `flex items-center gap-2 p-3 text-lg rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300/60 ${
             isActive
-                ? "bg-white text-[#29384d] shadow-md"
-                : "text-white/70 hover:bg-white/10 hover:text-white hover:shadow-sm"
+                ? "bg-blue-700 text-white shadow-md"
+                : "text-white/70 hover:bg-blue-400 hover:text-white hover:shadow-sm"
         }`;
 
     return (
