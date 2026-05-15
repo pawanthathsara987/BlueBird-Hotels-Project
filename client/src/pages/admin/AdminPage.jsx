@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, Routes, Route } from "react-router-dom";
+import { NavLink, Routes, Route } from "react-router-dom";
 import { MdAdminPanelSettings, MdDashboard, MdBedroomParent, MdBookOnline, MdPeople, MdSettings, MdLogout, MdMenu, MdClose } from "react-icons/md";
 import RoomManagement from "./rooms/roomManagement";
 import AmenitiesForm from "./rooms/AmenitiesForm";
@@ -13,6 +13,13 @@ import ViewDeletedStaff from "./user/ViewDeletedStaff";
 
 export default function AdminPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    const sidebarLinkClass = ({ isActive }) =>
+        `flex items-center gap-2 p-3 text-lg rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300/60 ${
+            isActive
+                ? "bg-blue-700 text-white shadow-md"
+                : "text-white/70 hover:bg-blue-400 hover:text-white hover:shadow-sm"
+        }`;
 
     return (
         <div className="w-full h-screen flex relative">
@@ -39,12 +46,12 @@ export default function AdminPage() {
                     <h1 className="text-xl font-bold text-white">Admin</h1>
                 </div>
                 <div className="w-full flex flex-col pl-5 pt-5">
-                    <Link to="/admin" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70"><MdDashboard className="text-2xl" /> Dashboard</Link>
-                    <Link to="/admin/rooms/roomManagement" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70"><MdBedroomParent className="text-2xl" /> Rooms</Link>
-                    <Link to="/admin/bookings" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70"><MdBookOnline className="text-2xl" /> Bookings</Link>
-                    <Link to="/admin/users" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70"><MdPeople className="text-2xl" /> Users</Link>
-                    <Link to="/admin/settings" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70"><MdSettings className="text-2xl" /> Settings</Link>
-                    <Link to="/logout" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70"><MdLogout className="text-2xl" /> Logout</Link>
+                    <NavLink to="/admin" end onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}><MdDashboard className="text-2xl" /> Dashboard</NavLink>
+                    <NavLink to="/admin/rooms/roomManagement" onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}><MdBedroomParent className="text-2xl" /> Rooms</NavLink>
+                    <NavLink to="/admin/bookings" onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}><MdBookOnline className="text-2xl" /> Bookings</NavLink>
+                    <NavLink to="/admin/users" onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}><MdPeople className="text-2xl" /> Users</NavLink>
+                    <NavLink to="/admin/settings" onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}><MdSettings className="text-2xl" /> Settings</NavLink>
+                    <NavLink to="/logout" onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}><MdLogout className="text-2xl" /> Logout</NavLink>
                 </div>
             </div>
 
