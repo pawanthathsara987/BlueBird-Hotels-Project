@@ -23,8 +23,11 @@ export default function NewBookingFlow({ onBookingSuccess }) {
         lastName: "",
         email: "",
         phoneNumber: "",
-        idPassport: ""
+        idPassport: "",
+        country: ""
     });
+
+    const [isLocal, setIsLocal] = useState(true);
 
     const [isLoading, setIsLoading] = useState(false);
 
@@ -146,29 +149,46 @@ export default function NewBookingFlow({ onBookingSuccess }) {
 
         setIsLoading(true);
 
-        const bookingData = {
-            source: 'reception',
-            guestDetails,
-            total_price: totalPrice,
-            rooms: selectedRooms.map(r => ({
-                roomId: r.roomId,
-                checkIn: new Date(checkInDate).toISOString(),
-                checkOut: new Date(checkOutDate).toISOString(),
-                actualAdults: r.actualAdults,
-                actualKids: r.actualKids
-            }))
-        };
-
         try {
+            // Step 1: Add Customer and wait for customer ID
+            toast.loading("Adding customer details...", { id: 'booking-progress' });
+            const customerResponse = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/roombook/reception-customer`, guestDetails);
+
+            if (!customerResponse.data.success) {
+                toast.dismiss('booking-progress');
+                toast.error("Failed to add customer details.");
+                setIsLoading(false);
+                return;
+            }
+
+            const guestId = customerResponse.data.data.customerId;
+            toast.loading("Creating booking...", { id: 'booking-progress' });
+
+            // Step 2: Create Booking using the new guestId
+            const bookingData = {
+                guestId,
+                total_price: totalPrice,
+                rooms: selectedRooms.map(r => ({
+                    roomId: r.roomId,
+                    checkIn: new Date(checkInDate).toISOString(),
+                    checkOut: new Date(checkOutDate).toISOString(),
+                    actualAdults: r.actualAdults,
+                    actualKids: r.actualKids
+                }))
+            };
+
             const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/roombook/visitor-booking`, bookingData);
             if (response.data.success) {
+                toast.dismiss('booking-progress');
                 toast.success("Booking created successfully!");
                 // Reset form
                 setSelectedRooms([]);
-                setGuestDetails({ firstName: "", lastName: "", email: "", phoneNumber: "", idPassport: "" });
+                setGuestDetails({ firstName: "", lastName: "", email: "", phoneNumber: "", idPassport: "", country: "" });
+                setIsLocal(true);
                 if (onBookingSuccess) onBookingSuccess();
             }
         } catch (error) {
+            toast.dismiss('booking-progress');
             toast.error(error.response?.data?.message || "Failed to create booking");
         } finally {
             setIsLoading(false);
@@ -336,10 +356,38 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                                 <label className="text-xs font-semibold text-gray-600 block mb-1 flex items-center gap-1"><MdEmail /> Email Address</label>
                                 <input type="email" name="email" value={guestDetails.email} onChange={handleGuestChange} placeholder="Optional for walk-ins" className="w-full border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 p-2" />
                             </div>
-                            <div>
-                                <label className="text-xs font-semibold text-gray-600 block mb-1 flex items-center gap-1"><MdBadge /> ID / Passport / Country</label>
-                                <input type="text" name="idPassport" value={guestDetails.idPassport} onChange={handleGuestChange} className="w-full border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 p-2" />
+                            <div className="flex items-center gap-2 mb-2 mt-4 border-t pt-4">
+                                <input
+                                    type="checkbox"
+                                    id="isLocal"
+                                    checked={isLocal}
+                                    onChange={(e) => setIsLocal(e.target.checked)}
+                                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300 cursor-pointer"
+                                />
+                                <label htmlFor="isLocal" className="text-sm font-semibold text-gray-700 cursor-pointer select-none">
+                                    Local Guest (uncheck if international)
+                                </label>
                             </div>
+
+                            {isLocal ? (
+                                <div>
+                                    <label className="text-xs font-semibold text-gray-600 block mb-1 flex items-center gap-1"><MdBadge /> National Identity Card (NIC)</label>
+                                    <input type="text" name="idPassport" value={guestDetails.idPassport} onChange={handleGuestChange} className="w-full border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 p-2" placeholder="Enter NIC number" />
+                                </div>
+                            ) : (
+                                <>
+                                    <div>
+                                        <label className="text-xs font-semibold text-gray-600 block mb-1 flex items-center gap-1"><MdBadge /> Country</label>
+                                        <input type="text" name="country" value={guestDetails.country} onChange={handleGuestChange} className="w-full border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 p-2" placeholder="Enter country name" />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-gray-600 block mb-1 flex items-center gap-1"><MdBadge /> Passport ID</label>
+                                        <input type="text" name="idPassport" value={guestDetails.idPassport} onChange={handleGuestChange} className="w-full border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 p-2" placeholder="Enter passport number" />
+                                    </div>
+                                </>
+                            )}
+
+
                         </div>
                     </div>
 

@@ -1,7 +1,7 @@
 import { Model, DataTypes } from "sequelize";
 import sequelize from "../../config/database.js";
 
-class BookedRoom extends Model {}
+class BookedRoom extends Model { }
 
 BookedRoom.init(
     {
@@ -23,7 +23,7 @@ BookedRoom.init(
             type: DataTypes.INTEGER,
             allowNull: false,
             references: {
-                model: 'room', 
+                model: 'room',
                 key: 'id'
             }
         },

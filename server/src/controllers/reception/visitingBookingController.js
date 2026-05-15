@@ -39,6 +39,62 @@ const availableRooms = async (req, res) => {
     }
 };
 
+// Add customer specifically for reception before booking
+const createReceptionCustomer = async (req, res) => {
+    try {
+        const { firstName, lastName, email, phoneNumber, idPassport, country } = req.body;
+
+        if (!firstName || !lastName || !phoneNumber) {
+            return res.status(400).json({
+                success: false,
+                message: "Guest details (firstName, lastName, phoneNumber) are required"
+            });
+        }
+
+        const customerEmail = email || `guest-${phoneNumber.replace(/[^0-9]/g, '')}@bluebird.com`;
+
+        let existingCustomer = await Customer.findOne({
+            where: {
+                [Op.or]: [
+                    { email: customerEmail },
+                    { phoneNumber: phoneNumber }
+                ]
+            }
+        });
+
+        if (existingCustomer) {
+            return res.status(200).json({
+                success: true,
+                message: "Existing customer found",
+                data: { customerId: existingCustomer.customerId }
+            });
+        }
+
+        const newCustomer = await Customer.create({
+            firstName,
+            lastName,
+            email: customerEmail,
+            phoneNumber,
+            country: idPassport || country || 'Unknown',
+            password: null,
+            googleAuth: false
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: "Customer created successfully",
+            data: { customerId: newCustomer.customerId }
+        });
+
+    } catch (error) {
+        console.error("CREATE RECEPTION CUSTOMER ERROR:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
 // Add booking
 const createVisitorBooking = async (req, res) => {
     const t = await sequelize.transaction();
@@ -414,6 +470,7 @@ const getAvailablePackagesByDate = async (req, res) => {
 };
 
 export {
+    createReceptionCustomer,
     createVisitorBooking,
     getAllBookings,
     getBookingById,
