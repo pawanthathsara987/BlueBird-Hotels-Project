@@ -44,6 +44,15 @@ Customer.init(
         country: {
             type: DataTypes.STRING(50),
             allowNull: true
+        },
+        idType: {
+            type: DataTypes.ENUM('NIC', 'PASSPORT'),
+            allowNull: true
+        },
+        idNumber: {
+            type: DataTypes.STRING(50),
+            allowNull: true,
+            unique: true
         }
     },
     {
