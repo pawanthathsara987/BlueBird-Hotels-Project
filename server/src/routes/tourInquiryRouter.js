@@ -4,6 +4,7 @@ import {
   getAllInquiries,
   getInquiryById,
   acceptInquiry,
+  sendAcceptedInquiryEmail,
   rejectInquiry,
   getInquiriesByTour,
   getInquiryStats,
@@ -28,6 +29,9 @@ router.get('/:id', getInquiryById);
 
 // Accept inquiry (manager accepts and creates booking)
 router.put('/:id/accept', acceptInquiry);
+
+// Send accepted inquiry quote email (manager customizes quote and sends to guest)
+router.put('/:id/send-accepted-email', sendAcceptedInquiryEmail);
 
 // Reject inquiry (manager rejects)
 router.put('/:id/reject', rejectInquiry);

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, Routes, Route } from "react-router-dom";
-import { MdDashboard, MdBedroomParent, MdBookOnline, MdLoop, MdAssessment, MdLogout, MdMenu, MdClose } from "react-icons/md";
-import { DollarSign, Inbox, CheckSquare } from "lucide-react";
+import { MdDashboard, MdBedroomParent, MdLoop, MdAssessment, MdLogout, MdMenu, MdClose } from "react-icons/md";
+import { Inbox } from "lucide-react";
 import AddTour from "./tours/TourForm";
 import TourEdit from "./tours/TourEdit";
 import TourItemForm from "./tours/TourItemForm";
@@ -9,8 +9,7 @@ import TourItemView from "./tours/TourItemView";
 import TourItemSelectPage from "./tours/TourItemSelectPage";
 import TourManagement from "./tours/tourManagement";
 import TourInquiriesManagement from "./TourInquiriesManagement";
-import TourBookingsManagement from "./TourBookingsManagement";
-import TourPaymentTracking from "./TourPaymentTracking";
+import ManagerDashboard from "./ManagerDashboard";
 
 export default function ManagerPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -40,8 +39,6 @@ export default function ManagerPage() {
                     <Link to="/manager/tours/tourManagement" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded"><MdBedroomParent className="text-2xl" /> Tours</Link>
                     <a href="#tour-section" className="px-3 py-2 text-sm font-semibold text-white/50">Tour Booking</a>
                     <Link to="/manager/tour-inquiries" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-base text-white/70 hover:text-white hover:bg-white/10 rounded ml-4"><Inbox className="w-5 h-5" /> Inquiries</Link>
-                    <Link to="/manager/tour-bookings" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-base text-white/70 hover:text-white hover:bg-white/10 rounded ml-4"><CheckSquare className="w-5 h-5" /> Bookings</Link>
-                    <Link to="/manager/tour-payments" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-base text-white/70 hover:text-white hover:bg-white/10 rounded ml-4"><DollarSign className="w-5 h-5" /> Payments</Link>
                     <Link to="/manager/vehicles" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded"><MdLoop className="text-2xl" /> Vehicles</Link>
                     <Link to="/manager/reports" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded"><MdAssessment className="text-2xl" /> Reports</Link>
                     <Link to="/logout" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded"><MdLogout className="text-2xl" /> Logout</Link>
@@ -50,13 +47,11 @@ export default function ManagerPage() {
 
             <div className="flex-1 h-full bg-gray-100 overflow-y-scroll pt-14 md:pt-0 p-4">
                 <Routes>
-                    <Route path="/" element={<h1 className="text-2xl font-bold">Welcome, Manager!</h1>} />
+                    <Route path="/" element={<ManagerDashboard />} />
                     <Route path="/tours/tourManagement" element={<TourManagement />} />
                     <Route path="/tours/add" element={<AddTour />} />
                     <Route path="/tours/edit/:id" element={<TourEdit />} />
                     <Route path="/tour-inquiries" element={<TourInquiriesManagement />} />
-                    <Route path="/tour-bookings" element={<TourBookingsManagement />} />
-                    <Route path="/tour-payments" element={<TourPaymentTracking />} />
                     <Route path="/vehicles" element={<h1 className="text-2xl font-bold">Manage Vehicles</h1>} />
                     <Route path="/reports" element={<h1 className="text-2xl font-bold">View Reports</h1>} />
                     <Route path="/tours/item/add" element={<TourItemForm />} />

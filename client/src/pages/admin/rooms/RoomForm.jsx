@@ -16,6 +16,7 @@ function RoomForm() {
 
     const [packages, setPackages] = useState([]);
     const [amenities, setAmenities] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
 
     const isEditMode = Boolean(selectedRoom?.id || selectedRoom?.roomNo || selectedRoom?.roomNumber);
 
@@ -75,6 +76,7 @@ function RoomForm() {
         }
 
         try {
+            setIsLoading(true);
 
             if (isEditMode) {
                 if (!selectedRoom?.id) {
@@ -114,6 +116,8 @@ function RoomForm() {
         } catch (error) {
             console.error("Failed to save room:", error?.response?.data || error);
             toast.error(error?.response?.data?.message || "Failed to save room");
+        } finally {
+            setIsLoading(false);
         }
     }
 
@@ -229,14 +233,9 @@ function RoomForm() {
                             {/* Select All / Unselect All Button */}
                             <button
                                 type="button"
-                                onClick={() => {
-                                    if (selectedAmenities.length === amenities.length) {
-                                        setSelectedAmenities([]);
-                                    } else {
-                                        setSelectedAmenities(amenities.map(a => a.id));
-                                    }
-                                }}
-                                className="text-sm text-blue-600 hover:underline"
+                                onClick={handleSelectAll}
+                                disabled={isLoading}
+                                className="text-sm text-blue-600 hover:underline disabled:text-gray-400 disabled:no-underline disabled:cursor-not-allowed"
                             >
                                 {selectedAmenities.length === amenities.length ? "Unselect All" : "Select All"}
                             </button>
@@ -272,15 +271,21 @@ function RoomForm() {
                     <div className="flex justify-end gap-4 pt-4">
                         <Link
                             to="/admin/rooms/roomManagement?tab=room"
-                            className="px-6 py-3 text-gray-700 hover:text-gray-900 font-medium"
+                            onClick={(e) => {
+                                if (isLoading) {
+                                    e.preventDefault();
+                                }
+                            }}
+                            className="px-6 py-3 text-gray-700 hover:text-gray-900 font-medium disabled:text-gray-400"
                         >
                             Cancel
                         </Link>
                         <button
                             onClick={handleSaveRoom}
-                            className="px-6 py-3 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition"
+                            disabled={isLoading}
+                            className="px-6 py-3 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
                         >
-                            {isEditMode ? "Update Room" : "Add Room"}
+                            {isLoading ? "Saving..." : isEditMode ? "Update Room" : "Add Room"}
                         </button>
                     </div>
                 </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Edit2, Trash2, Plus, MapPin } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 export default function TourView({ searchQuery = "" }) {
     const navigate = useNavigate();
@@ -8,6 +9,7 @@ export default function TourView({ searchQuery = "" }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [deletingId, setDeletingId] = useState(null);
+    const [deleteTarget, setDeleteTarget] = useState(null);
     const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api").replace(/\/$/, "");
 
     useEffect(() => {
@@ -34,13 +36,12 @@ export default function TourView({ searchQuery = "" }) {
         fetchTours();
     }, [backendBaseUrl]);
 
-    const handleDeleteTour = async (tourId) => {
-        const shouldDelete = window.confirm("Are you sure you want to delete this tour?");
-        if (!shouldDelete) return;
+    const handleDeleteTour = async () => {
+        if (!deleteTarget) return;
 
         try {
-            setDeletingId(tourId);
-            const response = await fetch(`${backendBaseUrl}/manager/tours/${tourId}`, {
+            setDeletingId(deleteTarget.id);
+            const response = await fetch(`${backendBaseUrl}/manager/tours/${deleteTarget.id}`, {
                 method: "DELETE",
             });
 
@@ -49,14 +50,21 @@ export default function TourView({ searchQuery = "" }) {
                 throw new Error(payload.message || "Failed to delete tour");
             }
 
-            setTours((prevTours) => prevTours.filter((tour) => tour.id !== tourId));
+            setTours((prevTours) => prevTours.filter((tour) => tour.id !== deleteTarget.id));
+            toast.success(payload.message || `Tour "${deleteTarget.packageName}" deleted successfully.`);
             setError("");
+            setDeleteTarget(null);
         } catch (deleteError) {
             console.error("Failed to delete tour:", deleteError);
+            toast.error(deleteError.message || "Failed to delete tour");
             setError(deleteError.message || "Failed to delete tour");
         } finally {
             setDeletingId(null);
         }
+    };
+
+    const openDeleteModal = (tour) => {
+        setDeleteTarget(tour);
     };
 
     const normalizedSearch = searchQuery.trim().toLowerCase();
@@ -133,7 +141,7 @@ export default function TourView({ searchQuery = "" }) {
                                 </div>
 
                                 <p className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-800 border border-emerald-100 px-3 py-1 text-sm font-bold mb-4">
-                                    LKR {Number(tour.price || 0).toFixed(2)}
+${Number(tour.price || 0).toFixed(2)}
                                 </p>
 
                                 {Array.isArray(tour.TourItems) && tour.TourItems.length > 0 && (
@@ -154,7 +162,7 @@ export default function TourView({ searchQuery = "" }) {
                                         Edit
                                     </button>
                                     <button
-                                        onClick={() => handleDeleteTour(tour.id)}
+                                        onClick={() => openDeleteModal(tour)}
                                         disabled={deletingId === tour.id}
                                         className="flex-1 h-10 bg-white hover:bg-rose-100 disabled:bg-slate-100 disabled:border-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-rose-700 rounded-xl flex items-center justify-center gap-2 font-semibold transition-colors shadow-sm border border-rose-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-200 focus-visible:ring-offset-1"
                                     >
@@ -165,6 +173,51 @@ export default function TourView({ searchQuery = "" }) {
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {deleteTarget && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4">
+                    <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+                        <div className="flex items-center gap-4 bg-red-500 px-6 py-5">
+                            <div className="rounded-full bg-red-600/70 p-3 text-white">
+                                <Trash2 size={22} />
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-bold text-white">Delete Tour</h3>
+                                <p className="text-sm text-red-100">This action cannot be undone.</p>
+                            </div>
+                        </div>
+
+                        <div className="px-6 py-5">
+                            <p className="text-lg font-semibold text-slate-800">
+                                Remove <span className="font-bold">{deleteTarget.packageName}</span>?
+                            </p>
+                            <p className="mt-2 text-sm leading-6 text-slate-500">
+                                This tour will be permanently deleted. All associated bookings and items will need to be reviewed.
+                            </p>
+                        </div>
+
+                        <div className="flex justify-end gap-3 border-t border-slate-100 px-6 py-4">
+                            <button
+                                type="button"
+                                onClick={() => setDeleteTarget(null)}
+                                disabled={deletingId === deleteTarget.id}
+                                className="rounded-xl bg-slate-100 px-5 py-2.5 font-semibold text-slate-700 transition-colors hover:bg-slate-200 disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleDeleteTour}
+                                disabled={deletingId === deleteTarget.id}
+                                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                            >
+                                <Trash2 size={16} />
+                                {deletingId === deleteTarget.id ? "Deleting..." : "Delete Tour"}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

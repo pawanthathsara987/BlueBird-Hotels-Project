@@ -14,10 +14,14 @@ export default function UpdateStaffMember(){
     const [email, setEmail] = useState(location.state.member.email);
     const [role, setRole] = useState(location.state.member.role);
     const [phoneNumber, setPhoneNumber] = useState(location.state.member.phoneNumber);
+    const [loading, setLoading] = useState(false);
 
     const navigate = useNavigate();
 
     async function updateMember(){
+        if (loading) {
+            return;
+        }
 
         if (userName == "" || name == "" || email == "" || role == "" || phoneNumber == "") {
             toast.error("Please fill in all fields");
@@ -25,6 +29,7 @@ export default function UpdateStaffMember(){
         }
 
         try {
+            setLoading(true);
 
             await axios.put(import.meta.env.VITE_BACKEND_URL + "/users/update/"+ userId, {
                 userName: userName,
@@ -40,6 +45,8 @@ export default function UpdateStaffMember(){
         }catch (err) {
             toast.error("Failed to update staff member");
             console.error(err);
+        } finally {
+            setLoading(false);
         }
 
     }
@@ -77,8 +84,9 @@ export default function UpdateStaffMember(){
                         name="username"
                         value={userName}
                         onChange={(e) => setUserName(e.target.value)}
+                        disabled={loading}
                         placeholder="e.g. jsmith"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                     />
                 </div>
                 <div className="m-5">
@@ -90,8 +98,9 @@ export default function UpdateStaffMember(){
                         name="name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
+                        disabled={loading}
                         placeholder="Full name"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                     />
                 </div>
 
@@ -104,8 +113,9 @@ export default function UpdateStaffMember(){
                         name="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        disabled={loading}
                         placeholder="staff@hotel.com"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                     />
                 </div>
 
@@ -118,7 +128,8 @@ export default function UpdateStaffMember(){
                             name="role"
                             value={role}
                             onChange={(e) => setRole(e.target.value)}
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                            disabled={loading}
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
                         >
                             <option value="">Select a role...</option>
                             <option value="staff_member">Staff Member</option>
@@ -134,8 +145,9 @@ export default function UpdateStaffMember(){
                             name="phoneNumber"
                             value={phoneNumber}
                             onChange={(e) => setPhoneNumber(e.target.value)}
+                            disabled={loading}
                             placeholder="+94 777 666 555"
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                         />
                     </div>
                 </div>
@@ -143,6 +155,11 @@ export default function UpdateStaffMember(){
                 <div className="flex justify-end gap-4 pt-4 m-5">
                     <Link
                         to="/admin/users"
+                        onClick={(e) => {
+                            if (loading) {
+                                e.preventDefault();
+                            }
+                        }}
                         className="px-6 py-3 text-gray-700 hover:text-gray-900 font-medium"
                     >
                         Cancel
@@ -150,9 +167,10 @@ export default function UpdateStaffMember(){
                     <button
                         onClick={updateMember}
                         type="button"
-                        className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                        disabled={loading}
+                        className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                        + Update Staff Member
+                        {loading ? "Saving..." : "+ Update Staff Member"}
                     </button>
                 </div>
             </div>

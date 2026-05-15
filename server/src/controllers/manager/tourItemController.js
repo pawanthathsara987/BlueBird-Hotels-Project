@@ -1,14 +1,25 @@
-import { Tour, TourItem } from '../../models/index.js';
+import { UniqueConstraintError } from "sequelize";
+import { TourItem } from '../../models/index.js';
+
+const normalizeTourItemName = (name) => String(name ?? "").trim();
+
+const validateTourItemName = (name) => {
+  if (!name) return "Tour item name is required";
+  if (name.length < 2) return "Tour item name must be at least 2 characters";
+  if (name.length > 100) return "Tour item name must be at most 100 characters";
+  return null;
+};
 
 // Create a new tour item
 export const createTourItem = async (req, res) => {
   try {
-    const { name } = req.body;
+    const name = normalizeTourItemName(req.body?.name);
 
-    if (!name) {
+    const validationError = validateTourItemName(name);
+    if (validationError) {
       return res.status(400).json({
         success: false,
-        message: "Tour item name is required",
+        message: validationError,
       });
     }
 
@@ -20,6 +31,13 @@ export const createTourItem = async (req, res) => {
       data: tourItem,
     });
   } catch (error) {
+    if (error instanceof UniqueConstraintError) {
+      return res.status(409).json({
+        success: false,
+        message: "Tour item already exists",
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: error.message,
@@ -75,7 +93,15 @@ export const getTourItem = async (req, res) => {
 export const updateTourItem = async (req, res) => {
   try {
     const { itemId } = req.params;
-    const { name } = req.body;
+    const name = normalizeTourItemName(req.body?.name);
+
+    const validationError = validateTourItemName(name);
+    if (validationError) {
+      return res.status(400).json({
+        success: false,
+        message: validationError,
+      });
+    }
 
     const tourItem = await TourItem.findByPk(itemId);
 
@@ -86,9 +112,7 @@ export const updateTourItem = async (req, res) => {
       });
     }
 
-    if (name) {
-      tourItem.name = name;
-    }
+    tourItem.name = name;
 
     await tourItem.save();
 
@@ -98,6 +122,13 @@ export const updateTourItem = async (req, res) => {
       data: tourItem,
     });
   } catch (error) {
+    if (error instanceof UniqueConstraintError) {
+      return res.status(409).json({
+        success: false,
+        message: "Tour item already exists",
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: error.message,
@@ -123,7 +154,7 @@ export const deleteTourItem = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Tour item deleted successfully",
+      message: "Tour item removed successfully.",
     });
   } catch (error) {
     res.status(500).json({

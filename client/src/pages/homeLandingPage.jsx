@@ -6,9 +6,8 @@ export default function HomeLandingPage() {
         <div className="w-full">
             <div className="relative w-full">
                 <ImageCarousel />
-                <BookingNavigation className="" />
             </div>
-            <div className="w-full h-75 mt-65 sm:mt-40  lg:mt-50 px-10 flex items-center justify-center flex-col gap-5">
+            <div className="w-full h-75 mt-65 sm:mt-40  lg:mt-20 px-10 flex items-center justify-center flex-col gap-5">
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-black/30 text-center mt-10\">Welcome to BlueBird Hotel</h2>
                 <div className="w-150 ">
                     <p className="text-center mt-4 text-gray-600 leading-7.5">Blue Bird Hotels is the right choice for visitors

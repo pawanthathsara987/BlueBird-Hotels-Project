@@ -11,7 +11,6 @@ const RoomPayment = () => {
   console.log(bookingData);
   const bookingConfirmation = location.state?.bookingConfirmation || null;
 
-  const [paymentMethod, setPaymentMethod] = useState('card');
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -21,12 +20,6 @@ const RoomPayment = () => {
     cardNumber: '',
     expiryDate: '',
     cvv: '',
-  });
-
-  const [bankData, setBankData] = useState({
-    bankName: '',
-    accountNumber: '',
-    accountHolder: '',
   });
 
   // Redirect if no booking data
@@ -58,14 +51,6 @@ const RoomPayment = () => {
     }));
   };
 
-  const handleBankChange = (e) => {
-    const { name, value } = e.target;
-    setBankData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
   const validateCardPayment = () => {
     if (!cardData.cardName.trim()) {
       setError('Cardholder name is required');
@@ -86,31 +71,11 @@ const RoomPayment = () => {
     return true;
   };
 
-  const validateBankPayment = () => {
-    if (!bankData.bankName.trim()) {
-      setError('Bank name is required');
-      return false;
-    }
-    if (!bankData.accountNumber.trim()) {
-      setError('Account number is required');
-      return false;
-    }
-    if (!bankData.accountHolder.trim()) {
-      setError('Account holder name is required');
-      return false;
-    }
-    return true;
-  };
-
   const handlePayment = async (e) => {
     e.preventDefault();
     setError('');
 
-    // Validate payment method
-    if (paymentMethod === 'card' && !validateCardPayment()) {
-      return;
-    }
-    if (paymentMethod === 'bank' && !validateBankPayment()) {
+    if (!validateCardPayment()) {
       return;
     }
 
@@ -142,10 +107,9 @@ const RoomPayment = () => {
         bookingId: bookingConfirmation?.booking_id,
         userId: guest.id,
         amount: advanceAmount,
-        paymentMethod,
+        paymentMethod: 'card',
         bookingType: 'room',
-        ...(paymentMethod === 'card' && { card: cardData }),
-        ...(paymentMethod === 'bank' && { bank: bankData }),
+        card: cardData,
       };
 
       // Simulate payment processing (replace with actual API call)
@@ -213,7 +177,7 @@ const RoomPayment = () => {
   return (
     <div className="flex flex-col min-h-screen bg-stone-50">
 
-      <main className="flex-grow py-12 px-4 sm:px-6 lg:px-8">
+      <main className="grow py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Back Button */}
           <button
@@ -228,12 +192,20 @@ const RoomPayment = () => {
             {/* Payment Form */}
             <div className="lg:col-span-2">
               <div className="bg-white rounded-2xl shadow-lg p-8">
-                <h2 className="text-2xl font-bold text-stone-900 mb-6">Payment Details</h2>
+                <div className="mb-8 flex items-center gap-4 rounded-2xl border border-emerald-100 bg-emerald-50/70 px-5 py-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-700 text-white shadow-md shadow-emerald-700/20">
+                    <CreditCard className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Secure card payment</p>
+                    <h2 className="text-2xl font-bold text-stone-900">Pay with Credit Card</h2>
+                  </div>
+                </div>
 
                 {/* Error Alert */}
                 {error && (
                   <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex gap-3">
-                    <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+                    <AlertCircle className="h-5 w-5 text-red-600 shrink-0" />
                     <p className="text-sm text-red-700">{error}</p>
                   </div>
                 )}
@@ -241,196 +213,100 @@ const RoomPayment = () => {
                 {/* Success Alert */}
                 {successMessage && (
                   <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg flex gap-3">
-                    <Check className="h-5 w-5 text-emerald-600 flex-shrink-0" />
+                    <Check className="h-5 w-5 text-emerald-600 shrink-0" />
                     <p className="text-sm text-emerald-700">{successMessage}</p>
                   </div>
                 )}
 
-                {/* Payment Method Selection */}
-                <div className="mb-8">
-                  <label className="block text-sm font-bold text-stone-700 mb-4">Payment Method</label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('card')}
-                      className={`p-4 rounded-lg border-2 transition flex items-center justify-center gap-2 font-semibold ${
-                        paymentMethod === 'card'
-                          ? 'border-emerald-700 bg-emerald-50 text-emerald-700'
-                          : 'border-stone-200 bg-white text-stone-700 hover:border-emerald-300'
-                      }`}
-                    >
-                      <CreditCard className="h-5 w-5" />
-                      Credit Card
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('bank')}
-                      className={`p-4 rounded-lg border-2 transition flex items-center justify-center gap-2 font-semibold ${
-                        paymentMethod === 'bank'
-                          ? 'border-emerald-700 bg-emerald-50 text-emerald-700'
-                          : 'border-stone-200 bg-white text-stone-700 hover:border-emerald-300'
-                      }`}
-                    >
-                      <Lock className="h-5 w-5" />
-                      Bank Transfer
-                    </button>
+                <form onSubmit={handlePayment} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-stone-700 mb-1">Cardholder Name</label>
+                    <input
+                      type="text"
+                      name="cardName"
+                      value={cardData.cardName}
+                      onChange={handleCardChange}
+                      placeholder="John Doe"
+                      className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700"
+                      disabled={processing}
+                    />
                   </div>
-                </div>
 
-                {/* Card Payment Form */}
-                {paymentMethod === 'card' && (
-                  <form onSubmit={handlePayment} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-stone-700 mb-1">Card Number</label>
+                    <input
+                      type="text"
+                      name="cardNumber"
+                      value={cardData.cardNumber}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\s/g, '').replace(/\D/g, '');
+                        handleCardChange({
+                          target: { name: 'cardNumber', value: value.replace(/(\d{4})/g, '$1 ').trim() }
+                        });
+                      }}
+                      placeholder="1234 5678 9012 3456"
+                      className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700"
+                      disabled={processing}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-stone-700 mb-1">Cardholder Name</label>
+                      <label className="block text-sm font-semibold text-stone-700 mb-1">Expiry Date</label>
                       <input
                         type="text"
-                        name="cardName"
-                        value={cardData.cardName}
-                        onChange={handleCardChange}
-                        placeholder="John Doe"
-                        className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700"
-                        disabled={processing}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-stone-700 mb-1">Card Number</label>
-                      <input
-                        type="text"
-                        name="cardNumber"
-                        value={cardData.cardNumber}
+                        name="expiryDate"
+                        value={cardData.expiryDate}
                         onChange={(e) => {
-                          const value = e.target.value.replace(/\s/g, '').replace(/\D/g, '');
-                          handleCardChange({
-                            target: { name: 'cardNumber', value: value.replace(/(\d{4})/g, '$1 ').trim() }
-                          });
+                          let value = e.target.value.replace(/\D/g, '');
+                          if (value.length >= 2) {
+                            value = value.slice(0, 2) + '/' + value.slice(2, 4);
+                          }
+                          handleCardChange({ target: { name: 'expiryDate', value } });
                         }}
-                        placeholder="1234 5678 9012 3456"
+                        placeholder="MM/YY"
                         className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700"
                         disabled={processing}
                       />
                     </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-semibold text-stone-700 mb-1">Expiry Date</label>
-                        <input
-                          type="text"
-                          name="expiryDate"
-                          value={cardData.expiryDate}
-                          onChange={(e) => {
-                            let value = e.target.value.replace(/\D/g, '');
-                            if (value.length >= 2) {
-                              value = value.slice(0, 2) + '/' + value.slice(2, 4);
-                            }
-                            handleCardChange({ target: { name: 'expiryDate', value } });
-                          }}
-                          placeholder="MM/YY"
-                          className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700"
-                          disabled={processing}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-stone-700 mb-1">CVV</label>
-                        <input
-                          type="text"
-                          name="cvv"
-                          value={cardData.cvv}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/\D/g, '').slice(0, 3);
-                            handleCardChange({ target: { name: 'cvv', value } });
-                          }}
-                          placeholder="123"
-                          className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700"
-                          disabled={processing}
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={processing}
-                      className="w-full bg-emerald-700 hover:bg-emerald-800 disabled:bg-stone-400 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg transition flex items-center justify-center gap-2 mt-6"
-                    >
-                      {processing ? (
-                        <>
-                          <Loader className="h-5 w-5 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <Lock className="h-5 w-5" />
-                          Pay ${advanceAmount.toFixed(2)} (50% Advance)
-                        </>
-                      )}
-                    </button>
-                  </form>
-                )}
-
-                {/* Bank Transfer Form */}
-                {paymentMethod === 'bank' && (
-                  <form onSubmit={handlePayment} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-semibold text-stone-700 mb-1">Bank Name</label>
+                      <label className="block text-sm font-semibold text-stone-700 mb-1">CVV</label>
                       <input
                         type="text"
-                        name="bankName"
-                        value={bankData.bankName}
-                        onChange={handleBankChange}
-                        placeholder="ABC Bank"
+                        name="cvv"
+                        value={cardData.cvv}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 3);
+                          handleCardChange({ target: { name: 'cvv', value } });
+                        }}
+                        placeholder="123"
                         className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700"
                         disabled={processing}
                       />
                     </div>
+                  </div>
 
-                    <div>
-                      <label className="block text-sm font-semibold text-stone-700 mb-1">Account Number</label>
-                      <input
-                        type="text"
-                        name="accountNumber"
-                        value={bankData.accountNumber}
-                        onChange={handleBankChange}
-                        placeholder="1234567890"
-                        className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700"
-                        disabled={processing}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-stone-700 mb-1">Account Holder</label>
-                      <input
-                        type="text"
-                        name="accountHolder"
-                        value={bankData.accountHolder}
-                        onChange={handleBankChange}
-                        placeholder="John Doe"
-                        className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700"
-                        disabled={processing}
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={processing}
-                      className="w-full bg-emerald-700 hover:bg-emerald-800 disabled:bg-stone-400 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg transition flex items-center justify-center gap-2 mt-6"
-                    >
-                      {processing ? (
-                        <>
-                          <Loader className="h-5 w-5 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <CreditCard className="h-5 w-5" />
-                          Pay ${advanceAmount.toFixed(2)} (50% Advance)
-                        </>
-                      )}
-                    </button>
-                  </form>
-                )}
+                  <button
+                    type="submit"
+                    disabled={processing}
+                    className="w-full bg-emerald-700 hover:bg-emerald-800 disabled:bg-stone-400 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg transition flex items-center justify-center gap-2 mt-6"
+                  >
+                    {processing ? (
+                      <>
+                        <Loader className="h-5 w-5 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="h-5 w-5" />
+                        Pay ${advanceAmount.toFixed(2)} (50% Advance)
+                      </>
+                    )}
+                  </button>
+                </form>
 
                 <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex gap-3">
-                  <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                  <AlertCircle className="h-5 w-5 text-blue-600 shrink-0" />
                   <div className="text-sm text-blue-700">
                     <p className="font-semibold mb-1">Payment Information</p>
                     <p>You are paying 50% advance now. The remaining 50% will be due upon check-in.</p>
@@ -499,7 +375,7 @@ const RoomPayment = () => {
                 </div>
 
                 <div className="mt-4 p-3 bg-emerald-50 rounded-lg flex gap-2">
-                  <Check className="h-4 w-4 text-emerald-700 flex-shrink-0" />
+                  <Check className="h-4 w-4 text-emerald-700 shrink-0" />
                   <p className="text-xs text-emerald-700 font-semibold">Secure payment with encryption</p>
                 </div>
               </div>

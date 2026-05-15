@@ -1,10 +1,11 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import logo from "../assets/bluebird logo.png";
 import { LuListCollapse, LuMenu } from "react-icons/lu"; 
 import { useState } from "react";
 
 export default function Header() {
   const [sideBarOpen, setSideBarOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <header className="w-full bg-white shadow-sm relative z-50">
@@ -22,13 +23,13 @@ export default function Header() {
         </div>
 
         <div className="hidden lg:flex items-center justify-center gap-8 font-medium">
-          <Link className="hover:text-blue-600">HOME</Link>
+          <Link to="/" className="hover:text-blue-600">HOME</Link>
           <Link className="hover:text-blue-600">HOTELS</Link>
           <Link className="hover:text-blue-600">PAGES</Link>
 
           <img src={logo} alt="logo" className="h-20 object-contain" />
 
-          <Link className="hover:text-blue-600">TRAVELS</Link>
+          <Link to="/tourBooking" className="hover:text-blue-600">TRAVELS</Link>
           <Link className="hover:text-blue-600">GALLERY</Link>
           <Link to="/contact" className="hover:text-blue-600">CONTACT</Link>
         </div>
@@ -38,7 +39,14 @@ export default function Header() {
         </div>
 
         <div className="hidden lg:flex justify-end font-semibold">
-          (+94) 70 1950 195
+          <button
+            onClick={() => {
+              navigate("/booking")
+            }}
+            className="inline-flex items-center justify-center rounded-2xl bg-linear-to-r from-sky-600 via-blue-600 to-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            Book Now
+          </button>
         </div>
       </div>
 
@@ -63,7 +71,7 @@ export default function Header() {
               <Link className="hover:text-blue-600 transition" to="/" onClick={() => setSideBarOpen(false)}>
                 PAGES
               </Link>
-              <Link className="hover:text-blue-600 transition" to="/" onClick={() => setSideBarOpen(false)}>
+              <Link className="hover:text-blue-600 transition" to="/tourBooking" onClick={() => setSideBarOpen(false)}>
                 TRAVELS
               </Link>
               <Link className="hover:text-blue-600 transition" to="/" onClick={() => setSideBarOpen(false)}>

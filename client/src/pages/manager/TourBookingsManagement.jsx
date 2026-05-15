@@ -12,7 +12,7 @@ export default function TourBookingsManagement() {
 
   const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3002/api').replace(/\/$/, '');
 
-  const formatLkr = (value) => `LKR ${Number(value || 0).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatCurrency = (value) => `$${Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const formatDate = (value) => {
     if (!value) return 'N/A';
@@ -244,7 +244,7 @@ export default function TourBookingsManagement() {
                         <p className="font-bold text-gray-900">Booking Ref: {booking.bookingRef}</p>
                         <p className="text-sm text-gray-700">Guest: {getGuestName(booking)}</p>
                         <p className="text-sm text-gray-700">Tour: {getTourName(booking)}</p>
-                        <p className="text-sm text-gray-600">Total: {formatLkr(booking.totalAmount)} • Start: {formatDate(booking.tourStartDate || booking.TourInquiry?.startDate)}</p>
+                        <p className="text-sm text-gray-600">Total: {formatCurrency(booking.totalAmount)} • Start: {formatDate(booking.tourStartDate || booking.TourInquiry?.startDate)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -305,15 +305,15 @@ export default function TourBookingsManagement() {
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
                               <span className="text-gray-600">Total Amount:</span>
-                              <span className="font-semibold">{formatLkr(booking.totalAmount)}</span>
+                              <span className="font-semibold">{formatCurrency(booking.totalAmount)}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-600">50% Advance:</span>
-                              <span className="font-semibold text-blue-600">{formatLkr(booking.depositAmount)}</span>
+                              <span className="font-semibold text-blue-600">{formatCurrency(booking.depositAmount)}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-600">Remaining (50%):</span>
-                              <span className="font-semibold text-green-600">{formatLkr(booking.remainingAmount)}</span>
+                              <span className="font-semibold text-green-600">{formatCurrency(booking.remainingAmount)}</span>
                             </div>
                           </div>
                         </div>
@@ -338,7 +338,7 @@ export default function TourBookingsManagement() {
                             </div>
                             <div className="flex justify-between">
                               <span>Refund Amount:</span>
-                              <span className="font-semibold">{formatLkr(booking.refundAmount)}</span>
+                              <span className="font-semibold">{formatCurrency(booking.refundAmount)}</span>
                             </div>
                           </div>
                         </div>

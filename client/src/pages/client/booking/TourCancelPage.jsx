@@ -125,7 +125,7 @@ export default function TourCancelPage() {
                 <p><strong>Tour:</strong> {details.tourName}</p>
                 <p><strong>Start Date:</strong> {new Date(details.startDate).toLocaleDateString('en-GB')}</p>
                 <p><strong>Refund Eligibility:</strong> {details.refundEligible ? 'Eligible' : 'Not eligible'}</p>
-                <p><strong>Refund Amount:</strong> LKR {Number(details.refundAmount || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p><strong>Refund Amount:</strong> ${Number(details.refundAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               </div>
 
               <div>
@@ -162,7 +162,7 @@ export default function TourCancelPage() {
               </div>
               <p><strong>Booking Ref:</strong> {result.bookingRef}</p>
               <p><strong>Refund Eligible:</strong> {result.refundEligible ? 'Yes' : 'No'}</p>
-              <p><strong>Refund Amount:</strong> LKR {Number(result.refundAmount || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p><strong>Refund Amount:</strong> ${Number(result.refundAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               <button
                 type="button"
                 onClick={() => navigate('/tourBooking')}
