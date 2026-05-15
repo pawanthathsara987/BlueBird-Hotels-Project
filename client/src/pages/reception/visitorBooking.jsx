@@ -67,7 +67,7 @@ export default function VisitorBooking() {
         <div className="w-full px-4 md:px-6 lg:px-8 py-4 md:py-6">
             <div className="mb-6 md:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Walk-In Management</h1>
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Visiting Management</h1>
                     <p className="text-gray-600 text-sm md:text-base mt-2">Register and manage walk-in guests</p>
                 </div>
                 <button
@@ -83,7 +83,7 @@ export default function VisitorBooking() {
             {showForm && (
                 <div className="bg-white rounded-lg shadow-md p-4 md:p-6 mb-6">
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-lg md:text-xl font-bold text-gray-800">Register Walk-In Guest</h2>
+                        <h2 className="text-lg md:text-xl font-bold text-gray-800">Register Visiting Guest</h2>
                         <button
                             onClick={() => setShowForm(false)}
                             className="text-gray-600 hover:text-gray-900 text-2xl"

@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from "react";
-import { MdCalendarToday, MdSearch, MdChevronLeft, MdChevronRight } from "react-icons/md";
+import { MdCalendarToday, MdSearch, MdChevronLeft, MdChevronRight, MdList, MdAdd } from "react-icons/md";
+import NewBookingFlow from "./NewBookingFlow";
 
 export default function Booking() {
+    const [activeTab, setActiveTab] = useState("list");
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
     const [searchTerm, setSearchTerm] = useState("");
 
@@ -143,11 +145,31 @@ export default function Booking() {
 
     return (
         <div className="w-full px-4 md:px-6 lg:px-8 py-4 md:py-6">
-            <div className="mb-6 md:mb-8">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Bookings Management</h1>
-                <p className="text-gray-600 text-sm md:text-base mt-2">View and manage all bookings filtered by date</p>
+            <div className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Bookings Management</h1>
+                    <p className="text-gray-600 text-sm md:text-base mt-2">Manage walk-in bookings and view existing reservations</p>
+                </div>
+                <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
+                    <button 
+                        onClick={() => setActiveTab("list")}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold transition-all ${activeTab === 'list' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                        <MdList className="text-lg" /> View Bookings
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab("new")}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold transition-all ${activeTab === 'new' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                        <MdAdd className="text-lg" /> New Booking
+                    </button>
+                </div>
             </div>
 
+            {activeTab === "new" ? (
+                <NewBookingFlow onBookingSuccess={() => setActiveTab("list")} />
+            ) : (
+                <>
             {/* Filter Section */}
             <div className="bg-white rounded-lg shadow-md p-4 md:p-6 mb-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
@@ -352,6 +374,8 @@ export default function Booking() {
                     </div>
                 </div>
             )}
+                </>
+            )}
         </div>
-    );
+    );      
 }
