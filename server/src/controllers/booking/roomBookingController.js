@@ -1,5 +1,6 @@
 import { col, fn, Op, QueryTypes } from "sequelize";
 import sequelize from "../../config/database.js";
+import { sendEmail } from "../../services/emailService.js";
 import { Customer, Room, BookedRoom, RoomPackage, Reservation, AirPortPickup } from "../../models/index.js";
 
 
@@ -49,7 +50,8 @@ const createBooking = async (req, res) => {
             checkInDate,
             total_price,
             rooms,
-            airportPickup
+            airportPickup,
+            personalRequest,
         } = req.body;
 
         // -----------------------------
@@ -175,6 +177,16 @@ const createBooking = async (req, res) => {
         }
 
         await t.commit();
+
+        if (personalRequest && personalRequest != null) {
+            await sendEmail({
+                to: "sandeepal513@gmail.com",
+                subject: "Personal Request",
+                html: "<h1>Personal Request</h1>" +
+                        "<p>Personal Request: " + personalRequest + "</p>",
+                text: personalRequest,
+            });
+        }
 
         return res.status(201).json({
             success: true,

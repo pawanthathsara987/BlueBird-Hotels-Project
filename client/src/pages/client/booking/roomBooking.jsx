@@ -24,9 +24,8 @@ const BookingRoom = () => {
   defaultCheckOut.setDate(defaultCheckOut.getDate() + 4);
   const navigate = useNavigate();
   const location = useLocation();
-  const customerToken =
-    localStorage.getItem("customerToken") ||
-    sessionStorage.getItem("customerToken");
+  const [customerToken, setCustomerToken] = useState("");
+  const isLikelyJwt = (token) => (typeof token === "string" && token.split(".").length === 3) ? true : false;
 
   const [checkInDate, setCheckInDate] = useState(today);
   const [checkOutDate, setCheckOutDate] = useState(defaultCheckOut);
@@ -41,6 +40,12 @@ const BookingRoom = () => {
   const [pickupTime, setPickupTime] = useState('');
 
   useEffect(() => {
+    const token =
+        localStorage.getItem("customerToken") ||
+        sessionStorage.getItem("customerToken") ||
+        "";
+
+    setCustomerToken(token);
     const saved = localStorage.getItem("bookingDetails");
 
     if (!saved) return;
@@ -347,14 +352,16 @@ const BookingRoom = () => {
   };
 
   const handleBooking = () => {
-    if (!customerToken) {
+    const token = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken") || "";
+
+    if (!isLikelyJwt(token)) {
       navigate("/customerlogin", {
         state: { from: location.pathname },
       });
       return;
     }
 
-    const guest = jwtDecode(customerToken);
+    const guest = jwtDecode(token); 
 
     const nights =
       checkInDate && checkOutDate
@@ -453,7 +460,7 @@ const BookingRoom = () => {
                 streamlined booking experience designed for quick decisions.
               </p>
             </div>
-            {customerToken == null && (
+            {!isLikelyJwt(customerToken) && (
               <button
                 type="button"
                 onClick={() =>

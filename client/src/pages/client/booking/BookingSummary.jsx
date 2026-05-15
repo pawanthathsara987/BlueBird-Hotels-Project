@@ -35,13 +35,6 @@ const BookingSummary = () => {
     const handleConfirmBooking = async () => {
         setIsProcessing(true);
         try {
-            // TODO: Send booking to backend
-            console.log('Confirming booking with data:', {
-                checkIn: checkInDate,
-                checkOut: checkOutDate,
-                selectedRooms,
-                totalCost,
-            });
             navigate("/payment", {
                 state: {
                     bookingData,

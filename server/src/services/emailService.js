@@ -1,8 +1,3 @@
-/**
- * Email Service
- * Handles all email notifications for tour booking system
- */
-
 import nodemailer from 'nodemailer';
 
 // Configure Nodemailer transporter

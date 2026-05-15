@@ -21,10 +21,8 @@ export default function RoomDetailsModal({ selectedRoom, onClose }) {
         const images = response?.data?.data;
 
         if (!Array.isArray(images) || images.length === 0) {
-          // Fallback to the single image on the room object
           setImageList(selectedRoom.image ? [selectedRoom.image] : []);
         } else {
-          // Map whatever shape your API returns — adjust the key if needed
           setImageList(images.map((img) => img.url ?? img.imageUrl ?? img));
         }
       } catch (error) {
@@ -36,7 +34,7 @@ export default function RoomDetailsModal({ selectedRoom, onClose }) {
     };
 
     getPackageImages();
-    setCurrentIndex(0); // Reset index when room changes
+    setCurrentIndex(0);
   }, [selectedRoom?.id]);
 
   const canSlide = imageList.length > 1;
@@ -65,7 +63,7 @@ export default function RoomDetailsModal({ selectedRoom, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-3 backdrop-blur-[2px] sm:p-5">
-      <div className="relative flex max-h-[82vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/20 bg-white shadow-2xl sm:max-w-2xl">
+      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/20 bg-white shadow-2xl sm:max-w-2xl">
 
         {/* Close button */}
         <button
@@ -86,10 +84,10 @@ export default function RoomDetailsModal({ selectedRoom, onClose }) {
               </div>
             ) : (
               <img
-                key={currentIndex}               // re-mounts to trigger fade
+                key={currentIndex}
                 src={currentImage}
                 alt={`${selectedRoom.type} – image ${currentIndex + 1}`}
-                className="h-full w-full object-cover animate-fadeIn"
+                className="h-full w-full object-cover transition-opacity duration-300 animate-fadeIn"
               />
             )}
 
