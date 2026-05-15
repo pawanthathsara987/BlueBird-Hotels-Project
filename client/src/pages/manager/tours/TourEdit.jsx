@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import TourForm from "./TourForm";
+import axios from "axios";
 import toast from "react-hot-toast";
 
 export default function TourEdit() {
@@ -16,13 +17,10 @@ export default function TourEdit() {
         const fetchTour = async () => {
             try {
                 setLoading(true);
-                const response = await fetch(`${backendBaseUrl}/manager/tours/${id}`);
-                const result = await response.json();
-                
-                if (!response.ok || !result.success) {
-                    throw new Error(result.message || "Failed to fetch tour");
+                const { data: result } = await axios.get(`${backendBaseUrl}/manager/tours/${id}`);
+                if (!result || !result.success) {
+                    throw new Error((result && result.message) || "Failed to fetch tour");
                 }
-                
                 setTourData(result.data);
             } catch (err) {
                 setError(err.message);
@@ -58,14 +56,11 @@ export default function TourEdit() {
                 formData.append("image", payload.imageFile);
             }
 
-            const response = await fetch(`${backendBaseUrl}/manager/tours/${id}`, {
-                method: "PUT",
-                body: formData,
+            const { data: result } = await axios.put(`${backendBaseUrl}/manager/tours/${id}`, formData, {
+                headers: { "Content-Type": "multipart/form-data" },
             });
-
-            const result = await response.json();
-            if (!response.ok || !result.success) {
-                throw new Error(result.message || "Failed to update tour");
+            if (!result || !result.success) {
+                throw new Error((result && result.message) || "Failed to update tour");
             }
 
             toast.success("Tour updated successfully!");

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { TrendingUp, DollarSign, MapPin, BarChart3 } from "lucide-react";
+import axios from "axios";
 
 export default function ToursDashboard() {
     const [tours, setTours] = useState([]);
@@ -10,13 +11,10 @@ export default function ToursDashboard() {
     useEffect(() => {
         const fetchTours = async () => {
             try {
-                const response = await fetch(`${backendBaseUrl}/manager/tours`);
-                const payload = await response.json();
-
-                if (!response.ok || !payload.success) {
-                    throw new Error(payload.message || "Failed to load tours");
+                const { data: payload } = await axios.get(`${backendBaseUrl}/manager/tours`);
+                if (!payload || !payload.success) {
+                    throw new Error((payload && payload.message) || "Failed to load tours");
                 }
-
                 setTours(payload.data || []);
                 setError("");
             } catch (error) {

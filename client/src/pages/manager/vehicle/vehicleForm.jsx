@@ -49,8 +49,33 @@ const defaultVehicle = {
 	pricePerDay: "",
 	status: "available",
 	description: "",
-	imageUrl: "",
+	image: null,
+	imagePreview: null,
 	features: "",
+};
+
+const ALLOWED_FUEL_TYPES = ["petrol", "diesel", "electric", "hybrid"];
+const ALLOWED_TRANSMISSIONS = ["automatic", "manual"];
+const ALLOWED_STATUSES = ["available", "unavailable", "maintenance", "retired"];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
+const normalizeFeaturesForInput = (features) => {
+	if (Array.isArray(features)) {
+		return features.map((feature) => String(feature).trim()).filter(Boolean).join(", ");
+	}
+
+	if (typeof features === "string") {
+		try {
+			const parsed = JSON.parse(features);
+			if (Array.isArray(parsed)) {
+				return parsed.map((feature) => String(feature).trim()).filter(Boolean).join(", ");
+			}
+		} catch {
+			return features;
+		}
+	}
+
+	return "";
 };
 
 export default function VehicleForm({ vehicle, onCancel, onSaved }) {
@@ -75,8 +100,9 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 			pricePerDay: vehicle.pricePerDay ? String(vehicle.pricePerDay) : "",
 			status: vehicle.status || "available",
 			description: vehicle.description || "",
-			imageUrl: vehicle.imageUrl || "",
-			features: Array.isArray(vehicle.features) ? vehicle.features.join(", ") : "",
+			image: null,
+			imagePreview: vehicle.image || null,
+			features: normalizeFeaturesForInput(vehicle.features),
 		};
 	}, [vehicle]);
 
@@ -90,30 +116,88 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 	}, [initialValues]);
 
 	const handleChange = (event) => {
-		const { name, value } = event.target;
-		setForm((prev) => ({ ...prev, [name]: value }));
+		const { name, value, type, files } = event.target;
+		
+		if (type === "file") {
+			const file = files?.[0] || null;
+			const preview = file ? URL.createObjectURL(file) : null;
+			setForm((prev) => ({ ...prev, image: file, imagePreview: preview }));
+		} else {
+			setForm((prev) => ({ ...prev, [name]: value }));
+		}
 		setErrors((prev) => ({ ...prev, [name]: "" }));
 	};
 
 	const validate = () => {
 		const nextErrors = {};
+		const normalizedFeatures = form.features
+			.split(",")
+			.map((feature) => feature.trim())
+			.filter(Boolean);
 
 		if (!form.plateNumber.trim()) nextErrors.plateNumber = "Plate number is required.";
+		if (!form.brand.trim()) nextErrors.brand = "Brand is required.";
 		if (!form.vehicleType.trim()) nextErrors.vehicleType = "Vehicle type is required.";
 		if (!form.model.trim()) nextErrors.model = "Model is required.";
+		if (!String(form.year).trim()) nextErrors.year = "Year is required.";
 		if (!String(form.capacity).trim()) nextErrors.capacity = "Capacity is required.";
 		if (!String(form.pricePerDay).trim()) nextErrors.pricePerDay = "Price per day is required.";
+		if (!form.fuelType) nextErrors.fuelType = "Fuel type is required.";
+		if (!form.transmission) nextErrors.transmission = "Transmission is required.";
+		if (!form.color.trim()) nextErrors.color = "Color is required.";
+		if (!form.status) nextErrors.status = "Status is required.";
+		if (!form.description.trim()) nextErrors.description = "Description is required.";
+		if (!normalizedFeatures.length) nextErrors.features = "Add at least one feature.";
+		if (!isEditMode && !form.image) nextErrors.image = "Vehicle image is required.";
+
+		if (form.image && !form.image.type.startsWith("image/")) {
+			nextErrors.image = "Only image files are allowed.";
+		}
+
+		if (form.image && form.image.size > MAX_IMAGE_SIZE) {
+			nextErrors.image = "Image must be 5MB or smaller.";
+		}
 
 		if (form.year && Number.isNaN(Number(form.year))) {
 			nextErrors.year = "Year must be a number.";
+		} else if (form.year && Number(form.year) < 1900) {
+			nextErrors.year = "Year must be 1900 or later.";
 		}
 
 		if (form.capacity && Number.isNaN(Number(form.capacity))) {
 			nextErrors.capacity = "Capacity must be a number.";
+		} else if (form.capacity && Number(form.capacity) <= 0) {
+			nextErrors.capacity = "Capacity must be greater than zero.";
 		}
 
 		if (form.pricePerDay && Number.isNaN(Number(form.pricePerDay))) {
 			nextErrors.pricePerDay = "Price per day must be a number.";
+		} else if (form.pricePerDay && Number(form.pricePerDay) <= 0) {
+			nextErrors.pricePerDay = "Price per day must be greater than zero.";
+		}
+
+		if (form.fuelType && !ALLOWED_FUEL_TYPES.includes(form.fuelType)) {
+			nextErrors.fuelType = "Select a valid fuel type.";
+		}
+
+		if (form.transmission && !ALLOWED_TRANSMISSIONS.includes(form.transmission)) {
+			nextErrors.transmission = "Select a valid transmission.";
+		}
+
+		if (form.status && !ALLOWED_STATUSES.includes(form.status)) {
+			nextErrors.status = "Select a valid status.";
+		}
+
+		if (form.brand && form.brand.trim().length > 100) {
+			nextErrors.brand = "Brand cannot exceed 100 characters.";
+		}
+
+		if (form.color && form.color.trim().length > 50) {
+			nextErrors.color = "Color cannot exceed 50 characters.";
+		}
+
+		if (form.description && form.description.trim().length > 2000) {
+			nextErrors.description = "Description is too long.";
 		}
 
 		setErrors(nextErrors);
@@ -127,33 +211,43 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 			return;
 		}
 
-		const payload = {
-			plateNumber: form.plateNumber.trim(),
-			brand: form.brand.trim() || null,
-			vehicleType: form.vehicleType.trim(),
-			model: form.model.trim(),
-			year: form.year ? Number(form.year) : null,
-			capacity: Number(form.capacity),
-			fuelType: form.fuelType || null,
-			transmission: form.transmission || null,
-			color: form.color.trim() || null,
-			pricePerDay: Number(form.pricePerDay),
-			status: form.status,
-			description: form.description.trim() || null,
-			imageUrl: form.imageUrl.trim() || null,
-			features: form.features
-				.split(",")
-				.map((feature) => feature.trim())
-				.filter(Boolean),
-		};
+		const formData = new FormData();
+		formData.append("plateNumber", form.plateNumber.trim());
+		formData.append("brand", form.brand.trim() || null);
+		formData.append("vehicleType", form.vehicleType.trim());
+		formData.append("model", form.model.trim());
+		formData.append("year", form.year ? Number(form.year) : null);
+		formData.append("capacity", Number(form.capacity));
+		formData.append("fuelType", form.fuelType || null);
+		formData.append("transmission", form.transmission || null);
+		formData.append("color", form.color.trim() || null);
+		formData.append("pricePerDay", Number(form.pricePerDay));
+		formData.append("status", form.status);
+		formData.append("description", form.description.trim() || null);
+		formData.append(
+			"features",
+			JSON.stringify(
+				form.features
+					.split(",")
+					.map((feature) => feature.trim())
+					.filter(Boolean)
+			)
+		);
+
+		if (form.image) {
+			formData.append("image", form.image);
+		}
 
 		try {
 			setIsSubmitting(true);
 			const token = localStorage.getItem("managerToken") || localStorage.getItem("token") || localStorage.getItem("accessToken");
-			const config = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
+			const config = token
+				? { headers: { Authorization: `Bearer ${token}` } }
+				: {};
+
 			const request = isEditMode
-				? axios.put(`${backendBaseUrl}/vehicles/${vehicle.id}`, payload, config)
-				: axios.post(`${backendBaseUrl}/vehicles`, payload, config);
+				? axios.put(`${backendBaseUrl}/vehicles/${vehicle.id}`, formData, config)
+				: axios.post(`${backendBaseUrl}/vehicles`, formData, config);
 
 			const response = await request;
 			const savedVehicle = response.data?.data;
@@ -167,8 +261,13 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 			}
 		} catch (error) {
 			const message = error.response?.data?.message || error.message || "Failed to save vehicle.";
+			const apiErrors = error.response?.data?.errors;
 			toast.error(message);
-			setErrors((prev) => ({ ...prev, form: message }));
+			setErrors((prev) => ({
+				...prev,
+				...(apiErrors && typeof apiErrors === "object" ? apiErrors : {}),
+				form: message,
+			}));
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -355,15 +454,25 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 					</div>
 
 					<div>
-						<FieldLabel text="Image URL" error={errors.imageUrl} />
-						<input
-							type="text"
-							name="imageUrl"
-							value={form.imageUrl}
-							onChange={handleChange}
-							className={inputClassName(!!errors.imageUrl)}
-							placeholder="https://..."
-						/>
+						<FieldLabel text="Vehicle Image" error={errors.image} />
+						<div className="flex gap-4 items-start">
+							<input
+								type="file"
+								name="image"
+								onChange={handleChange}
+								accept="image/*"
+								className={`${baseInput} border border-slate-200 bg-slate-50 hover:bg-white file:mr-3 file:py-1.5 file:px-3 file:border-0 file:rounded-lg file:bg-blue-50 file:text-blue-600 file:font-semibold file:cursor-pointer`}
+							/>
+						</div>
+						{form.imagePreview && (
+							<div className="mt-3 rounded-lg overflow-hidden border border-slate-200">
+								<img
+									src={form.imagePreview}
+									alt="Preview"
+									className="w-full h-40 object-cover"
+								/>
+							</div>
+						)}
 					</div>
 
 					<div>

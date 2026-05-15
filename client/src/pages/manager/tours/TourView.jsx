@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Edit2, Trash2, Plus, MapPin } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import axios from "axios";
 
 export default function TourView({ searchQuery = "" }) {
     const navigate = useNavigate();
@@ -15,13 +16,10 @@ export default function TourView({ searchQuery = "" }) {
     useEffect(() => {
         const fetchTours = async () => {
             try {
-                const response = await fetch(`${backendBaseUrl}/manager/tours`);
-                const payload = await response.json();
-
-                if (!response.ok || !payload.success) {
-                    throw new Error(payload.message || "Failed to load tours");
+                const { data: payload } = await axios.get(`${backendBaseUrl}/manager/tours`);
+                if (!payload || !payload.success) {
+                    throw new Error((payload && payload.message) || "Failed to load tours");
                 }
-
                 setTours(payload.data || []);
                 setError("");
             } catch (error) {
@@ -41,13 +39,9 @@ export default function TourView({ searchQuery = "" }) {
 
         try {
             setDeletingId(deleteTarget.id);
-            const response = await fetch(`${backendBaseUrl}/manager/tours/${deleteTarget.id}`, {
-                method: "DELETE",
-            });
-
-            const payload = await response.json();
-            if (!response.ok || !payload.success) {
-                throw new Error(payload.message || "Failed to delete tour");
+            const { data: payload } = await axios.delete(`${backendBaseUrl}/manager/tours/${deleteTarget.id}`);
+            if (!payload || !payload.success) {
+                throw new Error((payload && payload.message) || "Failed to delete tour");
             }
 
             setTours((prevTours) => prevTours.filter((tour) => tour.id !== deleteTarget.id));
