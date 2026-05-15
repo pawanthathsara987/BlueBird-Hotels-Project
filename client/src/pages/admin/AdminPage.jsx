@@ -48,7 +48,6 @@ export default function AdminPage() {
                 <div className="w-full flex flex-col pl-5 pt-5">
                     <NavLink to="/admin" end onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}><MdDashboard className="text-2xl" /> Dashboard</NavLink>
                     <NavLink to="/admin/rooms/roomManagement" onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}><MdBedroomParent className="text-2xl" /> Rooms</NavLink>
-                    <NavLink to="/admin/bookings" onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}><MdBookOnline className="text-2xl" /> Bookings</NavLink>
                     <NavLink to="/admin/users" onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}><MdPeople className="text-2xl" /> Users</NavLink>
                     <NavLink to="/admin/settings" onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}><MdSettings className="text-2xl" /> Settings</NavLink>
                     <NavLink to="/logout" onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}><MdLogout className="text-2xl" /> Logout</NavLink>
