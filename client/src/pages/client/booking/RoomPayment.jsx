@@ -8,7 +8,6 @@ const RoomPayment = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const bookingData = location.state?.bookingData || null;
-  console.log(bookingData);
   const bookingConfirmation = location.state?.bookingConfirmation || null;
 
   const [processing, setProcessing] = useState(false);
@@ -86,6 +85,7 @@ const RoomPayment = () => {
 
     let savedBookingDetails = {};
     let airportPickup = null;
+    let personalRequest = null;
 
     try {
       savedBookingDetails = JSON.parse(localStorage.getItem("bookingDetails"));
@@ -97,6 +97,12 @@ const RoomPayment = () => {
       airportPickup = JSON.parse(localStorage.getItem("airportPickUp"));
     } catch {
       airportPickup = null;
+    }
+
+    try {
+      personalRequest = localStorage.getItem("personalRequest");
+    } catch {
+      personalRequest = null;
     }
 
     if (!token) {
@@ -153,8 +159,8 @@ const RoomPayment = () => {
                 roomId: r.roomId,
                 checkIn: r.checkInDate,
                 checkOut: r.checkOutDate,
-                adults: r.adults,
-                kids: r.kids
+                actualAdults: r.adults,
+                actualKids: r.kids
               })),
               airportPickup: airportPickup?.enabled
                 ? {
@@ -164,6 +170,7 @@ const RoomPayment = () => {
                     pickupTime: airportPickup?.time || "",
                   }
                 : null,
+              personalRequest,
             }
           );
 

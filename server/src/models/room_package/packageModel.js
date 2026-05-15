@@ -34,7 +34,7 @@ RoomPackage.init(
             defaultValue: 0,
         },
         description: {
-            type: DataTypes.STRING,
+            type: DataTypes.STRING(1000),
             allowNull: true,
             defaultValue: "Sea-facing room with balcony, breakfast, and sunset lounge access."
         }
