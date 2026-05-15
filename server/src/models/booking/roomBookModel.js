@@ -49,6 +49,11 @@ BookedRoom.init(
             type: DataTypes.INTEGER,
             allowNull: false,
             defaultValue: 0,
+        },
+        actualKidAges: {
+            type: DataTypes.JSON,
+            allowNull: false,
+            defaultValue: [],
         }
     },
     {

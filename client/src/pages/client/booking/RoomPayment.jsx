@@ -39,6 +39,11 @@ const RoomPayment = () => {
   
   // Calculate 50% advance payment
   const totalAmount = Number(passedBookingData?.totalPrice || 0);
+  const originalTotalAmount = Number(
+    passedBookingData?.originalTotalPrice ||
+    selectedRooms.reduce((sum, room) => sum + Number(room.originalTotalPrice || room.totalPrice || 0), 0)
+  );
+  const totalSavings = Math.max(0, originalTotalAmount - totalAmount);
   const advanceAmount = Number((totalAmount * 0.5).toFixed(2));
   const remainingAmount = Number((totalAmount - advanceAmount).toFixed(2));
 
@@ -160,7 +165,8 @@ const RoomPayment = () => {
                 checkIn: r.checkInDate,
                 checkOut: r.checkOutDate,
                 actualAdults: r.adults,
-                actualKids: r.kids
+                actualKids: r.kids,
+                actualKidAges: r.actualKidAges || []
               })),
               airportPickup: airportPickup?.enabled
                 ? {
@@ -385,11 +391,48 @@ const RoomPayment = () => {
 
                 </div>
 
+                {/* Show per-room kid ages if available */}
+                {selectedRooms.map((room, idx) => {
+                  const ages = Array.isArray(room.actualKidAges) && room.actualKidAges.length > 0
+                    ? room.actualKidAges
+                    : Array.isArray(room.kidAges) && room.kidAges.length > 0
+                      ? room.kidAges
+                      : [];
+
+                  if (ages.length === 0) return null;
+
+                  return (
+                    <div key={idx} className="mb-3 p-3 rounded-lg bg-white border border-stone-100 text-sm">
+                      <div className="font-semibold text-stone-900 mb-2">Room {idx + 1} - Kid ages</div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {ages.map((a, i) => (
+                          <span key={i} className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800 border border-emerald-100">
+                            <span className="flex w-4 h-4 rounded-full bg-emerald-300 text-white text-[11px] font-bold items-center justify-center">{i+1}</span>
+                            <span>Age {a}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+
                 <div className="space-y-2 mb-6">
+                  {originalTotalAmount > totalAmount && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-stone-600">Original Total:</span>
+                      <span className="text-stone-400 line-through">${originalTotalAmount.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm">
                     <span className="text-stone-600">Subtotal:</span>
                     <span className="text-stone-900">${totalAmount.toFixed(2)}</span>
                   </div>
+                  {totalSavings > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-stone-600">Discount Savings:</span>
+                      <span className="font-semibold text-emerald-700">-${totalSavings.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm">
                     <span className="text-stone-600">Advance (50%):</span>
                     <span className="font-semibold text-emerald-700">${advanceAmount.toFixed(2)}</span>
@@ -403,7 +446,12 @@ const RoomPayment = () => {
                 <div className="bg-stone-100 p-3 rounded-lg">
                   <div className="flex justify-between items-center">
                     <span className="font-semibold text-stone-900">Total Amount:</span>
-                    <span className="text-2xl font-bold text-emerald-700">${totalAmount.toFixed(2)}</span>
+                    <div className="text-right">
+                      {originalTotalAmount > totalAmount && (
+                        <p className="text-xs text-stone-400 line-through">${originalTotalAmount.toFixed(2)}</p>
+                      )}
+                      <span className="text-2xl font-bold text-emerald-700">${totalAmount.toFixed(2)}</span>
+                    </div>
                   </div>
                 </div>
 

@@ -22,6 +22,14 @@ export default function RoomPackageCarousel() {
         }
     }
 
+    const getDiscountedPrice = (price, discount = 0) => {
+        const basePrice = Number(price || 0);
+        const discountPercent = Number(discount || 0);
+        return discountPercent > 0
+            ? Number((basePrice - (basePrice * discountPercent) / 100).toFixed(2))
+            : basePrice;
+    };
+
     const settings = {
         dots: false,
         infinite: true,
@@ -57,7 +65,9 @@ export default function RoomPackageCarousel() {
                             <RoomPackageCard
                                 image={pkg.pimage}
                                 title={pkg.pname}
-                                price={pkg.pprice}
+                                price={getDiscountedPrice(pkg.pprice, pkg.discount)}
+                                originalPrice={pkg.pprice}
+                                discount={pkg.discount}
                                 adults={pkg.maxAdults}
                                 kids={pkg.maxKids}
                                 description={pkg.description}
