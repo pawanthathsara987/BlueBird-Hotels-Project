@@ -14,6 +14,7 @@ import TourRefund from "./tour_package/TourRefund.js";
 import PackageImage from "./room_package/packageImageModel.js";
 import AirPortPickup from './booking/airPortPickupModel.js';
 import Vehicle from "./vehicle/vehicleModel.js";
+import VehicleType from "./vehicle/vehicleTypeModel.js";
 import Role from "./User/Role.js";
 
 
@@ -169,8 +170,8 @@ export function initModels() {
     });     
 
     
-    return { AirPortPickup, Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourRefund, PackageImage, Vehicle, Role };
+    return { AirPortPickup, Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourRefund, PackageImage, Vehicle, VehicleType, Role };
 }
-export { AirPortPickup, Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourRefund, PackageImage, Vehicle, Role };
+export { AirPortPickup, Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourRefund, PackageImage, Vehicle, VehicleType, Role };
 
 
