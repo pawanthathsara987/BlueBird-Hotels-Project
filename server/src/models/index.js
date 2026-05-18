@@ -156,6 +156,19 @@ export function initModels() {
         foreignKey: "roleId"
     });
 
+    // ── VehicleType → Vehicle ─────────────────────────────────────────────────────
+    VehicleType.hasMany(Vehicle, {
+    foreignKey: 'vehicleTypeId',
+    as: 'vehicles',
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+    });
+    Vehicle.belongsTo(VehicleType, {
+    foreignKey: 'vehicleTypeId',
+    as: 'vehicleType',
+    });     
+
+    
     return { AirPortPickup, Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourRefund, PackageImage, Vehicle, Role };
 }
 export { AirPortPickup, Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourRefund, PackageImage, Vehicle, Role };
