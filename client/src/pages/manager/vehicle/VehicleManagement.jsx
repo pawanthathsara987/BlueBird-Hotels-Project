@@ -3,6 +3,7 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import { CarFront, Plus, RefreshCw, Pencil, Trash2, Users, Fuel, Banknote, Image as ImageIcon } from "lucide-react";
 import VehicleForm from "./vehicleForm";
+import VehicleTypeForm from "./vehicleTypeForm";
 
 const Card = ({ children, className = "" }) => (
   <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm p-6 ${className}`}>
@@ -49,6 +50,7 @@ export default function VehicleManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [showTypeForm, setShowTypeForm] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
@@ -162,6 +164,14 @@ export default function VehicleManagement() {
             >
               <Plus className="w-4 h-4" />
               Add Vehicle
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowTypeForm(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Vehicle Type
             </button>
           </div>
         </div>
@@ -321,6 +331,20 @@ export default function VehicleManagement() {
         <div className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm overflow-y-auto py-8 px-4">
           <div className="max-w-5xl mx-auto">
             <VehicleForm vehicle={selectedVehicle} onCancel={closeForm} onSaved={handleSaved} />
+          </div>
+        </div>
+      )}
+
+      {showTypeForm && (
+        <div className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm overflow-y-auto py-8 px-4">
+          <div className="max-w-lg mx-auto">
+            <VehicleTypeForm
+              onCancel={() => setShowTypeForm(false)}
+              onSaved={() => {
+                setShowTypeForm(false);
+                fetchVehicles();
+              }}
+            />
           </div>
         </div>
       )}
