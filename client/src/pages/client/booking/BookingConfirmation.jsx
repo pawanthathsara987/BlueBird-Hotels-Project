@@ -15,6 +15,13 @@ const BookingConfirmation = () => {
   // Convert dates for formatting
   const checkIn = bookingData?.checkInDate ? new Date(bookingData.checkInDate) : null;
   const checkOut = bookingData?.checkOutDate ? new Date(bookingData.checkOutDate) : null;
+  const hasDiscount = (room) => Number(room.discount || 0) > 0 && Number(room.originalTotalPrice || 0) > Number(room.totalPrice || 0);
+  const totalDiscounted = Number(bookingData?.totalPrice || 0);
+  const totalOriginal = selectedRooms.reduce(
+    (sum, room) => sum + Number(room.originalTotalPrice ?? room.totalPrice ?? 0),
+    0,
+  );
+  const totalSavings = Math.max(0, totalOriginal - totalDiscounted);
 
   // Clear localStorage after component mounts (booking is confirmed)
   useEffect(() => {
@@ -113,10 +120,26 @@ const BookingConfirmation = () => {
 
           <div className="flex justify-between items-center">
             <span className="text-stone-600 font-medium">Total Amount</span>
-            <span className="font-bold text-emerald-700 text-lg">
-              ${bookingData?.totalPrice?.toFixed(2) || "0.00"}
-            </span>
+            <div className="text-right">
+              {totalOriginal > totalDiscounted && (
+                <p className="text-xs text-stone-400 line-through">
+                  ${totalOriginal.toFixed(2)}
+                </p>
+              )}
+              <span className="font-bold text-emerald-700 text-lg">
+                ${totalDiscounted.toFixed(2)}
+              </span>
+            </div>
           </div>
+
+          {totalSavings > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="text-stone-600 font-medium">You saved</span>
+              <span className="font-bold text-emerald-700">
+                ${totalSavings.toFixed(2)}
+              </span>
+            </div>
+          )}
 
           <div className="flex justify-between items-center">
             <span className="text-stone-600 font-medium">Guests</span>
@@ -167,6 +190,39 @@ const BookingConfirmation = () => {
                         <p className="font-medium text-stone-900">{room.nights || 0}</p>
                       </div>
                     </div>
+                    {
+                      (() => {
+                        const ages = Array.isArray(room.actualKidAges) && room.actualKidAges.length > 0
+                          ? room.actualKidAges
+                          : Array.isArray(room.kidAges) && room.kidAges.length > 0
+                            ? room.kidAges
+                            : [];
+
+                        if (ages.length === 0) return null;
+
+                        return (
+                          <div className="mt-3">
+                            <p className="text-xs font-bold uppercase tracking-wider text-stone-500 mb-2">Kid Ages</p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              {ages.map((age, ageIndex) => (
+                                <span key={ageIndex} className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800 border border-emerald-100">
+                                  <span className="flex w-4 h-4 rounded-full bg-emerald-300 text-white text-[11px] font-bold items-center justify-center">{ageIndex+1}</span>
+                                  <span>Age {age}</span>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()
+                    }
+                    {hasDiscount(room) && (
+                      <div className="mt-3 flex items-center justify-between text-sm">
+                        <span className="text-stone-500">Original total</span>
+                        <span className="text-stone-400 line-through">
+                          ${Number(room.originalTotalPrice || 0).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 );
               })}

@@ -225,9 +225,15 @@ export default function RoomDetailsModal({ selectedRoom, onClose }) {
             <div>
               <p className="text-xs text-gray-500">Price per night</p>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-extrabold text-gray-900 sm:text-3xl">${selectedRoom.price}</span>
+                {selectedRoom.originalPrice && selectedRoom.originalPrice > selectedRoom.price && (
+                  <span className="text-sm font-semibold text-gray-400 line-through">${Number(selectedRoom.originalPrice).toFixed(2)}</span>
+                )}
+                <span className="text-2xl font-extrabold text-gray-900 sm:text-3xl">${Number(selectedRoom.price || 0).toFixed(2)}</span>
                 <span className="text-sm text-gray-500">/night</span>
               </div>
+              {selectedRoom.discount > 0 && (
+                <p className="mt-1 text-xs font-semibold text-emerald-700">{selectedRoom.discount}% discount applied</p>
+              )}
             </div>
             <button
               type="button"

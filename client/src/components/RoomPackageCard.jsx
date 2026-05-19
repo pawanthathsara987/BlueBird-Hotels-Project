@@ -2,6 +2,8 @@ export default function RoomPackageCard({
     image,
     title,
     price,
+    originalPrice,
+    discount,
     adults,
     kids,
     description,
@@ -26,10 +28,20 @@ export default function RoomPackageCard({
                     </h2>
 
                     <div className="text-right">
+                        {Number(discount || 0) > 0 && Number(originalPrice || 0) > Number(price || 0) && (
+                            <p className="text-sm text-gray-400 line-through">
+                                ${Number(originalPrice || 0).toFixed(2)}
+                            </p>
+                        )}
 
                         <p className="text-4xl text-gray-400">
-                            from ${price}
+                            from ${Number(price || 0).toFixed(2)}
                         </p>
+                        {Number(discount || 0) > 0 && (
+                            <p className="mt-1 text-xs font-semibold text-emerald-700">
+                                {discount}% OFF
+                            </p>
+                        )}
 
                     </div>
 

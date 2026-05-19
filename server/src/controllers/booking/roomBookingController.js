@@ -109,7 +109,8 @@ const createBooking = async (req, res) => {
                 checkIn,
                 checkOut,
                 actualAdults = 1,
-                actualKids = 0
+                actualKids = 0,
+                actualKidAges = []
             } = roomData;
 
             if (!roomId || !checkIn || !checkOut) {
@@ -152,6 +153,7 @@ const createBooking = async (req, res) => {
                 checkOut,
                 actualAdults,
                 actualKids,
+                actualKidAges,
                 status: "reserved"
             });
         }
@@ -393,6 +395,7 @@ const getAvailablePackagesByDate = async (req, res) => {
                 p.id,
                 p.pname,
                 p.pprice,
+                p.discount,
                 p.pimage,
                 p.maxAdults,
                 p.maxKids,

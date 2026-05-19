@@ -39,6 +39,24 @@ const BookingRoom = () => {
   const [airportPickup, setAirportPickup] = useState(false);
   const [pickupTime, setPickupTime] = useState('');
 
+  const createKidAges = (count, existingAges = []) =>
+    Array.from({ length: Number(count || 0) }, (_, index) => existingAges[index] ?? "");
+
+  const calculateDiscountedPrice = (price, discount = 0) => {
+    const originalPrice = Number(price || 0);
+    const discountPercent = Number(discount || 0);
+    const discountedPrice = discountPercent > 0
+      ? originalPrice - (originalPrice * discountPercent) / 100
+      : originalPrice;
+
+    return {
+      originalPrice,
+      discountPercent,
+      discountedPrice: Number(discountedPrice.toFixed(2)),
+      savings: Number((originalPrice - discountedPrice).toFixed(2)),
+    };
+  };
+
   useEffect(() => {
     const token =
         localStorage.getItem("customerToken") ||
@@ -100,7 +118,9 @@ const BookingRoom = () => {
         packageList.map((pkg) => ({
           id: pkg.id,
           name: pkg.pname,
-          price: pkg.pprice,
+          originalPrice: Number(pkg.pprice || 0),
+          discount: Number(pkg.discount || 0),
+          price: calculateDiscountedPrice(pkg.pprice, pkg.discount).discountedPrice,
           main_image: pkg.pimage,
           description: pkg.description,
           maxAdults: pkg.maxAdults,
@@ -120,7 +140,9 @@ const BookingRoom = () => {
   const normalizePackage = (pkg) => ({
     id: pkg.id,
     name: pkg.pname || pkg.name,
-    price: pkg.pprice ?? pkg.price,
+    originalPrice: Number(pkg.pprice ?? pkg.price ?? 0),
+    discount: Number(pkg.discount ?? 0),
+    price: calculateDiscountedPrice(pkg.pprice ?? pkg.price, pkg.discount).discountedPrice,
     image: pkg.pimage || pkg.image,
     description: pkg.description,
     maxAdults: pkg.maxAdults ?? 0,
@@ -204,6 +226,7 @@ const BookingRoom = () => {
         roomId: null,
         adults: 1,
         kids: 0,
+        kidAges: [],
         showPackagePicker: false,
       },
     ];
@@ -237,6 +260,7 @@ const BookingRoom = () => {
             roomId: backendRoomId,
             adults: 1,
             kids: 0,
+            kidAges: [],
             showPackagePicker: false,
           }
         : room,
@@ -263,9 +287,37 @@ const BookingRoom = () => {
   };
 
   const updateRoomGuests = (roomId, field, value) => {
-    const updatedRooms = rooms.map((room) =>
-      room.id === roomId ? { ...room, [field]: Number(value) } : room,
-    );
+    const updatedRooms = rooms.map((room) => {
+      if (room.id !== roomId) return room;
+
+      if (field === "kids") {
+        const kidCount = Number(value);
+        return {
+          ...room,
+          kids: kidCount,
+          kidAges: createKidAges(kidCount, room.kidAges || []),
+        };
+      }
+
+      return { ...room, [field]: Number(value) };
+    });
+
+    setRooms(updatedRooms);
+    saveBookingToStorage(updatedRooms);
+  };
+
+  const updateKidAge = (roomId, kidIndex, ageValue) => {
+    const updatedRooms = rooms.map((room) => {
+      if (room.id !== roomId) return room;
+
+      const nextKidAges = createKidAges(room.kids, room.kidAges || []);
+      nextKidAges[kidIndex] = ageValue;
+
+      return {
+        ...room,
+        kidAges: nextKidAges,
+      };
+    });
 
     setRooms(updatedRooms);
     saveBookingToStorage(updatedRooms);
@@ -297,6 +349,8 @@ const BookingRoom = () => {
       description: item.description,
       description2: `${item.maxAdults} Adults${item.maxKids ? `, ${item.maxKids} Kids` : ""} - Breakfast Included`,
       price: item.price,
+      originalPrice: item.originalPrice,
+      discount: item.discount,
       maxGuests: `${item.maxAdults + item.maxKids} (${item.maxAdults} Adults, ${item.maxKids} Children)`,
       checkIn: item.checkIn || "2.00 pm",
       checkOut: item.checkOut || "12.0 pm",
@@ -378,9 +432,21 @@ const BookingRoom = () => {
       .filter((room) => room.packageId && room.roomId)
       .map((room) => {
         const pkg = packageOptions.find((p) => p.id === room.packageId);
+        const pricing = calculateDiscountedPrice(pkg?.originalPrice ?? pkg?.price, pkg?.discount);
 
-        const pricePerNight = Number(pkg?.price ?? 0);
+        if ((room.kids || 0) > 0) {
+          const kidAges = Array.isArray(room.kidAges) ? room.kidAges : [];
+          const hasMissingKidAge = kidAges.length < room.kids || kidAges.some((age) => age === "" || age === null || age === undefined);
+
+          if (hasMissingKidAge) {
+            toast.error(`Please select an age for each kid}`);
+            throw new Error("Missing kid ages");
+          }
+        }
+
+        const pricePerNight = Number(pricing.discountedPrice ?? 0);
         const totalPrice = pricePerNight * nights;
+        const originalTotalPrice = Number((pricing.originalPrice * nights).toFixed(2));
 
         return {
           packageId: room.packageId,
@@ -389,8 +455,14 @@ const BookingRoom = () => {
           frontendRoomId: room.id,
           adults: room.adults,
           kids: room.kids,
+          actualKidAges: room.kidAges || [],
+          originalPrice: pricing.originalPrice,
+          discount: pricing.discountPercent,
+          discountedPrice: pricing.discountedPrice,
+          savings: Number((pricing.originalPrice - pricing.discountedPrice).toFixed(2)),
           nights,
           totalPrice,
+          originalTotalPrice,
           checkInDate: checkInDate?.toISOString(),
           checkOutDate: checkOutDate?.toISOString(),
         };
@@ -407,6 +479,14 @@ const BookingRoom = () => {
       nights,
       totalPrice: selectedRoomsData.reduce(
         (sum, room) => sum + room.totalPrice,
+        0,
+      ),
+      originalTotalPrice: selectedRoomsData.reduce(
+        (sum, room) => sum + Number(room.originalTotalPrice || 0),
+        0,
+      ),
+      totalSavings: selectedRoomsData.reduce(
+        (sum, room) => sum + (Number(room.originalTotalPrice || 0) - Number(room.totalPrice || 0)),
         0,
       ),
     };
@@ -622,6 +702,21 @@ const BookingRoom = () => {
                                     Capacity: {selectedPackage.maxAdults} Adults
                                     / {selectedPackage.maxKids} Kids
                                   </p>
+                                  <div className="mt-2 flex items-end gap-2">
+                                    {Number(selectedPackage.discount || 0) > 0 && (
+                                      <span className="text-xs text-stone-400 line-through">
+                                        ${Number(selectedPackage.originalPrice || 0).toFixed(2)} / night
+                                      </span>
+                                    )}
+                                    <span className="text-sm font-bold text-emerald-700">
+                                      ${Number(selectedPackage.price || 0).toFixed(2)} / night
+                                    </span>
+                                  </div>
+                                  {Number(selectedPackage.discount || 0) > 0 && (
+                                    <p className="mt-1 text-xs font-semibold text-emerald-700">
+                                      {selectedPackage.discount}% discount applied
+                                    </p>
+                                  )}
                                 </div>
                                 <button
                                   type="button"
@@ -711,9 +806,16 @@ const BookingRoom = () => {
                                           {item.maxKids} Kids
                                         </p>
                                         <div className="flex items-center justify-between">
-                                          <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">
-                                            ${item.price} / night
-                                          </p>
+                                          <div className="flex flex-col">
+                                            {Number(item.discount || 0) > 0 && (
+                                              <p className="text-[11px] font-semibold text-stone-400 line-through">
+                                                ${Number(item.originalPrice || 0).toFixed(2)} / night
+                                              </p>
+                                            )}
+                                            <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">
+                                              ${Number(item.price || 0).toFixed(2)} / night
+                                            </p>
+                                          </div>
                                           <p
                                             className={`text-xs font-bold ${
                                               isUnavailable
@@ -793,6 +895,30 @@ const BookingRoom = () => {
                               ))
                             )}
                           </select>
+
+                          {room.kids > 0 && (
+                            <div className="mt-3 space-y-3 rounded-lg border border-stone-200 bg-stone-50 p-3">
+                              {Array.from({ length: room.kids }, (_, kidIndex) => (
+                                <div key={kidIndex}>
+                                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-stone-500">
+                                    Kid {kidIndex + 1} Age
+                                  </label>
+                                  <select
+                                    value={room.kidAges?.[kidIndex] || ""}
+                                    onChange={(e) => updateKidAge(room.id, kidIndex, e.target.value)}
+                                    className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm font-semibold text-stone-800"
+                                  >
+                                    <option value="">Select age</option>
+                                    {Array.from({ length: 11 }, (_, age) => age + 1).map((age) => (
+                                      <option key={age} value={age}>
+                                        {age}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -840,7 +966,7 @@ const BookingRoom = () => {
               ></textarea>
             </div>
 
-            <div className="mt-6 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-cyan-50 p-5 shadow-sm">
+            <div className="mt-6 rounded-2xl border border-emerald-200 bg-linear-to-r from-emerald-50 to-cyan-50 p-5 shadow-sm">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
                     {/* Left */}
@@ -981,10 +1107,22 @@ const BookingRoom = () => {
                       <p className="text-xs font-bold uppercase tracking-wider text-stone-500">
                         Price
                       </p>
-                      <p className="text-lg font-black text-emerald-700">
-                        {item.price}
-                      </p>
+                      <div className="text-right">
+                        {Number(item.discount || 0) > 0 && (
+                          <p className="text-xs text-stone-400 line-through">
+                            ${Number(item.originalPrice || 0).toFixed(2)}
+                          </p>
+                        )}
+                        <p className="text-lg font-black text-emerald-700">
+                          ${Number(item.price || 0).toFixed(2)}
+                        </p>
+                      </div>
                     </div>
+                    {Number(item.discount || 0) > 0 && (
+                      <p className="mt-2 text-xs font-semibold text-emerald-700">
+                        {item.discount}% discount applied
+                      </p>
+                    )}
                     <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                       <div className="rounded-xl bg-white px-3 py-2">
                         <p className="text-[11px] font-bold uppercase tracking-wider text-stone-500">

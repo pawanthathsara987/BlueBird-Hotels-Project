@@ -19,6 +19,11 @@ RoomPackage.init(
             type: DataTypes.INTEGER,
             allowNull: false,
         },
+        discount: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 0,
+        },
         pimage: {
             type: DataTypes.STRING,
             allowNull: true,
