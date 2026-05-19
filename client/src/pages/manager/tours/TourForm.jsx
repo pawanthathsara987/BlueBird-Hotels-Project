@@ -566,12 +566,9 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
               <FieldLabel text="Cancellation Policy" required error={errors.termsConditions} />
               <textarea
                 name="termsConditions" value={form.termsConditions} onChange={handleChange} rows={6}
-                placeholder={"Example:\n• Cancel 7+ days before the tour date: 60% refund\n• Cancel 1 day before the tour date: 20% refund\n• Same-day cancellation: no refund"}
+                placeholder={"60% Refund 7+ days before\n"}
                 className={`${inputCls(errors.termsConditions)} resize-none`}
               />
-              <p className="mt-2 text-xs text-slate-500 leading-relaxed">
-                Keep the policy clear and specific so customers can see exactly what happens when they cancel close to the tour date.
-              </p>
             </Card>
 
             {/* Location + Map */}

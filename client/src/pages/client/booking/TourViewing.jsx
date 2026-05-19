@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, DollarSign, Tag, X, SlidersHorizontal, RotateCcw, Search, Loader, Calculator } from 'lucide-react';
+import { MapPin, DollarSign, Tag, X, SlidersHorizontal, RotateCcw, Search, Loader } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../../components/header';
@@ -160,27 +160,7 @@ function FilterSidebar({
   locations,
   selectedLocation,
   setSelectedLocation,
-  refundInquiryCode,
-  setRefundInquiryCode,
-  onCheckRefund,
-  refundQuote,
-  isCheckingRefund,
 }) {
-  const formatHoursToDaysTime = (hours) => {
-    if (hours === null || hours === undefined || isNaN(hours)) return 'N/A';
-    const h = Number(hours);
-    if (h < 0) {
-      const abs = Math.abs(h);
-      const d = Math.floor(abs / 24);
-      const hr = abs % 24;
-      if (d > 0) return `Started ${d}d ${hr}h ago`;
-      return `Started ${hr}h ago`;
-    }
-    const d = Math.floor(h / 24);
-    const hr = h % 24;
-    if (d > 0) return `${d} day(s) ${hr} hour(s)`;
-    return `${hr} hour(s)`;
-  };
   return (
     <div className="bg-white/95 backdrop-blur rounded-3xl shadow-[0_12px_36px_rgba(2,6,23,0.12)] border border-slate-200 p-6 h-fit sticky top-4">
       <div className="flex items-center justify-between mb-6">
@@ -326,39 +306,6 @@ ${minPrice.toLocaleString()} - ${maxPrice.toLocaleString()}
         <RotateCcw className="w-4 h-4" />
         Reset All Filters
       </button>
-
-      {/* Refund check */}
-      <div className="mt-6">
-        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-3 flex items-center gap-2">
-          <Calculator className="w-4 h-4 text-cyan-700" />
-          Refund Check
-        </h3>
-        <div className="flex gap-2">
-          <input
-            value={refundInquiryCode}
-            onChange={(e) => setRefundInquiryCode(e.target.value)}
-            placeholder="Inquiry code"
-            className="flex-1 px-3 py-2 border border-slate-300 rounded-xl text-sm"
-          />
-          <button
-            onClick={onCheckRefund}
-            disabled={isCheckingRefund}
-            className="px-3 py-2 bg-amber-600 text-white rounded-xl disabled:opacity-60"
-          >
-            {isCheckingRefund ? <Loader size={14} className="animate-spin" /> : 'Check'}
-          </button>
-        </div>
-
-        {refundQuote && (
-          <div className="mt-3 p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-sm space-y-2">
-            <div className="flex justify-between"><span className="text-gray-600">Inquiry sent</span><span className="font-semibold">{refundQuote.inquiryCreatedAt ? new Date(refundQuote.inquiryCreatedAt).toLocaleString() : 'N/A'}</span></div>
-            <div className="flex justify-between"><span className="text-gray-600">Time until tour</span><span className="font-semibold">{formatHoursToDaysTime(refundQuote.hoursUntilTour)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-600">Refund %</span><span className="font-semibold text-emerald-700">{refundQuote.refundPercentage}%</span></div>
-            <div className="flex justify-between"><span className="text-gray-600">Refund</span><span className="font-bold text-emerald-700">${Number(refundQuote.refundAmount || 0).toLocaleString()}</span></div>
-            <div className="text-xs text-gray-600 mt-2">Preview only</div>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
@@ -381,11 +328,6 @@ export default function TourViewPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedLocation, setSelectedLocation] = useState('');
   const [maxAvailablePrice, setMaxAvailablePrice] = useState(10000);
-
-  // Refund check state
-  const [refundInquiryCode, setRefundInquiryCode] = useState('');
-  const [refundQuote, setRefundQuote] = useState(null);
-  const [isCheckingRefund, setIsCheckingRefund] = useState(false);
 
   const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3002/api').replace(/\/$/, '');
 
@@ -431,26 +373,6 @@ export default function TourViewPage() {
 
     fetchTours();
   }, [backendBaseUrl]);
-
-  const handleCheckRefund = async () => {
-    setRefundQuote(null);
-    if (!refundInquiryCode.trim()) return setError('Inquiry code is required');
-    setIsCheckingRefund(true);
-    try {
-      const res = await axios.get(`${backendBaseUrl}/tour-inquiry/refund-quote/${encodeURIComponent(refundInquiryCode.trim())}`);
-      if (res.data && res.data.success) {
-        setRefundQuote(res.data.data);
-        setError(null);
-      } else {
-        setError(res.data?.message || 'Failed to load refund quote');
-      }
-    } catch (err) {
-      console.error('Refund lookup failed:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to load refund quote');
-    } finally {
-      setIsCheckingRefund(false);
-    }
-  };
 
   /* =========================
      APPLY FILTERS
@@ -617,11 +539,6 @@ export default function TourViewPage() {
                 locations={locations}
                 selectedLocation={selectedLocation}
                 setSelectedLocation={setSelectedLocation}
-                refundInquiryCode={refundInquiryCode}
-                setRefundInquiryCode={setRefundInquiryCode}
-                onCheckRefund={handleCheckRefund}
-                refundQuote={refundQuote}
-                isCheckingRefund={isCheckingRefund}
               />
             </div>
 
