@@ -11,13 +11,13 @@ export default function NewBookingFlow({ onBookingSuccess }) {
 
     const [checkInDate, setCheckInDate] = useState(today.toISOString().split("T")[0]);
     const [checkOutDate, setCheckOutDate] = useState(defaultCheckOut.toISOString().split("T")[0]);
-    
+
     const [packages, setPackages] = useState([]);
     const [selectedPackageId, setSelectedPackageId] = useState("");
     const [availableRoomsForPackage, setAvailableRoomsForPackage] = useState([]);
-    
+
     const [selectedRooms, setSelectedRooms] = useState([]);
-    
+
     const [guestDetails, setGuestDetails] = useState({
         firstName: "",
         lastName: "",
@@ -113,7 +113,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
     };
 
     const handleUpdateRoomGuests = (roomId, field, value) => {
-        setSelectedRooms(prev => prev.map(r => 
+        setSelectedRooms(prev => prev.map(r =>
             r.roomId === roomId ? { ...r, [field]: Number(value) } : r
         ));
     };
@@ -127,7 +127,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
         const start = new Date(checkInDate);
         const end = new Date(checkOutDate);
         const diffTime = Math.abs(end - start);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         return diffDays > 0 ? diffDays : 1;
     };
 
@@ -178,9 +178,9 @@ export default function NewBookingFlow({ onBookingSuccess }) {
     return (
         <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-800 mb-6 border-b pb-3">Create New Walk-in Booking</h2>
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                
+
                 {/* Left Column: Room Selection */}
                 <div className="lg:col-span-2 space-y-6">
                     {/* Dates */}
@@ -189,8 +189,8 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                             <label className="block text-xs font-bold uppercase text-gray-500 mb-2">Check-in Date</label>
                             <div className="relative">
                                 <MdCalendarToday className="absolute left-3 top-3 text-gray-400" />
-                                <input 
-                                    type="date" 
+                                <input
+                                    type="date"
                                     value={checkInDate}
                                     min={today.toISOString().split("T")[0]}
                                     onChange={(e) => setCheckInDate(e.target.value)}
@@ -202,8 +202,8 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                             <label className="block text-xs font-bold uppercase text-gray-500 mb-2">Check-out Date</label>
                             <div className="relative">
                                 <MdCalendarToday className="absolute left-3 top-3 text-gray-400" />
-                                <input 
-                                    type="date" 
+                                <input
+                                    type="date"
                                     value={checkOutDate}
                                     min={checkInDate}
                                     onChange={(e) => setCheckOutDate(e.target.value)}
@@ -216,7 +216,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                     {/* Package & Room Selection */}
                     <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
                         <label className="block text-xs font-bold uppercase text-gray-500 mb-2">Select Package to view available rooms</label>
-                        <select 
+                        <select
                             value={selectedPackageId}
                             onChange={(e) => setSelectedPackageId(e.target.value)}
                             className="w-full p-3 border border-blue-200 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 transition-all font-medium text-gray-700"
@@ -243,11 +243,10 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                                                     type="button"
                                                     onClick={() => handleAddRoom(room)}
                                                     disabled={isSelected}
-                                                    className={`p-3 rounded-xl border text-center transition-all ${
-                                                        isSelected 
-                                                            ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-95' 
-                                                            : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:shadow-md hover:-translate-y-1'
-                                                    }`}
+                                                    className={`p-3 rounded-xl border text-center transition-all ${isSelected
+                                                        ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-95'
+                                                        : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:shadow-md hover:-translate-y-1'
+                                                        }`}
                                                 >
                                                     <MdHotel className={`mx-auto mb-1 text-xl ${isSelected ? 'text-blue-200' : 'text-blue-500'}`} />
                                                     <span className="font-bold">Room {room.id}</span>
@@ -276,8 +275,8 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                                     <div className="flex items-center gap-3">
                                         <div>
                                             <label className="text-[10px] uppercase font-bold text-gray-400 block">Adults</label>
-                                            <select 
-                                                value={room.actualAdults} 
+                                            <select
+                                                value={room.actualAdults}
                                                 onChange={(e) => handleUpdateRoomGuests(room.roomId, 'actualAdults', e.target.value)}
                                                 className="border-gray-200 rounded-md text-sm py-1 focus:ring-blue-500 focus:border-blue-500"
                                             >
@@ -288,8 +287,8 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                                         </div>
                                         <div>
                                             <label className="text-[10px] uppercase font-bold text-gray-400 block">Kids</label>
-                                            <select 
-                                                value={room.actualKids} 
+                                            <select
+                                                value={room.actualKids}
                                                 onChange={(e) => handleUpdateRoomGuests(room.roomId, 'actualKids', e.target.value)}
                                                 className="border-gray-200 rounded-md text-sm py-1 focus:ring-blue-500 focus:border-blue-500"
                                             >
@@ -299,7 +298,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                                             </select>
                                         </div>
                                     </div>
-                                    <button 
+                                    <button
                                         onClick={() => handleRemoveRoom(room.roomId)}
                                         className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors text-sm font-bold"
                                     >
@@ -347,7 +346,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                     {/* Summary */}
                     <div className="bg-gray-900 text-white p-5 rounded-xl shadow-lg">
                         <h3 className="text-sm font-bold uppercase text-gray-400 mb-4 border-b border-gray-700 pb-2">Booking Summary</h3>
-                        
+
                         <div className="flex justify-between text-sm mb-2">
                             <span className="text-gray-300">Nights</span>
                             <span className="font-bold">{calculateNights()}</span>
@@ -356,7 +355,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                             <span className="text-gray-300">Rooms</span>
                             <span className="font-bold">{selectedRooms.length}</span>
                         </div>
-                        
+
                         <div className="space-y-2 mb-4 max-h-32 overflow-y-auto">
                             {selectedRooms.map(r => (
                                 <div key={r.roomId} className="flex justify-between text-xs items-center bg-gray-800 p-2 rounded">
@@ -371,12 +370,12 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                             <span className="text-3xl font-black text-green-400">${totalPrice.toLocaleString()}</span>
                         </div>
 
-                        <button 
+                        <button
                             onClick={handleSubmitBooking}
                             disabled={isLoading || selectedRooms.length === 0}
                             className={`w-full py-3 rounded-lg font-bold uppercase tracking-wider transition-all shadow-md
-                                ${isLoading || selectedRooms.length === 0 
-                                    ? 'bg-gray-700 text-gray-500 cursor-not-allowed' 
+                                ${isLoading || selectedRooms.length === 0
+                                    ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
                                     : 'bg-green-500 hover:bg-green-400 text-gray-900 hover:shadow-green-500/20 hover:-translate-y-0.5'
                                 }`}
                         >
