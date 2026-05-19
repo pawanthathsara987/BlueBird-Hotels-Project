@@ -4,7 +4,7 @@ import sequelize from "../../config/database.js";
 class Room extends Model {}
 
 Room.init({
-    id: {                          // ← renamed from rid
+    id: {                          
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
