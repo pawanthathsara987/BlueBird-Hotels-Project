@@ -10,6 +10,7 @@ function PackageForm() {
 
     const [pname, setPname] = useState("");
     const [pprice, setPprice] = useState("");
+    const [discount, setDiscount] = useState(0);
     const [pimage, setPimage] = useState(null);
     const [maxAdults, setMaxAdults] = useState(2);
     const [maxKids, setMaxKids] = useState(0);
@@ -27,6 +28,7 @@ function PackageForm() {
         if (isEditMode) {
             setPname(selectedPackage.pname || "");
             setPprice(selectedPackage.pprice || "");
+            setDiscount(selectedPackage.discount ?? 0);
             setMaxAdults(selectedPackage.maxAdults ?? 2);
             setMaxKids(selectedPackage.maxKids ?? 0);
             setDescription(selectedPackage.description || "");
@@ -35,6 +37,7 @@ function PackageForm() {
         } else {
             setPname("");
             setPprice("");
+            setDiscount(0);
             setPimage(null);
             setMaxAdults(2);
             setMaxKids(0);
@@ -51,11 +54,17 @@ function PackageForm() {
                 return;
             }
 
+            if (Number(discount) < 0 || Number(discount) > 100) {
+                toast.error("Discount must be between 0 and 100");
+                return;
+            }
+
             setIsLoading(true);
 
             const formData = new FormData();
             formData.append("pname", pname.trim());
             formData.append("pprice", pprice);
+            formData.append("discount", discount);
             formData.append("maxAdults", maxAdults);
             formData.append("maxKids", maxKids);
             formData.append("description", description.trim());
@@ -74,6 +83,7 @@ function PackageForm() {
 
             setPname("");
             setPprice("");
+            setDiscount(0);
             setPimage(null);
             setMaxAdults(2);
             setMaxKids(0);
@@ -150,6 +160,20 @@ function PackageForm() {
                                 className="w-full border border-gray-300 rounded-lg pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
                             />
                         </div>
+                    </div>
+
+                    <div className="mb-5">
+                        <label className="block text-sm font-semibold mb-1">Discount (%)</label>
+                        <input
+                            type="number"
+                            value={discount}
+                            min={0}
+                            max={100}
+                            onChange={(e) => setDiscount(Number(e.target.value))}
+                            placeholder="Enter discount percentage"
+                            disabled={isLoading}
+                            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        />
                     </div>
 
                     <div className="mb-5">

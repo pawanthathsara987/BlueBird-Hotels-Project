@@ -20,7 +20,7 @@ export const upload = multer({
 // Add package
 const createPackage = async (req, res) => {
     try {
-        const { pname, pprice, maxAdults, maxKids, description } = req.body;
+        const { pname, pprice, discount, maxAdults, maxKids, description } = req.body;
 
         // Validate required fields
         if (!pname || !pprice || !req.file) {
@@ -57,6 +57,7 @@ const createPackage = async (req, res) => {
         const crt_package = await RoomPackage.create({
             pname: pname.trim(),
             pprice: Number(pprice),
+            discount: Number(discount) || 0,
             pimage,
             maxAdults: Number(maxAdults) || 2,
             maxKids: Number(maxKids) || 0,
@@ -103,7 +104,7 @@ const getAllPackages = async (req, res) => {
 const updatePackage = async (req, res) => {
     try {
         const { id } = req.params;
-        const { pname, pprice, maxAdults, maxKids, description } = req.body;
+        const { pname, pprice, discount, maxAdults, maxKids, description } = req.body;
 
         const package_ = await RoomPackage.findByPk(id);
 
@@ -158,6 +159,7 @@ const updatePackage = async (req, res) => {
         await package_.update({
             pname: pname.trim(),
             pprice: Number(pprice),
+            discount: Number(discount) || 0,
             pimage,
             maxAdults: Number(maxAdults),
             maxKids: Number(maxKids),

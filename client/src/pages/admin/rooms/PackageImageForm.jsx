@@ -276,7 +276,7 @@ function PackageImageForm() {
 							<option value="">Choose a package</option>
 							{packages.map((pkg) => (
 								<option key={pkg.id} value={pkg.id}>
-									{pkg.pname}
+									{pkg.pname} {Number(pkg.discount || 0) > 0 ? `(${pkg.discount}% OFF)` : ""}
 								</option>
 							))}
 						</select>

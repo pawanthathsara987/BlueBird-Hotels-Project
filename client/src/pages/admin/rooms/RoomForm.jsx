@@ -203,7 +203,9 @@ function RoomForm() {
 
                             <option value="">Select Room Type</option>
                             {packages.map((pkg) => (
-                                <option key={pkg.id} value={pkg.id}>{pkg.pname}</option>
+                                <option key={pkg.id} value={pkg.id}>
+                                    {pkg.pname} {Number(pkg.discount || 0) > 0 ? `(${pkg.discount}% OFF)` : ""}
+                                </option>
                             ))}
                         </select>
                     </div>

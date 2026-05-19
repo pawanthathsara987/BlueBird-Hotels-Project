@@ -5,6 +5,7 @@ import {
   MapPin, Upload, Search, Map,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 
 // White card wrapper
 const Card = ({ children, className = "" }) => (
@@ -67,7 +68,7 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
           }
 
           if (entry && typeof entry === "object") {
-            return (entry.description || entry.activity || entry.title || entry.name || "").toString().trim();
+            return (entry.description || "").toString().trim();
           }
 
           return "";
@@ -87,7 +88,7 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
         if (entry && typeof entry === "object") {
           return {
             day: idx + 1,
-            description: (entry.description || entry.activity || entry.title || entry.name || "").toString().trim(),
+            description: (entry.description || "").toString().trim(),
           };
         }
 
@@ -147,9 +148,8 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
     const fetchTourItems = async () => {
       try {
         setLoadingItems(true);
-        const response = await fetch(`${backendBaseUrl}/manager/tour-items`);
-        const result = await response.json();
-        if (result.success && Array.isArray(result.data)) {
+        const { data: result } = await axios.get(`${backendBaseUrl}/manager/tour-items`);
+        if (result && result.success && Array.isArray(result.data)) {
           setTourItemsList(result.data);
         }
       } catch (error) {
@@ -343,14 +343,11 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
         formData.append("image", imageFile);
       }
 
-      const response = await fetch(`${backendBaseUrl}/manager/tours`, {
-        method: "POST",
-        body: formData,
+      const { data: result } = await axios.post(`${backendBaseUrl}/manager/tours`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-
-      const result = await response.json();
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || "Failed to create tour");
+      if (!result || !result.success) {
+        throw new Error((result && result.message) || "Failed to create tour");
       }
 
       localStorage.removeItem("selectedTourItems");

@@ -26,7 +26,13 @@ const BookingSummary = () => {
         return roomPrice;
     };
 
+    const calculateOriginalRoomTotal = (room) => Number(room.originalTotalPrice ?? room.totalPrice ?? 0);
+
+    const hasDiscount = (room) => Number(room.discount || 0) > 0 && Number(room.originalTotalPrice || 0) > Number(room.totalPrice || 0);
+
     const totalCost = selectedRooms.reduce((sum, room) => sum + calculateRoomTotal(room), 0);
+    const originalTotalCost = selectedRooms.reduce((sum, room) => sum + calculateOriginalRoomTotal(room), 0);
+    const totalSavings = Math.max(0, originalTotalCost - totalCost);
 
     const handleGoBack = () => {
         navigate("/booking");
@@ -35,13 +41,6 @@ const BookingSummary = () => {
     const handleConfirmBooking = async () => {
         setIsProcessing(true);
         try {
-            // TODO: Send booking to backend
-            console.log('Confirming booking with data:', {
-                checkIn: checkInDate,
-                checkOut: checkOutDate,
-                selectedRooms,
-                totalCost,
-            });
             navigate("/payment", {
                 state: {
                     bookingData,
@@ -75,7 +74,7 @@ const BookingSummary = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-stone-50 to-stone-100 pb-20">
+        <div className="min-h-screen bg-linear-to-b from-stone-50 to-stone-100 pb-20">
             {/* Header */}
             <div className="bg-white shadow-md">
                 <div className="mx-auto max-w-7xl px-4 py-6 sm:px-8 lg:px-14">
@@ -150,6 +149,11 @@ const BookingSummary = () => {
                                                     <p className="text-sm text-stone-600 mt-2">Room {index + 1}</p>
                                                 </div>
                                                 <div className="text-right">
+                                                    {hasDiscount(room) && (
+                                                        <p className="text-xs text-stone-400 line-through">
+                                                            ${Number(room.originalTotalPrice || 0).toFixed(2)}
+                                                        </p>
+                                                    )}
                                                     <p className="text-2xl font-black text-emerald-700">
                                                         ${calculateRoomTotal(room).toFixed(2)}
                                                     </p>
@@ -199,6 +203,35 @@ const BookingSummary = () => {
                                                         <p className="font-semibold text-stone-900">{room.nights ?? nights}</p>
                                                     </div>
                                                 </div>
+
+                                                                                                {
+                                                                                                    (() => {
+                                                                                                        const ages = Array.isArray(room.actualKidAges) && room.actualKidAges.length > 0
+                                                                                                            ? room.actualKidAges
+                                                                                                            : Array.isArray(room.kidAges) && room.kidAges.length > 0
+                                                                                                                ? room.kidAges
+                                                                                                                : [];
+
+                                                                                                        if (ages.length === 0) return null;
+
+                                                                                                        return (
+                                                                                                            <div>
+                                                                                                                <p className="text-xs font-bold uppercase tracking-wider text-stone-500 mb-2">Kid Ages</p>
+                                                                                                                <div className="flex flex-wrap items-center gap-2">
+                                                                                                                  {ages.map((age, ageIndex) => (
+                                                                                                                    <span
+                                                                                                                      key={ageIndex}
+                                                                                                                      className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800 border border-emerald-100"
+                                                                                                                    >
+                                                                                                                      <span className="flex w-4 h-4 rounded-full bg-emerald-300 text-white text-[11px] font-bold items-center justify-center">{ageIndex+1}</span>
+                                                                                                                      <span>Age {age}</span>
+                                                                                                                    </span>
+                                                                                                                  ))}
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                        );
+                                                                                                    })()
+                                                                                                }
                                             </div>
                                         </div>
                                     );
@@ -218,6 +251,11 @@ const BookingSummary = () => {
                                         <span className="text-stone-600">Room {index + 1}</span>
                                         <span className="font-semibold text-stone-900">
                                             ${calculateRoomTotal(room).toFixed(2)}
+                                            {hasDiscount(room) && (
+                                                <span className="ml-2 text-xs text-stone-400 line-through">
+                                                    ${Number(room.originalTotalPrice || 0).toFixed(2)}
+                                                </span>
+                                            )}
                                         </span>
                                     </div>
                                 ))}
@@ -225,10 +263,25 @@ const BookingSummary = () => {
 
                             <div className="flex justify-between items-center mb-6">
                                 <span className="text-lg font-bold text-stone-900">Total</span>
-                                <span className="text-3xl font-black text-emerald-700">
-                                    ${totalCost.toFixed(2)}
-                                </span>
+                                <div className="text-right">
+                                    {originalTotalCost > totalCost && (
+                                        <p className="text-xs text-stone-400 line-through">
+                                            ${originalTotalCost.toFixed(2)}
+                                        </p>
+                                    )}
+                                    <span className="text-3xl font-black text-emerald-700">
+                                        ${totalCost.toFixed(2)}
+                                    </span>
+                                </div>
                             </div>
+
+                            {totalSavings > 0 && (
+                                <div className="mb-6 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+                                    <p className="text-sm font-semibold text-emerald-800">
+                                        You save ${totalSavings.toFixed(2)} with your discount
+                                    </p>
+                                </div>
+                            )}
 
                             <button
                                 onClick={handleConfirmBooking}

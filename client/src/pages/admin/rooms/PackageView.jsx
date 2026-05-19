@@ -121,6 +121,7 @@ const PackageView = () => {
                     <tr>
                         <th className="px-4 py-2">Package Name</th>
                         <th className="px-4 py-2">Price</th>
+                        <th className="px-4 py-2">Discount</th>
                         <th className="px-4 py-2">Adults</th>
                         <th className="px-4 py-2">Kids</th>
                         <th className="px-4 py-2">Description</th>
@@ -130,7 +131,7 @@ const PackageView = () => {
                 <tbody>
                     {isLoading ? (
                         <tr>
-                            <td colSpan={5} className="py-12 text-center">
+                            <td colSpan={6} className="py-12 text-center">
                                 <div className="flex justify-center items-center">
                                     <span className="w-16 h-16 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></span>
                                 </div>
@@ -138,7 +139,7 @@ const PackageView = () => {
                         </tr>
                     ) : packages.length === 0 ? (
                         <tr>
-                            <td colSpan={5} className="py-12 text-center text-gray-500">
+                            <td colSpan={6} className="py-12 text-center text-gray-500">
                                 <p className="text-lg">No packages available. Click "Add Package" to create one.</p>
                             </td>
                         </tr>
@@ -150,7 +151,19 @@ const PackageView = () => {
                                         {pkg.pimage && <img src={pkg.pimage} alt={pkg.pname} className="w-10 h-10 rounded object-cover" />}
                                         {pkg.pname}
                                     </td>
-                                    <td className="px-4 py-2 font-semibold text-green-600">${pkg.pprice}</td>
+                                    <td className="px-4 py-2 font-semibold text-green-600">
+                                        <div className="flex flex-col items-center">
+                                            {Number(pkg.discount || 0) > 0 && (
+                                                <span className="text-xs text-gray-400 line-through">
+                                                    ${Number(pkg.pprice || 0).toFixed(2)}
+                                                </span>
+                                            )}
+                                            <span>${Number((Number(pkg.pprice || 0) - (Number(pkg.pprice || 0) * Number(pkg.discount || 0)) / 100)).toFixed(2)}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-2">
+                                        {Number(pkg.discount || 0) > 0 ? `${pkg.discount}%` : "0%"}
+                                    </td>
                                     <td className="px-4 py-2">{pkg.maxAdults}</td>
                                     <td className="px-4 py-2">{pkg.maxKids}</td>
                                     <td className="px-4 py-2">{pkg.description}</td>

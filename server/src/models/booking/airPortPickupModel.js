@@ -1,37 +1,39 @@
 import { Model, DataTypes } from "sequelize";
 import sequelize from "../../config/database.js";
 
-class Reservation extends Model {}
+class AirPortPickup extends Model {}
 
-Reservation.init(
+AirPortPickup.init(
     {
         id: {
             type: DataTypes.INTEGER,
-            autoIncrement: true,
             primaryKey: true,
             allowNull: false,
+            autoIncrement: true,
         },
-        guest_id: {
+        customer_id: {
             type: DataTypes.INTEGER,
             allowNull: false,
+            references: {
+                model: "customer",
+                key: "id",
+            },
         },
-        total_price: {
-            type: DataTypes.DECIMAL(10, 2),
+        pickup_date: {
+            type: DataTypes.DATE,
             allowNull: false,
-            defaultValue: 0.00
         },
-        status: {
-            type: DataTypes.ENUM("pending", "confirmed", "cancelled", "completed"),
-            defaultValue: "pending",
+        pickup_time: {
+            type: DataTypes.TIME,
             allowNull: false,
         },
     },
     {
         sequelize,
-        modelName: "Reservation",
-        tableName: "reservations",
+        modelName: "AirPortPickup",
+        tableName: "airport_pickup",
         timestamps: true,
     }
 );
 
-export default Reservation;
+export default AirPortPickup;

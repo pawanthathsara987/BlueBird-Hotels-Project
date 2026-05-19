@@ -27,14 +27,30 @@ StaffMember.init(
                 isEmail: true
             }
         },
-        role: {
-            type: DataTypes.ENUM('staff_member', 'receptionist'),
+        roleId: {
+            type: DataTypes.INTEGER,
             allowNull: false,
-            defaultValue: 'receptionist'
+            references: {
+                model: "roles",
+                key: "roleId"
+            }
         },
         phoneNumber: {
             type: DataTypes.STRING(20),
             allowNull: false
+        },
+        nicNumber: {
+            type: DataTypes.STRING(20),
+            allowNull: true,
+            unique: true
+        },
+        address: {
+            type: DataTypes.STRING(255),
+            allowNull: true
+        },
+        imageUrl: {
+            type: DataTypes.STRING(500),
+            allowNull: true
         }
     },
     {

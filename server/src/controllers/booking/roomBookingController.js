@@ -1,6 +1,7 @@
 import { col, fn, Op, QueryTypes } from "sequelize";
 import sequelize from "../../config/database.js";
-import { Customer, Room, BookedRoom, RoomPackage, Reservation } from "../../models/index.js";
+import { sendEmail, sendBookingConfirmationEmail } from "../../services/emailService.js";
+import { Customer, Room, BookedRoom, RoomPackage, Reservation, AirPortPickup } from "../../models/index.js";
 
 
 // available room list with packages
@@ -46,8 +47,11 @@ const createBooking = async (req, res) => {
     try {
         const {
             guestId,
+            checkInDate,
             total_price,
-            rooms
+            rooms,
+            airportPickup,
+            personalRequest,
         } = req.body;
 
         // -----------------------------
@@ -57,6 +61,13 @@ const createBooking = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "guestId is required"
+            });
+        }
+
+        if (!checkInDate) {
+            return res.status(400).json({
+                success: false,
+                message: "checkInDate is required"
             });
         }
 
@@ -80,6 +91,7 @@ const createBooking = async (req, res) => {
         const reservation = await Reservation.create(
             {
                 guest_id: guestId,
+                check_in_date: checkInDate,
                 total_price,
                 status: "confirmed"
             },
@@ -97,7 +109,8 @@ const createBooking = async (req, res) => {
                 checkIn,
                 checkOut,
                 actualAdults = 1,
-                actualKids = 0
+                actualKids = 0,
+                actualKidAges = []
             } = roomData;
 
             if (!roomId || !checkIn || !checkOut) {
@@ -140,6 +153,7 @@ const createBooking = async (req, res) => {
                 checkOut,
                 actualAdults,
                 actualKids,
+                actualKidAges,
                 status: "reserved"
             });
         }
@@ -149,7 +163,56 @@ const createBooking = async (req, res) => {
         // -----------------------------
         await BookedRoom.bulkCreate(bookedRoomEntries, { transaction: t });
 
+        if (airportPickup?.enabled) {
+            if (!airportPickup.pickupDate || !airportPickup.pickupTime) {
+                throw new Error("Airport pickup date and time are required");
+            }
+
+            await AirPortPickup.create(
+                {
+                    guest_id: guestId,
+                    pickup_date: airportPickup.pickupDate,
+                    pickup_time: airportPickup.pickupTime,
+                },
+                { transaction: t }
+            );
+        }
+
         await t.commit();
+
+        try {
+            const confirmedBooking = await Reservation.findByPk(reservation.id, {
+                include: [
+                    { model: Customer },
+                    {
+                        model: BookedRoom,
+                        as: "bookedRooms",
+                        include: [
+                            {
+                                model: Room,
+                                include: [RoomPackage],
+                            },
+                        ],
+                    },
+                ],
+            });
+
+            if (confirmedBooking) {
+                await sendBookingConfirmationEmail(confirmedBooking);
+            }
+        } catch (emailError) {
+            console.error("BOOKING CONFIRMATION EMAIL ERROR:", emailError);
+        }
+
+        if (personalRequest && personalRequest != null) {
+            await sendEmail({
+                to: "sandeepal513@gmail.com",
+                subject: "Personal Request",
+                html: "<h1>Personal Request</h1>" +
+                        "<p>Personal Request: " + personalRequest + "</p>",
+                text: personalRequest,
+            });
+        }
 
         return res.status(201).json({
             success: true,
@@ -332,6 +395,7 @@ const getAvailablePackagesByDate = async (req, res) => {
                 p.id,
                 p.pname,
                 p.pprice,
+                p.discount,
                 p.pimage,
                 p.maxAdults,
                 p.maxKids,

@@ -14,6 +14,7 @@ import {
     deleteTour,
     upload as tourUpload
 } from '../controllers/manager/tourController.js';
+import { getAirportPickupRequests } from '../controllers/manager/airportPickupController.js';
 
 const router = express.Router();
 
@@ -32,5 +33,8 @@ router.get('/tours', getAllTours);
 router.get('/tours/:id', getTourById);
 router.put('/tours/:id', tourUpload.single('image'), updateTour);
 router.delete('/tours/:id', deleteTour);
+
+// Airport pickup requests
+router.get('/airport-pickups', getAirportPickupRequests);
 
 export default router;

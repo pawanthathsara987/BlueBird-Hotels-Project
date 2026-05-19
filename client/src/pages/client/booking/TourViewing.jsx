@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../../components/header';
 import Footer from '../../../components/footer';
+import FloatingChatbot from '../../../components/FloatingChatbot';
 
 /* ===================================
    TOUR CARD COMPONENT
@@ -136,7 +137,7 @@ ${Number(tour.price).toFixed(2)}
             }}
             className="w-full bg-cyan-700 hover:bg-cyan-800 active:bg-cyan-800 text-white px-4 py-2.5 rounded-xl text-sm font-semibold border border-cyan-700 transition-colors"
           >
-            Book Now
+            View Details
           </button>
         </div>
       </div>
@@ -575,6 +576,7 @@ export default function TourViewPage() {
         </div>
         </div>
       </div>
+      <FloatingChatbot />
       <Footer />
     </div>
   );

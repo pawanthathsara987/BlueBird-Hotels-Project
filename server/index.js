@@ -17,7 +17,7 @@ async function startServer() {
     await sequelize.authenticate();
     console.log('✅ MySQL connected (AWS RDS)');
 
-    await sequelize.sync({ alter: false }); // ← set true to recreate table droping exiting table
+    await sequelize.sync({ alter: false }); // Creates/updates tables based on models
     console.log('✅ Models synced');
 
     app.listen(PORT, () =>

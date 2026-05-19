@@ -19,6 +19,11 @@ RoomPackage.init(
             type: DataTypes.INTEGER,
             allowNull: false,
         },
+        discount: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 0,
+        },
         pimage: {
             type: DataTypes.STRING,
             allowNull: true,
@@ -34,7 +39,7 @@ RoomPackage.init(
             defaultValue: 0,
         },
         description: {
-            type: DataTypes.STRING,
+            type: DataTypes.STRING(1000),
             allowNull: true,
             defaultValue: "Sea-facing room with balcony, breakfast, and sunset lounge access."
         }
