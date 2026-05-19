@@ -11,26 +11,22 @@ AirPortPickup.init(
             allowNull: false,
             autoIncrement: true,
         },
-
-        guest_id: {
+        customer_id: {
             type: DataTypes.INTEGER,
             allowNull: false,
             references: {
                 model: "customer",
-                key: "customerId",
+                key: "id",
             },
         },
-
         pickup_date: {
             type: DataTypes.DATE,
             allowNull: false,
         },
-
         pickup_time: {
             type: DataTypes.TIME,
             allowNull: false,
         },
-
     },
     {
         sequelize,

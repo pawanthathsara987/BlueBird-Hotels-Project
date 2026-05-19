@@ -11,11 +11,11 @@ BookedRoom.init(
             primaryKey: true,
             allowNull: false,
         },
-        reservation_id: {
+        booking_id: {
             type: DataTypes.INTEGER,
             allowNull: false,
             references: {
-                model: 'reservations',
+                model: 'booking',
                 key: 'id'
             }
         },
@@ -23,7 +23,7 @@ BookedRoom.init(
             type: DataTypes.INTEGER,
             allowNull: false,
             references: {
-                model: 'room', 
+                model: 'room',
                 key: 'id'
             }
         },
@@ -40,21 +40,16 @@ BookedRoom.init(
             defaultValue: "reserved",
             allowNull: false,
         },
-        actualAdults: {
+        adults: {
             type: DataTypes.INTEGER,
             allowNull: false,
             defaultValue: 1,
         },
-        actualKids: {
+        kids: {
             type: DataTypes.INTEGER,
             allowNull: false,
             defaultValue: 0,
         },
-        actualKidAges: {
-            type: DataTypes.JSON,
-            allowNull: false,
-            defaultValue: [],
-        }
     },
     {
         sequelize,

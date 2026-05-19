@@ -1,6 +1,6 @@
 import Customer from "./User/Customer.js";
-import BookedRoom from "./booking/roomBookModel.js";
-import Reservation from "./booking/reservationModel.js";
+import BookedRoom from "./booking/bookedRoom.js";
+import Booking from "./booking/booking.js";
 import StaffMember from "./User/StaffMember.js";
 import Room from "./room_package/roomModel.js";
 import RoomPackage from "./room_package/packageModel.js";
@@ -18,17 +18,17 @@ import Role from "./User/Role.js";
 
 export function initModels() {
 
-    // Reservation -> BookedRoom
-    Reservation.hasMany(BookedRoom, {
-        foreignKey: "reservation_id",
+    // Booking -> BookedRoom
+    Booking.hasMany(BookedRoom, {
+        foreignKey: "booking_id",
         as: "bookedRooms",
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
     });
 
-    BookedRoom.belongsTo(Reservation, {
-        foreignKey: "reservation_id",
-        as: "reservation",
+    BookedRoom.belongsTo(Booking, {
+        foreignKey: "booking_id",
+        as: "booking",
     });
 
     // Room -> BookedRoom
@@ -42,27 +42,27 @@ export function initModels() {
         foreignKey: "room_id",
     });
 
-    // Customer -> Reservations
-    Customer.hasMany(Reservation, {
-        foreignKey: "guest_id",
+    // Customer -> Bookings
+    Customer.hasMany(Booking, {
+        foreignKey: "customer_id",
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
     });
     
-    Reservation.belongsTo(Customer, {
-        foreignKey: "guest_id",
+    Booking.belongsTo(Customer, {
+        foreignKey: "customer_id",
     });
 
 
     // Customer -> AirPortPickup
     Customer.hasMany(AirPortPickup, {
-        foreignKey: "guest_id",
+        foreignKey: "customer_id",
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
     });
 
     AirPortPickup.belongsTo(Customer, {
-        foreignKey: "guest_id",
+        foreignKey: "customer_id",
     });
 
     // Package -> Room
@@ -145,8 +145,11 @@ export function initModels() {
         foreignKey: "roleId"
     });
 
-    return { AirPortPickup, Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, Role };
+    // Keep `Reservation` alias for backward compatibility with existing controllers
+    const Reservation = Booking;
+
+    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, Role };
 }
-export { AirPortPickup, Customer, BookedRoom, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, Role };
+export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, Role };
 
 
