@@ -16,6 +16,8 @@ export default function UpdateStaffMember() {
     const [role, setRole] = useState(location.state.member.roleId);
     const [roles, setRoles] = useState([]);
     const [phoneNumber, setPhoneNumber] = useState(location.state.member.phoneNumber);
+    const [nicNumber, setNicNumber] = useState(location.state.member.nicNumber || "");
+    const [address, setAddress] = useState(location.state.member.address || "");
     const [loading, setLoading] = useState(false);
 
     const navigate = useNavigate();
@@ -47,7 +49,9 @@ export default function UpdateStaffMember() {
                 name: name,
                 email: email,
                 roleId: role,
-                phoneNumber: phoneNumber
+                phoneNumber: phoneNumber,
+                nicNumber: nicNumber,
+                address: address,
             });
 
             toast.success("Staff member updated successfully");
@@ -168,6 +172,37 @@ export default function UpdateStaffMember() {
                             onChange={(e) => setPhoneNumber(e.target.value)}
                             disabled={loading}
                             placeholder="+94 777 666 555"
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        />
+                    </div>
+                </div>
+
+                <div className="grid m-5 grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-600 mb-2 uppercase">
+                            NIC Number
+                        </label>
+                        <input
+                            type="text"
+                            name="nicNumber"
+                            value={nicNumber}
+                            onChange={(e) => setNicNumber(e.target.value)}
+                            disabled={loading}
+                            placeholder="e.g. 199912345678"
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-600 mb-2 uppercase">
+                            Address
+                        </label>
+                        <input
+                            type="text"
+                            name="address"
+                            value={address}
+                            onChange={(e) => setAddress(e.target.value)}
+                            disabled={loading}
+                            placeholder="Staff member address"
                             className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                         />
                     </div>
