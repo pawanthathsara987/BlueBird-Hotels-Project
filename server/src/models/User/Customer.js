@@ -5,7 +5,7 @@ class Customer extends Model { }
 
 Customer.init(
     {
-        customerId: {
+        id: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true
@@ -53,6 +53,10 @@ Customer.init(
             type: DataTypes.STRING(50),
             allowNull: true,
             unique: true
+        },
+        address: {
+            type: DataTypes.STRING(255),
+            allowNull: true
         }
     },
     {

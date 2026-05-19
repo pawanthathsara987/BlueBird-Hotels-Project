@@ -3,7 +3,6 @@ import { FaUserCircle } from "react-icons/fa";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import axios from "axios";
-import { set } from "date-fns";
 import Select from "react-select";
 
 export default function AddNewStaffMember() {
@@ -14,7 +13,10 @@ export default function AddNewStaffMember() {
     const [roles, setRoles] = useState([]);
     const [role, setRole] = useState("");
     const [phoneNumber, setPhoneNumber] = useState("");
+    const [nicNumber, setNicNumber] = useState("");
+    const [address, setAddress] = useState("");
     const [loading, setLoading] = useState(false);
+    const [image, setImage] = useState(null);
 
     const navigate = useNavigate();
 
@@ -37,6 +39,9 @@ export default function AddNewStaffMember() {
                 email: email,
                 roleId: role,
                 phoneNumber: phoneNumber,
+                nicNumber: nicNumber,
+                address: address,
+                image: image
             });
 
             toast.success("Staff member added successfully");
@@ -160,6 +165,51 @@ export default function AddNewStaffMember() {
                             className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                         />
                     </div>
+                </div>
+
+                <div className="grid m-5 grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-600 mb-2 uppercase">
+                            NIC Number
+                        </label>
+                        <input
+                            type="text"
+                            name="nicNumber"
+                            value={nicNumber}
+                            onChange={(e) => setNicNumber(e.target.value)}
+                            disabled={loading}
+                            placeholder="e.g. 199912345678"
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-600 mb-2 uppercase">
+                            Address
+                        </label>
+                        <input
+                            type="text"
+                            name="address"
+                            value={address}
+                            onChange={(e) => setAddress(e.target.value)}
+                            disabled={loading}
+                            placeholder="Staff member address"
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        />
+                    </div>
+                </div>
+
+                <div className="m-5">
+                    <label className="block text-sm font-semibold text-gray-600 mb-2 uppercase">
+                        Staff Image
+                    </label>
+
+                    <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setImage(e.target.files[0])}
+                        className="w-full p-3 border border-gray-300 rounded-lg"
+                        disabled={loading}
+                    />
                 </div>
 
                 <div className="flex justify-end gap-4 pt-4 m-5">

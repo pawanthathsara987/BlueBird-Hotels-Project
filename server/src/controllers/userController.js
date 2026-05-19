@@ -9,6 +9,7 @@ import e from "express";
 import sequelize from "../config/database.js";
 import Role from "../models/User/Role.js";
 import DeletedStaffMember from "../models/User/DeletedStaffMember.js";
+import supabase from "../config/supabaseClient.js";
 dotenv.config();
 
 const transporter = nodemailer.createTransport(
@@ -59,6 +60,8 @@ export async function registerUser(req, res) {
 
         const data = req.body;
 
+        console.log(req.body);
+
         const staffMember = await StaffMember.create(
             {
                 name: data.name,
@@ -66,6 +69,9 @@ export async function registerUser(req, res) {
                 email: data.email,
                 phoneNumber: data.phoneNumber,
                 roleId: data.roleId,
+                nicNumber: data.nicNumber,
+                address: data.address,
+                imageUrl: data.imageUrl
             }
         );
 
@@ -75,9 +81,13 @@ export async function registerUser(req, res) {
         });
 
     } catch (error) {
+
+        console.log(error);
+
         res.status(500).json({
             message: "Registration failed",
-            error: error.message
+            error: error.message,
+            fullError: error
         });
     }
 }
@@ -217,7 +227,9 @@ export async function searchUsers(req, res) {
                     { name: { [Op.like]: `%${query}%` } },
                     { userName: { [Op.like]: `%${query}%` } },
                     { email: { [Op.like]: `%${query}%` } },
-                    { phoneNumber: { [Op.like]: `%${query}%` } }
+                    { phoneNumber: { [Op.like]: `%${query}%` } },
+                    { nicNumber: { [Op.like]: `%${query}%` } },
+                    { address: { [Op.like]: `%${query}%` } }
                 ]
             },
             include: [
@@ -392,7 +404,7 @@ export async function addUserRoles(req, res) {
             message: "Role added successfully",
             role: newRole
         });
-    }catch (error) {
+    } catch (error) {
         res.status(500).json({
             message: "Failed to add role",
             error: error.message
@@ -404,7 +416,7 @@ export async function getAllRoles(req, res) {
     try {
         const roles = await Role.findAll();
         res.json(roles);
-    }catch (error) {
+    } catch (error) {
         res.status(500).json({
             message: "Failed to fetch roles",
             error: error.message
@@ -445,7 +457,7 @@ export async function getAllDeletedUsers(req, res) {
     try {
         const users = await DeletedStaffMember.findAll();
         res.json(users);
-    }catch (error) {
+    } catch (error) {
         res.status(500).json({
             message: "Failed to fetch deleted users",
             error: error.message

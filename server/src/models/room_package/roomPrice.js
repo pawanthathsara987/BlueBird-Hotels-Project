@@ -1,34 +1,41 @@
 import { Model, DataTypes } from "sequelize";
 import sequelize from "../../config/database.js";
 
-class Room extends Model {}
+class RoomPrice extends Model {}
 
-Room.init({
+RoomPrice.init({
     id: {                          
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
         allowNull: false,
     },
-    packageId: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-    },
-    roomNumber: {
+    occupancyTypeId: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        unique: true,
     },
-    roomStatus: {
-        type: DataTypes.ENUM("available", "occupied", "maintenance"),
+    roomTypeId: {
+        type: DataTypes.INTEGER,
         allowNull: false,
-        defaultValue: "available",
     },
-}, {
+    boardTypeId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+    },
+    seasonId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+    },
+    price: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+    }
+},
+{
     sequelize,
-    modelName: "Room",
-    tableName: "room",
+    modelName: "RoomPrice",
+    tableName: "room_price",
     timestamps: true,
 });
 
-export default Room;
+export default RoomPrice;

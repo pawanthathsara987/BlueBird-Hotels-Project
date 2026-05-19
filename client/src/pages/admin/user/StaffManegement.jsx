@@ -126,6 +126,8 @@ export default function StaffManagement() {
                                                 <th className="p-4 text-left text-sm font-semibold text-gray-400">EMAIL</th>
                                                 <th className="p-4 text-left text-sm font-semibold text-gray-400">ROLE</th>
                                                 <th className="p-4 text-left text-sm font-semibold text-gray-400">PHONE</th>
+                                                <th className="p-4 text-left text-sm font-semibold text-gray-400">NIC NUMBER</th>
+                                                <th className="p-4 text-left text-sm font-semibold text-gray-400">ADDRESS</th>
                                                 <th className="p-4 text-left text-sm font-semibold text-gray-400">ACTIONS</th>
                                             </tr>
                                         </thead>
@@ -137,6 +139,8 @@ export default function StaffManagement() {
                                                     <td className="border-b p-4">{member.email}</td>
                                                     <td className="border-b p-4">{member.Role?.roleName}</td>
                                                     <td className="border-b p-4">{member.phoneNumber}</td>
+                                                    <td className="border-b p-4">{member.nicNumber || "-"}</td>
+                                                    <td className="border-b p-4">{member.address || "-"}</td>
                                                     <td className="border-b p-4">
                                                         <div className="flex flex-wrap gap-2">
                                                             <button
@@ -175,6 +179,8 @@ export default function StaffManagement() {
                                                         <p><span className="font-semibold">Email:</span> {member.email}</p>
                                                         <p><span className="font-semibold">Role:</span> {member.Role?.roleName}</p>
                                                         <p><span className="font-semibold">Phone:</span> {member.phoneNumber}</p>
+                                                        <p><span className="font-semibold">NIC:</span> {member.nicNumber || "-"}</p>
+                                                        <p className="sm:col-span-2"><span className="font-semibold">Address:</span> {member.address || "-"}</p>
                                                     </div>
 
                                                     <div className="flex flex-col gap-2 sm:flex-row">

@@ -13,55 +13,91 @@ Vehicle.init(
       allowNull: false,
     },
 
-    plateNumber: {                          // ← ADD (unique, needed for bookings)
+    // ── Identity ────────────────────────────────
+    plateNumber: {
       type: DataTypes.STRING(30),
       allowNull: false,
       unique: true,
     },
-    brand: {                                
+    brand: {
       type: DataTypes.STRING(100),
       allowNull: true,
     },
-    vehicleType: {                          
+    model: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    model: {                                
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    year: {                                 
+    year: {
       type: DataTypes.INTEGER,
       allowNull: true,
     },
-    capacity: {                             
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    fuelType: {                             // ← ADD (petrol/diesel/electric/hybrid)
-      type: DataTypes.ENUM('petrol', 'diesel', 'electric', 'hybrid'),
-      allowNull: true,
-    },
-    transmission: {                         // ← ADD (auto/manual)
-      type: DataTypes.ENUM('automatic', 'manual'),
-      allowNull: true,
-    },
-    color: {                               
+    color: {
       type: DataTypes.STRING(50),
       allowNull: true,
     },
 
-    pricePerDay: {                          
+    // ── Type & capacity ─────────────────────────
+    vehicleTypeId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: { model: 'vehicle_types', key: 'id' },
+    },
+    capacity: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    fuelType: {
+      type: DataTypes.ENUM('petrol', 'diesel', 'electric', 'hybrid'),
+      allowNull: true,
+    },
+    transmission: {
+      type: DataTypes.ENUM('automatic', 'manual'),
+      allowNull: true,
+    },
+
+    // ── Pricing ─────────────────────────────────
+    pricePerDay: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
     },
+    // ✅ ADD: driver fee charged on top for "with driver" bookings
+    driverPricePerDay: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,       // null = vehicle cannot be hired with driver
+    },
 
-    status: {                             
-      type: DataTypes.ENUM('available', 'unavailable', 'maintenance', 'retired'),
+    // ── Compliance ──────────────────────────────
+    // ✅ ADD: needed for Manager expiry alerts (30-day warning)
+    insuranceNo: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+    },
+    insuranceExpiry: {
+      type: DataTypes.DATEONLY,
+      allowNull: false,
+    },
+    revenueLicenseExpiry: {
+      type: DataTypes.DATEONLY,
+      allowNull: false,
+    },
+
+    // ── Status ──────────────────────────────────
+    // ✅ CHANGE: added 'booked', dropped 'unavailable'
+    //    'booked'      → auto-managed: vehicle has active customer booking
+    //    'maintenance' → Manager manually sets when vehicle is being serviced
+    //    'retired'     → soft-delete; hidden from all views
+    status: {
+      type: DataTypes.ENUM('available', 'booked', 'maintenance', 'retired'),
       allowNull: false,
       defaultValue: 'available',
     },
 
+    // ── Features & media ────────────────────────
+    features: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: [],     // e.g. ["AC", "GPS", "WiFi", "Child Seat"]
+    },
     description: {
       type: DataTypes.TEXT,
       allowNull: true,
@@ -69,11 +105,6 @@ Vehicle.init(
     image: {
       type: DataTypes.STRING(500),
       allowNull: true,
-    },
-    features: {// ← ADD (["AC","GPS","WiFi"])
-      type: DataTypes.JSON,
-      allowNull: true,
-      defaultValue: [],
     },
   },
   {
