@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Send, Bot, Sparkles, X, ArrowRight } from "lucide-react";
+import logo from "../assets/bluebird logo.png";
 
 const initialMessages = [
   {
@@ -103,6 +104,24 @@ export default function FloatingChatbot() {
 
   return (
     <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3 font-sans selection:bg-emerald-500/20">
+      {/* Dynamic style tag for breathing scale animation */}
+      <style>{`
+        @keyframes breatheScale {
+          0%, 100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.08);
+          }
+        }
+        .animate-breathe {
+          animation: breatheScale 2.5s ease-in-out infinite;
+        }
+        .animate-breathe:hover {
+          animation: none;
+        }
+      `}</style>
+
       {/* ======================================================
           CHAT WINDOW
           ====================================================== */}
@@ -112,7 +131,7 @@ export default function FloatingChatbot() {
           <div className="bg-gradient-to-r from-stone-900 via-emerald-950 to-teal-900 px-5 py-4 text-white border-b border-white/5 relative shrink-0">
             {/* Glossy sheen overlay */}
             <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
-            
+
             <div className="flex items-center justify-between relative z-10">
               <div className="flex items-center gap-3">
                 <div className="relative">
@@ -124,7 +143,7 @@ export default function FloatingChatbot() {
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-400"></span>
                   </span>
                 </div>
-                
+
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-1.5">
                     <p className="text-sm font-extrabold tracking-tight">BlueBird Assistant</p>
@@ -152,16 +171,14 @@ export default function FloatingChatbot() {
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex ${
-                    message.from === "user" ? "justify-end" : "justify-start"
-                  } animate-fadeIn`}
+                  className={`flex ${message.from === "user" ? "justify-end" : "justify-start"
+                    } animate-fadeIn`}
                 >
                   <div
-                    className={`max-w-[85%] rounded-2xl px-4 py-3 text-xs leading-relaxed shadow-2xs relative ${
-                      message.from === "user"
+                    className={`max-w-[85%] rounded-2xl px-4 py-3 text-xs leading-relaxed shadow-2xs relative ${message.from === "user"
                         ? "bg-gradient-to-br from-emerald-800 to-teal-900 text-white rounded-tr-none shadow-[0_4px_12px_rgba(6,95,70,0.12)] border border-emerald-905"
                         : "bg-white text-stone-800 border border-stone-200/50 rounded-tl-none"
-                    }`}
+                      }`}
                   >
                     {/* MESSAGE TEXT */}
                     <p className="whitespace-pre-line font-semibold">{message.text}</p>
@@ -364,19 +381,18 @@ export default function FloatingChatbot() {
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-emerald-800 to-teal-700 text-white shadow-[0_8px_30px_rgba(6,95,70,0.3)] hover:shadow-[0_12px_40px_rgba(6,95,70,0.5)] border border-emerald-600/20 transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer relative group overflow-hidden"
+        className={`flex h-14 w-14 items-center justify-center rounded-full bg-white text-stone-850 shadow-[0_8px_30px_rgba(0,0,0,0.08)] hover:shadow-[0_12px_45px_rgba(6,95,70,0.18)] border transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer relative group overflow-hidden ${isOpen
+            ? "border-emerald-600 ring-4 ring-emerald-500/10"
+            : "border-blue-500 hover:border-emerald-600/50 hover:ring-4 hover:ring-emerald-500/10 animate-breathe"
+          }`}
       >
         <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-        
+
         {isOpen ? (
-          <X className="w-6 h-6 transition-transform duration-300 rotate-0 group-hover:rotate-90" />
+          <X className="w-6 h-6 transition-transform duration-300 rotate-0 group-hover:rotate-90 text-stone-700 hover:text-emerald-800" />
         ) : (
-          <div className="relative flex items-center justify-center">
-            <Bot className="w-6 h-6 animate-pulse" />
-            <span className="absolute -top-1.5 -right-1.5 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-400"></span>
-            </span>
+          <div className="relative flex items-center justify-center w-10.5 h-10.5">
+            <img src={logo} alt="BlueBird Logo" className="w-full h-full object-contain transform transition-transform duration-350 group-hover:scale-110" />
           </div>
         )}
       </button>
