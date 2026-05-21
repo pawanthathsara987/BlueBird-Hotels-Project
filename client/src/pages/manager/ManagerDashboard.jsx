@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import ToursDashboard from "./ToursDashboard";
+import DriverForm from "./vehicle/DriverForm";
 
 export default function ManagerDashboard() {
     const [dashboardSelectBtn, setDashboardSelectBtn] = useState("tour");
+    const [showDriverForm, setShowDriverForm] = useState(false);
 
     return (
         <div className="w-full">
@@ -45,10 +47,20 @@ export default function ManagerDashboard() {
                             >
                                 Open Vehicle Manager
                             </Link>
+                                                <div className="mt-4">
+                                                    <button onClick={() => setShowDriverForm(true)} className="ml-4 inline-flex items-center justify-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">Add Driver</button>
+                                                </div>
                         </div>
                     </div>
                 )}
             </div>
+                {showDriverForm && (
+                    <div className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm overflow-y-auto py-8 px-4">
+                        <div className="max-w-3xl mx-auto">
+                            <DriverForm onCancel={() => setShowDriverForm(false)} onSaved={() => setShowDriverForm(false)} />
+                        </div>
+                    </div>
+                )}
         </div>
     );
 }
