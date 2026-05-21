@@ -18,8 +18,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import BookingSummary from "./pages/client/booking/BookingSummary";
 import BookingConfirmation from "./pages/client/booking/BookingConfirmation";
 import ContactPage from "./pages/Contact_us";
-
-
+import CustomerDashboard from "./pages/client/CustomerDashboard";
 
 export default function App() {
     return (
@@ -45,6 +44,7 @@ export default function App() {
                         <Route path="/reception/*" element={< ReceptionPage />} />
                         <Route path="/*" element={<HomePage />} />
                         <Route path="/contact" element={<ContactPage />} />
+                        <Route path="/customer/dashboard" element={<CustomerDashboard />} />
                     </Routes>
                 </div>
             </BrowserRouter>

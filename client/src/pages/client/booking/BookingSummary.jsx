@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { ArrowLeft, Calendar, Users, DollarSign } from 'lucide-react';
+import { ArrowLeft, Calendar, Users, DollarSign, Car, Sparkles, Clock } from 'lucide-react';
 import { useState } from 'react';
 
 const BookingSummary = () => {
@@ -10,6 +10,18 @@ const BookingSummary = () => {
 
     const bookingData = location.state?.bookingData || {};
     const selectedRooms = location.state?.selectedRooms || [];
+
+    const [airportPickup] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem("airportPickUp")) || null;
+        } catch {
+            return null;
+        }
+    });
+
+    const [personalRequest] = useState(() => {
+        return localStorage.getItem("personalRequest") || "";
+    });
 
     const {
         checkInDate,
@@ -30,8 +42,9 @@ const BookingSummary = () => {
 
     const hasDiscount = (room) => Number(room.discount || 0) > 0 && Number(room.originalTotalPrice || 0) > Number(room.totalPrice || 0);
 
-    const totalCost = selectedRooms.reduce((sum, room) => sum + calculateRoomTotal(room), 0);
-    const originalTotalCost = selectedRooms.reduce((sum, room) => sum + calculateOriginalRoomTotal(room), 0);
+    const shuttleCost = airportPickup?.enabled ? 50.00 : 0.00;
+    const totalCost = selectedRooms.reduce((sum, room) => sum + calculateRoomTotal(room), 0) + shuttleCost;
+    const originalTotalCost = selectedRooms.reduce((sum, room) => sum + calculateOriginalRoomTotal(room), 0) + shuttleCost;
     const totalSavings = Math.max(0, originalTotalCost - totalCost);
 
     const handleGoBack = () => {
@@ -136,6 +149,71 @@ const BookingSummary = () => {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Guest Services & Special Requests Card */}
+                        {(airportPickup?.enabled || (personalRequest && personalRequest.trim().length > 0)) && (
+                            <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm space-y-4">
+                                <h2 className="text-xl font-extrabold text-stone-900 flex items-center gap-2">
+                                    <Sparkles className="h-5 w-5 text-emerald-750" />
+                                    Guest Services & Requests
+                                </h2>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Airport Pickup Column */}
+                                    {airportPickup?.enabled ? (
+                                        <div className="rounded-xl bg-emerald-50/30 border border-emerald-100 p-4 space-y-2">
+                                            <div className="flex items-center gap-2">
+                                                <Car className="h-4 w-4 text-emerald-800" />
+                                                <p className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+                                                    Sanctuary Shuttle Service
+                                                </p>
+                                            </div>
+                                            <div className="text-sm font-semibold text-stone-900 space-y-1">
+                                                <p className="flex justify-between">
+                                                    <span className="text-stone-500 text-xs">Shuttle Date:</span>
+                                                    <span className="font-bold text-xs">{checkIn ? format(checkIn, 'dd MMM yyyy') : 'Check-in Date'}</span>
+                                                </p>
+                                                <p className="flex justify-between items-center">
+                                                    <span className="flex items-center gap-1 text-stone-500 text-xs"><Clock className="h-3.5 w-3.5 text-stone-400" /> Pickup Time:</span>
+                                                    <span className="font-bold bg-emerald-100/50 text-emerald-950 px-2 py-0.5 rounded text-xs">{airportPickup.time || '12:00'}</span>
+                                                </p>
+                                                <p className="flex justify-between text-xs pt-1.5 border-t border-emerald-100 text-emerald-800 font-bold">
+                                                    <span>Shuttle Fee:</span>
+                                                    <span className="font-extrabold">$50.00 (One-time)</span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="rounded-xl bg-stone-50/50 border border-stone-200/60 p-4 flex flex-col justify-center items-center text-center text-stone-450 py-6">
+                                            <Car className="h-6 w-6 text-stone-300 mb-1.5" />
+                                            <p className="text-xs font-bold uppercase tracking-wider">No Shuttle Selected</p>
+                                            <p className="text-[10px] mt-0.5 leading-tight text-stone-400">Airport transfer is not requested</p>
+                                        </div>
+                                    )}
+
+                                    {/* Personal Requests Column */}
+                                    {personalRequest && personalRequest.trim().length > 0 ? (
+                                        <div className="rounded-xl bg-stone-50 border border-stone-200 p-4 flex flex-col justify-between">
+                                            <div>
+                                                <p className="text-xs font-bold uppercase tracking-wider text-stone-500 mb-1.5 flex items-center gap-1.5">
+                                                    <Sparkles className="h-3.5 w-3.5 text-emerald-800" />
+                                                    Special Request
+                                                </p>
+                                                <p className="text-xs font-semibold text-stone-750 italic leading-relaxed p-3 bg-white border border-stone-200/60 rounded-lg">
+                                                    "{personalRequest}"
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="rounded-xl bg-stone-50/50 border border-stone-200/60 p-4 flex flex-col justify-center items-center text-center text-stone-450 py-6">
+                                            <Sparkles className="h-6 w-6 text-stone-300 mb-1.5" />
+                                            <p className="text-xs font-bold uppercase tracking-wider">No Special Request</p>
+                                            <p className="text-[10px] mt-0.5 leading-tight text-stone-400">No additional custom instructions provided</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Selected Rooms */}
                         <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
@@ -264,6 +342,14 @@ const BookingSummary = () => {
                                         </span>
                                     </div>
                                 ))}
+                                {airportPickup?.enabled && (
+                                    <div className="flex justify-between text-sm text-emerald-800 font-semibold pt-2 border-t border-stone-100">
+                                        <span className="flex items-center gap-1.5">
+                                            <Car className="h-3.5 w-3.5" /> Airport Shuttle
+                                        </span>
+                                        <span>+$50.00</span>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="flex justify-between items-center mb-6">

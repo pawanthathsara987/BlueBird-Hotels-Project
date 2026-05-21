@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { DateRange } from "react-date-range";
 import { addDays, format } from "date-fns";
-import { Plus, Minus, Calendar, Users, Globe, ChevronDown, ChevronLeft, ChevronRight, Info, Sparkles, Coffee, Utensils, Check, Moon, ArrowRight, Trash2, Lock, Unlock } from "lucide-react";
+import { Plus, Minus, Calendar, Users, Globe, ChevronDown, ChevronLeft, ChevronRight, Info, Sparkles, Coffee, Utensils, Check, Moon, ArrowRight, Trash2, Lock, Unlock, Car, Clock, ClipboardList } from "lucide-react";
 import toast from "react-hot-toast";
 import RoomDetailsModal from "../../pages/client/booking/RoomDetailsModal";
 
@@ -42,6 +42,27 @@ const RoomSelector = () => {
   // Global settings
   const [nationality, setNationality] = useState(() => {
     return location.state?.bookingData?.nationality || "Sri Lankan";
+  });
+
+  // Extra booking options (Personal requests & airport pickup)
+  const [personalRequest, setPersonalRequest] = useState(() => {
+    return localStorage.getItem("personalRequest") || "";
+  });
+  const [airportPickupEnabled, setAirportPickupEnabled] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("airportPickUp"));
+      return !!stored?.enabled;
+    } catch {
+      return false;
+    }
+  });
+  const [pickupTime, setPickupTime] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("airportPickUp"));
+      return stored?.time || "12:00";
+    } catch {
+      return "12:00";
+    }
   });
 
   // Set packages config
@@ -426,12 +447,22 @@ const RoomSelector = () => {
     // Calculate total nightly rate of all rooms
     const totalNightlyRate = addedRooms.reduce((sum, r) => sum + (r.price || 0), 0);
 
+    // Save to localStorage so BookingSummary.jsx and RoomPayment.jsx can read them
+    localStorage.setItem("personalRequest", personalRequest);
+    localStorage.setItem(
+      "airportPickUp",
+      JSON.stringify({
+        enabled: airportPickupEnabled,
+        time: pickupTime,
+      })
+    );
+
     // Construct bookingData expected by BookingSummary.jsx
     const bookingData = {
       checkInDate: dateRange[0].startDate.toISOString(),
       checkOutDate: dateRange[0].endDate.toISOString(),
       nights: nights,
-      totalPrice: totalNightlyRate * nights,
+      totalPrice: totalNightlyRate * nights + (airportPickupEnabled ? 50 : 0),
       nationality: nationality,
     };
 
@@ -1027,67 +1058,33 @@ const RoomSelector = () => {
                       }`} />
                     Confirm Room {idx + 1}
                   </button>
-
                 </div>
 
                 {/* Right Side: Category and Board Type Selectors Stacked */}
-                <div className="flex-1 flex flex-col min-w-0 space-y-5">
+                <div className="flex-1 flex flex-col min-w-0 space-y-6">
                   {/* Category Selector */}
                   <div className="relative w-full px-1">
                     <label className="text-xs uppercase font-extrabold tracking-widest text-stone-400 mb-2.5 px-0.5 block flex items-center justify-between">
                       <span>Select Room Category</span>
                       {room.roomType && (
-                        <span className="text-xs font-bold text-emerald-850 bg-emerald-50 border border-emerald-150 px-2 py-0.5 rounded-md normal-case tracking-normal">
-                          {room.roomType}
+                        <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-150 px-2.5 py-0.5 rounded-md normal-case tracking-normal">
+                          Active: {room.roomType}
                         </span>
                       )}
                     </label>
-                    <div className="relative group/carousel">
-                      {/* Left Chevron */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCategoryPrev(room.id);
-                        }}
-                        className="absolute -left-2 top-1/2 -translate-y-1/2 z-30 w-7 h-7 rounded-full bg-white/95 border border-stone-200 shadow-md flex items-center justify-center text-stone-600 hover:text-emerald-800 hover:border-emerald-600 active:scale-95 transition cursor-pointer backdrop-blur-xs opacity-90 md:opacity-0 md:group-hover/carousel:opacity-100 duration-200"
-                      >
-                        <ChevronLeft className="w-3.5 h-3.5" />
-                      </button>
-
-                      {/* Right Chevron */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCategoryNext(room.id);
-                        }}
-                        className="absolute -right-2 top-1/2 -translate-y-1/2 z-30 w-7 h-7 rounded-full bg-white/95 border border-stone-200 shadow-md flex items-center justify-center text-stone-600 hover:text-emerald-800 hover:border-emerald-600 active:scale-95 transition cursor-pointer backdrop-blur-xs opacity-90 md:opacity-0 md:group-hover/carousel:opacity-100 duration-200"
-                      >
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-
-                      {/* Carousel Track wrapper with premium border, background, and edge fades */}
-                      <div className="overflow-hidden w-full rounded-2xl border border-stone-200/70 bg-white/50 p-2.5 shadow-3xs relative">
-                        {/* Smooth fade-out overlays for side-peek items */}
-                        <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white via-white/80 to-transparent z-20 pointer-events-none" />
-                        <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white via-white/80 to-transparent z-20 pointer-events-none" />
-
-                        <div
-                          className="flex gap-4 pb-1 pt-1 items-stretch transition-transform duration-350 ease-out"
-                          style={{
-                            transform: 'translateX(-155px)', // makes the first item peek on the left
-                          }}
-                        >
-                          {getRotatedArray(roomTypes, room.categoryIndex || 0).map((type) => {
+                    <div className="relative w-full">
+                      {/* Grid track wrapper with premium border, background, and spacing */}
+                      <div className="w-full rounded-2xl border-3 border-stone-200/70 bg-white/40 p-3 shadow-3xs">
+                        <div className="flex gap-4 pb-1 pt-1 items-stretch overflow-x-auto scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent">
+                          {roomTypes.map((type) => {
                             const isSelected = room.roomType === type.name;
                             return (
                               <div
                                 key={type.name}
                                 onClick={() => handleRoomTypeChange(room.id, type.name)}
-                                className={`min-w-[190px] w-[190px] bg-white rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden flex flex-col justify-between group shadow-3xs hover:shadow-2xs relative ${isSelected
-                                  ? "border-emerald-600 ring-2 ring-emerald-500/10 scale-[1.01] shadow-sm"
-                                  : "border-stone-200/80 hover:border-stone-300"
+                                className={`min-w-[195px] w-[195px] bg-white rounded-xl border-2 transition-all duration-350 cursor-pointer overflow-hidden flex flex-col justify-between group relative active:scale-98 ${isSelected
+                                  ? "border-emerald-600 ring-4 ring-emerald-500/15 scale-[1.03] shadow-[0_12px_24px_rgba(6,95,70,0.12)] z-10"
+                                  : "border-stone-200/80 hover:border-emerald-600/40 hover:scale-[1.01] hover:shadow-2xs"
                                   }`}
                               >
                                 {/* HD room thumbnail preview */}
@@ -1099,12 +1096,12 @@ const RoomSelector = () => {
                                   />
                                   <div className="absolute top-2 right-2 z-10">
                                     {isSelected ? (
-                                      <span className="w-5 h-5 rounded-full bg-emerald-800 text-white flex items-center justify-center shadow-md">
-                                        <Check className="w-3 h-3" />
+                                      <span className="w-6 h-6 rounded-full bg-emerald-800 text-white flex items-center justify-center shadow-md border border-white/20">
+                                        <Check className="w-3.5 h-3.5" />
                                       </span>
                                     ) : (
-                                      <span className="w-5 h-5 rounded-full bg-white/90 text-stone-500 flex items-center justify-center backdrop-blur-3xs shadow-sm border border-stone-200/50 hover:bg-stone-50">
-                                        <Plus className="w-3 h-3" />
+                                      <span className="w-6 h-6 rounded-full bg-white/90 text-stone-500 flex items-center justify-center backdrop-blur-3xs shadow-sm border border-stone-200/50 hover:bg-stone-50">
+                                        <Plus className="w-3.5 h-3.5" />
                                       </span>
                                     )}
                                   </div>
@@ -1116,24 +1113,24 @@ const RoomSelector = () => {
                                       e.stopPropagation();
                                       setDetailingRoom(type);
                                     }}
-                                    className="absolute top-2 left-2 z-10 w-5 h-5 rounded-full bg-white/95 text-stone-600 hover:text-emerald-800 flex items-center justify-center backdrop-blur-3xs shadow-sm border border-stone-200/50 hover:border-stone-300 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+                                    className="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-white/95 text-stone-600 hover:text-emerald-800 flex items-center justify-center backdrop-blur-3xs shadow-sm border border-stone-200/50 hover:border-stone-300 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
                                     title="View suite details"
                                   >
-                                    <Info className="w-3 h-3" />
+                                    <Info className="w-3.5 h-3.5" />
                                   </button>
 
                                   {/* Price Tag Badge */}
-                                  <div className="absolute bottom-2 left-2 bg-stone-950/80 text-white px-2 py-0.5 rounded text-xs font-extrabold tracking-wider backdrop-blur-3xs">
+                                  <div className="absolute bottom-2 left-2 bg-stone-950/85 text-white px-2.5 py-0.5 rounded text-xs font-black tracking-wider backdrop-blur-3xs">
                                     {type.price} / night
                                   </div>
                                 </div>
 
                                 {/* Card metadata details */}
-                                <div className="p-3 flex-1 flex flex-col justify-between space-y-1">
-                                  <h5 className="font-extrabold text-stone-850 text-xs leading-tight tracking-tight group-hover:text-emerald-950 transition">
+                                <div className="p-3.5 flex-1 flex flex-col justify-between space-y-2">
+                                  <h5 className="font-extrabold text-stone-850 text-xs leading-tight tracking-tight group-hover:text-emerald-900 transition">
                                     {type.name}
                                   </h5>
-                                  <div className="flex items-center justify-between text-xs font-bold text-stone-400 pt-1.5 border-t border-stone-100">
+                                  <div className="flex items-center justify-between text-[11px] font-bold text-stone-400 pt-2 border-t border-stone-100">
                                     <button
                                       type="button"
                                       onClick={(e) => {
@@ -1142,9 +1139,9 @@ const RoomSelector = () => {
                                       }}
                                       className="text-stone-450 hover:text-emerald-850 transition duration-200 font-extrabold flex items-center gap-0.5 cursor-pointer hover:underline"
                                     >
-                                      <Info className="w-2.5 h-2.5" /> Details
+                                      <Info className="w-3 h-3" /> Details
                                     </button>
-                                    <span className="text-stone-650 bg-stone-50 px-1.5 py-0.5 rounded text-xs font-bold">{type.maxOccupancy} Guests</span>
+                                    <span className="text-stone-650 bg-stone-50 px-2 py-0.5 rounded text-[10px] font-bold">{type.maxOccupancy} Guests</span>
                                   </div>
                                 </div>
                               </div>
@@ -1160,72 +1157,45 @@ const RoomSelector = () => {
                     <label className="text-xs uppercase font-extrabold tracking-widest text-stone-400 mb-2 px-0.5 block flex items-center justify-between">
                       <span>Select Experience Package (Board Type)</span>
                       {room.boardType && (
-                        <span className="text-xs font-bold text-emerald-850 bg-emerald-50 border border-emerald-150 px-2 py-0.5 rounded-md normal-case tracking-normal">
-                          {room.boardType}
+                        <span className="text-xs font-bold text-emerald-850 bg-emerald-50 border border-emerald-150 px-2.5 py-0.5 rounded-md normal-case tracking-normal">
+                          Active: {room.boardType}
                         </span>
                       )}
                     </label>
-                    <div className="relative group/carousel">
-                      {/* Left Chevron */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePackagePrev(room.id);
-                        }}
-                        className="absolute -left-2 top-1/2 -translate-y-1/2 z-30 w-7 h-7 rounded-full bg-white/95 border border-stone-200 shadow-md flex items-center justify-center text-stone-600 hover:text-emerald-800 hover:border-emerald-600 active:scale-95 transition cursor-pointer backdrop-blur-xs opacity-90 md:opacity-0 md:group-hover/carousel:opacity-100 duration-200"
-                      >
-                        <ChevronLeft className="w-3.5 h-3.5" />
-                      </button>
-
-                      {/* Right Chevron */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePackageNext(room.id);
-                        }}
-                        className="absolute -right-2 top-1/2 -translate-y-1/2 z-30 w-7 h-7 rounded-full bg-white/95 border border-stone-200 shadow-md flex items-center justify-center text-stone-600 hover:text-emerald-800 hover:border-emerald-600 active:scale-95 transition cursor-pointer backdrop-blur-xs opacity-90 md:opacity-0 md:group-hover/carousel:opacity-100 duration-200"
-                      >
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-
-                      {/* Carousel Track wrapper with premium border, background, and edge fades */}
-                      <div className="overflow-hidden w-full rounded-2xl border border-stone-200/70 bg-white/50 p-2.5 shadow-3xs relative">
-                        {/* Smooth fade-out overlays for side-peek items */}
-                        <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white via-white/80 to-transparent z-20 pointer-events-none" />
-                        <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white via-white/80 to-transparent z-20 pointer-events-none" />
-
-                        <div
-                          className="flex gap-4 pb-1 pt-1 items-stretch transition-transform duration-350 ease-out"
-                          style={{
-                            transform: 'translateX(-155px)', // makes the first item peek on the left
-                          }}
-                        >
-                          {getRotatedArray(packages, room.packageIndex || 0).map((pkg) => {
+                    <div className="relative w-full">
+                      {/* Grid track wrapper with premium border, background, and spacing */}
+                      <div className="w-full rounded-2xl border-3 border-stone-200/70 bg-white/40 p-3 shadow-3xs">
+                        <div className="flex gap-4 pb-1 pt-1 items-stretch overflow-x-auto scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent">
+                          {packages.map((pkg) => {
                             const isSelected = room.boardType === pkg.name;
                             const IconComponent = pkg.icon;
                             return (
                               <div
                                 key={pkg.id}
                                 onClick={() => handleBoardTypeChange(room.id, pkg.name)}
-                                className={`min-w-[190px] w-[190px] bg-white rounded-xl border p-3 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col justify-between group shadow-3xs relative ${isSelected
-                                  ? "border-emerald-600 ring-2 ring-emerald-500/10 scale-[1.01] shadow-sm"
-                                  : "border-stone-200/80 hover:border-stone-300"
+                                className={`min-w-[195px] w-[195px] bg-white rounded-xl border-2 p-3.5 transition-all duration-350 cursor-pointer overflow-hidden flex flex-col justify-between group relative active:scale-98 ${isSelected
+                                  ? "border-emerald-600 ring-4 ring-emerald-500/15 scale-[1.03] shadow-[0_12px_24px_rgba(6,95,70,0.12)] z-10"
+                                  : "border-stone-200/80 hover:border-emerald-600/40 hover:scale-[1.01] hover:shadow-2xs"
                                   }`}
                               >
-                                <div className={`h-1 bg-gradient-to-r ${pkg.color} absolute top-0 left-0 right-0`} />
-                                <div className="flex justify-between items-center pt-1.5">
-                                  <IconComponent className="w-4 h-4 text-emerald-800" />
-                                  {isSelected && (
-                                    <span className="w-4 h-4 rounded-full bg-emerald-800 text-white flex items-center justify-center shadow-xs">
-                                      <Check className="w-2.5 h-2.5" />
+                                <div className={`h-1.5 bg-gradient-to-r ${pkg.color} absolute top-0 left-0 right-0`} />
+                                <div className="flex justify-between items-center pt-2">
+                                  <div className="p-1.5 rounded-lg bg-emerald-50 border border-emerald-100">
+                                    <IconComponent className="w-4 h-4 text-emerald-800" />
+                                  </div>
+                                  {isSelected ? (
+                                    <span className="w-6 h-6 rounded-full bg-emerald-800 text-white flex items-center justify-center shadow-md border border-white/20">
+                                      <Check className="w-3.5 h-3.5" />
+                                    </span>
+                                  ) : (
+                                    <span className="w-6 h-6 rounded-full bg-stone-50 border border-stone-200 text-stone-400 flex items-center justify-center shadow-3xs group-hover:border-stone-300">
+                                      <Plus className="w-3.5 h-3.5" />
                                     </span>
                                   )}
                                 </div>
-                                <div className="mt-2.5">
-                                  <h6 className="text-stone-800 font-bold text-xs tracking-tight">{pkg.name}</h6>
-                                  <p className="text-xs text-stone-400 leading-tight mt-0.5">{pkg.tagline}</p>
+                                <div className="mt-3.5">
+                                  <h6 className="text-stone-850 font-black text-xs tracking-tight">{pkg.name}</h6>
+                                  <p className="text-[11px] text-stone-400 leading-tight mt-1 font-semibold">{pkg.tagline}</p>
                                 </div>
                               </div>
                             );
@@ -1235,10 +1205,140 @@ const RoomSelector = () => {
                     </div>
                   </div>
                 </div>
-
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* 3. Additional Guest Services Section */}
+      <div className="space-y-5 pt-6 border-t border-stone-100">
+        <div>
+          <h3 className="text-stone-800 font-bold text-lg tracking-wide flex items-center gap-2">
+            <ClipboardList className="w-5 h-5 text-emerald-800" /> 3. Additional Guest Services
+          </h3>
+          <p className="text-sm text-stone-500">Elevate your stay with premium resort services and special requests</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Card A: Premium Airport Pickup */}
+          <div
+            className={`border rounded-2xl p-6 transition-all duration-350 shadow-3xs flex flex-col justify-between ${airportPickupEnabled
+                ? "border-emerald-600 bg-emerald-50/5 ring-4 ring-emerald-500/5"
+                : "border-stone-200 bg-stone-50/30 hover:border-emerald-600/30"
+              }`}
+          >
+            <div>
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-xl border ${airportPickupEnabled ? "bg-emerald-100 border-emerald-250 text-emerald-800" : "bg-white border-stone-200 text-stone-500"}`}>
+                    <Car className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-stone-850 text-sm sm:text-base leading-tight">Sanctuary Airport Shuttle</h4>
+                    <p className="text-xs text-stone-400 font-semibold mt-0.5">Private transfer from airport to resort</p>
+                  </div>
+                </div>
+
+                {/* Surcharge Badge */}
+                <span className="text-xs font-black text-emerald-850 bg-emerald-50 border border-emerald-200/60 px-2.5 py-1 rounded-lg">
+                  +$50.00 / trip
+                </span>
+              </div>
+
+              <p className="text-xs text-stone-500 leading-relaxed font-medium mb-4">
+                A private chauffeur will meet you at the terminal arrivals lobby with a custom name board and drive you directly to BlueBird Hotels.
+              </p>
+
+              {/* Shuttle Schedule Inputs */}
+              {airportPickupEnabled && (
+                <div className="bg-white border border-stone-200/80 p-4 rounded-xl space-y-3.5 shadow-3xs animate-fadeIn mb-4">
+                  <span className="text-xs uppercase font-extrabold tracking-widest text-emerald-850 block border-b border-stone-100 pb-1.5 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5" /> Transfer Schedule
+                  </span>
+
+                  <div className="grid grid-cols-2 gap-3.5">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-extrabold text-stone-400 uppercase tracking-wider">Shuttle Date</span>
+                      <div className="border text-xs rounded-lg px-3 py-2 bg-stone-50 text-stone-600 font-bold border-stone-250 cursor-not-allowed select-none">
+                        {format(dateRange[0].startDate, "dd MMM yyyy")}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-extrabold text-stone-400 uppercase tracking-wider">Arrival Time</span>
+                      <input
+                        type="time"
+                        value={pickupTime}
+                        onChange={(e) => setPickupTime(e.target.value)}
+                        className="border text-xs rounded-lg px-3 py-2 bg-white text-stone-700 font-bold border-stone-200 hover:border-stone-300 focus:ring-1 focus:ring-emerald-500/20 focus:border-emerald-600 transition cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-emerald-800 font-semibold italic">
+                    * The pickup date matches your check-in date. Please update check-in date above if needed.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Toggle Switch */}
+            <div className="flex items-center justify-between border-t border-stone-150/40 pt-4 mt-auto">
+              <span className="text-xs font-extrabold text-stone-600">Request Airport Pickup</span>
+              <button
+                type="button"
+                onClick={() => setAirportPickupEnabled(!airportPickupEnabled)}
+                className={`w-12 h-6.5 rounded-full p-1 transition-colors duration-300 focus:outline-none shadow-inner cursor-pointer relative ${airportPickupEnabled ? "bg-emerald-800" : "bg-stone-200"
+                  }`}
+              >
+                <div
+                  className={`w-4.5 h-4.5 rounded-full bg-white shadow-md transform transition-transform duration-300 ${airportPickupEnabled ? "translate-x-5.5" : "translate-x-0"
+                    }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Card B: Personal & Special Requests */}
+          <div
+            className={`border rounded-2xl p-6 transition-all duration-350 shadow-3xs flex flex-col justify-between ${personalRequest.trim().length > 0
+                ? "border-emerald-600 bg-emerald-50/5 ring-4 ring-emerald-500/5"
+                : "border-stone-200 bg-stone-50/30 hover:border-emerald-600/30"
+              }`}
+          >
+            <div className="flex flex-col h-full justify-between">
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`p-2 rounded-xl border ${personalRequest.trim().length > 0 ? "bg-emerald-100 border-emerald-250 text-emerald-800" : "bg-white border-stone-200 text-stone-500"}`}>
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-stone-850 text-sm sm:text-base leading-tight">Special & Personal Requests</h4>
+                    <p className="text-xs text-stone-400 font-semibold mt-0.5">Let us personalize your sanctuary stay</p>
+                  </div>
+                </div>
+
+                <p className="text-xs text-stone-500 leading-relaxed font-medium mb-4">
+                  Do you have dietary preferences, allergies, require specific bedding configs, or celebrating a special occasion? Let us know below.
+                </p>
+              </div>
+
+              <div className="space-y-1.5 mt-auto">
+                <textarea
+                  value={personalRequest}
+                  onChange={(e) => setPersonalRequest(e.target.value)}
+                  placeholder="e.g., Allergen-free feather pillows, celebrating our wedding anniversary, arrival cake setup, extra child bed option..."
+                  maxLength={500}
+                  rows={4}
+                  className="w-full text-xs font-semibold text-stone-750 bg-white border border-stone-200 hover:border-stone-300 rounded-xl p-3.5 focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-600 transition placeholder-stone-400 outline-hidden resize-none shadow-3xs"
+                />
+                <div className="flex justify-between items-center text-[10px] text-stone-400 font-bold px-1">
+                  <span>We do our best to accommodate all guest desires.</span>
+                  <span>{personalRequest.length} / 500 chars</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1253,11 +1353,21 @@ const RoomSelector = () => {
 
         {/* Dynamic Estimated Total Nightly Rate */}
         {!hasUnconfiguredRoom && totalNightlyRate > 0 && (
-          <div className="flex flex-col items-end sm:items-start text-right sm:text-left bg-stone-50 border border-stone-200/50 px-4.5 py-2.5 rounded-2xl shadow-3xs animate-fadeIn shrink-0">
-            <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-stone-400 mb-0.5">Est. Total Nightly Rate</span>
-            <span className="text-emerald-900 font-black text-lg sm:text-xl tracking-tight">
-              ${totalNightlyRate} <span className="text-xs font-bold text-stone-450">/ night</span>
-            </span>
+          <div className="flex items-center gap-3.5 flex-wrap justify-end sm:justify-start">
+            <div className="flex flex-col items-end sm:items-start text-right sm:text-left bg-stone-50 border border-stone-200/50 px-4.5 py-2.5 rounded-2xl shadow-3xs animate-fadeIn shrink-0">
+              <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-stone-400 mb-0.5">Est. Total Nightly Rate</span>
+              <span className="text-emerald-900 font-black text-lg sm:text-xl tracking-tight">
+                ${totalNightlyRate} <span className="text-xs font-bold text-stone-450">/ night</span>
+              </span>
+            </div>
+            {airportPickupEnabled && (
+              <div className="flex flex-col items-end sm:items-start text-right sm:text-left bg-emerald-50/40 border border-emerald-200/60 px-4.5 py-2.5 rounded-2xl shadow-3xs animate-fadeIn shrink-0">
+                <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-emerald-800 mb-0.5">Shuttle Surcharge</span>
+                <span className="text-emerald-950 font-black text-lg sm:text-xl tracking-tight">
+                  +$50.00 <span className="text-xs font-bold text-stone-450">one-time</span>
+                </span>
+              </div>
+            )}
           </div>
         )}
 
