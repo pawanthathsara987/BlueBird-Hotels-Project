@@ -135,8 +135,12 @@ export default function FloatingChatbot() {
             <div className="flex items-center justify-between relative z-10">
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-xs text-xl border border-white/10 shadow-inner">
-                    <Bot className="w-5.5 h-5.5 text-emerald-300" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white border border-white/20 shadow-inner">
+                    <img
+                      src={logo}
+                      alt="BlueBird Logo"
+                      className="h-6 w-6 object-contain"
+                    />
                   </div>
                   <span className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
