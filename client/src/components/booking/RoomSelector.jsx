@@ -1,29 +1,48 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { DateRange } from "react-date-range";
 import { addDays, format } from "date-fns";
-import { Plus, Minus, Calendar, Users, Globe, ChevronDown, ChevronLeft, ChevronRight, Info, Sparkles, Coffee, Utensils, Check, Moon, ArrowRight, Trash2, Lock, Unlock} from "lucide-react";
+import { Plus, Minus, Calendar, Users, Globe, ChevronDown, ChevronLeft, ChevronRight, Info, Sparkles, Coffee, Utensils, Check, Moon, ArrowRight, Trash2, Lock, Unlock } from "lucide-react";
 import toast from "react-hot-toast";
+import RoomDetailsModal from "../../pages/client/booking/RoomDetailsModal";
 
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
 
 /* ---------------- MAIN ---------------- */
 const RoomSelector = () => {
-  const [dateRange, setDateRange] = useState([
-    {
-      startDate: new Date(),
-      endDate: addDays(new Date(), 2),
-      key: "selection",
-    },
-  ]);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [detailingRoom, setDetailingRoom] = useState(null);
+  const [dateRange, setDateRange] = useState(() => {
+    const passedData = location.state?.bookingData;
+    if (passedData?.checkInDate && passedData?.checkOutDate) {
+      return [
+        {
+          startDate: new Date(passedData.checkInDate),
+          endDate: new Date(passedData.checkOutDate),
+          key: "selection",
+        },
+      ];
+    }
+    return [
+      {
+        startDate: new Date(),
+        endDate: addDays(new Date(), 2),
+        key: "selection",
+      },
+    ];
+  });
 
   const [showCalendar, setShowCalendar] = useState(false);
   const [showNationalityDropdown, setShowNationalityDropdown] = useState(false);
 
   // Global settings
-  const [nationality, setNationality] = useState("Sri Lankan");
+  const [nationality, setNationality] = useState(() => {
+    return location.state?.bookingData?.nationality || "Sri Lankan";
+  });
 
   // Set packages config
   const packages = [
@@ -71,42 +90,114 @@ const RoomSelector = () => {
       name: "Deluxe King Room",
       maxOccupancy: 3,
       image: "https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=600&q=80",
-      price: "$250"
+      images: [
+        "https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1591088398332-8a7791972843?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=600&q=80"
+      ],
+      price: "$250",
+      description: "Savor elegant coastal living in our Deluxe King Room. Featuring high ceilings, custom-crafted teak furniture, and a private sanctuary terrace offering serene garden views.",
+      tagline: "Refined sanctuary with hand-selected designer touches.",
+      roomSize: "45 m² / 484 sq ft",
+      cancellationPolicy: "Free cancellation up to 24 hours prior to check-in.",
+      paymentPolicy: "No deposit required. Pay upon arrival at the front desk."
     },
     {
       name: "Ocean Front Suite",
       maxOccupancy: 4,
       image: "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=600&q=80",
-      price: "$450"
+      images: [
+        "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?auto=format&fit=crop&w=600&q=80"
+      ],
+      price: "$450",
+      description: "Gaze upon uninterrupted Indian Ocean panoramas from our Ocean Front Suite. Complete with a signature plush king bed, deep soaking marble tub, and a spacious sun-drenched balcony.",
+      tagline: "Captivating ocean vistas meets sophisticated beach luxury.",
+      roomSize: "72 m² / 775 sq ft",
+      cancellationPolicy: "Free cancellation up to 48 hours prior to arrival.",
+      paymentPolicy: "Guaranteed booking. Pay on check-in."
     },
     {
       name: "Sunset Beach Villa",
       maxOccupancy: 5,
       image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80",
-      price: "$750"
+      images: [
+        "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=600&q=80"
+      ],
+      price: "$750",
+      description: "Step directly onto powdery white sands from your private Sunset Beach Villa. Features a personal plunge pool, open-air garden rain shower, and front-row seats to majestic daily sunsets.",
+      tagline: "Your private beachfront sanctuary with an infinity plunge pool.",
+      roomSize: "115 m² / 1,238 sq ft",
+      cancellationPolicy: "Free cancellation up to 7 days prior to arrival.",
+      paymentPolicy: "10% refundable deposit required to hold reservation."
     },
     {
       name: "Grand Presidential Suite",
       maxOccupancy: 6,
       image: "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=600&q=80",
-      price: "$1,250"
+      images: [
+        "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=600&q=80"
+      ],
+      price: "$1,250",
+      description: "The peak of opulent resort living. Our two-bedroom Grand Presidential Suite features a private fitness studio, absolute ocean frontage, massive dining terrace, and a dedicated 24-hour private butler.",
+      tagline: "Unrivaled coastal majesty, supreme comfort, and elite butler service.",
+      roomSize: "240 m² / 2,583 sq ft",
+      cancellationPolicy: "Free cancellation up to 14 days prior to arrival.",
+      paymentPolicy: "Guaranteed reservation. Major credit cards pre-authorized."
     }
   ];
 
-  // Dynamic added rooms list (Initialize with one default room using selected board type, initially unconfigured)
-  const [addedRooms, setAddedRooms] = useState([
-    {
-      id: 1,
-      roomType: "", // Enforce selection!
-      adults: 2,
-      children: 0,
-      childAges: [], // Enforce specify child age
-      boardType: "Room Only",
-      isConfigured: false,
-      categoryIndex: 0,
-      packageIndex: 0
+  // Helper to calculate room price dynamically based on room type and board type
+  const calculateRoomPrice = (roomType, boardType) => {
+    if (!roomType) return 0;
+    const typeObj = roomTypes.find(t => t.name === roomType);
+    if (!typeObj) return 0;
+    const base = Number(typeObj.price.replace(/[^0-9.]/g, '')) || 0;
+    const addons = { "Room Only": 0, "Bed & Breakfast": 40, "Half Board": 90, "Full Board": 150 };
+    return base + (addons[boardType] || 0);
+  };
+
+  // Dynamic added rooms list (Initialize with one default room using selected board type, initially unconfigured or restored from location state)
+  const [addedRooms, setAddedRooms] = useState(() => {
+    const passedRooms = location.state?.selectedRooms;
+    if (Array.isArray(passedRooms) && passedRooms.length > 0) {
+      return passedRooms.map(r => {
+        const typeIdx = roomTypes.findIndex(t => t.name === r.roomType);
+        const pkgIdx = packages.findIndex(p => p.name === r.boardType);
+        return {
+          id: r.frontendRoomId || Date.now() + Math.random(),
+          roomType: r.roomType || "",
+          adults: r.adults || 2,
+          children: r.kids || 0,
+          childAges: r.kidAges || [],
+          boardType: r.boardType || "Room Only",
+          price: r.pricePerNight || 0,
+          isConfigured: true,
+          categoryIndex: typeIdx >= 0 ? typeIdx : 0,
+          packageIndex: pkgIdx >= 0 ? pkgIdx : 0
+        };
+      });
     }
-  ]);
+    return [
+      {
+        id: 1,
+        roomType: "", // Enforce selection!
+        adults: 2,
+        children: 0,
+        childAges: [], // Enforce specify child age
+        boardType: "Room Only",
+        price: 0,
+        isConfigured: false,
+        categoryIndex: 0,
+        packageIndex: 0
+      }
+    ];
+  });
 
   // Add Room Button Handler
   const handleAddNewRoom = () => {
@@ -117,6 +208,7 @@ const RoomSelector = () => {
       children: 0,
       childAges: [],
       boardType: "Room Only",
+      price: 0,
       isConfigured: false,
       categoryIndex: 0,
       packageIndex: 0
@@ -173,7 +265,12 @@ const RoomSelector = () => {
       if (r.id === roomId) {
         const newIndex = (r.categoryIndex - 1 + roomTypes.length) % roomTypes.length;
         const newRoomType = roomTypes[newIndex].name;
-        return { ...r, categoryIndex: newIndex, roomType: newRoomType };
+        return {
+          ...r,
+          categoryIndex: newIndex,
+          roomType: newRoomType,
+          price: calculateRoomPrice(newRoomType, r.boardType)
+        };
       }
       return r;
     }));
@@ -184,7 +281,12 @@ const RoomSelector = () => {
       if (r.id === roomId) {
         const newIndex = (r.categoryIndex + 1) % roomTypes.length;
         const newRoomType = roomTypes[newIndex].name;
-        return { ...r, categoryIndex: newIndex, roomType: newRoomType };
+        return {
+          ...r,
+          categoryIndex: newIndex,
+          roomType: newRoomType,
+          price: calculateRoomPrice(newRoomType, r.boardType)
+        };
       }
       return r;
     }));
@@ -195,7 +297,12 @@ const RoomSelector = () => {
       if (r.id === roomId) {
         const newIndex = (r.packageIndex - 1 + packages.length) % packages.length;
         const newBoardType = packages[newIndex].name;
-        return { ...r, packageIndex: newIndex, boardType: newBoardType };
+        return {
+          ...r,
+          packageIndex: newIndex,
+          boardType: newBoardType,
+          price: calculateRoomPrice(r.roomType, newBoardType)
+        };
       }
       return r;
     }));
@@ -206,7 +313,12 @@ const RoomSelector = () => {
       if (r.id === roomId) {
         const newIndex = (r.packageIndex + 1) % packages.length;
         const newBoardType = packages[newIndex].name;
-        return { ...r, packageIndex: newIndex, boardType: newBoardType };
+        return {
+          ...r,
+          packageIndex: newIndex,
+          boardType: newBoardType,
+          price: calculateRoomPrice(r.roomType, newBoardType)
+        };
       }
       return r;
     }));
@@ -215,13 +327,27 @@ const RoomSelector = () => {
   // Board Type Selection Handler
   const handleBoardTypeChange = (roomId, newBoardType) => {
     const pkgIdx = packages.findIndex(p => p.name === newBoardType);
-    setAddedRooms(prev => prev.map(r => r.id === roomId ? { ...r, boardType: newBoardType, packageIndex: pkgIdx >= 0 ? pkgIdx : r.packageIndex } : r));
+    setAddedRooms(prev => prev.map(r =>
+      r.id === roomId ? {
+        ...r,
+        boardType: newBoardType,
+        packageIndex: pkgIdx >= 0 ? pkgIdx : r.packageIndex,
+        price: calculateRoomPrice(r.roomType, newBoardType)
+      } : r
+    ));
   };
 
   // Room Type Selection Handler
   const handleRoomTypeChange = (roomId, newType) => {
     const typeIdx = roomTypes.findIndex(t => t.name === newType);
-    setAddedRooms(prev => prev.map(r => r.id === roomId ? { ...r, roomType: newType, categoryIndex: typeIdx >= 0 ? typeIdx : r.categoryIndex } : r));
+    setAddedRooms(prev => prev.map(r =>
+      r.id === roomId ? {
+        ...r,
+        roomType: newType,
+        categoryIndex: typeIdx >= 0 ? typeIdx : r.categoryIndex,
+        price: calculateRoomPrice(newType, r.boardType)
+      } : r
+    ));
   };
 
   // Child Age Selection Handler
@@ -265,6 +391,7 @@ const RoomSelector = () => {
   const hasUnconfiguredRoom = addedRooms.some(r => !r.isConfigured);
   const totalAdults = addedRooms.reduce((sum, r) => sum + r.adults, 0);
   const totalChildren = addedRooms.reduce((sum, r) => sum + r.children, 0);
+  const totalNightlyRate = addedRooms.reduce((sum, r) => sum + (r.price || 0), 0);
 
   // Refs for click outside detection
   const nationalityRef = useRef(null);
@@ -295,27 +422,60 @@ const RoomSelector = () => {
 
   const handleFinalBookingSubmit = () => {
     const nights = getStayNights();
-    alert(`Success! Finalizing your booking details:
-      - Nationality: ${nationality}
-      - Duration: ${format(dateRange[0].startDate, "dd MMM yyyy")} to ${format(dateRange[0].endDate, "dd MMM yyyy")} (${nights} Nights)
-      - Configured Rooms (${totalRooms}):
-        ${addedRooms.map((r, i) => {
-      const childrenDesc = r.children > 0
-        ? `, ${r.children} Children (Ages: ${r.childAges.map(age => age === 0 ? "Under 1" : `${age} years`).join(", ")})`
-        : "";
-      return `\n        Room ${i + 1}: ${r.roomType} (${r.boardType}) — Occupancy: ${r.adults} Adults${childrenDesc}`;
-    }).join("")}
-      
-      Thank you for choosing Island Luxury Collection.`);
+
+    // Calculate total nightly rate of all rooms
+    const totalNightlyRate = addedRooms.reduce((sum, r) => sum + (r.price || 0), 0);
+
+    // Construct bookingData expected by BookingSummary.jsx
+    const bookingData = {
+      checkInDate: dateRange[0].startDate.toISOString(),
+      checkOutDate: dateRange[0].endDate.toISOString(),
+      nights: nights,
+      totalPrice: totalNightlyRate * nights,
+      nationality: nationality,
+    };
+
+    // Construct selectedRooms list expected by BookingSummary.jsx
+    const selectedRooms = addedRooms.map((r, i) => {
+      const roomNights = nights;
+      const roomNightlyRate = r.price || 0;
+      return {
+        frontendRoomId: r.id,
+        packageName: `${r.roomType} (${r.boardType})`,
+        roomType: r.roomType,
+        boardType: r.boardType,
+        adults: r.adults,
+        kids: r.children,
+        kidAges: r.childAges,
+        actualKidAges: r.childAges,
+        nights: roomNights,
+        pricePerNight: roomNightlyRate,
+        totalPrice: roomNightlyRate * roomNights,
+        originalTotalPrice: roomNightlyRate * roomNights,
+        discount: 0,
+        checkInDate: dateRange[0].startDate.toISOString(),
+        checkOutDate: dateRange[0].endDate.toISOString(),
+      };
+    });
+
+    toast.success("Redirecting to your booking summary...");
+
+    // Navigate to booking summary page
+    navigate("/booking-summary", {
+      state: {
+        bookingData,
+        selectedRooms,
+      }
+    });
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto bg-white/95 backdrop-blur-md rounded-3xl shadow-[0_20px_50px_rgba(28,25,23,0.15)] border border-stone-200/80 p-6 md:p-8 space-y-8 relative transition-all duration-300">
+    <div className="w-full max-w-7xl mx-auto bg-white/95 backdrop-blur-md rounded-3xl shadow-[0_20px_60px_rgba(28,25,23,0.18)] border border-stone-200/90 p-6 md:p-9 space-y-9 relative transition-all duration-300">
 
       {/* Upper Luxury Header Row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 pb-5">
         <div className="flex items-center gap-3">
-          <span className="bg-emerald-800 text-white px-3 py-1 rounded-full font-bold text-[11px] uppercase tracking-widest shadow-sm flex items-center gap-1.5 animate-pulse">
+          <span className="bg-emerald-800 text-white px-3 py-1 rounded-full font-bold text-xs uppercase tracking-widest shadow-sm flex items-center gap-1.5 animate-pulse">
             <Sparkles className="w-3.5 h-3.5" /> Luxury Stay
           </span>
           <h2 className="text-stone-800 font-extrabold text-xl tracking-tight">Configure Your Escape</h2>
@@ -330,8 +490,8 @@ const RoomSelector = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 bg-stone-50/70 p-4 rounded-2xl border border-stone-100">
 
         {/* Nationality Dropdown */}
-        <div ref={nationalityRef} className="lg:col-span-3 flex flex-col relative">
-          <label className="text-[10px] uppercase font-bold tracking-widest text-stone-500 mb-2 px-1 flex items-center gap-1">
+        <div ref={nationalityRef} className="lg:col-span-3 flex flex-col relative h-full">
+          <label className="text-xs uppercase font-bold tracking-widest text-stone-500 mb-2 px-1 flex items-center gap-1">
             <Globe className="w-3 h-3 text-emerald-800" /> Nationality
           </label>
 
@@ -341,7 +501,7 @@ const RoomSelector = () => {
               setShowNationalityDropdown(!showNationalityDropdown);
               setShowCalendar(false);
             }}
-            className="flex items-center justify-between border border-stone-200/80 bg-white hover:border-emerald-600 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500/20 px-4 py-3.5 rounded-xl transition text-left cursor-pointer group shadow-xs"
+            className="flex-1 flex items-center justify-between border border-stone-200/80 bg-white hover:border-emerald-600 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500/20 px-4 py-3.5 rounded-xl transition text-left cursor-pointer group shadow-xs"
           >
             <span className="text-stone-800 font-bold text-sm flex items-center gap-2">
               {nationality === "Sri Lankan" ? "🇱🇰 Sri Lankan" : "🌐 Non-Sri Lankan"}
@@ -380,8 +540,8 @@ const RoomSelector = () => {
         </div>
 
         {/* Dynamic Check In - Check Out Dates */}
-        <div ref={dateRangeRef} className="lg:col-span-5 flex flex-col relative">
-          <label className="text-[10px] uppercase font-bold tracking-widest text-stone-500 mb-2 px-1 flex items-center gap-1">
+        <div ref={dateRangeRef} className="lg:col-span-5 flex flex-col relative h-full">
+          <label className="text-xs uppercase font-bold tracking-widest text-stone-500 mb-2 px-1 flex items-center gap-1">
             <Calendar className="w-3 h-3 text-emerald-800" /> Check In — Check Out
           </label>
 
@@ -391,36 +551,36 @@ const RoomSelector = () => {
               setShowCalendar(!showCalendar);
               setShowNationalityDropdown(false);
             }}
-            className="flex items-center justify-between border border-stone-200/80 bg-white hover:border-emerald-600 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500/20 p-3.5 rounded-xl transition text-left cursor-pointer shadow-xs group"
+            className="flex-1 flex items-center justify-between border border-stone-200/80 bg-white hover:border-emerald-600 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500/20 p-3.5 rounded-xl transition text-left cursor-pointer shadow-xs group"
           >
             {/* Visual Stay Card Blocks */}
             <div className="flex items-center justify-between w-full">
               <div className="flex flex-col">
-                <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider">Arrive</span>
+                <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">Arrive</span>
                 <span className="text-stone-800 font-extrabold text-sm tracking-tight">
                   {format(dateRange[0].startDate, "dd MMM")}
                 </span>
-                <span className="text-[10px] font-medium text-stone-400 capitalize">
+                <span className="text-xs font-medium text-stone-400 capitalize">
                   {format(dateRange[0].startDate, "eeee")}
                 </span>
               </div>
 
               {/* Night Counter stay badge */}
-              <div className="flex flex-col items-center justify-center px-3 py-0.5 bg-stone-100 group-hover:bg-emerald-50 rounded-lg border border-stone-200/50 transition">
-                <span className="text-[9px] font-extrabold text-stone-600 uppercase tracking-widest flex items-center gap-1">
+              <div className="flex flex-col items-center justify-center px-3 py-1 bg-stone-100 group-hover:bg-emerald-50 rounded-lg border border-stone-200/50 transition">
+                <span className="text-xs font-extrabold text-stone-600 uppercase tracking-widest flex items-center gap-1">
                   <Moon className="w-2.5 h-2.5 text-emerald-800" /> {getStayNights()}
                 </span>
-                <span className="text-[8px] font-bold text-stone-400 uppercase tracking-widest mt-px">
+                <span className="text-xs font-bold text-stone-400 uppercase tracking-widest mt-px animate-fadeIn">
                   {getStayNights() === 1 ? "Night" : "Nights"}
                 </span>
               </div>
 
               <div className="flex flex-col text-right">
-                <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider">Depart</span>
+                <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">Depart</span>
                 <span className="text-stone-800 font-extrabold text-sm tracking-tight">
                   {format(dateRange[0].endDate, "dd MMM")}
                 </span>
-                <span className="text-[10px] font-medium text-stone-400 capitalize">
+                <span className="text-xs font-medium text-stone-400 capitalize">
                   {format(dateRange[0].endDate, "eeee")}
                 </span>
               </div>
@@ -434,7 +594,7 @@ const RoomSelector = () => {
                 <button
                   type="button"
                   onClick={() => setShowCalendar(false)}
-                  className="text-[10px] font-bold bg-stone-100 hover:bg-stone-200 text-stone-600 px-2.5 py-1 rounded-md transition"
+                  className="text-xs font-bold bg-stone-100 hover:bg-stone-200 text-stone-600 px-3 py-1.5 rounded-md transition shadow-2xs"
                 >
                   Done
                 </button>
@@ -456,23 +616,23 @@ const RoomSelector = () => {
         </div>
 
         {/* Read-Only Occupancy Preview Bar */}
-        <div className="lg:col-span-4 flex flex-col relative group">
-          <label className="text-[10px] uppercase font-bold tracking-widest text-stone-500 mb-2 px-1 flex items-center gap-1">
+        <div className="lg:col-span-4 flex flex-col relative group h-full">
+          <label className="text-xs uppercase font-bold tracking-widest text-stone-500 mb-2 px-1 flex items-center gap-1">
             <Users className="w-3.5 h-3.5 text-emerald-800" /> Occupancy Preview
           </label>
 
-          <div className="flex items-center justify-between border border-stone-200/80 bg-stone-100/50 px-4 py-3.5 rounded-xl transition text-left cursor-default shadow-xs select-none">
+          <div className="flex-1 flex items-center justify-between border border-stone-200/80 bg-stone-100/50 px-4 py-3.5 rounded-xl transition text-left cursor-default shadow-xs select-none">
             <div className="flex flex-col">
               <span className="text-stone-800 font-extrabold text-sm">
                 {totalAdults + totalChildren} {totalAdults + totalChildren === 1 ? "Guest" : "Guests"}
               </span>
-              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider mt-px">
+              <span className="text-xs font-bold text-stone-400 uppercase tracking-wider mt-px">
                 {totalRooms} {totalRooms === 1 ? "Room" : "Rooms"} ({configuredRoomsCount} Configured) • {totalAdults} Ad • {totalChildren} Ch
               </span>
             </div>
 
             {/* Dynamic visual indicator for configuration completeness */}
-            <span className={`text-[9px] font-bold px-2 py-1 rounded-lg border transition-colors duration-300 ${hasUnconfiguredRoom
+            <span className={`text-xs font-bold px-2 py-1 rounded-lg border transition-colors duration-300 ${hasUnconfiguredRoom
               ? "bg-amber-50 text-amber-700 border-amber-250/50"
               : "bg-emerald-50 text-emerald-850 border-emerald-250/50"
               }`}>
@@ -501,7 +661,7 @@ const RoomSelector = () => {
           Add Room
         </button>
         {hasUnconfiguredRoom && (
-          <p className="text-[10px] font-bold text-amber-600 flex items-center gap-1 animate-pulse">
+          <p className="text-xs font-bold text-amber-600 flex items-center gap-1 animate-pulse">
             ⚠️ Configure and confirm Room {totalRooms} before adding another
           </p>
         )}
@@ -539,7 +699,7 @@ const RoomSelector = () => {
 
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+                      <span className="text-xs font-black uppercase tracking-widest text-stone-400">
                         Room {idx + 1} Locked
                       </span>
                     </div>
@@ -548,7 +708,7 @@ const RoomSelector = () => {
                       Pending Configuration
                     </h4>
 
-                    <p className="text-[11px] text-stone-400 font-semibold leading-relaxed">
+                    <p className="text-xs text-stone-400 font-semibold leading-relaxed">
                       Please configure and confirm <span className="text-stone-600 font-bold">Room {idx}</span> to unlock the configuration for this room.
                     </p>
                   </div>
@@ -581,10 +741,10 @@ const RoomSelector = () => {
 
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-emerald-850">
+                      <span className="text-xs font-black uppercase tracking-widest text-emerald-850">
                         Room {idx + 1} Confirmed
                       </span>
-                      <span className="text-[9px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-150 px-2 py-0.5 rounded-md flex items-center gap-1">
+                      <span className="text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-150 px-2 py-0.5 rounded-md flex items-center gap-1">
                         {(() => {
                           const pkg = packages.find(p => p.name === room.boardType);
                           const PkgIcon = pkg ? pkg.icon : Sparkles;
@@ -594,21 +754,24 @@ const RoomSelector = () => {
                       </span>
                     </div>
 
-                    <h4 className="text-stone-800 font-extrabold text-base tracking-tight">
-                      {room.roomType}
+                    <h4 className="text-stone-800 font-extrabold text-base sm:text-lg tracking-tight flex items-center gap-2">
+                      <span>{room.roomType}</span>
+                      <span className="text-emerald-850 bg-emerald-50 border border-emerald-250/60 px-2 py-0.5 rounded-lg text-xs font-extrabold tracking-wide">
+                        ${room.price} / night
+                      </span>
                     </h4>
 
-                    <p className="text-[11px] text-stone-500 font-semibold flex items-center gap-2">
+                    <p className="text-xs text-stone-500 font-semibold flex items-center gap-2">
                       <span>Occupancy:</span>
-                      <span className="text-stone-700 bg-stone-100 px-2 py-0.5 rounded-md font-bold">
+                      <span className="text-stone-700 bg-stone-100 px-2 py-0.5 rounded-md font-bold text-xs">
                         {room.adults} {room.adults === 1 ? "Adult" : "Adults"}
                       </span>
                       {room.children > 0 && (
-                        <span className="text-stone-700 bg-stone-100 px-2 py-0.5 rounded-md font-bold flex items-center gap-1">
+                        <span className="text-stone-700 bg-stone-100 px-2 py-0.5 rounded-md font-bold text-xs flex items-center gap-1">
                           <span>
                             {room.children} {room.children === 1 ? "Child" : "Children"}
                           </span>
-                          <span className="text-stone-400 font-medium text-[10px]">
+                          <span className="text-stone-450 font-bold text-xs">
                             ({room.childAges.map(age => age === 0 ? "Infant" : `${age}y`).join(", ")})
                           </span>
                         </span>
@@ -626,8 +789,8 @@ const RoomSelector = () => {
                         alt={room.roomType}
                         className="w-full h-full object-cover"
                       />
-                      <div className="absolute bottom-1 left-1 bg-stone-950/80 text-white text-[7px] font-black px-1.5 py-0.2 rounded backdrop-blur-3xs">
-                        {roomTypes.find(t => t.name === room.roomType).price}
+                      <div className="absolute bottom-1 left-1 bg-stone-950/80 text-white text-xs font-black px-2 py-0.5 rounded backdrop-blur-3xs">
+                        ${room.price}
                       </div>
                     </div>
                   )}
@@ -642,7 +805,7 @@ const RoomSelector = () => {
                         }
                         handleEditRoom(room.id);
                       }}
-                      className={`font-bold uppercase text-[9px] tracking-wider px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow-3xs group border ${isPrevRoomUnconfigured
+                      className={`font-bold uppercase text-xs tracking-wider px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow-3xs group border ${isPrevRoomUnconfigured
                         ? "bg-stone-100 text-stone-400 border-stone-200 cursor-not-allowed animate-pulse"
                         : "bg-white hover:bg-stone-50 text-stone-700 border-stone-200 hover:border-stone-400 cursor-pointer active:scale-95"
                         }`}
@@ -650,7 +813,7 @@ const RoomSelector = () => {
                       {isPrevRoomUnconfigured ? (
                         <Lock className="w-3 h-3 text-stone-450" />
                       ) : (
-                        <Unlock className="w-3 h-3 text-stone-400 group-hover:text-stone-600 transition" />
+                        <Unlock className="w-3 h-3 text-stone-450 group-hover:text-stone-600 transition" />
                       )}
                       Edit Room
                     </button>
@@ -685,7 +848,7 @@ const RoomSelector = () => {
 
                     <div className="flex items-center gap-2.5">
                       {/* Selected Package Badge */}
-                      <span className="text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-100 px-2.5 py-0.5 rounded-md flex items-center gap-1">
+                      <span className="text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-100 px-2.5 py-0.5 rounded-md flex items-center gap-1">
                         <Sparkles className="w-2.5 h-2.5" /> {room.boardType}
                       </span>
 
@@ -703,16 +866,16 @@ const RoomSelector = () => {
                   </div>
 
                   {/* Info summary description */}
-                  <div className="text-[11px] text-stone-500 leading-relaxed bg-white/45 p-3.5 rounded-xl border border-stone-200/50 space-y-2.5">
+                  <div className="text-xs text-stone-500 leading-relaxed bg-white/45 p-3.5 rounded-xl border border-stone-200/50 space-y-2.5">
                     <div>
-                      <span className="font-bold text-stone-400 block text-[9px] uppercase tracking-wider mb-0.5">Selected Category</span>
-                      <span className={`font-bold block text-xs ${room.roomType ? "text-emerald-850" : "text-amber-650 italic font-semibold animate-pulse"}`}>
+                      <span className="font-bold text-stone-400 block text-xs uppercase tracking-wider mb-0.5">Selected Category</span>
+                      <span className={`font-bold block text-sm ${room.roomType ? "text-emerald-850" : "text-amber-650 italic font-semibold animate-pulse"}`}>
                         {room.roomType || "⚠️ Selection Required"}
                       </span>
                     </div>
                     <div className="pt-2 border-t border-stone-200/40">
-                      <span className="font-bold text-stone-400 block text-[9px] uppercase tracking-wider mb-0.5">Selected Board Type</span>
-                      <span className="font-bold block text-xs text-emerald-850 flex items-center gap-1.5">
+                      <span className="font-bold text-stone-400 block text-xs uppercase tracking-wider mb-0.5">Selected Board Type</span>
+                      <span className="font-bold block text-sm text-emerald-850 flex items-center gap-1.5">
                         {(() => {
                           const pkg = packages.find(p => p.name === room.boardType);
                           const PkgIcon = pkg ? pkg.icon : Sparkles;
@@ -721,6 +884,37 @@ const RoomSelector = () => {
                         {room.boardType || "Room Only"}
                       </span>
                     </div>
+                    {room.roomType && (
+                      <div className="pt-2.5 border-t border-stone-200/40 space-y-1.5 bg-emerald-50/20 p-3 rounded-xl border border-emerald-100/50 animate-fadeIn">
+                        <span className="font-bold text-stone-400 block text-xs uppercase tracking-wider">Calculated Room Price</span>
+                        <div className="flex flex-col text-stone-750 font-bold text-xs space-y-1">
+                          <div className="flex justify-between">
+                            <span>Base Rate:</span>
+                            <span>
+                              ${(() => {
+                                const typeObj = roomTypes.find(t => t.name === room.roomType);
+                                return typeObj ? Number(typeObj.price.replace(/[^0-9.]/g, '')) : 0;
+                              })()}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>{room.boardType} Add-on:</span>
+                            <span>
+                              +${(() => {
+                                const addons = { "Room Only": 0, "Bed & Breakfast": 40, "Half Board": 90, "Full Board": 150 };
+                                return addons[room.boardType] || 0;
+                              })()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="pt-2 border-t border-emerald-200/35 flex items-center justify-between">
+                          <span className="text-xs font-black text-emerald-850">Total Nightly Rate:</span>
+                          <span className="font-black text-emerald-900 text-sm sm:text-base">
+                            ${room.price} / night
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Occupancy counters for this specific room */}
@@ -730,7 +924,7 @@ const RoomSelector = () => {
                     <div className="flex items-center justify-between bg-white border border-stone-200/60 p-3 rounded-xl shadow-3xs">
                       <div className="flex flex-col">
                         <span className="text-xs font-bold text-stone-800">Adults</span>
-                        <span className="text-[9px] text-stone-400 font-semibold">Ages 11+</span>
+                        <span className="text-xs text-stone-400 font-bold">Ages 11+</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
@@ -756,7 +950,7 @@ const RoomSelector = () => {
                     <div className="flex items-center justify-between bg-white border border-stone-200/60 p-3 rounded-xl shadow-3xs animate-fadeIn">
                       <div className="flex flex-col">
                         <span className="text-xs font-bold text-stone-800">Kids</span>
-                        <span className="text-[9px] text-stone-400 font-semibold">Ages 0-11</span>
+                        <span className="text-xs text-stone-400 font-bold">Ages 0-11</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
@@ -781,7 +975,7 @@ const RoomSelector = () => {
                     {/* Specify Child Ages Grid */}
                     {room.children > 0 && (
                       <div className="bg-white border border-stone-200/60 p-3 rounded-xl shadow-3xs space-y-3 animate-fadeIn">
-                        <span className="text-[9px] uppercase font-extrabold tracking-widest text-emerald-850 block border-b border-stone-100 pb-1.5">
+                        <span className="text-xs uppercase font-extrabold tracking-widest text-emerald-850 block border-b border-stone-100 pb-1.5">
                           Specify Child Ages
                         </span>
 
@@ -790,11 +984,11 @@ const RoomSelector = () => {
                             const currentAge = room.childAges?.[childIdx] ?? "";
                             return (
                               <div key={childIdx} className="flex flex-col gap-1">
-                                <span className="text-[8px] font-bold text-stone-400">Child {childIdx + 1} Age</span>
+                                <span className="text-xs font-bold text-stone-400">Child {childIdx + 1} Age</span>
                                 <select
                                   value={currentAge}
                                   onChange={(e) => handleChildAgeChange(room.id, childIdx, e.target.value)}
-                                  className={`border text-[11px] rounded-lg px-2 py-1 bg-stone-50 text-stone-700 font-bold focus:ring-1 focus:ring-emerald-500/20 focus:border-emerald-600 transition cursor-pointer ${currentAge === "" ? "border-amber-300 ring-2 ring-amber-500/5" : "border-stone-200 hover:border-stone-300"
+                                  className={`border text-xs rounded-lg px-2 py-1 bg-stone-50 text-stone-700 font-bold focus:ring-1 focus:ring-emerald-500/20 focus:border-emerald-600 transition cursor-pointer ${currentAge === "" ? "border-amber-300 ring-2 ring-amber-500/5" : "border-stone-200 hover:border-stone-300"
                                     }`}
                                 >
                                   <option value="">Select Age</option>
@@ -809,7 +1003,7 @@ const RoomSelector = () => {
                         </div>
 
                         {room.childAges?.some(age => age === "") && (
-                          <p className="text-[8px] font-extrabold text-amber-600 animate-pulse">
+                          <p className="text-xs font-extrabold text-amber-600 animate-pulse">
                             ⚠️ Age required for each child
                           </p>
                         )}
@@ -822,7 +1016,7 @@ const RoomSelector = () => {
                   <button
                     type="button"
                     onClick={() => handleConfirmRoom(room.id, idx)}
-                    className={`w-full font-extrabold uppercase text-[10px] tracking-wider py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-1.5 border shadow-2xs ${!room.roomType || (room.children > 0 && room.childAges.some(age => age === ""))
+                    className={`w-full font-extrabold uppercase text-xs tracking-wider py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-1.5 border shadow-2xs ${!room.roomType || (room.children > 0 && room.childAges.some(age => age === ""))
                       ? "bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-250/50 cursor-pointer"
                       : "bg-emerald-800 hover:bg-emerald-950 text-white border-emerald-900/10 cursor-pointer active:scale-98 shadow-[0_4px_10px_rgba(6,95,70,0.08)] hover:shadow-[0_6px_14px_rgba(6,95,70,0.12)] group"
                       }`}
@@ -840,10 +1034,10 @@ const RoomSelector = () => {
                 <div className="flex-1 flex flex-col min-w-0 space-y-5">
                   {/* Category Selector */}
                   <div className="relative w-full px-1">
-                    <label className="text-[9px] uppercase font-extrabold tracking-widest text-stone-400 mb-2.5 px-0.5 block flex items-center justify-between">
+                    <label className="text-xs uppercase font-extrabold tracking-widest text-stone-400 mb-2.5 px-0.5 block flex items-center justify-between">
                       <span>Select Room Category</span>
                       {room.roomType && (
-                        <span className="text-[9px] font-bold text-emerald-850 bg-emerald-50 border border-emerald-150 px-2 py-0.5 rounded-md normal-case tracking-normal">
+                        <span className="text-xs font-bold text-emerald-850 bg-emerald-50 border border-emerald-150 px-2 py-0.5 rounded-md normal-case tracking-normal">
                           {room.roomType}
                         </span>
                       )}
@@ -873,12 +1067,16 @@ const RoomSelector = () => {
                         <ChevronRight className="w-3.5 h-3.5" />
                       </button>
 
-                      {/* Carousel Track wrapper */}
-                      <div className="overflow-hidden w-full rounded-xl">
+                      {/* Carousel Track wrapper with premium border, background, and edge fades */}
+                      <div className="overflow-hidden w-full rounded-2xl border border-stone-200/70 bg-white/50 p-2.5 shadow-3xs relative">
+                        {/* Smooth fade-out overlays for side-peek items */}
+                        <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white via-white/80 to-transparent z-20 pointer-events-none" />
+                        <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white via-white/80 to-transparent z-20 pointer-events-none" />
+
                         <div
-                          className="flex gap-4 pb-3 pt-1 items-stretch transition-transform duration-350 ease-out"
+                          className="flex gap-4 pb-1 pt-1 items-stretch transition-transform duration-350 ease-out"
                           style={{
-                            transform: 'translateX(-140px)', // makes the first item peek on the left
+                            transform: 'translateX(-155px)', // makes the first item peek on the left
                           }}
                         >
                           {getRotatedArray(roomTypes, room.categoryIndex || 0).map((type) => {
@@ -887,13 +1085,13 @@ const RoomSelector = () => {
                               <div
                                 key={type.name}
                                 onClick={() => handleRoomTypeChange(room.id, type.name)}
-                                className={`min-w-[170px] w-[170px] bg-white rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden flex flex-col justify-between group shadow-3xs hover:shadow-2xs relative ${isSelected
+                                className={`min-w-[190px] w-[190px] bg-white rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden flex flex-col justify-between group shadow-3xs hover:shadow-2xs relative ${isSelected
                                   ? "border-emerald-600 ring-2 ring-emerald-500/10 scale-[1.01] shadow-sm"
                                   : "border-stone-200/80 hover:border-stone-300"
                                   }`}
                               >
                                 {/* HD room thumbnail preview */}
-                                <div className="relative h-26 overflow-hidden shrink-0">
+                                <div className="relative h-28 overflow-hidden shrink-0">
                                   <img
                                     src={type.image}
                                     alt={type.name}
@@ -910,20 +1108,43 @@ const RoomSelector = () => {
                                       </span>
                                     )}
                                   </div>
+
+                                  {/* Info Trigger Button (Top-left always visible with interactive hover scale) */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDetailingRoom(type);
+                                    }}
+                                    className="absolute top-2 left-2 z-10 w-5 h-5 rounded-full bg-white/95 text-stone-600 hover:text-emerald-800 flex items-center justify-center backdrop-blur-3xs shadow-sm border border-stone-200/50 hover:border-stone-300 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+                                    title="View suite details"
+                                  >
+                                    <Info className="w-3 h-3" />
+                                  </button>
+
                                   {/* Price Tag Badge */}
-                                  <div className="absolute bottom-2 left-2 bg-stone-950/80 text-white px-2 py-0.5 rounded text-[8px] font-extrabold tracking-wider backdrop-blur-3xs">
+                                  <div className="absolute bottom-2 left-2 bg-stone-950/80 text-white px-2 py-0.5 rounded text-xs font-extrabold tracking-wider backdrop-blur-3xs">
                                     {type.price} / night
                                   </div>
                                 </div>
 
                                 {/* Card metadata details */}
                                 <div className="p-3 flex-1 flex flex-col justify-between space-y-1">
-                                  <h5 className="font-bold text-stone-850 text-[11px] leading-tight tracking-tight group-hover:text-emerald-950 transition">
+                                  <h5 className="font-extrabold text-stone-850 text-xs leading-tight tracking-tight group-hover:text-emerald-950 transition">
                                     {type.name}
                                   </h5>
-                                  <div className="flex items-center justify-between text-[9px] font-bold text-stone-400 pt-1.5 border-t border-stone-100">
-                                    <span>Capacity:</span>
-                                    <span className="text-stone-600 bg-stone-50 px-1.5 py-0.2 rounded">{type.maxOccupancy} Guests</span>
+                                  <div className="flex items-center justify-between text-xs font-bold text-stone-400 pt-1.5 border-t border-stone-100">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDetailingRoom(type);
+                                      }}
+                                      className="text-stone-450 hover:text-emerald-850 transition duration-200 font-extrabold flex items-center gap-0.5 cursor-pointer hover:underline"
+                                    >
+                                      <Info className="w-2.5 h-2.5" /> Details
+                                    </button>
+                                    <span className="text-stone-650 bg-stone-50 px-1.5 py-0.5 rounded text-xs font-bold">{type.maxOccupancy} Guests</span>
                                   </div>
                                 </div>
                               </div>
@@ -936,10 +1157,10 @@ const RoomSelector = () => {
 
                   {/* Experience Package (Board Type) Selector */}
                   <div className="relative w-full px-1">
-                    <label className="text-[9px] uppercase font-extrabold tracking-widest text-stone-400 mb-2 px-0.5 block flex items-center justify-between">
+                    <label className="text-xs uppercase font-extrabold tracking-widest text-stone-400 mb-2 px-0.5 block flex items-center justify-between">
                       <span>Select Experience Package (Board Type)</span>
                       {room.boardType && (
-                        <span className="text-[9px] font-bold text-emerald-850 bg-emerald-50 border border-emerald-150 px-2 py-0.5 rounded-md normal-case tracking-normal">
+                        <span className="text-xs font-bold text-emerald-850 bg-emerald-50 border border-emerald-150 px-2 py-0.5 rounded-md normal-case tracking-normal">
                           {room.boardType}
                         </span>
                       )}
@@ -969,12 +1190,16 @@ const RoomSelector = () => {
                         <ChevronRight className="w-3.5 h-3.5" />
                       </button>
 
-                      {/* Carousel Track wrapper */}
-                      <div className="overflow-hidden w-full rounded-xl">
+                      {/* Carousel Track wrapper with premium border, background, and edge fades */}
+                      <div className="overflow-hidden w-full rounded-2xl border border-stone-200/70 bg-white/50 p-2.5 shadow-3xs relative">
+                        {/* Smooth fade-out overlays for side-peek items */}
+                        <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white via-white/80 to-transparent z-20 pointer-events-none" />
+                        <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white via-white/80 to-transparent z-20 pointer-events-none" />
+
                         <div
-                          className="flex gap-4 pb-3 pt-1 items-stretch transition-transform duration-350 ease-out"
+                          className="flex gap-4 pb-1 pt-1 items-stretch transition-transform duration-350 ease-out"
                           style={{
-                            transform: 'translateX(-140px)', // makes the first item peek on the left
+                            transform: 'translateX(-155px)', // makes the first item peek on the left
                           }}
                         >
                           {getRotatedArray(packages, room.packageIndex || 0).map((pkg) => {
@@ -984,7 +1209,7 @@ const RoomSelector = () => {
                               <div
                                 key={pkg.id}
                                 onClick={() => handleBoardTypeChange(room.id, pkg.name)}
-                                className={`min-w-[170px] w-[170px] bg-white rounded-xl border p-3 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col justify-between group shadow-3xs relative ${isSelected
+                                className={`min-w-[190px] w-[190px] bg-white rounded-xl border p-3 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col justify-between group shadow-3xs relative ${isSelected
                                   ? "border-emerald-600 ring-2 ring-emerald-500/10 scale-[1.01] shadow-sm"
                                   : "border-stone-200/80 hover:border-stone-300"
                                   }`}
@@ -999,8 +1224,8 @@ const RoomSelector = () => {
                                   )}
                                 </div>
                                 <div className="mt-2.5">
-                                  <h6 className="text-stone-800 font-bold text-[11px] tracking-tight">{pkg.name}</h6>
-                                  <p className="text-[9px] text-stone-400 leading-tight mt-0.5">{pkg.tagline}</p>
+                                  <h6 className="text-stone-800 font-bold text-xs tracking-tight">{pkg.name}</h6>
+                                  <p className="text-xs text-stone-400 leading-tight mt-0.5">{pkg.tagline}</p>
                                 </div>
                               </div>
                             );
@@ -1026,6 +1251,16 @@ const RoomSelector = () => {
           </p>
         </div>
 
+        {/* Dynamic Estimated Total Nightly Rate */}
+        {!hasUnconfiguredRoom && totalNightlyRate > 0 && (
+          <div className="flex flex-col items-end sm:items-start text-right sm:text-left bg-stone-50 border border-stone-200/50 px-4.5 py-2.5 rounded-2xl shadow-3xs animate-fadeIn shrink-0">
+            <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-stone-400 mb-0.5">Est. Total Nightly Rate</span>
+            <span className="text-emerald-900 font-black text-lg sm:text-xl tracking-tight">
+              ${totalNightlyRate} <span className="text-xs font-bold text-stone-450">/ night</span>
+            </span>
+          </div>
+        )}
+
         <button
           type="button"
           onClick={handleFinalBookingSubmit}
@@ -1040,6 +1275,10 @@ const RoomSelector = () => {
         </button>
       </div>
 
+      <RoomDetailsModal
+        selectedRoom={detailingRoom}
+        onClose={() => setDetailingRoom(null)}
+      />
     </div>
   );
 };

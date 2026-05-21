@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/bluebird logo.png";
 import { LuListCollapse, LuMenu } from "react-icons/lu";
 import { Sun, Moon } from "lucide-react";
@@ -9,6 +9,7 @@ export default function Header() {
   const [sideBarOpen, setSideBarOpen] = useState(false);
   const [weather, setWeather] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     getWeather();
@@ -63,15 +64,23 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-4 justify-end col-start-3">
-          <div className=" lg:flex justify-end font-semibold">
+          <div className="hidden lg:flex items-center gap-3 font-semibold">
             <button
-              onClick={() => {
-                navigate("/booking")
-              }}
-              className="inline-flex items-center justify-center rounded-2xl bg-linear-to-r from-sky-600 via-blue-600 to-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              onClick={() => navigate("/customerLogin")}
+              className="px-5 py-2.5 text-sm font-semibold text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-2xl border border-gray-200 transition-all duration-300 cursor-pointer"
             >
-              Book Now
+              Sign In
             </button>
+            {location.pathname !== "/booking" && (
+              <button
+                onClick={() => {
+                  navigate("/booking")
+                }}
+                className="inline-flex items-center justify-center rounded-2xl bg-linear-to-r from-sky-600 via-blue-600 to-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer"
+              >
+                Book Now
+              </button>
+            )}
           </div>
 
           <div className="flex lg:hidden items-center col-start-3">
@@ -109,6 +118,10 @@ export default function Header() {
               </Link>
               <Link className="hover:text-blue-600 transition" to="/" onClick={() => setSideBarOpen(false)}>
                 CONTACT
+              </Link>
+              <hr className="border-gray-200 my-1" />
+              <Link className="text-blue-650 font-bold hover:text-blue-700 transition" to="/customerLogin" onClick={() => setSideBarOpen(false)}>
+                Sign In
               </Link>
             </div>
 

@@ -35,7 +35,12 @@ const BookingSummary = () => {
     const totalSavings = Math.max(0, originalTotalCost - totalCost);
 
     const handleGoBack = () => {
-        navigate("/booking");
+        navigate("/booking", {
+            state: {
+                bookingData,
+                selectedRooms,
+            }
+        });
     };
 
     const handleConfirmBooking = async () => {
