@@ -67,6 +67,10 @@ Driver.init(
     allowNull: true,
     defaultValue: [],   // e.g. ["English", "Chinese", "German"]
     },
+    driverImage: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+    },
 
     notes: {
       type: DataTypes.TEXT,
