@@ -202,17 +202,6 @@ export function initModels() {
         as: 'boardType',
     });
 
-    SeasonalDiscount.hasMany(RoomPrice, {
-        foreignKey: 'seasonId',
-        as: 'roomPrices',
-        onDelete: 'SET NULL',
-        onUpdate: 'CASCADE',
-    });
-    RoomPrice.belongsTo(SeasonalDiscount, {
-        foreignKey: 'seasonId',
-        as: 'season',
-    });
-
     return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, VehicleType, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount };
 }
 export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, VehicleType, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount };
