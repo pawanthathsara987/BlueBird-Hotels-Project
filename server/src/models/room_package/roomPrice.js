@@ -22,10 +22,6 @@ RoomPrice.init({
         type: DataTypes.INTEGER,
         allowNull: false,
     },
-    seasonId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-    },
     price: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
