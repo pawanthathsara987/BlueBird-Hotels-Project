@@ -20,6 +20,7 @@ import RoomType from "./room_package/roomTypeModel.js";
 import BoardType from "./room_package/boardType.js";
 import SeasonalDiscount from "./room_package/seasonalDiscount.js";
 import RoomPrice from "./room_package/roomPrice.js";
+import DriverPricingSetting from "./vehicle/driverpricingmodel.js";
 
 
 // Keep `Reservation` alias for backward compatibility with existing controllers
@@ -202,6 +203,17 @@ export function initModels() {
         as: 'boardType',
     });
 
+    SeasonalDiscount.hasMany(RoomPrice, {
+        foreignKey: 'seasonId',
+        as: 'roomPrices',
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE',
+    });
+    RoomPrice.belongsTo(SeasonalDiscount, {
+        foreignKey: 'seasonId',
+        as: 'season',
+    });
+
     return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, VehicleType, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount };
 }
-export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, VehicleType, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount };
+export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, VehicleType, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, DriverPricingSetting };

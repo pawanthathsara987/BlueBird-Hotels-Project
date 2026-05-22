@@ -15,6 +15,7 @@ import {
     upload as tourUpload
 } from '../controllers/manager/tourController.js';
 import { getAirportPickupRequests } from '../controllers/manager/airportPickupController.js';
+import { getDriverPrice, updateDriverPrice } from '../controllers/manager/driverPricingController.js';
 import {
     getDrivers,
     getDriver,
@@ -45,6 +46,10 @@ router.delete('/tours/:id', deleteTour);
 
 // Airport pickup requests
 router.get('/airport-pickups', getAirportPickupRequests);
+
+// Shared driver price
+router.get('/driver-price', getDriverPrice);
+router.put('/driver-price', updateDriverPrice);
 
 // Drivers CRUD (temporarily unprotected for development)
 router.get('/drivers', getDrivers);
