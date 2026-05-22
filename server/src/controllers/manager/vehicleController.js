@@ -1,6 +1,7 @@
 // controllers/vehicleController.js
 import { Op } from 'sequelize';
 import multer from 'multer';
+import sequelize from '../../config/database.js';
 import Vehicle from '../../models/vehicle/vehicleModel.js';
 import supabase from '../../config/supabaseClient.js';
 
@@ -79,6 +80,25 @@ const parseFeatures = (features) => {
 const ALLOWED_FUEL_TYPES = ['petrol', 'diesel', 'electric', 'hybrid'];
 const ALLOWED_TRANSMISSIONS = ['automatic', 'manual'];
 const ALLOWED_STATUSES = ['available', 'unavailable', 'maintenance', 'retired'];
+
+const getVehicleTableColumns = async () => {
+  try {
+    const tableDescription = await sequelize.getQueryInterface().describeTable('vehicles');
+    return new Set(Object.keys(tableDescription));
+  } catch {
+    return null;
+  }
+};
+
+const sanitizeVehiclePayload = (payload, tableColumns) => {
+  if (!tableColumns) {
+    return payload;
+  }
+
+  return Object.fromEntries(
+    Object.entries(payload).filter(([key]) => tableColumns.has(key))
+  );
+};
 
 const buildVehicleValidationErrors = (body, { requireImage = false, imageFile = null } = {}) => {
   const errors = {};
@@ -260,6 +280,7 @@ export const checkAvailability = async (req, res) => {
 // Manager only — add a new vehicle
 export const createVehicle = async (req, res) => {
   try {
+    const tableColumns = await getVehicleTableColumns();
     const validationErrors = buildVehicleValidationErrors(req.body, { requireImage: true, imageFile: req.file });
     if (Object.keys(validationErrors).length > 0) {
       return res.status(400).json({
@@ -280,7 +301,7 @@ export const createVehicle = async (req, res) => {
     }
 
     const vehicle = await Vehicle.create({
-      ...req.body,
+      ...sanitizeVehiclePayload(req.body, tableColumns),
       features: parseFeatures(req.body.features),
       image,
     });
@@ -303,6 +324,7 @@ export const createVehicle = async (req, res) => {
 // Manager only — update vehicle details
 export const updateVehicle = async (req, res) => {
   try {
+    const tableColumns = await getVehicleTableColumns();
     const vehicle = await Vehicle.findByPk(req.params.id);
     if (!vehicle) {
       return res.status(404).json({ success: false, message: 'Vehicle not found' });
@@ -334,7 +356,7 @@ export const updateVehicle = async (req, res) => {
     }
 
     const payload = {
-      ...req.body,
+      ...sanitizeVehiclePayload(req.body, tableColumns),
       image,
     };
 
