@@ -1,27 +1,53 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
-import { Plus, RefreshCw, Pencil, Trash2, Users } from "lucide-react";
+import { Plus, RefreshCw, Users } from "lucide-react";
 import DriverForm from "./DriverForm";
 
 const Card = ({ children, className = "" }) => (
   <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm p-6 ${className}`}>{children}</div>
 );
 
+const formatMoney = (value) => {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? `$${amount.toFixed(2)}` : "$0.00";
+};
+
 export default function DriversManagement() {
   const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api").replace(/\/$/, "");
   const [drivers, setDrivers] = useState([]);
+  const [driverPricing, setDriverPricing] = useState({ id: 1, driverPricePerDay: 0 });
   const [loading, setLoading] = useState(true);
+  const [priceLoading, setPriceLoading] = useState(true);
+  const [priceSaving, setPriceSaving] = useState(false);
   const [error, setError] = useState("");
+  const [priceError, setPriceError] = useState("");
+  const [priceForm, setPriceForm] = useState("0");
   const [showForm, setShowForm] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
+  const token = localStorage.getItem("managerToken") || localStorage.getItem("token") || localStorage.getItem("accessToken");
+  const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+
+  const fetchDriverPrice = async () => {
+    try {
+      setPriceLoading(true);
+      const res = await axios.get(`${backendBaseUrl}/manager/driver-price`, config);
+      const setting = res.data?.data || { id: 1, driverPricePerDay: 0 };
+      setDriverPricing(setting);
+      setPriceForm(String(setting.driverPricePerDay ?? 0));
+      setPriceError("");
+    } catch (err) {
+      setPriceError(err.response?.data?.message || err.message || "Failed to load driver price");
+    } finally {
+      setPriceLoading(false);
+    }
+  };
+
   const fetchDrivers = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("managerToken") || localStorage.getItem("token") || localStorage.getItem("accessToken");
-      const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
       const res = await axios.get(`${backendBaseUrl}/manager/drivers`, config);
       setDrivers(res.data?.data || []);
       setError("");
@@ -33,7 +59,10 @@ export default function DriversManagement() {
     }
   };
 
-  useEffect(() => { fetchDrivers(); }, []);
+  useEffect(() => {
+    fetchDrivers();
+    fetchDriverPrice();
+  }, []);
 
   const stats = useMemo(() => {
     const total = drivers.length;
@@ -47,6 +76,26 @@ export default function DriversManagement() {
   const closeForm = () => { setSelectedDriver(null); setShowForm(false); };
 
   const handleSaved = async () => { await fetchDrivers(); closeForm(); };
+
+  const handleSaveDriverPrice = async (e) => {
+    e.preventDefault();
+    try {
+      setPriceSaving(true);
+      const res = await axios.put(`${backendBaseUrl}/manager/driver-price`, { driverPricePerDay: priceForm }, config);
+      const setting = res.data?.data || driverPricing;
+      setDriverPricing(setting);
+      setPriceForm(String(setting.driverPricePerDay ?? priceForm));
+      setPriceError("");
+      toast.success("Driver price updated");
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Failed to update driver price";
+      const apiErrors = err.response?.data?.errors;
+      setPriceError(apiErrors?.driverPricePerDay || msg);
+      toast.error(msg);
+    } finally {
+      setPriceSaving(false);
+    }
+  };
 
   const handleDelete = async (d) => {
     if (!confirm(`Delete driver ${d.fullName}?`)) return;
@@ -91,6 +140,32 @@ export default function DriversManagement() {
           <div className="rounded-2xl p-5 border bg-white">On Leave<br/><div className="text-2xl font-bold">{stats.onLeave}</div></div>
         </div>
 
+        <Card>
+          <form onSubmit={handleSaveDriverPrice} className="flex flex-col md:flex-row md:items-end gap-4">
+            <div className="flex-1">
+              <label className="text-xs font-semibold text-slate-500">Shared Driver Price Per Day</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={priceForm}
+                onChange={(e) => setPriceForm(e.target.value)}
+                className="mt-1 w-full px-4 py-2.5 rounded-xl text-sm text-slate-800 outline-none border border-slate-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-500"
+                placeholder="Enter shared driver price"
+              />
+              <p className="text-xs text-slate-500 mt-1">This price is used for every driver.</p>
+              {priceError && <p className="text-xs text-red-500 mt-1">{priceError}</p>}
+            </div>
+            <div className="md:w-56">
+              <div className="text-xs font-semibold text-slate-500 mb-1">Current shared price</div>
+              <div className="text-2xl font-black text-emerald-700">{priceLoading ? 'Loading...' : formatMoney(driverPricing.driverPricePerDay)}</div>
+            </div>
+            <button type="submit" disabled={priceSaving || priceLoading} className="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold disabled:opacity-60">
+              {priceSaving ? 'Saving...' : 'Save Price'}
+            </button>
+          </form>
+        </Card>
+
         {loading && <Card><div className="py-16 text-center">Loading drivers...</div></Card>}
 
         {!loading && error && <Card><div className="py-10 text-center text-red-600">{error}</div></Card>}
@@ -117,6 +192,7 @@ export default function DriversManagement() {
                       <h3 className="text-lg font-bold">{d.fullName}</h3>
                       <p className="text-sm text-slate-600">{d.phone} • {d.nicNo}</p>
                       <p className="text-sm text-slate-500">{Array.isArray(d.languageSkills) ? d.languageSkills.join(', ') : (d.languageSkills || '')}</p>
+                      <p className="text-sm font-semibold text-emerald-700 mt-1">Shared driver price: {formatMoney(driverPricing.driverPricePerDay)}</p>
                     </div>
                     <div className="flex flex-col gap-2">
                       <button onClick={() => openEdit(d)} className="inline-flex items-center gap-2 px-3 py-1 rounded bg-amber-500 text-white">Edit</button>
