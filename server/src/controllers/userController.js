@@ -179,7 +179,7 @@ export async function deleteUser(req, res) {
             });
 
             if (!staffMember) {
-                return res.status(404).json({ message: "User not found" });
+                return null;
             }
 
             await DeletedStaffMember.create({
@@ -189,7 +189,7 @@ export async function deleteUser(req, res) {
                 roleId: staffMember.Role.roleId,
                 roleName: staffMember.Role.roleName,
                 phoneNumber: staffMember.phoneNumber
-            });
+            }, { transaction });
 
             await UserRegisterModel.destroy({
                 where: { email: staffMember.email },
@@ -202,7 +202,7 @@ export async function deleteUser(req, res) {
             });
         });
 
-        if (!deletedCount) {
+        if (deletedCount === null) {
             return res.status(404).json({ message: "User not found" });
         }
 
