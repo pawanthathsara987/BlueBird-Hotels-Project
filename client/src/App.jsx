@@ -6,19 +6,19 @@ import AdminPage from "./pages/admin/AdminPage";
 import PasswordResetPage from "./pages/reception/PasswordResetPage";
 import CustomerPasswordResetPage from "./pages/client/PasswordResetPage";
 import { Toaster } from "react-hot-toast";
-import BookingRoom from "./pages/client/booking/roomBooking";
+import BookingRoom from "./pages/client/booking/roombooking/roomBooking";
 import ManagerPage from "./pages/manager/managerPage";
 import ReceptionPage from "./pages/reception/receptionPage";
-import TourViewPage from "./pages/client/booking/TourViewing";
-import TourDetailsPage from "./pages/client/booking/TourDetailsPage";
-import TourInquiryPage from "./pages/client/booking/TourInquiryPage";
-import RoomPaymentPage from "./pages/client/booking/RoomPayment";
+import TourViewPage from "./pages/client/booking/tourbooking/TourViewing";
+import TourDetailsPage from "./pages/client/booking/tourbooking/TourDetailsPage";
+import TourInquiryPage from "./pages/client/booking/tourbooking/TourInquiryPage";
+import RoomPaymentPage from "./pages/client/booking/roombooking/RoomPayment";
 import CustomerLoginPage from "./pages/CustomerLoginPage";
 import { GoogleOAuthProvider } from "@react-oauth/google";
-import BookingSummary from "./pages/client/booking/BookingSummary";
-import BookingConfirmation from "./pages/client/booking/BookingConfirmation";
+import BookingSummary from "./pages/client/booking/roombooking/BookingSummary";
+import BookingConfirmation from "./pages/client/booking/roombooking/BookingConfirmation";
 import ContactPage from "./pages/Contact_us";
-import CustomerDashboard from "./pages/client/CustomerDashboard";
+import CustomerDashboard from "./pages/client/dashboard/CustomerDashboard";
 
 export default function App() {
     return (

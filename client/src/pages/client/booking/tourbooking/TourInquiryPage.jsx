@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { AlertCircle, Check, Loader, MapPin, X } from 'lucide-react';
 import axios from 'axios';
 import { useLocation, useNavigate } from 'react-router-dom';
-import Header from '../../../components/header';
-import Footer from '../../../components/footer';
+import Header from '../../../../components/header';
+import Footer from '../../../../components/footer';
 
 function Stepper({ label, value, onChange, min = 0 }) {
   return (

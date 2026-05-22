@@ -1,10 +1,10 @@
 import { Sparkles, } from "lucide-react";
 import "react-datepicker/dist/react-datepicker.css";
 import RoomDetailsModal from "./RoomDetailsModal";
-import FloatingChatbot from "./../../../components/FloatingChatbot";
-import RoomSelector from "../../../components/booking/RoomSelector";
-import Header from "../../../components/header";
-import Footer from "../../../components/footer"
+import FloatingChatbot from "./../../../../components/FloatingChatbot";
+import RoomSelector from "../../../../components/booking/RoomSelector";
+import Header from "../../../../components/header";
+import Footer from "../../../../components/footer";
 import { useNavigate } from "react-router-dom";
 
 
