@@ -84,105 +84,109 @@ const RoomTypeView = () => {
     
 
     return (
-        <div className="mt-10 mx-5 rounded-lg">
-            <div className='w-fit ml-auto flex'>
+        <div className="p-4 md:p-6 space-y-6">
+            
+            {/* Header / Actions section */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/70 p-4 rounded-2xl border border-slate-100">
+                <div>
+                    <h3 className="text-base font-bold text-slate-700">Configured Room Categories</h3>
+                    <p className="text-xs text-slate-400">Total of {roomTypes.length} active room types</p>
+                </div>
                 <Link
                     to="/admin/rooms/packages/add"
-                    className="w-fit m-2 ml-auto flex items-center justify-between p-2 
-                        text-md rounded-[5px] space-x-1 bg-blue-400 shadow-md hover:bg-blue-500 
-                        cursor-pointer transition-colors"
+                    className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all duration-300 shadow-md shadow-blue-500/10 hover:scale-[1.02] cursor-pointer w-full sm:w-auto"
                 >
-                    <Plus />
-                    <label className="cursor-pointer">Add Room Type</label>
+                    <Plus size={18} />
+                    <span>Add Room Type</span>
                 </Link>
             </div>
-            <table className="min-w-full bg-white shadow-md rounded-lg">
-                <thead className="bg-gray-200">
-                    <tr>
-                        <th className="px-4 py-2">ID</th>
-                        <th className="px-4 py-2">Type</th>
-                        <th className="px-4 py-2">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {isLoading ? (
-                        <tr>
-                            <td colSpan={3} className="py-12 text-center">
-                                <div className="flex justify-center items-center">
-                                    <span className="w-16 h-16 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></span>
-                                </div>
-                            </td>
-                        </tr>
-                    ) : roomTypes.length === 0 ? (
-                        <tr>
-                            <td colSpan={3} className="py-12 text-center text-gray-500">
-                                <p className="text-lg">No room types available. Click "Add Room Type" to create one.</p>
-                            </td>
-                        </tr>
-                    ) : (
-                        <>
+
+            {/* Table or Empty State */}
+            {isLoading ? (
+                <div className="py-16 text-center">
+                    <div className="flex justify-center items-center">
+                        <span className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></span>
+                    </div>
+                </div>
+            ) : roomTypes.length === 0 ? (
+                <div className="text-center py-16 border border-dashed border-slate-200 rounded-2xl bg-slate-50/30">
+                    <p className="text-slate-400 font-medium text-base">No Room Types available. Click "Add Room Type" to create one.</p>
+                </div>
+            ) : (
+                <div className="overflow-x-auto">
+                    <table className="min-w-full table-auto">
+                        <thead>
+                            <tr className="border-b border-slate-100 text-left">
+                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">ID</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Type Name</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
                             {roomTypes.map(rt => (
-                                <tr key={rt.id} className="text-center hover:bg-gray-50 transition-colors">
-                                    <td className="px-4 py-2">{rt.id}</td>
-                                    <td className="px-4 py-2">{rt.type}</td>
-                                    <td className="px-4 py-2 flex justify-center items-center space-x-5">
-                                        <button
-                                            onClick={() =>
-                                                navigate("/admin/rooms/packages/edit", {
-                                                    state: { selectedPackage: rt },
-                                                })
-                                            }
-                                            className="text-blue-500 hover:text-blue-700 hover:scale-110 transition-transform cursor-pointer"
-                                            title="Edit room type"
-                                        >
-                                            <RiEditLine size={18} />
-                                        </button>
-                                        <button
-                                            onClick={() => openDeletePopup(rt)}
-                                            className="text-red-500 hover:text-red-700 hover:scale-110 transition-transform cursor-pointer"
-                                            title="Delete room type"
-                                        >
-                                            <RiDeleteBinLine size={18} />
-                                        </button>
+                                <tr key={rt.id} className="hover:bg-slate-50/50 transition-colors duration-200">
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-400">
+                                        #{rt.id}
+                                    </td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-700">
+                                        {rt.type}
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                        <div className="flex items-center justify-end gap-3.5">
+                                            <button
+                                                onClick={() =>
+                                                    navigate("/admin/rooms/packages/edit", {
+                                                        state: { selectedPackage: rt },
+                                                    })
+                                                }
+                                                className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all duration-200 cursor-pointer"
+                                                title="Edit room type"
+                                            >
+                                                <RiEditLine size={18} />
+                                            </button>
+                                            <button
+                                                onClick={() => openDeletePopup(rt)}
+                                                className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-all duration-200 cursor-pointer"
+                                                title="Delete room type"
+                                            >
+                                                <RiDeleteBinLine size={18} />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
-                        </>
-                    )}
-                </tbody>
-            </table>
+                        </tbody>
+                    </table>
+                </div>
+            )}
 
-            {/* ✅ SIMPLE DELETE CONFIRMATION POPUP */}
+            {/* Delete Popup */}
             {showDeletePopup && (
                 <>
                     {/* Overlay */}
                     <div
-                        className="fixed inset-0 bg-transparent backdrop-blur-sm z-40"
+                        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-all duration-300"
                         onClick={closeDeletePopup}
                     />
                     {/* Popup */}
                     <div className="fixed inset-0 flex items-center justify-center z-50 px-4">
-                        <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm">
-                            {/* Message */}
-                            <p className="text-lg font-semibold text-gray-800 mb-6">
-                                Are you sure you want to delete <span className="text-red-600">"{typeToDelete?.type}"</span>?
+                        <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full border border-slate-100 animate-scaleUp">
+                            <p className="text-lg font-bold text-slate-800 mb-6">
+                                Are you sure you want to delete <span className="text-rose-600">"{typeToDelete?.type}"</span>?
                             </p>
 
-                            {/* Buttons */}
                             <div className="flex gap-3">
                                 <button
                                     onClick={closeDeletePopup}
                                     disabled={isDeleting}
-                                    className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded font-semibold 
-                                        hover:bg-gray-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={confirmDelete}
                                     disabled={isDeleting}
-                                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded font-semibold 
-                                        hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                    className="flex-1 px-4 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
                                 >
                                     {isDeleting ? (
                                         <>
