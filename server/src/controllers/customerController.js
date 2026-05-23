@@ -48,7 +48,10 @@ export async function registerCustomer(req, res) {
             email: data.email,
             password: hashedPassword,
             phoneNumber: data.phoneNumber,
-            country: data.country
+            country: data.country,
+            idType: data.idType,
+            idNumber: data.idNumber,
+            address: data.address
         });
 
         const userResponse = {
@@ -57,7 +60,10 @@ export async function registerCustomer(req, res) {
             lastName: newCustomer.lastName,
             email: newCustomer.email,
             phoneNumber: newCustomer.phoneNumber,
-            country: newCustomer.country
+            country: newCustomer.country,
+            idType: newCustomer.idType,
+            idNumber: newCustomer.idNumber,
+            address: newCustomer.address
         };
 
         res.status(201).json({
@@ -109,7 +115,10 @@ export async function loginCustomer(req, res) {
             lastName: customer.lastName,
             email: customer.email,
             phoneNumber: customer.phoneNumber,
-            country: customer.country
+            country: customer.country,
+            idType: customer.idType,
+            idNumber: customer.idNumber,
+            address: customer.address
         };
 
         const token = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
@@ -264,7 +273,10 @@ export async function googleLogin(req, res) {
             lastName: user.lastName,
             email: user.email,
             phoneNumber: user.phoneNumber,
-            country: user.country
+            country: user.country,
+            idType: user.idType,
+            idNumber: user.idNumber,
+            address: user.address
         };
 
         const token = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
