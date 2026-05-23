@@ -1,5 +1,5 @@
 import axios from "axios";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, SlidersHorizontal } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { RiDeleteBinLine, RiEditLine } from "react-icons/ri";
 import toast from "react-hot-toast";
@@ -28,7 +28,6 @@ const RoomView = () => {
         return String(rawStatus || "unknown").toLowerCase();
     };
 
-
     // Fetch rooms from the backend, with search term
     useEffect(() => {
         async function fetchRooms() {
@@ -41,7 +40,7 @@ const RoomView = () => {
                 }
 
                 const res = await axios.get(url);
-                setRooms(res.data.data);
+                setRooms(res.data.data || []);
 
             } catch (err) {
                 console.error("Error fetching rooms:", err);
@@ -51,7 +50,6 @@ const RoomView = () => {
         }
         fetchRooms();
     }, [searchTerm]);
-
 
     // Memoized filtered rooms based on status filter
     const filteredRooms = useMemo(() => {
@@ -65,26 +63,20 @@ const RoomView = () => {
         })
     }, [rooms, statusFilter]);
 
-
     // Handlers for delete action    
     const openDeleteModal = (room) => {
         setSelectedRoom(room);
         setIsDeleteModalOpen(true);
     };
 
-
-    // Handler to close delete modal, preventing closure during deletion process    
+    // Handler to close delete modal
     const closeDeleteModal = () => {
-        if (isDeleting) {
-            return;
-        }
-
+        if (isDeleting) return;
         setIsDeleteModalOpen(false);
         setSelectedRoom(null);
     };
 
-
-    // Handler for confirming deletion of a room, with error handling
+    // Handler for confirming deletion
     const handleDeleteRoom = async () => {
         const roomId = getRoomId(selectedRoom);
 
@@ -109,90 +101,119 @@ const RoomView = () => {
     };
 
     return (
-        <div className="mt-10 mx-5 rounded-lg">
-            <div className="w-[90%] md:w-[65%] mx-auto mt-8 px-6 py-4 flex flex-col md:flex-row gap-4 bg-white rounded-2xl shadow-lg border border-gray-100">
-                <div className="flex items-center gap-3 flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus-within:ring-2 focus-within:ring-blue-400 focus-within:border-blue-400 transition-all">
-                    <Search size={18} className="text-gray-400 shrink-0" />
+        <div className="p-4 md:p-6 space-y-6">
+            
+            {/* Search, Filter, and Action Header */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-slate-50/70 p-4 rounded-2xl border border-slate-100">
+                <div className="flex items-center gap-3 flex-1 w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all duration-300">
+                    <Search size={18} className="text-slate-400 shrink-0" />
                     <input
                         type="search"
-                        placeholder="Search rooms..."
-                        className="outline-none w-full bg-transparent text-sm text-gray-700 placeholder-gray-400"
+                        placeholder="Search rooms by number or status..."
+                        className="outline-none w-full bg-transparent text-sm text-slate-700 placeholder-slate-400 font-medium"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-                <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-                >
-                    <option value="all">All Status</option>
-                    <option value="available">Available</option>
-                    <option value="occupied">Occupied</option>
-                    <option value="maintenance">Maintenance</option>
-                </select>
+                
+                <div className="flex w-full md:w-auto items-center gap-3">
+                    <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2.5 flex-1 md:flex-none">
+                        <SlidersHorizontal size={16} className="text-slate-400" />
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="outline-none bg-transparent text-sm font-bold text-slate-600 pr-4 cursor-pointer"
+                        >
+                            <option value="all">All Status</option>
+                            <option value="available">Available</option>
+                            <option value="occupied">Occupied</option>
+                            <option value="maintenance">Maintenance</option>
+                        </select>
+                    </div>
+
+                    <Link
+                        to="/admin/rooms/room/add"
+                        className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all duration-300 shadow-md shadow-blue-500/10 hover:scale-[1.02] cursor-pointer"
+                    >
+                        <Plus size={18} />
+                        <span>Add Room</span>
+                    </Link>
+                </div>
             </div>
-            <Link
-                to="/admin/rooms/room/add"
-                className="w-fit m-2 ml-auto flex items-center justify-between p-2 
-                    text-md rounded-[5px] space-x-1 bg-blue-400 shadow-md"
-            >
-                <Plus />
-                <label>Add Room</label>
-            </Link>
 
+            {/* Content Body */}
             {loading ? (
-                <Loader />
+                <div className="py-16"><Loader /></div>
+            ) : filteredRooms.length === 0 ? (
+                <div className="text-center py-16 border border-dashed border-slate-200 rounded-2xl bg-slate-50/30">
+                    <p className="text-slate-400 font-medium text-base">No rooms match the search criteria or status filter.</p>
+                </div>
             ) : (
-                <table className="min-w-full bg-white shadow-md rounded-lg">
-                    <thead className="bg-gray-200">
-                        <tr>
-                            <th className="px-4 py-2">Room No</th>
-                            <th className="px-4 py-2">Type</th>
-                            <th className="px-4 py-2">Status</th>
-                            <th className="px-4 py-2">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredRooms.map((room) => (
-                            <tr key={room.id} className="text-center border-t">
-
-                                <td className="px-4 py-2">{room.roomNumber}</td>
-
-                                <td className="px-4 py-2">
-                                    {room.RoomPackage?.pname || "N/A"}
-                                </td>
-
-                                <td className="px-4 py-2">
-                                    <span className={`px-2 py-1 rounded text-white text-xs ${getStatusValue(room) === "available"
-                                        ? "bg-green-500"
-                                        : getStatusValue(room) === "occupied"
-                                            ? "bg-red-500"
-                                            : "bg-yellow-500"
-                                        }`}>
-                                        {getStatusValue(room)}
-                                    </span>
-                                </td>
-
-                                <td className="px-4 py-2 flex justify-center gap-3">
-                                    <button
-                                        onClick={() => navigate("/admin/rooms/room/edit", { state: { selectedRoom: room } })}
-                                        className="text-blue-500"
-                                    >
-                                        <RiEditLine size={18} />
-                                    </button>
-
-                                    <button
-                                        onClick={() => openDeleteModal(room)}
-                                        className="text-red-500">
-                                        <RiDeleteBinLine size={18} />
-                                    </button>
-                                </td>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full table-auto">
+                        <thead>
+                            <tr className="border-b border-slate-100 text-left">
+                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Room Number</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Room Type</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {filteredRooms.map((room) => {
+                                const status = getStatusValue(room);
+                                return (
+                                    <tr key={room.id} className="hover:bg-slate-50/50 transition-colors duration-200">
+                                        <td className="px-6 py-4 text-sm font-bold text-slate-700">
+                                            Room {room.roomNumber}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm font-semibold text-slate-500">
+                                            {room.RoomPackage?.pname || "N/A"}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm">
+                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border transition-colors ${
+                                                status === "available"
+                                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                                                    : status === "occupied"
+                                                        ? "bg-rose-50 text-rose-700 border-rose-200/60"
+                                                        : "bg-amber-50 text-amber-700 border-amber-200/60"
+                                            }`}>
+                                                <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                                                    status === "available"
+                                                        ? "bg-emerald-500"
+                                                        : status === "occupied"
+                                                            ? "bg-rose-500"
+                                                            : "bg-amber-500"
+                                                }`} />
+                                                {status}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="flex items-center justify-end gap-3.5">
+                                                <button
+                                                    onClick={() => navigate("/admin/rooms/room/edit", { state: { selectedRoom: room } })}
+                                                    className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all duration-200 cursor-pointer"
+                                                    title="Edit room"
+                                                >
+                                                    <RiEditLine size={18} />
+                                                </button>
+                                                <button
+                                                    onClick={() => openDeleteModal(room)}
+                                                    className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-all duration-200 cursor-pointer"
+                                                    title="Delete room"
+                                                >
+                                                    <RiDeleteBinLine size={18} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
             )}
+            
             <DeleteRoomModal
                 isOpen={isDeleteModalOpen}
                 room={selectedRoom}
