@@ -109,7 +109,7 @@ export async function updateRoom(req, res) {
         await roomModel.update(
             {
                 roomNumber: roomNo,
-                roomStatus: status, 
+                roomStatus: status,
                 packageId,
             },
             {
