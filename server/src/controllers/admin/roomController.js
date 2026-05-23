@@ -1,7 +1,7 @@
-import roomModel from "../../models/room_package/roomModel.js";
-import roomAmenities from "../../models/room_package/roomAmenities.js";
-import packageModel from "../../models/room_package/packageModel.js";
-import amenitiesModel from "../../models/room_package/amenitiesModel.js";
+import roomModel from "../../models/room/roomModel.js";
+import roomAmenities from "../../models/room/roomAmenities.js";
+import packageModel from "../../models/room/packageModel.js";
+import amenitiesModel from "../../models/room/amenitiesModel.js";
 import { Op } from "sequelize";
 
 export async function addRoom(req, res) {
@@ -109,7 +109,7 @@ export async function updateRoom(req, res) {
         await roomModel.update(
             {
                 roomNumber: roomNo,
-                roomStatus: status, 
+                roomStatus: status,
                 packageId,
             },
             {
