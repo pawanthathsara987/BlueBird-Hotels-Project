@@ -333,23 +333,23 @@ export default function CustomerRegister() {
                     <p className="text-slate-400 font-bold uppercase tracking-wider mb-2 text-[9px]">Password Guidelines</p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5">
                         <div className={`flex items-center gap-1.5 ${/[A-Z]/.test(password) ? "text-emerald-400" : "text-slate-400"}`}>
-                            <span>•</span> One uppercase letter
+                            <span className="text-[20px]">•</span> One uppercase letter
                         </div>
                         <div className={`flex items-center gap-1.5 ${/[a-z]/.test(password) ? "text-emerald-400" : "text-slate-400"}`}>
-                            <span>•</span> One lowercase letter
+                            <span className="text-[20px]">•</span> One lowercase letter
                         </div>
                         <div className={`flex items-center gap-1.5 ${/\d/.test(password) ? "text-emerald-400" : "text-slate-400"}`}>
-                            <span>•</span> One number
+                            <span className="text-[20px]">•</span> One number
                         </div>
                         <div className={`flex items-center gap-1.5 ${/[@$!%*?&]/.test(password) ? "text-emerald-400" : "text-slate-400"}`}>
-                            <span>•</span> One special character
+                            <span className="text-[20px]">•</span> One special character
                         </div>
                         <div className={`flex items-center gap-1.5 ${password.length >= 8 ? "text-emerald-400" : "text-slate-400"}`}>
-                            <span>•</span> 8+ characters
+                            <span className="text-[20px]">•</span> 8+ characters
                         </div>
                         {confirmPassword && (
                             <div className={`flex items-center gap-1.5 col-span-2 sm:col-span-1 ${password === confirmPassword ? "text-emerald-400" : "text-rose-400"}`}>
-                                <span>•</span> {password === confirmPassword ? "Passwords match" : "Match failed"}
+                                <span className="text-[20px]">•</span> {password === confirmPassword ? "Passwords match" : "Match failed"}
                             </div>
                         )}
                     </div>
