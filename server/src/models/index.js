@@ -60,7 +60,7 @@ export function initModels() {
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
     });
-    
+
     Booking.belongsTo(Customer, {
         foreignKey: "customer_id",
     });
@@ -198,15 +198,15 @@ export function initModels() {
 
     // ── VehicleType → Vehicle ─────────────────────────────────────────────────────
     VehicleType.hasMany(Vehicle, {
-    foreignKey: 'vehicleTypeId',
-    as: 'vehicles',
-    onDelete: 'RESTRICT',
-    onUpdate: 'CASCADE',
+        foreignKey: 'vehicleTypeId',
+        as: 'vehicles',
+        onDelete: 'RESTRICT',
+        onUpdate: 'CASCADE',
     });
     Vehicle.belongsTo(VehicleType, {
-    foreignKey: 'vehicleTypeId',
-    as: 'vehicleType',
-    });     
+        foreignKey: 'vehicleTypeId',
+        as: 'vehicleType',
+    });
 
     // RoomPrice associations: link pricing to occupancy/room/board/season types
     OccupancyType.hasMany(RoomPrice, {
