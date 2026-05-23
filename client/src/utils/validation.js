@@ -14,3 +14,18 @@ export function validateSriLankanNIC(nic) {
     const newFormat = /^[0-9]{12}$/;
     return oldFormat.test(trimmed) || newFormat.test(trimmed);
 }
+
+/**
+ * Validates international Passport numbers.
+ * Standard passport format is alphanumeric, between 6 to 15 characters.
+ * 
+ * @param {string} passport - The passport number to validate
+ * @returns {boolean} - True if valid or empty, false if invalid format
+ */
+export function validatePassport(passport) {
+    if (!passport || passport.trim() === "") return true;
+    const trimmed = passport.trim();
+    const passportFormat = /^[a-zA-Z0-9]{6,15}$/;
+    return passportFormat.test(trimmed);
+}
+
