@@ -1,7 +1,7 @@
 import { Search } from "lucide-react";
 import RoomView from './RoomView';
 import AmenitiesView from "./AmenitiesView";
-import PackageView from "./PackageView";
+import RoomTypeView from "./RoomTypeView";
 import { useState } from "react";
 
 export default function RoomManagement() {
@@ -61,7 +61,7 @@ export default function RoomManagement() {
                 ) : selectBtn === 'amenities' ? (
                     <AmenitiesView />
                 ) : (
-                    <PackageView />
+                    <RoomTypeView />
                 )}
 
             </div>
