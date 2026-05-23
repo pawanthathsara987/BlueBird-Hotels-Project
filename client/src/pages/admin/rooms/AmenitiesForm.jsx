@@ -15,17 +15,42 @@ function AmenitiesForm() {
     const [isLoading, setIsLoading] = useState(false);
     const isEditMode = Boolean(selectedAmenity?.id);
 
+    const [roomTypes, setRoomTypes] = useState([]);
+    const [selectedRoomTypes, setSelectedRoomTypes] = useState([]);
+    const [isLoadingRoomTypes, setIsLoadingRoomTypes] = useState(false);
+
     const goBackToAmenities = () => {
         navigate("/admin/rooms/roomManagement?tab=amenities");
     };
 
+    // Fetch all Room Types on mount
     useEffect(() => {
-        if (isEditMode) {
+        const fetchRoomTypes = async () => {
+            try {
+                setIsLoadingRoomTypes(true);
+                const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/room-types`);
+                setRoomTypes(res.data.data || []);
+            } catch (error) {
+                console.error("Failed to fetch room types:", error);
+                toast.error("Failed to load room types");
+            } finally {
+                setIsLoadingRoomTypes(false);
+            }
+        };
+        fetchRoomTypes();
+    }, []);
+
+    // Set fields and extract pre-existing associations in edit mode
+    useEffect(() => {
+        if (isEditMode && selectedAmenity) {
             setName(selectedAmenity?.name || "");
             setAmenityList([]);
+            const assignedTypeIds = selectedAmenity?.RoomTypes?.map(rt => rt.id) || [];
+            setSelectedRoomTypes(assignedTypeIds);
         } else {
             setName("");
             setAmenityList([]);
+            setSelectedRoomTypes([]);
         }
     }, [isEditMode, selectedAmenity]);
 
@@ -71,6 +96,7 @@ function AmenitiesForm() {
                     `${import.meta.env.VITE_BACKEND_URL}/admin/amenitie`,
                     {
                         name: amenity.name,
+                        roomTypeIds: selectedRoomTypes,
                     }
                 );
             }
@@ -105,6 +131,7 @@ function AmenitiesForm() {
                 `${import.meta.env.VITE_BACKEND_URL}/admin/amenitie/${selectedAmenity.id}`,
                 {
                     name: trimmedName,
+                    roomTypeIds: selectedRoomTypes,
                 }
             );
 
@@ -214,6 +241,72 @@ function AmenitiesForm() {
                             Editing amenity id: <span className="font-semibold">{selectedAmenity?.id}</span>
                         </div>
                     )}
+
+                    {/* Room Types selection section */}
+                    <div className="mb-6 border-t border-gray-200 pt-5">
+                        <div className="flex justify-between items-center mb-3">
+                            <label className="block text-sm font-bold text-gray-700">
+                                Assign to Room Types
+                                <span className="ml-2 text-xs text-blue-600 font-normal">
+                                    ({selectedRoomTypes.length} selected)
+                                </span>
+                            </label>
+                            {roomTypes.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (selectedRoomTypes.length === roomTypes.length) {
+                                            setSelectedRoomTypes([]);
+                                        } else {
+                                            setSelectedRoomTypes(roomTypes.map(rt => rt.id));
+                                        }
+                                    }}
+                                    className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
+                                >
+                                    {selectedRoomTypes.length === roomTypes.length ? "Deselect All" : "Select All"}
+                                </button>
+                            )}
+                        </div>
+
+                        {isLoadingRoomTypes ? (
+                            <div className="text-sm text-gray-500 py-2">Loading room types...</div>
+                        ) : roomTypes.length === 0 ? (
+                            <div className="text-sm text-gray-400 italic py-2">
+                                No room types available. Add room types first under the Room Type tab.
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                {roomTypes.map((rt) => {
+                                    const isChecked = selectedRoomTypes.includes(rt.id);
+                                    return (
+                                        <label
+                                            key={rt.id}
+                                            className={`flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer select-none transition-all duration-200 ${
+                                                isChecked
+                                                    ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
+                                                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700"
+                                            }`}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={isChecked}
+                                                onChange={() => {
+                                                    setSelectedRoomTypes(prev =>
+                                                        prev.includes(rt.id)
+                                                            ? prev.filter(id => id !== rt.id)
+                                                            : [...prev, rt.id]
+                                                    );
+                                                }}
+                                                className="w-4 h-4 rounded text-blue-600 border-gray-300 focus:ring-blue-500 accent-blue-600"
+                                                onClick={(e) => e.stopPropagation()}
+                                            />
+                                            <span className="text-sm font-semibold">{rt.type}</span>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
 
                     <div className="flex justify-end gap-4 pt-4">
                         <Link
