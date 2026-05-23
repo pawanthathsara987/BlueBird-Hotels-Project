@@ -16,6 +16,7 @@ import {
 } from '../controllers/manager/tourController.js';
 import { getAirportPickupRequests } from '../controllers/manager/airportPickupController.js';
 import { getDriverPrice, updateDriverPrice } from '../controllers/manager/driverPricingController.js';
+import { getVehicleRentalPolicy, updateVehicleRentalPolicy } from '../controllers/manager/vehicleRentalPolicyController.js';
 import {
     getDrivers,
     getDriver,
@@ -50,6 +51,10 @@ router.get('/airport-pickups', getAirportPickupRequests);
 // Shared driver price
 router.get('/driver-price', getDriverPrice);
 router.put('/driver-price', updateDriverPrice);
+
+// Shared vehicle rental policy and charges
+router.get('/vehicle-rental-policy', getVehicleRentalPolicy);
+router.put('/vehicle-rental-policy', updateVehicleRentalPolicy);
 
 // Drivers CRUD (temporarily unprotected for development)
 router.get('/drivers', getDrivers);

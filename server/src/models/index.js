@@ -15,6 +15,7 @@ import AirPortPickup from './booking/airPortPickupModel.js';
 import Vehicle from "./vehicle/vehicleModel.js";
 import VehicleType from "./vehicle/vehicleTypeModel.js";
 import Role from "./User/Role.js";
+import VehicleRentalPolicy from "./vehicle/vehicleRentalPolicyModel.js";
 import OccupancyType from "./room_package/occupancyTypesModel.js";
 import RoomType from "./room_package/roomTypeModel.js";
 import BoardType from "./room_package/boardType.js";
@@ -214,6 +215,6 @@ export function initModels() {
         as: 'season',
     });
 
-    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, VehicleType, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount };
+    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount };
 }
-export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, VehicleType, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, DriverPricingSetting };
+export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, DriverPricingSetting };
