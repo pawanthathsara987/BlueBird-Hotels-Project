@@ -17,12 +17,12 @@ const AmenitiesView = () => {
     const [showDeletePopup, setShowDeletePopup] = useState(false);
     const [amenityToDelete, setAmenityToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
-    
+
     const getAmenities = async () => {
         setLoading(true);
         try {
-            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/amenitiesroom`);
-            
+            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/amenities`);
+
             if (!response.data || !response.data.data) {
                 setAmenities([]);
                 return;
@@ -33,15 +33,14 @@ const AmenitiesView = () => {
                 return;
             }
 
-
             setAmenities(response.data.data);
 
         } catch (error) {
             console.error("Error fetching amenities:", error);
-            
-            const errorMessage = error.response?.data?.message || 
-                                error.message || 
-                                "Failed to fetch amenities";
+
+            const errorMessage = error.response?.data?.message ||
+                error.message ||
+                "Failed to fetch amenities";
             toast.error(errorMessage);
             setAmenities([]);
         } finally {
@@ -98,15 +97,15 @@ const AmenitiesView = () => {
             <table className="min-w-full bg-white shadow-md rounded-lg">
                 <thead className="bg-gray-200">
                     <tr>
+                        <th className="px-4 py-2">ID</th>
                         <th className="px-4 py-2">Name</th>
-                        <th className="px-4 py-2">Assigned Rooms</th>
                         <th className="px-4 py-2">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {isLoading ? (
                         <tr>
-                            <td colSpan={5} className="py-12 text-center">
+                            <td colSpan={3} className="py-12 text-center">
                                 <div className="flex justify-center items-center">
                                     <span className="w-16 h-16 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></span>
                                 </div>
@@ -114,20 +113,16 @@ const AmenitiesView = () => {
                         </tr>
                     ) : amenities.length === 0 ? (
                         <tr>
-                            <td colSpan={5} className="py-12 text-center text-gray-500">
-                                <p className="text-lg">No Amenities available. Click "Add Amenities" to create one.</p>
+                            <td colSpan={3} className="py-12 text-center text-gray-500">
+                                <p className="text-lg">No Amenities available. Click "Add Amenity" to create one.</p>
                             </td>
                         </tr>
                     ) : (
                         <>
                             {amenities.map((amenity) => (
                                 <tr key={amenity.id} className="text-center border-t">
+                                    <td className="px-4 py-2 font-medium">{amenity.id}</td>
                                     <td className="px-4 py-2 font-medium">{amenity.name}</td>
-                                    <td className="px-4 py-2">
-                                        <span className="bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full">
-                                            {amenity.Assign_Rooms || 0} Rooms
-                                        </span>
-                                    </td>
                                     <td className="px-4 py-2 flex justify-center items-center space-x-5">
                                         <button
                                             onClick={() =>
