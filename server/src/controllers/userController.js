@@ -54,6 +54,24 @@ export async function userLogin(req, res) {
     }
 }
 
+const uploadImageToSupabase = async (file) => {
+    if (!file) return null;
+    const fileName = `${Date.now()}-${file.originalname}`;
+
+    const { error } = await supabase.storage.from("staff-members").upload(
+        `images/${fileName}`,
+        file.buffer,
+        { contentType: file.mimetype, upsert: false }
+    );
+
+    if (error) {
+        throw new Error(`Image upload failed: ${error.message}`);
+    }
+
+    const { data } = supabase.storage.from("staff-members").getPublicUrl(`images/${fileName}`);
+    return data.publicUrl;
+};
+
 export async function registerUser(req, res) {
 
     try {
@@ -61,6 +79,11 @@ export async function registerUser(req, res) {
         const data = req.body;
 
         console.log(req.body);
+
+        let imageUrl = null;
+        if (req.file) {
+            imageUrl = await uploadImageToSupabase(req.file);
+        }
 
         const staffMember = await StaffMember.create(
             {
@@ -71,7 +94,7 @@ export async function registerUser(req, res) {
                 roleId: data.roleId,
                 nicNumber: data.nicNumber,
                 address: data.address,
-                imageUrl: data.imageUrl
+                imageUrl: imageUrl
             }
         );
 
@@ -150,9 +173,38 @@ export async function updateUser(req, res) {
     const userId = req.params.id;
 
     try {
-        await StaffMember.update(req.body, {
+        const data = req.body;
+        let imageUrl = data.imageUrl;
+
+        if (req.file) {
+            imageUrl = await uploadImageToSupabase(req.file);
+
+            const oldStaffMember = await StaffMember.findByPk(userId);
+            if (oldStaffMember && oldStaffMember.imageUrl) {
+                try {
+                    const oldPath = oldStaffMember.imageUrl.split("/staff-members/")[1];
+                    if (oldPath) {
+                        await supabase.storage.from("staff-members").remove([oldPath]);
+                    }
+                } catch (e) {
+                    console.error("Error deleting old profile image:", e);
+                }
+            }
+        }
+
+        await StaffMember.update({
+            name: data.name,
+            userName: data.userName,
+            email: data.email,
+            roleId: data.roleId,
+            phoneNumber: data.phoneNumber,
+            nicNumber: data.nicNumber,
+            address: data.address,
+            imageUrl: imageUrl
+        }, {
             where: { userId: userId }
         });
+
         res.json({ message: "User updated successfully" });
     } catch (error) {
         res.status(500).json({
@@ -179,7 +231,7 @@ export async function deleteUser(req, res) {
             });
 
             if (!staffMember) {
-                return res.status(404).json({ message: "User not found" });
+                return null;
             }
 
             await DeletedStaffMember.create({
@@ -189,7 +241,7 @@ export async function deleteUser(req, res) {
                 roleId: staffMember.Role.roleId,
                 roleName: staffMember.Role.roleName,
                 phoneNumber: staffMember.phoneNumber
-            });
+            }, { transaction });
 
             await UserRegisterModel.destroy({
                 where: { email: staffMember.email },
@@ -202,7 +254,7 @@ export async function deleteUser(req, res) {
             });
         });
 
-        if (!deletedCount) {
+        if (deletedCount === null) {
             return res.status(404).json({ message: "User not found" });
         }
 
