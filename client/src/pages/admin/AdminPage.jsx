@@ -4,7 +4,7 @@ import { MdAdminPanelSettings, MdDashboard, MdBedroomParent, MdBookOnline, MdPeo
 import RoomManagement from "./rooms/roomManagement";
 import AmenitiesForm from "./rooms/AmenitiesForm";
 import RoomForm from "./rooms/RoomForm";
-import PackageForm from "./rooms/PackageForm";
+import RoomTypeForm from "./rooms/RoomTypeForm";
 import PackageImageForm from "./rooms/PackageImageForm";
 import StaffManagement from "./user/StaffManegement";
 import AddNewStaffMember from "./user/AddNewStaffMember";
@@ -15,10 +15,9 @@ export default function AdminPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const sidebarLinkClass = ({ isActive }) =>
-        `flex items-center gap-3 py-3 px-4 text-base font-medium rounded-xl transition-all duration-300 focus:outline-none border-l-4 ${
-            isActive
-                ? "bg-blue-600/10 text-blue-400 border-blue-500 shadow-sm shadow-blue-500/5"
-                : "text-slate-400 border-transparent hover:bg-slate-800/50 hover:text-slate-100 hover:translate-x-1"
+        `flex items-center gap-3 py-3 px-4 text-base font-medium rounded-xl transition-all duration-300 focus:outline-none border-l-4 ${isActive
+            ? "bg-blue-600/10 text-blue-400 border-blue-500 shadow-sm shadow-blue-500/5"
+            : "text-slate-400 border-transparent hover:bg-slate-800/50 hover:text-slate-100 hover:translate-x-1"
         }`;
 
     return (
@@ -124,14 +123,14 @@ export default function AdminPage() {
                     <Route path="/rooms/room/edit" element={<RoomForm />} />
                     <Route path="/rooms/amenities/add" element={<AmenitiesForm />} />
                     <Route path="/rooms/amenities/edit" element={<AmenitiesForm />} />
-                    <Route path="/rooms/packages/add" element={<PackageForm />} />
-                    <Route path="/rooms/packages/edit" element={<PackageForm />} />
+                    <Route path="/rooms/packages/add" element={<RoomTypeForm />} />
+                    <Route path="/rooms/packages/edit" element={<RoomTypeForm />} />
                     <Route path="/rooms/packages/image/add" element={<PackageImageForm />} />
                     <Route path="/bookings" element={<h1 className="p-5">Bookings Management</h1>} />
                     <Route path="/users" element={<StaffManagement />} />
                     <Route path="/users/addStaffMember" element={<AddNewStaffMember />} />
-                    <Route path="/users/updateStaffMember" element={<UpdateStaffMember />}/>
-                    <Route path="/users/viewDeletedStaff" element={<ViewDeletedStaff />}/>
+                    <Route path="/users/updateStaffMember" element={<UpdateStaffMember />} />
+                    <Route path="/users/viewDeletedStaff" element={<ViewDeletedStaff />} />
                     <Route path="/settings" element={<h1 className="p-5">Settings</h1>} />
                 </Routes>
             </div>
