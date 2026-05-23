@@ -50,7 +50,7 @@ export default function RoomManagement() {
                                 : "bg-white text-blue-700 hover:bg-gray-100"}`}
                             onClick={() => saveSelectBtn('packages')}
                         >
-                            Packages
+                            Room Type
                         </button>
                     </div>
                 </div>
