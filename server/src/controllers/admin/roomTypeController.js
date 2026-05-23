@@ -1,9 +1,17 @@
-import { RoomType } from "../../models/index.js";
+import { Amenities, RoomType } from "../../models/index.js";
 
 // get all room types
 const getAllRoomTypes = async (req, res) => {
     try {
-        const roomTypes = await RoomType.findAll();
+        const roomTypes = await RoomType.findAll({
+            include: [
+                {
+                    model: Amenities,
+                    attributes: ["id", "name"],
+                    through: { attributes: [] },
+                },
+            ],
+        });
 
         return res.status(200).json({
             success: true,
