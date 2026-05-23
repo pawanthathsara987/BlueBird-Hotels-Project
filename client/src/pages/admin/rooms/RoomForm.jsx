@@ -15,6 +15,7 @@ function RoomForm() {
     const [selectedAmenities, setSelectedAmenities] = useState([]);
 
     const [packages, setPackages] = useState([]);
+    const [roomTypes, setRoomTypes] = useState([]);
     const [amenities, setAmenities] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -50,6 +51,30 @@ function RoomForm() {
             setSelectedAmenities([]);
         }
     }, [isEditMode, selectedRoom]);
+
+    useEffect(() => {
+        if (!roomType) {
+            if (!isEditMode) {
+                setSelectedAmenities([]);
+            }
+            return;
+        }
+
+        const selectedPackage = packages.find((pkg) => String(pkg.id) === String(roomType));
+        const selectedTypeName = selectedPackage?.pname?.trim().toLowerCase();
+
+        if (!selectedTypeName) {
+            return;
+        }
+
+        const matchedRoomType = roomTypes.find((type) => String(type.type || "").trim().toLowerCase() === selectedTypeName);
+
+        if (matchedRoomType?.Amenities) {
+            setSelectedAmenities(matchedRoomType.Amenities.map((amenity) => amenity.id));
+        } else if (matchedRoomType) {
+            setSelectedAmenities([]);
+        }
+    }, [roomType, packages, roomTypes, isEditMode]);
 
     const isAllSelected = amenities.length > 0 && selectedAmenities.length === amenities.length;
     const handleSelectAll = () => {
@@ -122,18 +147,41 @@ function RoomForm() {
     }
 
     useEffect(() => {
-        async function fetchPackages() {
+        async function fetchPackagesAndTypes() {
             try {
-                const res = await axios.get(import.meta.env.VITE_BACKEND_URL + "/admin/packages");
-                setPackages(res.data.data);
-                console.log("API response:", res.data);
+                const [packagesRes, roomTypesRes] = await Promise.all([
+                    axios.get(import.meta.env.VITE_BACKEND_URL + "/admin/packages"),
+                    axios.get(import.meta.env.VITE_BACKEND_URL + "/admin/room-types"),
+                ]);
+
+                const roomTypeList = roomTypesRes.data?.data || [];
+                setRoomTypes(roomTypeList);
+
+                const packageList = packagesRes.data?.data || [];
+
+                if (packageList.length > 0) {
+                    setPackages(packageList);
+                } else {
+                    setPackages(
+                        roomTypeList.map((roomType) => ({
+                            id: roomType.id,
+                            pname: roomType.type,
+                            discount: 0,
+                        }))
+                    );
+                }
+
+                console.log("API response:", {
+                    packages: packagesRes.data,
+                    roomTypes: roomTypesRes.data,
+                });
 
             } catch (error) {
                 console.error("Error fetching packages:", error);
             }
         }
 
-        fetchPackages();
+        fetchPackagesAndTypes();
 
     }, []);
 
