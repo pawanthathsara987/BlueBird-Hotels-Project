@@ -1,15 +1,130 @@
-import roomModel from "../../models/room/roomModel.js";
-import roomAmenities from "../../models/room/roomAmenities.js";
-import packageModel from "../../models/room/packageModel.js";
-import amenitiesModel from "../../models/room/amenitiesModel.js";
 import { Op } from "sequelize";
+import { Amenities, OccupancyType, Room, RoomAmenities, RoomType } from "../../models/index.js";
+import roomModel from "../../models/room/roomModel.js";
+
+export async function getAllRooms(req, res) {
+    try {
+        const rooms = await roomModel.findAll({
+            include: [
+                {
+                    model: OccupancyType,
+                    as: "occupancyType",
+                },
+                {
+                    model: RoomType,
+                    as: "roomType",
+                },
+                {
+                    model: RoomAmenities,
+                    include: [
+                        {
+                            model: Amenities,
+                        },
+                    ],
+                },
+            ],
+            order: [["id", "DESC"]],
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: rooms.length > 0 ? "Rooms found" : "Rooms not found",
+            count: rooms.length,
+            data: rooms,
+        });
+    } catch (error) {
+        console.error("GET ROOMS ERROR:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch rooms",
+            error: error.message,
+        });
+    }
+}
+
+export async function searchRooms(req, res) {
+    try {
+        const query = String(req.params.query || "").trim();
+
+        const rooms = await roomModel.findAll({
+            where: {
+                [Op.or]: [
+                    { room_number: { [Op.like]: `%${query}%` } },
+                    { status: { [Op.like]: `%${query}%` } },
+                ],
+            },
+            include: [
+                {
+                    model: OccupancyType,
+                    as: "occupancyType",
+                },
+                {
+                    model: RoomType,
+                    as: "roomType",
+                },
+                {
+                    model: RoomAmenities,
+                    include: [
+                        {
+                            model: Amenities,
+                        },
+                    ],
+                },
+            ],
+            order: [["id", "DESC"]],
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: rooms.length > 0 ? "Rooms found" : "Rooms not found",
+            count: rooms.length,
+            data: rooms,
+        });
+    } catch (error) {
+        console.error("SEARCH ROOMS ERROR:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to search rooms",
+            error: error.message,
+        });
+    }
+}
 
 export async function addRoom(req, res) {
 
     try {
-        const { roomNo, status, packageId, amenities } = req.body;
+        const {
+            room_number,
+            roomNumber,
+            occupancy_type_id,
+            occupancyTypeId,
+            room_type_id,
+            roomTypeId,
+            floor,
+            status,
+            kids_allow,
+            kidsAllow,
+            kids,
+            amenities,
+            amenityIds,
+            selectedAmenities,
+        } = req.body;
 
-        if (!roomNo || !status || !packageId) {
+        const resolvedRoomNumber = room_number ?? roomNumber;
+        const resolvedOccupancyTypeId = occupancy_type_id ?? occupancyTypeId;
+        const resolvedRoomTypeId = room_type_id ?? roomTypeId ?? null;
+        const resolvedFloor = floor === "" || floor === undefined ? null : Number(floor);
+        const resolvedKidsAllow = kids_allow ?? kidsAllow ?? false;
+        const resolvedKids = kids === "" || kids === undefined ? null : Number(kids);
+        const resolvedAmenities = Array.isArray(amenities)
+            ? amenities
+            : Array.isArray(amenityIds)
+                ? amenityIds
+                : Array.isArray(selectedAmenities)
+                    ? selectedAmenities
+                    : [];
+
+        if (!resolvedRoomNumber || !resolvedOccupancyTypeId) {
             return res.status(400).json({
                 success: false,
                 message: "Missing required fields"
@@ -17,18 +132,22 @@ export async function addRoom(req, res) {
         }
 
         const newRoom = await roomModel.create({
-            roomNumber: roomNo,
-            status,
-            packageId,
+            room_number: Number(resolvedRoomNumber),
+            occupancy_type_id: Number(resolvedOccupancyTypeId),
+            room_type_id: resolvedRoomTypeId ? Number(resolvedRoomTypeId) : null,
+            floor: Number.isNaN(resolvedFloor) ? null : resolvedFloor,
+            status: status || "available",
+            kids_allow: Boolean(resolvedKidsAllow),
+            kids: Number.isNaN(resolvedKids) ? null : resolvedKids,
         });
 
-        if (amenities && amenities.length > 0) {
-            const records = amenities.map((amenityId) => ({
-                roomId: newRoom.id,
-                amenityId: amenityId,
-            }));
-
-            await roomAmenities.bulkCreate(records);
+        if (resolvedAmenities.length > 0) {
+            await RoomAmenities.bulkCreate(
+                resolvedAmenities.map((amenityId) => ({
+                    roomId: newRoom.id,
+                    amenityId: Number(amenityId),
+                }))
+            );
         }
 
         return res.status(201).json({
@@ -51,52 +170,43 @@ export async function addRoom(req, res) {
 
 }
 
-
-export async function getAllRooms(req, res) {
-    try {
-
-        const rooms = await roomModel.findAll({
-            include: [
-                {
-                    model: packageModel,
-                    attributes: ["id", "pname"]
-                },
-                {
-                    model: roomAmenities,
-                    include: [
-                        {
-                            model: amenitiesModel,
-                            attributes: ["id", "name"]
-                        }
-                    ]
-                }
-            ],
-            order: [["roomNumber", "ASC"]]
-        });
-        return res.json({
-            success: true,
-            data: rooms
-        });
-
-    } catch (error) {
-        console.error("GET ALL ROOMS ERROR:", error);
-        return res.status(500).json({
-            success: false,
-            message: "Failed to fetch rooms",
-            error: error.message
-        });
-    }
-}
-
 export async function updateRoom(req, res) {
     const roomId = req.params.id;
 
     try {
-        const { roomNo, status, packageId, amenities } = req.body;
-        console.log("UPDATE ROOM DATA:", req.body);
+        const {
+            room_number,
+            roomNumber,
+            occupancy_type_id,
+            occupancyTypeId,
+            room_type_id,
+            roomTypeId,
+            floor,
+            status,
+            kids_allow,
+            kidsAllow,
+            kids,
+            amenities,
+            amenityIds,
+            selectedAmenities,
+        } = req.body;
+
+        const resolvedRoomNumber = room_number ?? roomNumber;
+        const resolvedOccupancyTypeId = occupancy_type_id ?? occupancyTypeId;
+        const resolvedRoomTypeId = room_type_id ?? roomTypeId ?? null;
+        const resolvedFloor = floor === "" || floor === undefined ? null : Number(floor);
+        const resolvedKidsAllow = kids_allow ?? kidsAllow ?? false;
+        const resolvedKids = kids === "" || kids === undefined ? null : Number(kids);
+        const resolvedAmenities = Array.isArray(amenities)
+            ? amenities
+            : Array.isArray(amenityIds)
+                ? amenityIds
+                : Array.isArray(selectedAmenities)
+                    ? selectedAmenities
+                    : [];
 
         const existingRoom = await roomModel.findOne({
-            where: { roomNumber: roomNo }
+            where: { room_number: resolvedRoomNumber }
         });
 
         if (existingRoom && existingRoom.id != roomId) {
@@ -108,24 +218,28 @@ export async function updateRoom(req, res) {
 
         await roomModel.update(
             {
-                roomNumber: roomNo,
-                roomStatus: status,
-                packageId,
+                room_number: Number(resolvedRoomNumber),
+                occupancy_type_id: Number(resolvedOccupancyTypeId),
+                room_type_id: resolvedRoomTypeId ? Number(resolvedRoomTypeId) : null,
+                floor: Number.isNaN(resolvedFloor) ? null : resolvedFloor,
+                status: status || "available",
+                kids_allow: Boolean(resolvedKidsAllow),
+                kids: Number.isNaN(resolvedKids) ? null : resolvedKids,
             },
             {
                 where: { id: roomId }
             }
         );
 
-        await roomAmenities.destroy({ where: { roomId } });
+        await RoomAmenities.destroy({ where: { roomId: roomId } });
 
-        if (amenities && amenities.length > 0) {
-            const records = amenities.map((amenityId) => ({
-                roomId,
-                amenityId,
-            }));
-
-            await roomAmenities.bulkCreate(records);
+        if (resolvedAmenities.length > 0) {
+            await RoomAmenities.bulkCreate(
+                resolvedAmenities.map((amenityId) => ({
+                    roomId: roomId,
+                    amenityId: Number(amenityId),
+                }))
+            );
         }
 
         return res.json({
@@ -146,7 +260,6 @@ export async function updateRoom(req, res) {
 export async function deleteRoom(req, res) {
     const roomId = req.params.id;
     try {
-        await roomAmenities.destroy({ where: { roomId } });
         await roomModel.destroy({ where: { id: roomId } });
         return res.json({
             success: true,
@@ -162,39 +275,3 @@ export async function deleteRoom(req, res) {
     }
 }
 
-export async function searchRooms(req, res) {
-
-    const query = req.params.query || "";
-
-    try {
-
-        const rooms = await roomModel.findAll({
-            where: {
-                [Op.or]: [
-                    { roomNumber: { [Op.like]: `%${query}%` } },
-                    { roomStatus: { [Op.like]: `%${query}%` } },
-                    { "$RoomPackage.pname$": { [Op.like]: `%${query}%` } }
-                ]
-            },
-            include: [
-                {
-                    model: packageModel,
-                    attributes: ["id", "pname"],
-                }
-            ]
-        });
-
-        return res.json({
-            success: true,
-            data: rooms
-        });
-
-    } catch (error) {
-        console.error("SEARCH ROOMS ERROR:", error);
-        return res.status(500).json({
-            success: false,
-            message: "Failed to search rooms",
-            error: error.message
-        });
-    }
-}
