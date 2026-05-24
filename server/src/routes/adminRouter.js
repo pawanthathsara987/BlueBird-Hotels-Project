@@ -15,8 +15,9 @@ import {
     getAllPackageimages,
 } from '../controllers/admin/packageImageController.js';
 
-import { addRoom, getAllRooms, updateRoom, deleteRoom, searchRooms } from "../controllers/admin/roomController.js";
+import { addRoom, updateRoom, deleteRoom, getAllRooms, searchRooms } from "../controllers/admin/roomController.js";
 import {getAllRoomTypes, createRoomType, updateRoomType, deleteRoomType } from "../controllers/admin/roomTypeController.js";
+import { getAllOccupancyTypes } from "../controllers/admin/occupancyTypeController.js";
 
 const router = express.Router();
 
@@ -49,10 +50,13 @@ router.post('/room-type', createRoomType);
 router.put('/room-type/:id', updateRoomType);
 router.delete('/room-type/:id', deleteRoomType);
 
+// Occupancy Type routes
+router.get('/occupancy-types', getAllOccupancyTypes);
+
 // Rooms routes
-router.post('/rooms', addRoom);
-router.get('/rooms/search/:query', searchRooms);
 router.get('/rooms', getAllRooms);
+router.get('/rooms/search/:query', searchRooms);
+router.post('/rooms', addRoom);
 router.put('/rooms/:id', updateRoom);
 router.delete('/rooms/:id', deleteRoom);
 
