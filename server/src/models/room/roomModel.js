@@ -10,19 +10,34 @@ Room.init({
         primaryKey: true,
         allowNull: false,
     },
-    packageId: {
+    occupancy_type_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+    },
+    room_type_id: {
         type: DataTypes.INTEGER,
         allowNull: true,
     },
-    roomNumber: {
+    room_number: {
         type: DataTypes.INTEGER,
-        allowNull: false,
-        unique: true,
+        allowNull: true,
     },
-    roomStatus: {
+    floor: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
+    status: {
         type: DataTypes.ENUM("available", "occupied", "maintenance"),
-        allowNull: false,
+        allowNull: true,
         defaultValue: "available",
+    },
+    kids_allow: {
+        type: DataTypes.BOOLEAN,
+        allowNull: true,
+    },
+    kids: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
     },
 }, {
     sequelize,

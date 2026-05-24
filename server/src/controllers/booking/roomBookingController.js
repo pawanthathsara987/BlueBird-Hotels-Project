@@ -1,7 +1,7 @@
 import { col, fn, Op, QueryTypes } from "sequelize";
 import sequelize from "../../config/database.js";
 import { sendEmail, sendBookingConfirmationEmail } from "../../services/emailService.js";
-import { Customer, Room, BookedRoom, RoomPackage, Reservation, AirPortPickup, RoomType, RoomPrice, OccupancyType, BoardType, SeasonalDiscount } from "../../models/index.js";
+import { Customer, Room, BookedRoom, Reservation, AirPortPickup } from "../../models/index.js";
 
 /**
  * Helper to calculate dynamic price for a room stay based on RoomType, OccupancyType, BoardType and SeasonalDiscount.

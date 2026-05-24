@@ -4,7 +4,6 @@ import sequelize from "../config/database.js";
 
 import {
   Room,
-  RoomPackage,
   Tour, // ✅ FIX: you MUST import Tour model
 } from "../models/index.js";
 
