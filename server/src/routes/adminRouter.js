@@ -46,8 +46,8 @@ router.delete('/amenitie/:id', deleteAmenitie);
 
 // Room Type routes
 router.get('/room-types', getAllRoomTypes);
-router.post('/room-type', createRoomType);
-router.put('/room-type/:id', updateRoomType);
+router.post('/room-type', upload.single("image"), createRoomType);
+router.put('/room-type/:id', upload.single("image"), updateRoomType);
 router.delete('/room-type/:id', deleteRoomType);
 
 // Occupancy Type routes
