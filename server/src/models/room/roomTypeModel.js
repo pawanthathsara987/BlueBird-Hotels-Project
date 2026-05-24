@@ -1,7 +1,7 @@
-import {Model, DataTypes} from 'sequelize';
+import { Model, DataTypes } from 'sequelize';
 import sequelize from '../../config/database.js';
 
-class RoomType extends Model {}
+class RoomType extends Model { }
 
 RoomType.init({
     id: {
@@ -15,6 +15,10 @@ RoomType.init({
         allowNull: false,
         unique: true,
     },
+    image_url: {
+        type: DataTypes.STRING,
+        allowNull: true
+    }
 }, {
     sequelize,
     modelName: "RoomType",
