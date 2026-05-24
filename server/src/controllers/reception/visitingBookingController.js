@@ -1,6 +1,6 @@
 import { col, fn, Op, QueryTypes } from "sequelize";
 import sequelize from "../../config/database.js";
-import { Customer, Room, BookedRoom, RoomPackage, Reservation } from "../../models/index.js";
+import { Customer, Room, BookedRoom, Reservation } from "../../models/index.js";
 
 
 // available room list with packages

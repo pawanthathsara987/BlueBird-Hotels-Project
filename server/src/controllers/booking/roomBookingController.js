@@ -1,7 +1,7 @@
 import { col, fn, Op, QueryTypes } from "sequelize";
 import sequelize from "../../config/database.js";
 import { sendEmail, sendBookingConfirmationEmail } from "../../services/emailService.js";
-import { Customer, Room, BookedRoom, RoomPackage, Reservation, AirPortPickup } from "../../models/index.js";
+import { Customer, Room, BookedRoom, Reservation, AirPortPickup } from "../../models/index.js";
 
 
 // available room list with packages

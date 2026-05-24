@@ -1,4 +1,7 @@
 import { Amenities, RoomType } from "../../models/index.js";
+import supabase from "../../config/supabaseClient.js";
+
+const SUPABASE_BUCKET = "room_type";
 
 // get all room types
 const getAllRoomTypes = async (req, res) => {
@@ -40,8 +43,34 @@ const createRoomType = async (req, res) => {
             });
         }
 
+        let imageUrl = null;
+
+        if (req.file) {
+            const fileName = `${Date.now()}-${req.file.originalname}`;
+            const { error: uploadError } = await supabase.storage
+                .from(SUPABASE_BUCKET)
+                .upload(`${type}/${fileName}`, req.file.buffer, {
+                    contentType: req.file.mimetype,
+                });
+
+            if (uploadError) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Image upload failed",
+                    error: uploadError.message,
+                });
+            }
+
+            const { data: publicUrlData } = supabase.storage
+                .from(SUPABASE_BUCKET)
+                .getPublicUrl(`${type}/${fileName}`);
+
+            imageUrl = publicUrlData.publicUrl;
+        }
+
         const roomType = await RoomType.create({
             type: type.trim(),
+            image_url: imageUrl,
         });
 
         return res.status(201).json({
@@ -73,7 +102,48 @@ const updateRoomType = async (req, res) => {
             });
         }
 
-        await roomType.update({ type: type.trim() });
+        const updateData = {};
+        if (type) {
+            updateData.type = type.trim();
+        }
+
+        if (req.file) {
+            // Delete old image from Supabase if exists
+            if (roomType.image_url) {
+                try {
+                    const oldFileName = roomType.image_url.split('/').pop();
+                    await supabase.storage
+                        .from(SUPABASE_BUCKET)
+                        .remove([`${type}/${oldFileName}`]);
+                } catch (err) {
+                    console.error("Error deleting old image:", err);
+                }
+            }
+
+            // Upload new image
+            const fileName = `${Date.now()}-${req.file.originalname}`;
+            const { error: uploadError } = await supabase.storage
+                .from(SUPABASE_BUCKET)
+                .upload(`${type}/${fileName}`, req.file.buffer, {
+                    contentType: req.file.mimetype,
+                });
+
+            if (uploadError) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Image upload failed",
+                    error: uploadError.message,
+                });
+            }
+
+            const { data: publicUrlData } = supabase.storage
+                .from(SUPABASE_BUCKET)
+                .getPublicUrl(`${type}/${fileName}`);
+
+            updateData.image_url = publicUrlData.publicUrl;
+        }
+
+        await roomType.update(updateData);
 
         return res.status(200).json({
             success: true,
@@ -101,6 +171,18 @@ const deleteRoomType = async (req, res) => {
                 success: false,
                 message: "Room type not found",
             });
+        }
+
+        // Delete image from Supabase if exists
+        if (roomType.image_url) {
+            try {
+                const fileName = roomType.image_url.split('/').pop();
+                await supabase.storage
+                    .from(SUPABASE_BUCKET)
+                    .remove([`${type}/${fileName}`]);
+            } catch (err) {
+                console.error("Error deleting image from Supabase:", err);
+            }
         }
 
         await roomType.destroy();
