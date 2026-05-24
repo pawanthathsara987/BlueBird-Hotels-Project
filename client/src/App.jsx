@@ -19,6 +19,8 @@ import BookingSummary from "./pages/client/booking/roombooking/BookingSummary";
 import BookingConfirmation from "./pages/client/booking/roombooking/BookingConfirmation";
 import ContactPage from "./pages/Contact_us";
 import CustomerDashboard from "./pages/client/dashboard/CustomerDashboard";
+import VehicleCatalogPage from "./pages/client/vehicles/VehicleCatalogPage";
+import VehicleDetailsPage from "./pages/client/vehicles/VehicleDetailsPage";
 
 export default function App() {
     return (
@@ -45,6 +47,8 @@ export default function App() {
                         <Route path="/*" element={<HomePage />} />
                         <Route path="/contact" element={<ContactPage />} />
                         <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+                        <Route path="/vehicles" element={<VehicleCatalogPage />} />
+                        <Route path="/vehicles/:id" element={<VehicleDetailsPage />} />
                     </Routes>
                 </div>
             </BrowserRouter>
