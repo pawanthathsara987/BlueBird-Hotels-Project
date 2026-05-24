@@ -1,4 +1,4 @@
-import { PackageImage, RoomPackage } from "../../models/index.js";
+import { PackageImage } from "../../models/index.js";
 import supabase from "../../config/supabaseClient.js";
 
 const SUPABASE_BUCKET = "packages";
