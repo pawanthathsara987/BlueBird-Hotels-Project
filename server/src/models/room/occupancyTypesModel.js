@@ -15,6 +15,10 @@ OccupancyType.init({
         allowNull: false,
         unique: true,
     },
+    capacity: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+    }
 }, {
     sequelize,
     modelName: "OccupancyType",

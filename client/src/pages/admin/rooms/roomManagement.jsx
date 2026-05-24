@@ -1,7 +1,7 @@
-import { Search } from "lucide-react";
+import { Bed, Sparkles, Layers } from "lucide-react";
 import RoomView from './RoomView';
 import AmenitiesView from "./AmenitiesView";
-import PackageView from "./PackageView";
+import RoomTypeView from "./RoomTypeView";
 import { useState } from "react";
 
 export default function RoomManagement() {
@@ -14,58 +14,78 @@ export default function RoomManagement() {
         setSelectBtn(value);
     };
 
-
     return (
-        <div className="relative m-0 p-0 bg-gray-100 min-h-screen">
-            <div>
-                {/* Header */}
-                <div className="p-5 flex justify-between items-center">
-                    <h1 className="text-4xl font-bold">Rooms</h1>
-                    <div className="flex justify-center items-center rounded-full border-2 border-blue-600 p-1 bg-white shadow-md">
+        <div className="min-h-screen bg-slate-50/50 p-6 md:p-8">
+            <div className="max-w-7xl mx-auto space-y-8 animate-fadeIn">
+                
+                {/* Premium Dashboard Header Card */}
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-100">
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2.5 bg-blue-50 text-blue-600 rounded-2xl shadow-sm">
+                                <Bed size={22} className="animate-pulse" />
+                            </div>
+                            <span className="text-[10px] font-bold text-blue-600 tracking-wider uppercase bg-blue-50 px-2.5 py-1 rounded-full">
+                                Hotel Properties
+                            </span>
+                        </div>
+                        <h1 className="text-3xl md:text-4xl font-extrabold text-slate-800 tracking-tight">
+                            Room Management
+                        </h1>
+                    </div>
+
+                    {/* Premium Sliding Pill Tab Switcher */}
+                    <div className="flex items-center p-1.5 bg-slate-100/80 backdrop-blur-md rounded-2xl border border-slate-200/50 w-fit self-start lg:self-center shadow-inner">
                         <button
-                            className={`px-6 py-2 rounded-full text-13px font-bold cursor-pointer
-                                transition-all duration-300 ease-in-out
-                                ${selectBtn == 'room'
-                                ? "bg-blue-600 text-white shadow-lg"
-                                : "bg-white text-blue-700 hover:bg-gray-100"}`}
                             onClick={() => saveSelectBtn('room')}
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 cursor-pointer ${
+                                selectBtn === 'room'
+                                    ? "bg-white text-blue-600 shadow-md shadow-slate-200/50 scale-[1.02]"
+                                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-50/50"
+                            }`}
                         >
-                            Room
+                            <Bed size={16} />
+                            <span>Room</span>
                         </button>
                         <button
-                            className={`px-6 py-2 rounded-full text-13px font-bold cursor-pointer
-                                transition-all duration-300 ease-in-out
-                                ${selectBtn == 'amenities'
-                                ? "bg-blue-600 text-white shadow-lg"
-                                : "bg-white text-blue-700 hover:bg-gray-100"}`}
                             onClick={() => saveSelectBtn('amenities')}
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 cursor-pointer ${
+                                selectBtn === 'amenities'
+                                    ? "bg-white text-blue-600 shadow-md shadow-slate-200/50 scale-[1.02]"
+                                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-50/50"
+                            }`}
                         >
-                            Amenities
+                            <Sparkles size={16} />
+                            <span>Amenities</span>
                         </button>
                         <button
-                            className={`px-6 py-2 rounded-full text-13px font-bold cursor-pointer
-                                transition-all duration-300 ease-in-out
-                                ${selectBtn == 'packages'
-                                ? "bg-blue-600 text-white shadow-lg"
-                                : "bg-white text-blue-700 hover:bg-gray-100"}`}
                             onClick={() => saveSelectBtn('packages')}
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 cursor-pointer ${
+                                selectBtn === 'packages'
+                                    ? "bg-white text-blue-600 shadow-md shadow-slate-200/50 scale-[1.02]"
+                                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-50/50"
+                            }`}
                         >
-                            Packages
+                            <Layers size={16} />
+                            <span>Room Type</span>
                         </button>
                     </div>
                 </div>
 
-                {/* Tab Views */}
-                {selectBtn === 'room' ? (
-                    <RoomView />
-                ) : selectBtn === 'amenities' ? (
-                    <AmenitiesView />
-                ) : (
-                    <PackageView />
-                )}
+                {/* View Container Card */}
+                <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div className="p-1">
+                        {selectBtn === 'room' ? (
+                            <RoomView />
+                        ) : selectBtn === 'amenities' ? (
+                            <AmenitiesView />
+                        ) : (
+                            <RoomTypeView />
+                        )}
+                    </div>
+                </div>
 
             </div>
-
         </div>
     );
 }

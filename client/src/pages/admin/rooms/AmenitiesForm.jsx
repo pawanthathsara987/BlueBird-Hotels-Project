@@ -15,17 +15,42 @@ function AmenitiesForm() {
     const [isLoading, setIsLoading] = useState(false);
     const isEditMode = Boolean(selectedAmenity?.id);
 
+    const [roomTypes, setRoomTypes] = useState([]);
+    const [selectedRoomTypes, setSelectedRoomTypes] = useState([]);
+    const [isLoadingRoomTypes, setIsLoadingRoomTypes] = useState(false);
+
     const goBackToAmenities = () => {
         navigate("/admin/rooms/roomManagement?tab=amenities");
     };
 
+    // Fetch all Room Types on mount
     useEffect(() => {
-        if (isEditMode) {
+        const fetchRoomTypes = async () => {
+            try {
+                setIsLoadingRoomTypes(true);
+                const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/room-types`);
+                setRoomTypes(res.data.data || []);
+            } catch (error) {
+                console.error("Failed to fetch room types:", error);
+                toast.error("Failed to load room types");
+            } finally {
+                setIsLoadingRoomTypes(false);
+            }
+        };
+        fetchRoomTypes();
+    }, []);
+
+    // Set fields and extract pre-existing associations in edit mode
+    useEffect(() => {
+        if (isEditMode && selectedAmenity) {
             setName(selectedAmenity?.name || "");
             setAmenityList([]);
+            const assignedTypeIds = selectedAmenity?.RoomTypes?.map(rt => rt.id) || [];
+            setSelectedRoomTypes(assignedTypeIds);
         } else {
             setName("");
             setAmenityList([]);
+            setSelectedRoomTypes([]);
         }
     }, [isEditMode, selectedAmenity]);
 
@@ -71,6 +96,7 @@ function AmenitiesForm() {
                     `${import.meta.env.VITE_BACKEND_URL}/admin/amenitie`,
                     {
                         name: amenity.name,
+                        roomTypeIds: selectedRoomTypes,
                     }
                 );
             }
@@ -105,6 +131,7 @@ function AmenitiesForm() {
                 `${import.meta.env.VITE_BACKEND_URL}/admin/amenitie/${selectedAmenity.id}`,
                 {
                     name: trimmedName,
+                    roomTypeIds: selectedRoomTypes,
                 }
             );
 
@@ -118,124 +145,185 @@ function AmenitiesForm() {
     };
 
     return (
-        <div className="p-6 bg-gray-50 min-h-screen">
-            <Link
-                to="/admin/rooms/roomManagement?tab=amenities"
-                className="text-gray-600 hover:text-gray-800 mb-4 inline-block"
-            >
-                ← Back
-            </Link>
+        <div className="p-6 bg-slate-50/50 min-h-screen">
+            <div className="max-w-3xl mx-auto space-y-6">
+                <Link
+                    to="/admin/rooms/roomManagement?tab=amenities"
+                    className="text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors inline-block"
+                >
+                    ← Back to Room Management
+                </Link>
 
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-800">
-                    {isEditMode ? "Update Amenity" : "Add Amenities"}
-                </h1>
-                <p className="text-gray-500 mt-1">
-                    {isEditMode
-                        ? "Update the selected amenity details"
-                        : "Add one or more amenities and save them together"}
-                </p>
-            </div>
-
-            <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
-                <div className="bg-[#2c4a6b] p-6 flex items-center gap-4">
-                    <div>
-                        <h2 className="text-lg font-bold text-white">
-                            {isEditMode ? "Amenity Update" : "New Amenities"}
+                <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-8 text-white relative">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+                        <span className="text-[10px] font-bold text-blue-400 tracking-wider uppercase bg-blue-500/15 px-2.5 py-1 rounded-full border border-blue-400/20">
+                            Service Options
+                        </span>
+                        <h2 className="text-2xl font-bold text-white mt-3">
+                            {isEditMode ? "Update Amenity" : "Add Amenities"}
                         </h2>
-                        <p className="text-gray-300 text-sm">
+                        <p className="text-slate-300 text-xs mt-1">
                             {isEditMode
-                                ? "Edit the name, then save changes"
-                                : "Use name to queue amenities"}
+                                ? "Edit the name and room type assignments of this amenity"
+                                : "Create one or multiple amenities, assign them to room types, and save them together"}
                         </p>
                     </div>
-                </div>
 
-                <div className="p-5">
-                    <div className="flex gap-2 mb-3">
-                        <input
-                            type="text"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            onKeyDown={(e) =>
-                                e.key === "Enter" && (isEditMode ? updateAmenity() : handleAdd())
-                            }
-                            placeholder="Amenity name e.g. WiFi"
-                            disabled={isLoading}
-                            className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100"
-                        />
-                        {!isEditMode && (
-                            <button
-                                onClick={handleAdd}
-                                disabled={isLoading}
-                                className="flex items-center gap-1 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <Plus size={16} />
-                                Add
-                            </button>
-                        )}
-                    </div>
-                    <p className="text-xs text-gray-400 mb-4">
-                        {isEditMode
-                            ? "Update this amenity and save changes"
-                            : "Press Enter or click Add to queue amenity"}
-                    </p>
-
-                    {!isEditMode && amenityList.length > 0 ? (
-                        <div className="border border-gray-200 rounded-lg p-3 mb-5 max-h-48 overflow-y-auto bg-gray-50">
-                            <p className="text-xs font-semibold text-gray-500 mb-2">
-                                Queued ({amenityList.length}) - will save all at once
-                            </p>
-                            <div className="flex flex-col gap-2">
-                                {amenityList.map((item) => (
-                                    <div
-                                        key={item.id}
-                                        className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-3 py-2"
+                    <div className="p-8 space-y-6">
+                        <div className="space-y-2">
+                            <label className="block text-sm font-bold text-slate-700">Amenity Name</label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    onKeyDown={(e) =>
+                                        e.key === "Enter" && (isEditMode ? updateAmenity() : handleAdd())
+                                    }
+                                    placeholder="Amenity name e.g. WiFi, Sea View, Mini Bar"
+                                    disabled={isLoading}
+                                    className="flex-1 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 font-medium transition disabled:opacity-50"
+                                />
+                                {!isEditMode && (
+                                    <button
+                                        onClick={handleAdd}
+                                        disabled={isLoading}
+                                        className="flex items-center gap-1.5 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                     >
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm font-medium">{item.name}</span>
-                                        </div>
-                                        <RiDeleteBinLine
-                                            onClick={() => handleRemove(item.id)}
-                                            className="text-red-400 hover:text-red-600 cursor-pointer"
-                                        />
-                                    </div>
-                                ))}
+                                        <Plus size={16} />
+                                        Add
+                                    </button>
+                                )}
                             </div>
+                            <p className="text-[11px] text-slate-400">
+                                {isEditMode
+                                    ? "Update this amenity and save changes"
+                                    : "Press Enter or click Add to queue this amenity"}
+                            </p>
                         </div>
-                    ) : !isEditMode ? (
-                        <div className="border border-dashed border-gray-300 rounded-lg p-4 mb-5 text-center text-gray-400 text-sm">
-                            No amenities added yet. Use the form above to queue them.
-                        </div>
-                    ) : null}
 
-                    {isEditMode && (
-                        <div className="border border-gray-200 rounded-lg p-4 mb-5 text-sm text-gray-600 bg-gray-50">
-                            Editing amenity id: <span className="font-semibold">{selectedAmenity?.id}</span>
-                        </div>
-                    )}
+                        {!isEditMode && amenityList.length > 0 ? (
+                            <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/40 max-h-48 overflow-y-auto">
+                                <p className="text-xs font-bold text-slate-500 mb-2">
+                                    Queued ({amenityList.length}) - will save all at once
+                                </p>
+                                <div className="flex flex-col gap-2">
+                                    {amenityList.map((item) => (
+                                        <div
+                                            key={item.id}
+                                            className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-4 py-2.5 shadow-sm"
+                                        >
+                                            <span className="text-sm font-bold text-slate-700">{item.name}</span>
+                                            <RiDeleteBinLine
+                                                onClick={() => handleRemove(item.id)}
+                                                className="text-slate-400 hover:text-rose-600 cursor-pointer transition-colors"
+                                                size={18}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : !isEditMode ? (
+                            <div className="border border-dashed border-slate-200 rounded-2xl p-6 text-center text-slate-400 text-sm bg-slate-50/20">
+                                No amenities added yet. Use the input field above to add them to the queue.
+                            </div>
+                        ) : null}
 
-                    <div className="flex justify-end gap-4 pt-4">
-                        <Link
-                            to="/admin/rooms/roomManagement?tab=amenities"
-                            className="px-6 py-3 text-gray-700 hover:text-gray-900 font-medium"
-                        >
-                            Cancel
-                        </Link>
-                        <button
-                            onClick={isEditMode ? updateAmenity : saveAmenities}
-                            disabled={isLoading || (!isEditMode && amenityList.length === 0)}
-                            className="px-6 py-3 rounded-lg text-sm font-semibold text-white transition bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                        >
-                            {isLoading ? (
-                                <>
-                                    <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                                    {isEditMode ? "Updating..." : "Saving..."}
-                                </>
+                        {isEditMode && (
+                            <div className="border border-slate-200 rounded-2xl p-4 text-xs font-bold text-slate-500 bg-slate-50/40">
+                                Editing amenity ID: <span className="text-slate-700 font-extrabold">{selectedAmenity?.id}</span>
+                            </div>
+                        )}
+
+                        {/* Room Types selection section */}
+                        <div className="mb-6 border-t border-slate-100 pt-6">
+                            <div className="flex justify-between items-center mb-3">
+                                <label className="block text-sm font-bold text-slate-700">
+                                    Assign to Room Types
+                                    <span className="ml-2 text-xs text-blue-600 font-normal">
+                                        ({selectedRoomTypes.length} selected)
+                                    </span>
+                                </label>
+                                {roomTypes.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (selectedRoomTypes.length === roomTypes.length) {
+                                                setSelectedRoomTypes([]);
+                                            } else {
+                                                setSelectedRoomTypes(roomTypes.map(rt => rt.id));
+                                            }
+                                        }}
+                                        className="text-xs text-blue-600 hover:text-blue-800 font-bold cursor-pointer"
+                                    >
+                                        {selectedRoomTypes.length === roomTypes.length ? "Deselect All" : "Select All"}
+                                    </button>
+                                )}
+                            </div>
+
+                            {isLoadingRoomTypes ? (
+                                <div className="text-sm text-slate-400 py-2">Loading room types...</div>
+                            ) : roomTypes.length === 0 ? (
+                                <div className="text-sm text-slate-400 italic py-2">
+                                    No room types available. Add room types first under the Room Type tab.
+                                </div>
                             ) : (
-                                isEditMode ? "Update Amenity" : `Save All (${amenityList.length})`
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    {roomTypes.map((rt) => {
+                                        const isChecked = selectedRoomTypes.includes(rt.id);
+                                        return (
+                                            <label
+                                                key={rt.id}
+                                                className={`flex items-center gap-3 px-4 py-3 rounded-2xl border cursor-pointer select-none transition-all duration-200 ${
+                                                    isChecked
+                                                        ? "border-blue-500 bg-blue-50/50 text-blue-700 shadow-sm"
+                                                        : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 text-slate-700"
+                                                }`}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isChecked}
+                                                    onChange={() => {
+                                                        setSelectedRoomTypes(prev =>
+                                                            prev.includes(rt.id)
+                                                                ? prev.filter(id => id !== rt.id)
+                                                                : [...prev, rt.id]
+                                                        );
+                                                    }}
+                                                    className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500 accent-blue-600 cursor-pointer"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                />
+                                                <span className="text-sm font-semibold">{rt.type}</span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
                             )}
-                        </button>
+                        </div>
+
+                        <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
+                            <Link
+                                to="/admin/rooms/roomManagement?tab=amenities"
+                                className="px-6 py-3 text-slate-500 hover:text-slate-800 font-bold text-sm rounded-xl transition duration-200"
+                            >
+                                Cancel
+                            </Link>
+                            <button
+                                onClick={isEditMode ? updateAmenity : saveAmenities}
+                                disabled={isLoading || (!isEditMode && amenityList.length === 0)}
+                                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition shadow-md shadow-blue-500/10 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                        {isEditMode ? "Updating..." : "Saving..."}
+                                    </>
+                                ) : (
+                                    isEditMode ? "Update Amenity" : `Save All (${amenityList.length})`
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

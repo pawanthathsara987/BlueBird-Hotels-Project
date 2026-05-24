@@ -1,6 +1,6 @@
 import { col, fn } from "sequelize";
 import multer from "multer";
-import { Room, RoomPackage } from "../../models/index.js";
+import { Room } from "../../models/index.js";
 import supabase from "../../config/supabaseClient.js";
 
 // Configure multer to store in memory (required for Supabase)
