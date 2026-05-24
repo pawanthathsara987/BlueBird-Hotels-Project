@@ -19,6 +19,7 @@ function RoomForm() {
 
     const [occupancyTypes, setOccupancyTypes] = useState([]);
     const [roomTypes, setRoomTypes] = useState([]);
+    const [rooms, setRooms] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
 
     const isEditMode = Boolean(selectedRoom?.id || selectedRoom?.roomNo || selectedRoom?.roomNumber || selectedRoom?.room_number);
@@ -36,10 +37,6 @@ function RoomForm() {
             setStatus((selectedRoom.status || selectedRoom.roomStatus || "available").toString().trim().toLowerCase());
             setKidsAllow(Boolean(selectedRoom.kids_allow ?? selectedRoom.kidsAllow ?? false));
             setKids(selectedRoom.kids === null || selectedRoom.kids === undefined ? "" : String(selectedRoom.kids));
-            const existingAmenities = selectedRoom.RoomAmenities?.map((roomAmenity) => roomAmenity.amenityId)
-                || selectedRoom.roomAmenities?.map((roomAmenity) => roomAmenity.amenityId)
-                || [];
-            setSelectedAmenities(existingAmenities.map((id) => Number(id)));
         } else {
             setRoomNumber("");
             setFloor("");
@@ -54,6 +51,33 @@ function RoomForm() {
 
     const selectedRoomType = roomTypes.find((roomType) => String(roomType.id) === String(roomTypeId));
     const availableAmenities = selectedRoomType?.Amenities || [];
+    const enteredRoomNumber = Number(roomNumber);
+    const isDuplicateRoomNumber = Boolean(
+        roomNumber !== "" &&
+        rooms.some((room) => {
+            const existingRoomNumber = Number(room.room_number ?? room.roomNumber);
+            const sameNumber = existingRoomNumber === enteredRoomNumber;
+            const sameRoom = selectedRoom?.id && String(room.id) === String(selectedRoom.id);
+
+            return sameNumber && !sameRoom;
+        })
+    );
+
+    const selectedOccupancy = occupancyTypes.find((type) => String(type.id) === String(occupancyTypeId));
+    const occupancyCapacity = selectedOccupancy ? Number(selectedOccupancy.capacity || 0) : 0;
+    const kidsCountNum = kids !== "" ? Number(kids) : 0;
+    const isKidsCountInvalid = Boolean(
+        kidsAllow &&
+        occupancyCapacity > 0 &&
+        (kids === "" || Number.isNaN(kidsCountNum) || kidsCountNum < 1 || kidsCountNum + 1 > occupancyCapacity)
+    );
+
+    useEffect(() => {
+        if (occupancyCapacity === 1) {
+            setKidsAllow(false);
+            setKids("");
+        }
+    }, [occupancyCapacity]);
 
     useEffect(() => {
         if (!roomTypeId) {
@@ -61,14 +85,53 @@ function RoomForm() {
             return;
         }
 
-        const validAmenityIds = new Set((selectedRoomType?.Amenities || []).map((amenity) => Number(amenity.id)));
-        setSelectedAmenities((prev) => prev.filter((amenityId) => validAmenityIds.has(Number(amenityId))));
-    }, [roomTypeId, selectedRoomType]);
+        const roomTypeAmenityIds = (selectedRoomType?.Amenities || []).map((amenity) => Number(amenity.id));
+        const existingAmenities = selectedRoom?.RoomAmenities?.map((roomAmenity) => Number(roomAmenity.amenityId ?? roomAmenity.Amenity?.id ?? roomAmenity.amenity?.id))
+            || selectedRoom?.roomAmenities?.map((roomAmenity) => Number(roomAmenity.amenityId ?? roomAmenity.Amenity?.id ?? roomAmenity.amenity?.id))
+            || [];
+
+        if (isEditMode) {
+            if (existingAmenities.length > 0) {
+                setSelectedAmenities(existingAmenities.filter((amenityId) => roomTypeAmenityIds.includes(amenityId)));
+            } else {
+                setSelectedAmenities(roomTypeAmenityIds);
+            }
+            return;
+        }
+
+        setSelectedAmenities((prev) => prev.filter((amenityId) => roomTypeAmenityIds.includes(Number(amenityId))));
+    }, [roomTypeId, selectedRoomType, isEditMode, selectedRoom]);
 
     async function handleSaveRoom() {
         if (!roomNumber || !occupancyTypeId) {
             toast.error("Please fill in all required fields");
             return;
+        }
+
+        if (isDuplicateRoomNumber) {
+            toast.error("This room number already exists");
+            return;
+        }
+
+        if (kidsAllow) {
+            if (kids === "" || kids === undefined) {
+                toast.error("Please enter the allowed kids count");
+                return;
+            }
+            const kidsCount = Number(kids);
+            if (Number.isNaN(kidsCount) || kidsCount < 1) {
+                toast.error("Please enter a valid kids count (at least 1)");
+                return;
+            }
+
+            const selectedOccupancy = occupancyTypes.find((type) => String(type.id) === String(occupancyTypeId));
+            if (selectedOccupancy) {
+                const capacity = Number(selectedOccupancy.capacity || 0);
+                if (kidsCount + 1 > capacity) {
+                    toast.error(`Kids count must be lower than occupancy capacity. Since at least 1 adult is required, the maximum allowed kids count for this occupancy (${capacity} guests) is ${capacity - 1}.`);
+                    return;
+                }
+            }
         }
 
         try {
@@ -111,13 +174,15 @@ function RoomForm() {
     useEffect(() => {
         async function fetchRoomMetadata() {
             try {
-                const [occupancyTypesRes, roomTypesRes] = await Promise.all([
+                const [occupancyTypesRes, roomTypesRes, roomsRes] = await Promise.all([
                     axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/occupancy-types`),
                     axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/room-types`),
+                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/rooms`),
                 ]);
 
                 setOccupancyTypes(occupancyTypesRes.data?.data || []);
                 setRoomTypes(roomTypesRes.data?.data || []);
+                setRooms(roomsRes.data?.data || []);
             } catch (error) {
                 console.error("Error fetching room metadata:", error);
                 toast.error(error?.response?.data?.message || "Failed to load room metadata");
@@ -169,6 +234,11 @@ function RoomForm() {
                                 disabled={isLoading}
                                 className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 font-medium transition disabled:opacity-50"
                             />
+                            {isDuplicateRoomNumber && (
+                                <p className="text-xs font-semibold text-rose-600">
+                                    This room number is already in use. Choose another number.
+                                </p>
+                            )}
                         </div>
 
                         <div className="space-y-2">
@@ -290,20 +360,32 @@ function RoomForm() {
 
                         <div className="space-y-4 border-t border-slate-100 pt-6">
                             <div className="flex items-center justify-between gap-4">
-                                <label className="block text-sm font-bold text-slate-700">Allow Kids</label>
+                                <div className="space-y-0.5">
+                                    <label className="block text-sm font-bold text-slate-700">Allow Kids</label>
+                                    {occupancyCapacity === 1 && (
+                                        <p className="text-[10px] text-slate-400 font-semibold animate-fadeIn">
+                                            Not available for Single occupancy rooms
+                                        </p>
+                                    )}
+                                </div>
                                 <button
                                     type="button"
                                     onClick={() => {
+                                        if (occupancyCapacity === 1) return;
                                         setKidsAllow((prev) => {
                                             const next = !prev;
                                             if (!next) {
                                                 setKids("");
+                                            } else {
+                                                setKids("1"); // Default count is 1
                                             }
                                             return next;
                                         });
                                     }}
-                                    disabled={isLoading}
-                                    className={`relative inline-flex h-7 w-12 items-center rounded-full transition ${kidsAllow ? "bg-blue-600" : "bg-slate-300"}`}
+                                    disabled={isLoading || occupancyCapacity === 1}
+                                    className={`relative inline-flex h-7 w-12 items-center rounded-full transition ${kidsAllow ? "bg-blue-600" : "bg-slate-300"} ${
+                                        occupancyCapacity === 1 ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                                    }`}
                                 >
                                     <span
                                         className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${kidsAllow ? "translate-x-6" : "translate-x-1"}`}
@@ -315,13 +397,25 @@ function RoomForm() {
                                 <label className="block text-sm font-bold text-slate-700">Kids Count</label>
                                 <input
                                     type="number"
-                                    min="0"
+                                    min="1"
                                     value={kids}
                                     onChange={(e) => setKids(e.target.value)}
                                     placeholder="Enter allowed kids count"
-                                    disabled={isLoading || !kidsAllow}
-                                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 font-medium transition disabled:opacity-50"
+                                    disabled={isLoading || !kidsAllow || occupancyCapacity === 1}
+                                    className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 bg-slate-50/50 placeholder-slate-400 font-medium transition disabled:opacity-50 ${
+                                        isKidsCountInvalid
+                                            ? "border-rose-300 focus:ring-rose-500/20 focus:border-rose-500 text-rose-700"
+                                            : "border-slate-200 focus:ring-blue-500/20 focus:border-blue-500 text-slate-700"
+                                    }`}
                                 />
+                                {isKidsCountInvalid && occupancyCapacity > 0 && (
+                                    <p className="text-xs font-semibold text-rose-600 animate-fadeIn">
+                                        {kidsCountNum < 1 
+                                            ? "Kids count must be at least 1 if kids are allowed." 
+                                            : `Kids count must be lower than occupancy capacity. Since at least 1 adult is required, max kids count for this occupancy (${occupancyCapacity} guests) is ${occupancyCapacity - 1}.`
+                                        }
+                                    </p>
+                                )}
                             </div>
                         </div>
 
@@ -353,7 +447,7 @@ function RoomForm() {
                             </Link>
                             <button
                                 onClick={handleSaveRoom}
-                                disabled={isLoading}
+                                disabled={isLoading || isDuplicateRoomNumber || isKidsCountInvalid}
                                 className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition shadow-md shadow-blue-500/10 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
                             >
                                 {isLoading ? (
