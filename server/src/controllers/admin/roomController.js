@@ -131,6 +131,38 @@ export async function addRoom(req, res) {
             });
         }
 
+        if (resolvedKidsAllow) {
+            const occupancyType = await OccupancyType.findByPk(Number(resolvedOccupancyTypeId));
+            if (!occupancyType) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Selected occupancy type not found"
+                });
+            }
+
+            if (occupancyType.capacity === 1) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Kids cannot be allowed in Single occupancy rooms"
+                });
+            }
+
+            const kidsCount = resolvedKids === null ? 0 : Number(resolvedKids);
+            if (Number.isNaN(kidsCount) || kidsCount < 1) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Kids count must be at least 1 when kids are allowed"
+                });
+            }
+
+            if (kidsCount + 1 > occupancyType.capacity) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Kids count must be lower than occupancy capacity. Since at least 1 adult is required, the maximum allowed kids count for this occupancy (${occupancyType.capacity} guests) is ${occupancyType.capacity - 1}.`
+                });
+            }
+        }
+
         const newRoom = await roomModel.create({
             room_number: Number(resolvedRoomNumber),
             occupancy_type_id: Number(resolvedOccupancyTypeId),
@@ -214,6 +246,38 @@ export async function updateRoom(req, res) {
                 success: false,
                 message: "Room number already exists"
             });
+        }
+
+        if (resolvedKidsAllow) {
+            const occupancyType = await OccupancyType.findByPk(Number(resolvedOccupancyTypeId));
+            if (!occupancyType) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Selected occupancy type not found"
+                });
+            }
+
+            if (occupancyType.capacity === 1) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Kids cannot be allowed in Single occupancy rooms"
+                });
+            }
+
+            const kidsCount = resolvedKids === null ? 0 : Number(resolvedKids);
+            if (Number.isNaN(kidsCount) || kidsCount < 1) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Kids count must be at least 1 when kids are allowed"
+                });
+            }
+
+            if (kidsCount + 1 > occupancyType.capacity) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Kids count must be lower than occupancy capacity. Since at least 1 adult is required, the maximum allowed kids count for this occupancy (${occupancyType.capacity} guests) is ${occupancyType.capacity - 1}.`
+                });
+            }
         }
 
         await roomModel.update(
