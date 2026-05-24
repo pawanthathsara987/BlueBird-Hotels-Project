@@ -7,7 +7,9 @@ import {
    updateBooking,
    availableRooms,
    getAvailablePackagesByDate,
-   getAvailableRoomAssignForPackage
+   getAvailableRoomAssignForPackage,
+   getPricingMatrix,
+   checkBookingPrice
 } from '../controllers/booking/roomBookingController.js';
 
 import { createVisitorBooking } from '../controllers/reception/visitingBookingController.js';
@@ -26,6 +28,7 @@ router.get('/availableRooms', availableRooms);
 router.get('/getAllPackages', getAllPackages);
 router.get('/available-packages', getAvailablePackagesByDate);
 router.post('/available-rooms', getAvailableRoomAssignForPackage);
-
+router.get('/pricing-matrix', getPricingMatrix);
+router.post('/check-price', checkBookingPrice);
 
 export default router;

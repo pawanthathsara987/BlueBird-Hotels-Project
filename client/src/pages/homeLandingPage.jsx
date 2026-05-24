@@ -1,5 +1,4 @@
 import ImageCarousel from "../components/imageCarousel";
-import BookingNavigation from "../components/bookingNavigation";
 import RoomPackageCarousel from "../components/RoomPackageCarousel";
 
 export default function HomeLandingPage() {
