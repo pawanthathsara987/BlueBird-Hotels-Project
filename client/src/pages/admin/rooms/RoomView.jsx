@@ -163,12 +163,15 @@ const RoomView = () => {
                             <tr className="border-b border-slate-100 text-left">
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Room Number</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Room Type</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Occupancy</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Floor</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Guests</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Status</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {filteredRooms.map((room) => {
+                             {filteredRooms.map((room) => {
                                 const status = getStatusValue(room);
                                 return (
                                     <tr key={room.id} className="hover:bg-slate-50/50 transition-colors duration-200">
@@ -177,6 +180,37 @@ const RoomView = () => {
                                         </td>
                                         <td className="px-6 py-4 text-sm font-semibold text-slate-500">
                                             {room.roomType?.type || room.RoomType?.type || "N/A"}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm font-semibold text-slate-500">
+                                            {room.occupancyType?.type || room.OccupancyType?.type || "N/A"}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm font-semibold text-slate-500">
+                                            Floor {room.floor ?? "N/A"}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm">
+                                            {(() => {
+                                                const capacity = room.occupancyType?.capacity || room.OccupancyType?.capacity || 0;
+                                                const hasKids = room.kids_allow ?? room.kidsAllow;
+                                                const kidsCount = hasKids ? (room.kids ?? 0) : 0;
+                                                const adultsCount = Math.max(1, capacity - kidsCount);
+
+                                                if (hasKids && kidsCount > 0) {
+                                                    return (
+                                                        <div className="flex flex-col gap-0.5">
+                                                            <span className="text-sm font-semibold text-slate-700">{adultsCount} {adultsCount === 1 ? "Adult" : "Adults"}</span>
+                                                            <span className="text-[11px] font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-md w-fit border border-blue-100/50 mt-0.5">
+                                                                {kidsCount} {kidsCount === 1 ? "Kid" : "Kids"} Allowed
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                }
+
+                                                return (
+                                                    <span className="text-sm font-semibold text-slate-700">
+                                                        {capacity} {capacity === 1 ? "Adult" : "Adults"}
+                                                    </span>
+                                                );
+                                            })()}
                                         </td>
                                         <td className="px-6 py-4 text-sm">
                                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border transition-colors ${
