@@ -53,7 +53,15 @@ const RoomView = () => {
 
     // Memoized filtered rooms based on status filter
     const filteredRooms = useMemo(() => {
-        return rooms.filter((room) => {
+        return rooms
+            .slice()
+            .sort((left, right) => {
+                const leftNumber = Number(left?.room_number ?? left?.roomNumber ?? 0);
+                const rightNumber = Number(right?.room_number ?? right?.roomNumber ?? 0);
+
+                return leftNumber - rightNumber;
+            })
+            .filter((room) => {
             const statusValue = getStatusValue(room);
 
             if (statusFilter === "all") {
@@ -165,10 +173,10 @@ const RoomView = () => {
                                 return (
                                     <tr key={room.id} className="hover:bg-slate-50/50 transition-colors duration-200">
                                         <td className="px-6 py-4 text-sm font-bold text-slate-700">
-                                            Room {room.roomNumber}
+                                            Room {room.room_number ?? room.roomNumber}
                                         </td>
                                         <td className="px-6 py-4 text-sm font-semibold text-slate-500">
-                                            {room.RoomPackage?.pname || "N/A"}
+                                            {room.roomType?.type || room.RoomType?.type || "N/A"}
                                         </td>
                                         <td className="px-6 py-4 text-sm">
                                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border transition-colors ${
