@@ -10,7 +10,7 @@ const RoomTypeView = () => {
 
     const [roomTypes, setRoomTypes] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
-    
+
     const [showDeletePopup, setShowDeletePopup] = useState(false);
     const [typeToDelete, setTypeToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -81,11 +81,11 @@ const RoomTypeView = () => {
             setIsDeleting(false);
         }
     };
-    
+
 
     return (
         <div className="p-4 md:p-6 space-y-6">
-            
+
             {/* Header / Actions section */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/70 p-4 rounded-2xl border border-slate-100">
                 <div>
@@ -129,7 +129,22 @@ const RoomTypeView = () => {
                                         #{rt.id}
                                     </td>
                                     <td className="px-6 py-4 text-sm font-bold text-slate-700">
-                                        {rt.type}
+                                        <div className="flex items-center gap-3">
+                                            {rt.image_url ? (
+                                                <img
+                                                    src={rt.image_url}
+                                                    alt={rt.type}
+                                                    className="w-12 h-10 object-cover rounded-xl border border-slate-100 shadow-sm transition duration-300 hover:scale-105"
+                                                />
+                                            ) : (
+                                                <div className="w-12 h-10 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center text-slate-300">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                </div>
+                                            )}
+                                            <span className="font-semibold text-slate-800">{rt.type}</span>
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end gap-3.5">
