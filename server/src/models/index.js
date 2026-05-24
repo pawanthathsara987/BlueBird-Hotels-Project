@@ -3,7 +3,6 @@ import BookedRoom from "./booking/bookedRoom.js";
 import Booking from "./booking/booking.js";
 import StaffMember from "./User/StaffMember.js";
 import Room from "./room/roomModel.js";
-import RoomPackage from "./room/packageModel.js";
 import Amenities from "./room/amenitiesModel.js";
 import UserRegisterModel from "./User/UserRegisterModel.js";
 import Tour from "./tour_package/tourModel.js";
@@ -76,26 +75,6 @@ export function initModels() {
     AirPortPickup.belongsTo(Customer, {
         foreignKey: "customer_id",
     });
-
-    // Package -> Room
-    RoomPackage.hasMany(Room, {
-        foreignKey: "packageId",
-        onDelete: "CASCADE",
-        onUpdate: "CASCADE",
-    })
-    Room.belongsTo(RoomPackage, {
-        foreignKey: "packageId",
-    })
-
-    // package -> packageImage
-    RoomPackage.hasMany(PackageImage, {
-        foreignKey: "packageId",
-        onDelete: "CASCADE",
-        onUpdate: "CASCADE",
-    })
-    PackageImage.belongsTo(RoomPackage, {
-        foreignKey: "packageId",
-    })
 
     // Room -> RoomAmenities
     Room.hasMany(RoomAmenities, {
@@ -254,6 +233,29 @@ export function initModels() {
         as: 'season',
     });
 
-    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, VehicleType, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities };
+    // Room -> OccupancyType & RoomType associations
+    OccupancyType.hasMany(Room, {
+        foreignKey: 'occupancy_type_id',
+        as: 'rooms',
+        onDelete: 'RESTRICT',
+        onUpdate: 'CASCADE',
+    });
+    Room.belongsTo(OccupancyType, {
+        foreignKey: 'occupancy_type_id',
+        as: 'occupancyType',
+    });
+
+    RoomType.hasMany(Room, {
+        foreignKey: 'room_type_id',
+        as: 'rooms',
+        onDelete: 'RESTRICT',
+        onUpdate: 'CASCADE',
+    });
+    Room.belongsTo(RoomType, {
+        foreignKey: 'room_type_id',
+        as: 'roomType',
+    });
+
+    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, VehicleType, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities };
 }
-export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, RoomPackage, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, VehicleType, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting };
+export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, VehicleType, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting };
