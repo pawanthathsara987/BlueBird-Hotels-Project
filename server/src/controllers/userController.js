@@ -27,7 +27,26 @@ const transporter = nodemailer.createTransport(
 
 export async function userLogin(req, res) {
     try {
-        const { email, password } = req.body;
+        const { email, password, role } = req.body;
+
+        if (role) {
+            const staffMember = await StaffMember.findOne({
+                where: { email: email.trim() },
+                include: [
+                    {
+                        model: Role,
+                        where: { roleName: role }
+                    }
+                ]
+            });
+
+            if (!staffMember) {
+                return res.status(403).json({
+                    message: `You are not authorized to login as a ${role}`
+                });
+            }
+        }
+
         const user = await UserRegisterModel.findOne({ where: { email: email } });
 
         if (!user) {
@@ -310,10 +329,36 @@ export async function searchUsers(req, res) {
 export async function verifyEmail(req, res) {
     try {
 
-        const email = req.body.email;
+        const { email, role } = req.body;
+
+        if (!email) {
+            return res.status(400).json({
+                message: "Email is required"
+            });
+        }
+
+        const targetRole = role || "receptionist";
+
+        const staffMember = await StaffMember.findOne({
+            where: { email: email.trim() },
+            include: [
+                {
+                    model: Role,
+                    where: { roleName: targetRole }
+                }
+            ]
+        });
+
+        if (!staffMember) {
+            return res.json({
+                showLogin: false,
+                showRegister: false,
+                message: `Email is not authorized as a ${targetRole}`
+            });
+        }
 
         const registeredUser = await UserRegisterModel.findOne({
-            where: { email: email }
+            where: { email: email.trim() }
         });
 
         if (registeredUser) {
@@ -323,30 +368,9 @@ export async function verifyEmail(req, res) {
             });
         }
 
-        const staffMember = await StaffMember.findOne({
-            where: {
-                email: email,
-                role: "receptionist"
-            },
-            include: [
-                {
-                    model: Role,
-                    where: { roleName: "receptionist" },
-                }
-            ]
-        });
-
-        if (staffMember) {
-            return res.json({
-                showLogin: false,
-                showRegister: true
-            });
-        }
-
         return res.json({
             showLogin: false,
-            showRegister: false,
-            message: "Email is not allowed"
+            showRegister: true
         });
 
     } catch (error) {
