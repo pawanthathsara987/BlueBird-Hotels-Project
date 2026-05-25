@@ -1,7 +1,7 @@
 import { Model, DataTypes } from 'sequelize';
 import sequelize from '../../config/database.js';
 
-class Booking extends Model {
+class VehicleBooking extends Model {
 
   // ── Computed helpers ──────────────────────────
   get isFullyPaid() {
@@ -14,7 +14,7 @@ class Booking extends Model {
   }
 }
 
-Booking.init(
+VehicleBooking.init(
   {
     id: {
       type: DataTypes.INTEGER,
@@ -34,7 +34,7 @@ Booking.init(
     customerId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      references: { model: 'users', key: 'id' },
+      references: { model: 'customer', key: 'id' },
     },
     vehicleId: {
       type: DataTypes.INTEGER,
@@ -139,8 +139,8 @@ Booking.init(
     },
     balanceCollectedBy: {
       type: DataTypes.INTEGER,
-      allowNull: true,          // Manager who collected — FK → users.id
-      references: { model: 'users', key: 'id' },
+      allowNull: true,          // Manager who collected — FK → staff_members.userId
+      references: { model: 'staff_members', key: 'userId' },
     },
 
     // ── Booking status ────────────────────────────
@@ -182,8 +182,8 @@ Booking.init(
     // ── Cancellation ──────────────────────────────
     cancelledBy: {
       type: DataTypes.INTEGER,
-      allowNull: true,          // FK → users.id (customer or Manager)
-      references: { model: 'users', key: 'id' },
+      allowNull: true,          // FK → staff_members.userId (or customer id depending on actor)
+      references: { model: 'staff_members', key: 'userId' },
     },
     cancelledAt: {
       type: DataTypes.DATE,
@@ -202,10 +202,10 @@ Booking.init(
   },
   {
     sequelize,
-    modelName: 'Booking',
-    tableName: 'bookings',
+    modelName: 'VehicleBooking',
+    tableName: 'vehicle_booking',
     timestamps: true,
   }
 );
 
-export default Booking;
+export default VehicleBooking;

@@ -1,7 +1,7 @@
 import { Model, DataTypes } from 'sequelize';
 import sequelize from '../../config/database.js';
 
-class ServiceLog extends Model {}
+class ServiceLog extends Model { }
 
 ServiceLog.init(
   {
@@ -21,7 +21,7 @@ ServiceLog.init(
     recordedBy: {
       type: DataTypes.INTEGER,
       allowNull: false,              // Manager who logged the service
-      references: { model: 'users', key: 'id' },
+      references: { model: 'staff_members', key: 'userId' },
     },
 
     // ── Service details ───────────────────────────

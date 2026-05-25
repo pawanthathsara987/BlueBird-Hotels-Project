@@ -16,12 +16,12 @@ Checklist.init(
     bookingId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      references: { model: 'bookings', key: 'id' },
+      references: { model: 'vehicle_booking', key: 'id' },
     },
     doneBy: {
       type: DataTypes.INTEGER,
       allowNull: false,              // Manager who completed the checklist
-      references: { model: 'users', key: 'id' },
+      references: { model: 'staff_members', key: 'userId' },
     },
 
     // ── Checklist type ────────────────────────────

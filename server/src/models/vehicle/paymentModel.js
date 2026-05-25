@@ -16,12 +16,12 @@ Payment.init(
     bookingId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      references: { model: 'bookings', key: 'id' },
+      references: { model: 'vehicle_booking', key: 'id' },
     },
     receivedBy: {
       type: DataTypes.INTEGER,
       allowNull: true,               // null for online payments (PayHere)
-      references: { model: 'users', key: 'id' },
+      references: { model: 'staff_members', key: 'userId' },
     },
 
     // ── Payment details ───────────────────────────
