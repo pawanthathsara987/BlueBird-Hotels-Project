@@ -1,7 +1,7 @@
 import { col, fn, Op, QueryTypes } from "sequelize";
 import sequelize from "../../config/database.js";
 import { sendEmail, sendBookingConfirmationEmail } from "../../services/emailService.js";
-import { Customer, Room, BookedRoom, Reservation, AirPortPickup } from "../../models/index.js";
+import { Customer, Room, BookedRoom, Reservation, AirPortPickup, OtherItemPrice, RoomType, Amenities } from "../../models/index.js";
 
 /**
  * Helper to calculate dynamic price for a room stay based on RoomType, OccupancyType, BoardType and SeasonalDiscount.
@@ -338,7 +338,12 @@ const createBooking = async (req, res) => {
             if (!airportPickup.pickupDate || !airportPickup.pickupTime) {
                 throw new Error("Airport pickup date and time are required");
             }
-            calculatedTotalPrice += 50.00;
+            const pickupPriceRecord = await OtherItemPrice.findOne({
+                where: { item_name: { [Op.like]: "%airport pickup%" }, status: true },
+                transaction: t
+            });
+            const pickupPrice = pickupPriceRecord ? parseFloat(pickupPriceRecord.price) : 50.00;
+            calculatedTotalPrice += pickupPrice;
         }
 
         // Compare price discrepancy (tolerance of $1.50 for minor floating point rounding differences)
@@ -419,7 +424,7 @@ const createBooking = async (req, res) => {
                 to: "sandeepal513@gmail.com",
                 subject: "Personal Request",
                 html: "<h1>Personal Request</h1>" +
-                        "<p>Personal Request: " + personalRequest + "</p>",
+                    "<p>Personal Request: " + personalRequest + "</p>",
                 text: personalRequest,
             });
         }
@@ -450,10 +455,10 @@ const getAllBookings = async (req, res) => {
         const bookings = await Reservation.findAll({
             include: [
                 { model: Customer },
-                { 
-                    model: BookedRoom, 
+                {
+                    model: BookedRoom,
                     as: 'bookedRooms',
-                    include: [Room] 
+                    include: [Room]
                 }
             ]
         });
@@ -491,7 +496,7 @@ const updateBooking = async (req, res) => {
         if (!reservation) throw new Error("Reservation not found");
 
         await reservation.update({ status, total_price }, { transaction: t });
-        
+
         await t.commit();
         return res.status(200).json({ success: true, message: "Updated" });
     } catch (error) {
@@ -589,7 +594,7 @@ const getAvailableRoomAssignForPackage = async (req, res) => {
     }
 };
 
-const getAvailablePackagesByDate = async (req, res) => {
+const getAvailableRoomTypesByDate = async (req, res) => {
     try {
         const { checkIn, checkOut } = req.query;
 
@@ -602,40 +607,91 @@ const getAvailablePackagesByDate = async (req, res) => {
 
         const query = `
             SELECT 
-                p.id,
-                p.pname,
-                p.pprice,
-                p.discount,
-                p.pimage,
-                p.maxAdults,
-                p.maxKids,
-                p.description,
-                COUNT(DISTINCT r.id) AS available_room
-            FROM room_package p
-            JOIN room r ON p.id = r.packageId
-            WHERE r.roomStatus = 'available'
+                rt.id AS room_type_id,
+                rt.type AS room_type_name,
+                rt.image_url,
+                rp.occupancyTypeId,
+                rp.boardTypeId,
+                bt.type AS board_type_name,
+                rp.price,
+                COUNT(r.id) AS available_rooms_count,
+                MAX(ot.capacity) AS max_adults,
+                MAX(r.kids) AS max_kids,
+                MAX(r.kids_allow) AS kids_allow
+            FROM room_type rt
+            JOIN room r ON rt.id = r.room_type_id
+            JOIN occupancy_type ot ON r.occupancy_type_id = ot.id
+            JOIN room_price rp ON rt.id = rp.roomTypeId
+            JOIN board_type bt ON rp.boardTypeId = bt.id
+            WHERE r.status = 'available'
+            AND r.occupancy_type_id = rp.occupancyTypeId
             AND r.id NOT IN (
-                SELECT br.room_id
+                SELECT br.room_id 
                 FROM booked_rooms br
-                WHERE br.status NOT IN ('cancelled', 'checked_out')
-                AND br.checkIn < :checkOut
-                AND br.checkOut > :checkIn
+                WHERE br.status IN ('reserved', 'checked_in')
+                    AND br.checkIn < :checkOut
+                    AND br.checkOut > :checkIn
             )
-            GROUP BY p.id
+            GROUP BY 
+                rt.id, 
+                rt.type, 
+                rt.image_url, 
+                rp.occupancyTypeId, 
+                rp.boardTypeId, 
+                bt.type, 
+                rp.price
         `;
 
-        const packagesList = await sequelize.query(query, {
-            replacements: { 
-                checkIn: checkIn, 
-                checkOut: checkOut 
+        const roomTypeList = await sequelize.query(query, {
+            replacements: {
+                checkIn: checkIn,
+                checkOut: checkOut
             },
             type: QueryTypes.SELECT
         });
 
+        // Fetch detailed available physical rooms list to allow client-side room assignment
+        const roomsQuery = `
+            SELECT r.id, r.room_number, r.floor, r.room_type_id, r.kids_allow, r.kids AS max_kids, ot.capacity AS max_adults
+            FROM room r
+            JOIN occupancy_type ot ON r.occupancy_type_id = ot.id
+            WHERE r.status = 'available'
+            AND r.id NOT IN (
+                SELECT br.room_id 
+                FROM booked_rooms br
+                WHERE br.status IN ('reserved', 'checked_in')
+                    AND br.checkIn < :checkOut
+                    AND br.checkOut > :checkIn
+            )
+        `;
+
+        const availableRoomsList = await sequelize.query(roomsQuery, {
+            replacements: {
+                checkIn: checkIn,
+                checkOut: checkOut
+            },
+            type: QueryTypes.SELECT
+        });
+
+        const otherPricesList = await OtherItemPrice.findAll({
+            where: { status: true }
+        });
+
+        const roomTypeAmenitiesList = await RoomType.findAll({
+            include: [{
+                model: Amenities,
+                attributes: ["id", "name"],
+                through: { attributes: [] }
+            }]
+        });
+
         return res.status(200).json({
             success: true,
-            message: packagesList.length > 0 ? "Packages found" : "No packages available",
-            data: packagesList
+            message: roomTypeList.length > 0 ? "Room Types found" : " No Room Types available",
+            data: roomTypeList,
+            availableRooms: availableRoomsList,
+            otherPrices: otherPricesList,
+            roomTypeAmenities: roomTypeAmenitiesList
         });
 
     } catch (error) {
@@ -748,8 +804,12 @@ const checkBookingPrice = async (req, res) => {
 
         let airportPickupSurcharge = 0;
         if (airportPickup?.enabled) {
-            calculatedTotalPrice += 50.00;
-            airportPickupSurcharge = 50.00;
+            const pickupPriceRecord = await OtherItemPrice.findOne({
+                where: { item_name: { [Op.like]: "%airport pickup%" }, status: true }
+            });
+            const pickupPrice = pickupPriceRecord ? parseFloat(pickupPriceRecord.price) : 50.00;
+            calculatedTotalPrice += pickupPrice;
+            airportPickupSurcharge = pickupPrice;
         }
 
         return res.status(200).json({
@@ -778,7 +838,7 @@ export {
     updateBooking,
     availableRooms,
     getAvailableRoomAssignForPackage,
-    getAvailablePackagesByDate,
+    getAvailableRoomTypesByDate,
     getPricingMatrix,
     checkBookingPrice,
     calculateRoomStayPrice

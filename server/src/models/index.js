@@ -9,7 +9,6 @@ import Tour from "./tour_package/tourModel.js";
 import TourItem from "./tour_package/tourItemsModel.js";
 import RoomAmenities from "./room/roomAmenities.js";
 import TourInquiry from "./tour_package/TourInquiry.js";
-import PackageImage from "./room/packageImageModel.js";
 import AirPortPickup from './booking/airPortPickupModel.js';
 import Vehicle from "./vehicle/vehicleModel.js";
 import VehicleType from "./vehicle/vehicleTypeModel.js";
@@ -21,6 +20,7 @@ import SeasonalDiscount from "./room/seasonalDiscount.js";
 import RoomPrice from "./room/roomPrice.js";
 import RoomTypeAmenities from "./room/roomTypeAmenities.js";
 import DriverPricingSetting from "./vehicle/driverpricingmodel.js";
+import OtherItemPrice from "./room/otherItemPrice.js";
 
 
 // Keep `Reservation` alias for backward compatibility with existing controllers
@@ -256,6 +256,6 @@ export function initModels() {
         as: 'roomType',
     });
 
-    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, VehicleType, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities };
+    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, OtherItemPrice };
 }
-export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, VehicleType, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting };
+export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, OtherItemPrice };

@@ -6,15 +6,13 @@ import {
    deleteBookingById,
    updateBooking,
    availableRooms,
-   getAvailablePackagesByDate,
+   getAvailableRoomTypesByDate,
    getAvailableRoomAssignForPackage,
    getPricingMatrix,
    checkBookingPrice
 } from '../controllers/booking/roomBookingController.js';
 
 import { createVisitorBooking } from '../controllers/reception/visitingBookingController.js';
-
-import { getAllPackages } from '../controllers/admin/packageController.js';
 
 const router = express.Router();
 
@@ -25,8 +23,7 @@ router.get('/booking/:id', getBookingById);
 router.delete('/booking/:id', deleteBookingById);
 router.put('/booking/:id', updateBooking);
 router.get('/availableRooms', availableRooms);
-router.get('/getAllPackages', getAllPackages);
-router.get('/available-packages', getAvailablePackagesByDate);
+router.get('/available-packages', getAvailableRoomTypesByDate);
 router.post('/available-rooms', getAvailableRoomAssignForPackage);
 router.get('/pricing-matrix', getPricingMatrix);
 router.post('/check-price', checkBookingPrice);
