@@ -1,4 +1,4 @@
-import DriverPricingSetting from '../../models/vehicle/driverpricingmodel.js';
+import DriverPricingSetting from '../../models/vehicle/driverPricingModel.js';
 
 const SINGLETON_ID = 1;
 
