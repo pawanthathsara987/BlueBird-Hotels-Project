@@ -1,5 +1,6 @@
 import multer from 'multer';
 import Driver from '../../models/vehicle/driverModel.js';
+import VehicleBooking from '../../models/vehicle/VehicleBookingModel.js';
 import supabase from '../../config/supabaseClient.js';
 
 // Multer memory storage for image uploads
@@ -168,6 +169,18 @@ export const deleteDriver = async (req, res) => {
   try {
     const driver = await Driver.findByPk(req.params.id);
     if (!driver) return res.status(404).json({ success: false, message: 'Driver not found' });
+
+    const assignedBooking = await VehicleBooking.findOne({
+      where: { driverId: driver.id },
+      attributes: ['id', 'bookingNo', 'status'],
+    });
+
+    if (assignedBooking) {
+      return res.status(409).json({
+        success: false,
+        message: `Cannot delete driver with assigned booking ${assignedBooking.bookingNo || assignedBooking.id}`,
+      });
+    }
 
     try {
       await deleteImageFromSupabase(driver.driverImage);
