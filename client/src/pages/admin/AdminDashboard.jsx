@@ -57,7 +57,7 @@ export default function AdminDashboard() {
 
     // Enhance room data with visual dashboard statuses mapping to the exact reference image colors
     const enrichedRooms = useMemo(() => {
-        return rooms.map((room, index) => {
+        return rooms.map((room) => {
             let dashboardStatus = "not_booked"; // default white/gray
             
             // Map SQL database statuses to the image legend states
@@ -68,9 +68,16 @@ export default function AdminDashboard() {
             } else if (dbStatus === "maintenance") {
                 dashboardStatus = "canceled"; // solid red
             } else {
-                // To visually match the rich pending state from the reference image,
-                // we'll assign a subset of available rooms as "pending" for a more realistic demo
-                dashboardStatus = (index % 5 === 0) ? "pending" : "not_booked";
+                // Check if the room has an active booking that is in "pending" status
+                const hasPendingBooking = room.bookedRooms?.some(
+                    (br) => br.booking?.status === "pending" && br.status !== "cancelled"
+                );
+                
+                if (hasPendingBooking) {
+                    dashboardStatus = "pending"; // orange/amber pending state
+                } else {
+                    dashboardStatus = "not_booked"; // available (gray/white)
+                }
             }
 
             return {
