@@ -45,6 +45,7 @@ export function initModels() {
     // Room -> BookedRoom
     Room.hasMany(BookedRoom, {
         foreignKey: "room_id",
+        as: "bookedRooms",
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
     });
