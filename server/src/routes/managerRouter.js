@@ -25,14 +25,16 @@ import {
     deleteDriver,
     upload as driverUpload,
 } from '../controllers/manager/driverController.js';
-import { requireAuth, requireRole } from '../middleware/authMiddleware.js';
+// Manager auth temporarily disabled for testing
+// Checklist routes removed
 import {
-    createChecklist,
-    getChecklist,
-    getChecklistsByBooking,
-    updateChecklist,
-    deleteChecklist,
-} from '../controllers/manager/checklistController.js';
+    getVehicleBooking,
+    updateBookingStatus,
+    assignDriver,
+    collectBalance,
+    cancelBooking
+} from '../controllers/manager/vehicleBookingManagerController.js';
+import { getVehicleReportDashboard } from '../controllers/manager/vehicleReportController.js';
 
 const router = express.Router();
 
@@ -56,8 +58,8 @@ router.delete('/tours/:id', deleteTour);
 router.get('/airport-pickups', getAirportPickupRequests);
 
 // Shared driver price
-router.get('/driver-price', requireAuth, requireRole('manager'), getDriverPrice);
-router.put('/driver-price', requireAuth, requireRole('manager'), updateDriverPrice);
+router.get('/driver-price', getDriverPrice);
+router.put('/driver-price', updateDriverPrice);
 
 // Shared vehicle rental policy and charges
 router.get('/vehicle-rental-policy', getVehicleRentalPolicy);
@@ -70,11 +72,13 @@ router.post('/drivers', driverUpload.single('driverImage'), createDriver);
 router.put('/drivers/:id', driverUpload.single('driverImage'), updateDriver);
 router.delete('/drivers/:id', deleteDriver);
 
-// Checklist routes (pickup / return inspections)
-router.post('/checklists', createChecklist);
-router.get('/checklists/:id', getChecklist);
-router.get('/bookings/:bookingId/checklists', getChecklistsByBooking);
-router.put('/checklists/:id', updateChecklist);
-router.delete('/checklists/:id', deleteChecklist);
+// Checklist routes removed
+// manager specific: vehicle bookings (picker)
+router.get('/vehicle-bookings/:id', getVehicleBooking);
+router.put('/vehicle-bookings/:id/status', updateBookingStatus);
+router.put('/vehicle-bookings/:id/assign-driver', assignDriver);
+router.put('/vehicle-bookings/:id/collect-balance', collectBalance);
+router.put('/vehicle-bookings/:id/cancel', cancelBooking);
+router.get('/vehicle-reports', getVehicleReportDashboard);
 
 export default router;

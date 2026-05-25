@@ -25,8 +25,7 @@ import DriverPricingSetting from "./vehicle/driverPricingModel.js";
 import VehicleBooking from "./vehicle/VehicleBookingModel.js";
 import Driver from "./vehicle/driverModel.js";
 import Payment from "./vehicle/paymentModel.js";
-import Checklist from "./vehicle/checklistModel.js";
-import VehicleServiceLog from "./vehicle/vehicleServiceLogModel.js";
+// Checklist and VehicleServiceLog removed per request
 
 
 // Keep `Reservation` alias for backward compatibility with existing controllers
@@ -210,13 +209,7 @@ export function initModels() {
     VehicleBooking.hasMany(Payment, { foreignKey: 'bookingId', as: 'payments', onDelete: 'CASCADE' });
     Payment.belongsTo(VehicleBooking, { foreignKey: 'bookingId', as: 'booking' });
 
-    // VehicleBooking → Checklist
-    VehicleBooking.hasMany(Checklist, { foreignKey: 'bookingId', as: 'checklists', onDelete: 'CASCADE' });
-    Checklist.belongsTo(VehicleBooking, { foreignKey: 'bookingId', as: 'booking' });
-
-    // Vehicle → VehicleServiceLog
-    Vehicle.hasMany(VehicleServiceLog, { foreignKey: 'vehicleId', as: 'serviceLogs', onDelete: 'CASCADE' });
-    VehicleServiceLog.belongsTo(Vehicle, { foreignKey: 'vehicleId', as: 'vehicle' });
+    // Checklist and VehicleServiceLog associations removed
 
     // RoomPrice associations: link pricing to occupancy/room/board/season types
     OccupancyType.hasMany(RoomPrice, {
@@ -287,6 +280,6 @@ export function initModels() {
         as: 'roomType',
     });
 
-    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, VehicleBooking, Driver, Payment, Checklist, VehicleServiceLog, RoomTypeAmenities };
+    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment };
 }
-export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, Checklist, VehicleServiceLog };
+export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, PackageImage, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment };

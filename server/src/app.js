@@ -10,7 +10,6 @@ import chatBot from './controllers/chatController.js';
 import customerRouter from './routes/customerRoutes.js';
 import vehicleRouter from './routes/vehicleRouter.js';
 import vehicleTypeRouter from './routes/vehicleTypeRouter.js';
-import vehicleServiceLogRouter from './routes/vehicleServiceLogRouter.js';
 
 const app = express();
 
@@ -27,8 +26,7 @@ app.use('/api/customers', customerRouter);
 app.use('/api/vehicles', vehicleRouter);
 app.use('/api/vehicle-types', vehicleTypeRouter);
 // Vehicle service logs: nested under vehicles and standalone for log operations
-app.use('/api/vehicles/:vehicleId/service-logs', vehicleServiceLogRouter.nested);
-app.use('/api/service-logs', vehicleServiceLogRouter.standalone);
+// Vehicle service logs removed
 app.post('/api/chat', chatBot);
 
 export default app;
