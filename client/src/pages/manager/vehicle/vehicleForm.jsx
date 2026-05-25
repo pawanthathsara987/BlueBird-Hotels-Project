@@ -48,6 +48,9 @@ const defaultVehicle = {
 	color: "",
 	pricePerDay: "",
 	status: "available",
+	insuranceNo: "",
+	insuranceExpiry: "",
+	revenueLicenseExpiry: "",
 	description: "",
 	image: null,
 	imagePreview: null,
@@ -107,6 +110,9 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 			color: vehicle.color || "",
 			pricePerDay: vehicle.pricePerDay ? String(vehicle.pricePerDay) : "",
 			status: vehicle.status || "available",
+			insuranceNo: vehicle.insuranceNo || "",
+			insuranceExpiry: vehicle.insuranceExpiry || "",
+			revenueLicenseExpiry: vehicle.revenueLicenseExpiry || "",
 			description: vehicle.description || "",
 			image: null,
 			imagePreview: vehicle.image || null,
@@ -154,6 +160,9 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 		if (!form.transmission) nextErrors.transmission = "Transmission is required.";
 		if (!form.color.trim()) nextErrors.color = "Color is required.";
 		if (!form.status) nextErrors.status = "Status is required.";
+		if (!form.insuranceNo.trim()) nextErrors.insuranceNo = "Insurance number is required.";
+		if (!String(form.insuranceExpiry).trim()) nextErrors.insuranceExpiry = "Insurance expiry is required.";
+		if (!String(form.revenueLicenseExpiry).trim()) nextErrors.revenueLicenseExpiry = "Revenue license expiry is required.";
 		if (!form.description.trim()) nextErrors.description = "Description is required.";
 		if (!normalizedFeatures.length) nextErrors.features = "Add at least one feature.";
 		if (!isEditMode && !form.image) nextErrors.image = "Vehicle image is required.";
@@ -231,6 +240,9 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 		formData.append("color", form.color.trim() || null);
 		formData.append("pricePerDay", Number(form.pricePerDay));
 		formData.append("status", form.status);
+		formData.append("insuranceNo", form.insuranceNo.trim());
+		formData.append("insuranceExpiry", form.insuranceExpiry);
+		formData.append("revenueLicenseExpiry", form.revenueLicenseExpiry);
 		formData.append("description", form.description.trim() || null);
 		formData.append(
 			"features",
@@ -438,6 +450,40 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 							<option value="maintenance">Maintenance</option>
 							<option value="retired">Retired</option>
 						</select>
+					</div>
+
+					<div>
+						<FieldLabel text="Insurance No" required error={errors.insuranceNo} />
+						<input
+							type="text"
+							name="insuranceNo"
+							value={form.insuranceNo}
+							onChange={handleChange}
+							className={inputClassName(!!errors.insuranceNo)}
+							placeholder="INS-123456"
+						/>
+					</div>
+
+					<div>
+						<FieldLabel text="Insurance Expiry" required error={errors.insuranceExpiry} />
+						<input
+							type="date"
+							name="insuranceExpiry"
+							value={form.insuranceExpiry}
+							onChange={handleChange}
+							className={inputClassName(!!errors.insuranceExpiry)}
+						/>
+					</div>
+
+					<div>
+						<FieldLabel text="Revenue License Expiry" required error={errors.revenueLicenseExpiry} />
+						<input
+							type="date"
+							name="revenueLicenseExpiry"
+							value={form.revenueLicenseExpiry}
+							onChange={handleChange}
+							className={inputClassName(!!errors.revenueLicenseExpiry)}
+						/>
 					</div>
 				</div>
 

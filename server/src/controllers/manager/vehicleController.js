@@ -116,7 +116,7 @@ const buildVehicleValidationErrors = (body, { requireImage = false, imageFile = 
 
   if (!String(body.plateNumber || '').trim()) errors.plateNumber = 'Plate number is required.';
   if (!String(body.brand || '').trim()) errors.brand = 'Brand is required.';
-  if (!String(body.vehicleType || '').trim()) errors.vehicleType = 'Vehicle type is required.';
+  if (!String(body.vehicleTypeId || '').trim()) errors.vehicleTypeId = 'Vehicle type is required.';
   if (!String(body.model || '').trim()) errors.model = 'Model is required.';
 
   if (!String(body.year || '').trim()) {
@@ -163,6 +163,12 @@ const buildVehicleValidationErrors = (body, { requireImage = false, imageFile = 
     errors.status = 'Select a valid status.';
   }
 
+  if (!String(body.insuranceNo || '').trim()) errors.insuranceNo = 'Insurance number is required.';
+  if (!String(body.insuranceExpiry || '').trim()) errors.insuranceExpiry = 'Insurance expiry is required.';
+  if (!String(body.revenueLicenseExpiry || '').trim()) {
+    errors.revenueLicenseExpiry = 'Revenue license expiry is required.';
+  }
+
   if (!String(body.description || '').trim()) errors.description = 'Description is required.';
   if (!features.length) errors.features = 'Add at least one feature.';
 
@@ -193,7 +199,7 @@ export const getVehicles = async (req, res) => {
     const where = {};
 
     if (status)        where.status       = status;
-    if (vehicleType)   where.vehicleType  = vehicleType;
+    if (vehicleType)   where.vehicleTypeId = vehicleType;
     if (fuelType)      where.fuelType     = fuelType;
     if (transmission)  where.transmission = transmission;
     if (capacity)      where.capacity     = { [Op.gte]: Number(capacity) };
@@ -445,6 +451,21 @@ export const deleteVehicle = async (req, res) => {
     const vehicle = await Vehicle.findByPk(req.params.id);
     if (!vehicle) {
       return res.status(404).json({ success: false, message: 'Vehicle not found' });
+    }
+
+    const activeBooking = await VehicleBooking.findOne({
+      where: {
+        vehicleId: vehicle.id,
+        status: { [Op.in]: BLOCKING_BOOKING_STATUSES },
+      },
+      attributes: ['id', 'bookingNo'],
+    });
+
+    if (activeBooking) {
+      return res.status(409).json({
+        success: false,
+        message: `Cannot delete vehicle with active booking ${activeBooking.bookingNo || activeBooking.id}`,
+      });
     }
 
     // Delete image from Supabase if exists
