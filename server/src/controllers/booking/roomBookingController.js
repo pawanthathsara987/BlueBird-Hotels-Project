@@ -1,7 +1,7 @@
 import { col, fn, Op, QueryTypes } from "sequelize";
 import sequelize from "../../config/database.js";
 import { sendEmail, sendBookingConfirmationEmail } from "../../services/emailService.js";
-import { Customer, Room, BookedRoom, Reservation, AirPortPickup, OtherItemPrice, RoomType, Amenities } from "../../models/index.js";
+import { Customer, Room, BookedRoom, Reservation, AirPortPickup, OtherItemPrice, RoomType, Amenities, Policy } from "../../models/index.js";
 
 /**
  * Helper to calculate dynamic price for a room stay based on RoomType, OccupancyType, BoardType and SeasonalDiscount.
@@ -685,13 +685,30 @@ const getAvailableRoomTypesByDate = async (req, res) => {
             }]
         });
 
+        // Load active policies from DB, seed if empty
+        let policiesList = await Policy.findAll({
+            where: { status: true }
+        });
+
+        if (policiesList.length === 0) {
+            const defaultPolicy = await Policy.create({
+                policy_name: "Default Hotel Policy",
+                cancellation_policy: "Free cancellation up to 48 hours prior to arrival. Cancellations made within 48 hours are subject to a one-night charge.",
+                payment_policy: "No prepayment required. Secure your booking online and pay 50% advance on checkout to hold your luxury stay.",
+                check_in_time: "2:00 PM",
+                check_out_time: "12:00 PM"
+            });
+            policiesList = [defaultPolicy];
+        }
+
         return res.status(200).json({
             success: true,
             message: roomTypeList.length > 0 ? "Room Types found" : " No Room Types available",
             data: roomTypeList,
             availableRooms: availableRoomsList,
             otherPrices: otherPricesList,
-            roomTypeAmenities: roomTypeAmenitiesList
+            roomTypeAmenities: roomTypeAmenitiesList,
+            policies: policiesList
         });
 
     } catch (error) {

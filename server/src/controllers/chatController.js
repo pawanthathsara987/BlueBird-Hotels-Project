@@ -38,18 +38,38 @@ const isRoomQuestion = (message) => {
 
   const keywords = [
     "room",
+    "rooms",
     "suite",
+    "suites",
     "hotel room",
+    "hotel rooms",
     "stay",
+    "stays",
     "night",
+    "nights",
     "check in",
+    "check-in",
     "check out",
+    "check-out",
     "family room",
     "deluxe",
+    "superior",
     "amenity",
+    "amenities",
     "facility",
+    "facilities",
     "bed",
+    "beds",
     "price room",
+    "room price",
+    "room prices",
+    "availability",
+    "available room",
+    "available rooms",
+    "booking room",
+    "book room",
+    "accommodate",
+    "accommodation"
   ];
 
   return keywords.some((k) => text.includes(k));
@@ -128,43 +148,44 @@ const getAllTourPackages = async () => {
 ====================================================== */
 
 const getRoomPackages = async () => {
-  const rows = await RoomPackage.findAll({
-    attributes: [
-      "id",
-      "pname",
-      "pprice",
-      "pimage",
-      "maxAdults",
-      "maxKids",
-      "description",
-    ],
-    include: [
-      {
-        model: Room,
-        attributes: ["id", "roomStatus"],
-        required: false,
-      },
-    ],
+  const query = `
+    SELECT 
+        rt.id AS id,
+        rt.type AS name,
+        rt.image_url AS image,
+        MIN(rp.price) AS price,
+        MAX(ot.capacity) AS maxAdults,
+        MAX(r.kids) AS maxKids,
+        COUNT(r.id) AS availableRooms
+    FROM room_type rt
+    LEFT JOIN room r ON rt.id = r.room_type_id AND r.status = 'available'
+    LEFT JOIN occupancy_type ot ON r.occupancy_type_id = ot.id
+    LEFT JOIN room_price rp ON rt.id = rp.roomTypeId
+    GROUP BY rt.id, rt.type, rt.image_url
+  `;
+  const rows = await sequelize.query(query, {
+    type: QueryTypes.SELECT
   });
 
-  return rows.map((row) => {
-    const plain = row.get({ plain: true });
-
-    const rooms = plain.Rooms || [];
-
-    const availableRooms = rooms.filter(
-      (r) => r.roomStatus === "available",
-    ).length;
+  return rows.map(row => {
+    const norm = (row.name || "").toLowerCase();
+    const description = norm.includes("presidential")
+      ? "The peak of opulent resort living. Features private plunge pool and supreme coastal details."
+      : norm.includes("villa")
+        ? "Private beachfront sanctuary with step-out access to white sands."
+        : norm.includes("suite")
+          ? "Captivating ocean vistas meets refined suite luxury."
+          : "Savor elegant coastal living with custom-crafted designer touches.";
 
     return {
-      id: plain.id,
-      name: plain.pname,
-      price: plain.pprice,
-      image: plain.pimage,
-      maxAdults: plain.maxAdults,
-      maxKids: plain.maxKids,
-      description: plain.description,
-      availableRooms,
+      id: row.id,
+      name: row.name,
+      price: row.price || 250,
+      image: row.image,
+      maxAdults: row.maxAdults || 3,
+      maxKids: row.maxKids || 0,
+      description: description,
+      availableRooms: Number(row.availableRooms || 0)
     };
   });
 };
@@ -179,12 +200,16 @@ const generateReplyWithGemini = async (message, context = null) => {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
   const systemInstruction = `
-        You are BlueBird Hotels assistant.
+        You are BlueBird Hotels assistant, a premium concierge chatbot.
+
+        Your job is to assist guests with inquiries about room availability, prices, capacities, and facilities using the live data provided.
 
         Rules:
-        - Do NOT invent prices
-        - Only use provided data
-        - Be concise
+        - Do NOT invent prices or details. If a room type is not in the data, state that it is not available.
+        - Utilize the provided room data (which includes room names, pricing, maximum occupancy, and available room counts) to answer questions directly.
+        - When asked for cheap rooms or room options for specific numbers of adults/kids, suggest the best fits from the provided room data based on price and maximum occupancy limits.
+        - If rooms are available, encourage the user to click the "Review Package Details" or booking button.
+        - Be concise, elegant, welcoming, and highly professional.
     `;
 
   const prompt = context ? `User: ${message}\n\nData:\n${context}` : message;

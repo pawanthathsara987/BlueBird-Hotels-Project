@@ -6,7 +6,7 @@ import { DateRange } from "react-date-range";
 import { addDays, format } from "date-fns";
 import { Plus, Minus, Calendar, Users, Globe, ChevronDown, ChevronLeft, ChevronRight, Info, Sparkles, Coffee, Utensils, Check, Moon, ArrowRight, Trash2, Lock, Unlock, Car, Clock, ClipboardList } from "lucide-react";
 import toast from "react-hot-toast";
-import RoomDetailsModal from "../../pages/client/booking/roombooking/RoomDetailsModal";
+import RoomDetailsModal from "./RoomDetailsModal";
 
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
@@ -50,7 +50,7 @@ const RoomSelector = () => {
 
   // Global settings
   const [nationality, setNationality] = useState(() => {
-    return location.state?.bookingData?.nationality || "Sri Lankan";
+    return location.state?.bookingData?.nationality || "";
   });
 
   // Extra booking options (Personal requests & airport pickup)
@@ -97,6 +97,9 @@ const RoomSelector = () => {
   // Dynamic Other Prices state
   const [otherPrices, setOtherPrices] = useState([]);
 
+  // Dynamic Hotel Policy state
+  const [policy, setPolicy] = useState(null);
+
   // Dynamic Room Types state
   const [roomTypes, setRoomTypes] = useState([]);
 
@@ -112,9 +115,17 @@ const RoomSelector = () => {
         const result = await response.json();
         if (result && result.success && Array.isArray(result.data)) {
           const physicalRooms = Array.isArray(result.availableRooms) ? result.availableRooms : [];
-          
+
           if (Array.isArray(result.otherPrices)) {
             setOtherPrices(result.otherPrices);
+          }
+
+          const fetchedPolicy = Array.isArray(result.policies) && result.policies.length > 0
+            ? result.policies[0]
+            : null;
+
+          if (fetchedPolicy) {
+            setPolicy(fetchedPolicy);
           }
 
           const amenitiesMap = {};
@@ -144,33 +155,36 @@ const RoomSelector = () => {
           const mapped = uniqueTypesList.map(rt => {
             const name = rt.room_type_name;
             const norm = name.toLowerCase();
-            
+
             // Base price is the Room Only price from the DB, fallback to rt.price or 250
             const priceVal = rt.boardPrices["room only"] || parseFloat(rt.price) || 250;
-            
+
             // Determine max occupancy from backend columns
             const dbMaxAdults = Number(rt.max_adults) || 3;
             const dbMaxKids = Number(rt.max_kids) || 0;
             const dbKidsAllow = !!rt.kids_allow;
-            
+
             // Determine size
             let size = "45 m² / 484 sq ft";
             if (norm.includes("presidential") || norm.includes("grand")) size = "240 m² / 2,583 sq ft";
             else if (norm.includes("villa") || norm.includes("beach")) size = "115 m² / 1,238 sq ft";
             else if (norm.includes("suite") || norm.includes("ocean")) size = "72 m² / 775 sq ft";
 
-            // Policies
-            const cancelPolicy = norm.includes("deluxe")
+            // Policies dynamically populated from DB
+            const cancelPolicy = fetchedPolicy?.cancellation_policy || (norm.includes("deluxe")
               ? "Free cancellation up to 24 hours prior to check-in."
               : norm.includes("suite")
                 ? "Free cancellation up to 48 hours prior to arrival."
-                : "Free cancellation up to 7 days prior to arrival.";
+                : "Free cancellation up to 7 days prior to arrival.");
 
-            const payPolicy = norm.includes("deluxe")
+            const payPolicy = fetchedPolicy?.payment_policy || (norm.includes("deluxe")
               ? "No deposit required. Pay upon arrival at the front desk."
               : norm.includes("suite")
                 ? "Guaranteed booking. Pay on check-in."
-                : "10% refundable deposit required to hold reservation.";
+                : "10% refundable deposit required to hold reservation.");
+
+            const checkInTime = fetchedPolicy?.check_in_time || "2:00 PM";
+            const checkOutTime = fetchedPolicy?.check_out_time || "12:00 PM";
 
             // Dynamic Description & Tagline
             const tagline = norm.includes("presidential")
@@ -207,14 +221,16 @@ const RoomSelector = () => {
               maxAdults: dbMaxAdults,
               maxKids: dbKidsAllow ? dbMaxKids : 0,
               kidsAllow: dbKidsAllow,
-              image: rt.image_url || "https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=600&q=80",
-              images: [rt.image_url || "https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=600&q=80"],
+              image: rt.image_url,
+              images: [rt.image_url],
               price: `$${priceVal}`,
               description,
               tagline,
               roomSize: size,
               cancellationPolicy: cancelPolicy,
               paymentPolicy: payPolicy,
+              checkIn: checkInTime,
+              checkOut: checkOutTime,
               features,
               availableRooms: typeAvailableRooms,
               availableRoomsCount: rt.available_rooms_count,
@@ -560,6 +576,11 @@ const RoomSelector = () => {
   };
 
   const handleFinalBookingSubmit = () => {
+    if (!nationality || nationality === "") {
+      toast.error("Please select your Nationality in the search bar above before proceeding.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     const nights = getStayNights();
 
     // Calculate total nightly rate of all rooms
@@ -678,7 +699,11 @@ const RoomSelector = () => {
             className="flex-1 flex items-center justify-between border border-stone-200/80 bg-white hover:border-emerald-600 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500/20 px-4 py-3.5 rounded-xl transition text-left cursor-pointer group shadow-xs"
           >
             <span className="text-stone-800 font-bold text-sm flex items-center gap-2">
-              {nationality === "Sri Lankan" ? "🇱🇰 Sri Lankan" : "🌐 Non-Sri Lankan"}
+              {nationality === "Sri Lankan" 
+                ? "🇱🇰 Sri Lankan" 
+                : (nationality === "Non Sri Lankan Resident" || nationality === "Non-Sri Lankan" || nationality === "Non Sri Lankan")
+                  ? "🌐 Non-Sri Lankan"
+                  : "❓ Please Select"}
             </span>
             <ChevronDown className={`w-4 h-4 text-stone-400 transition-transform ${showNationalityDropdown ? "rotate-180 text-emerald-800" : "group-hover:text-stone-600"}`} />
           </button>
@@ -1110,8 +1135,8 @@ const RoomSelector = () => {
                       <div className="text-[10px] text-stone-550 font-bold bg-stone-100/50 p-2 rounded-lg flex justify-between items-center border border-stone-200/40 select-none animate-fadeIn">
                         <span>Combined Guest Capacity Limit:</span>
                         <span className={`px-2 py-0.5 rounded text-[10px] font-black border ${(room.adults + room.children) >= (roomTypes.find(t => t.name === room.roomType)?.maxAdults || 0)
-                            ? "bg-rose-50 text-rose-800 border-rose-200/50"
-                            : "bg-emerald-50 text-emerald-800 border-emerald-200/50"
+                          ? "bg-rose-50 text-rose-800 border-rose-200/50"
+                          : "bg-emerald-50 text-emerald-800 border-emerald-200/50"
                           }`}>
                           {room.adults + room.children} / {roomTypes.find(t => t.name === room.roomType)?.maxAdults || 0} Max
                         </span>
@@ -1352,8 +1377,8 @@ const RoomSelector = () => {
                                       <div className="flex flex-col items-end gap-1 shrink-0">
                                         <span className="text-stone-650 bg-stone-100 px-2 py-0.5 rounded text-[10px] font-bold">{type.maxOccupancy} Guests</span>
                                         <span className={`px-2 py-0.5 rounded text-[10px] font-black tracking-wide border ${remainingRoomsCount > 0
-                                            ? "bg-emerald-50 text-emerald-800 border-emerald-250/30"
-                                            : "bg-rose-50 text-rose-800 border-rose-250/30 animate-pulse"
+                                          ? "bg-emerald-50 text-emerald-800 border-emerald-250/30"
+                                          : "bg-rose-50 text-rose-800 border-rose-250/30 animate-pulse"
                                           }`}>
                                           {remainingRoomsCount} Available
                                         </span>
@@ -1591,6 +1616,12 @@ const RoomSelector = () => {
                 </span>
               </div>
             )}
+            <div className="flex flex-col items-end sm:items-start text-right sm:text-left bg-emerald-800 text-white border border-emerald-900/15 px-4.5 py-2.5 rounded-2xl shadow-[0_6px_16px_rgba(6,95,70,0.18)] animate-fadeIn shrink-0">
+              <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-emerald-200 mb-0.5">Total for {getStayNights()} {getStayNights() === 1 ? 'Night' : 'Nights'}</span>
+              <span className="font-black text-lg sm:text-xl tracking-tight text-white">
+                ${(totalNightlyRate * getStayNights() + (airportPickupEnabled ? getAirportPickupPrice() : 0)).toFixed(2)}
+              </span>
+            </div>
           </div>
         )}
 
