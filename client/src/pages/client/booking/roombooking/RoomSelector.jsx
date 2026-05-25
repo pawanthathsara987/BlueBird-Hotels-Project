@@ -6,7 +6,7 @@ import { DateRange } from "react-date-range";
 import { addDays, format } from "date-fns";
 import { Plus, Minus, Calendar, Users, Globe, ChevronDown, ChevronLeft, ChevronRight, Info, Sparkles, Coffee, Utensils, Check, Moon, ArrowRight, Trash2, Lock, Unlock, Car, Clock, ClipboardList } from "lucide-react";
 import toast from "react-hot-toast";
-import RoomDetailsModal from "../../pages/client/booking/roombooking/RoomDetailsModal";
+import RoomDetailsModal from "./RoomDetailsModal";
 
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
