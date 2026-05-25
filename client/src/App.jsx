@@ -21,6 +21,7 @@ import ContactPage from "./pages/Contact_us";
 import CustomerDashboard from "./pages/client/dashboard/CustomerDashboard";
 import VehicleCatalogPage from "./pages/client/vehicles/VehicleCatalogPage";
 import VehicleDetailsPage from "./pages/client/vehicles/VehicleDetailsPage";
+import VehicleBookingPage from "./pages/client/vehicles/VehicleBookingPage";
 
 export default function App() {
     return (
@@ -49,6 +50,7 @@ export default function App() {
                         <Route path="/customer/dashboard" element={<CustomerDashboard />} />
                         <Route path="/vehicles" element={<VehicleCatalogPage />} />
                         <Route path="/vehicles/:id" element={<VehicleDetailsPage />} />
+                        <Route path="/vehicles/:id/book" element={<VehicleBookingPage />} />
                     </Routes>
                 </div>
             </BrowserRouter>
