@@ -64,17 +64,17 @@ router.get('/vehicle-rental-policy', getVehicleRentalPolicy);
 router.put('/vehicle-rental-policy', updateVehicleRentalPolicy);
 
 // Drivers CRUD
-router.get('/drivers', requireAuth, requireRole('manager'), getDrivers);
-router.get('/drivers/:id', requireAuth, requireRole('manager'), getDriver);
-router.post('/drivers', requireAuth, requireRole('manager'), driverUpload.single('driverImage'), createDriver);
-router.put('/drivers/:id', requireAuth, requireRole('manager'), driverUpload.single('driverImage'), updateDriver);
-router.delete('/drivers/:id', requireAuth, requireRole('manager'), deleteDriver);
+router.get('/drivers', getDrivers);
+router.get('/drivers/:id', getDriver);
+router.post('/drivers', driverUpload.single('driverImage'), createDriver);
+router.put('/drivers/:id', driverUpload.single('driverImage'), updateDriver);
+router.delete('/drivers/:id', deleteDriver);
 
 // Checklist routes (pickup / return inspections)
-router.post('/checklists', requireAuth, requireRole('manager'), createChecklist);
-router.get('/checklists/:id', requireAuth, requireRole('manager'), getChecklist);
-router.get('/bookings/:bookingId/checklists', requireAuth, requireRole('manager'), getChecklistsByBooking);
-router.put('/checklists/:id', requireAuth, requireRole('manager'), updateChecklist);
-router.delete('/checklists/:id', requireAuth, requireRole('manager'), deleteChecklist);
+router.post('/checklists', createChecklist);
+router.get('/checklists/:id', getChecklist);
+router.get('/bookings/:bookingId/checklists', getChecklistsByBooking);
+router.put('/checklists/:id', updateChecklist);
+router.delete('/checklists/:id', deleteChecklist);
 
 export default router;

@@ -17,10 +17,10 @@ const router = express.Router();
 
 router.get('/', getVehicles);
 
-// TODO: Protect these with [requireAuth, requireRole('manager')] after login
-router.post('/', upload.single('image'), createVehicle);
-router.put('/:id', upload.single('image'), updateVehicle);
-router.delete('/:id', deleteVehicle);
+// Manager-only vehicle write operations
+router.post('/', requireAuth, requireRole('manager'), upload.single('image'), createVehicle);
+router.put('/:id', requireAuth, requireRole('manager'), upload.single('image'), updateVehicle);
+router.delete('/:id', requireAuth, requireRole('manager'), deleteVehicle);
 
 router.get('/:id/availability', checkAvailability);
 router.get('/:id', getVehicle);
