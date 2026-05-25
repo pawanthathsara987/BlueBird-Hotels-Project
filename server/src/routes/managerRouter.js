@@ -26,6 +26,13 @@ import {
     upload as driverUpload,
 } from '../controllers/manager/driverController.js';
 import { requireAuth, requireRole } from '../middleware/authMiddleware.js';
+import {
+    createChecklist,
+    getChecklist,
+    getChecklistsByBooking,
+    updateChecklist,
+    deleteChecklist,
+} from '../controllers/manager/checklistController.js';
 
 const router = express.Router();
 
@@ -49,18 +56,25 @@ router.delete('/tours/:id', deleteTour);
 router.get('/airport-pickups', getAirportPickupRequests);
 
 // Shared driver price
-router.get('/driver-price', getDriverPrice);
-router.put('/driver-price', updateDriverPrice);
+router.get('/driver-price', requireAuth, requireRole('manager'), getDriverPrice);
+router.put('/driver-price', requireAuth, requireRole('manager'), updateDriverPrice);
 
 // Shared vehicle rental policy and charges
 router.get('/vehicle-rental-policy', getVehicleRentalPolicy);
 router.put('/vehicle-rental-policy', updateVehicleRentalPolicy);
 
-// Drivers CRUD (temporarily unprotected for development)
-router.get('/drivers', getDrivers);
-router.get('/drivers/:id', getDriver);
-router.post('/drivers', driverUpload.single('driverImage'), createDriver);
-router.put('/drivers/:id', driverUpload.single('driverImage'), updateDriver);
-router.delete('/drivers/:id', deleteDriver);
+// Drivers CRUD
+router.get('/drivers', requireAuth, requireRole('manager'), getDrivers);
+router.get('/drivers/:id', requireAuth, requireRole('manager'), getDriver);
+router.post('/drivers', requireAuth, requireRole('manager'), driverUpload.single('driverImage'), createDriver);
+router.put('/drivers/:id', requireAuth, requireRole('manager'), driverUpload.single('driverImage'), updateDriver);
+router.delete('/drivers/:id', requireAuth, requireRole('manager'), deleteDriver);
+
+// Checklist routes (pickup / return inspections)
+router.post('/checklists', requireAuth, requireRole('manager'), createChecklist);
+router.get('/checklists/:id', requireAuth, requireRole('manager'), getChecklist);
+router.get('/bookings/:bookingId/checklists', requireAuth, requireRole('manager'), getChecklistsByBooking);
+router.put('/checklists/:id', requireAuth, requireRole('manager'), updateChecklist);
+router.delete('/checklists/:id', requireAuth, requireRole('manager'), deleteChecklist);
 
 export default router;

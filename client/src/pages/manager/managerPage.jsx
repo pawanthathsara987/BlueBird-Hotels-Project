@@ -11,11 +11,14 @@ import TourManagement from "./tours/tourManagement";
 import TourInquiriesManagement from "./TourInquiriesManagement";
 import ManagerDashboard from "./ManagerDashboard";
 import VehicleManagement from "./vehicle/VehicleManagement";
+import ServiceLogs from "./vehicle/ServiceLogs";
+import AllServiceLogs from "./vehicle/AllServiceLogs";
 import DriversManagement from "./vehicle/DriversManagement";
 import VehicleRentalPolicy from "./vehicle/VehicleRentalPolicy";
+import Checklist from "./vehicle/Checklist";
 
 export default function ManagerPage() {
-    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(true);
 
     return (
         <div className="w-full h-screen flex relative">
@@ -43,11 +46,13 @@ export default function ManagerPage() {
                     <a href="#tour-section" className="px-3 py-2 text-sm font-semibold text-white/50">Tour Booking</a>
                     <Link to="/manager/tour-inquiries" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-base text-white/70 hover:text-white hover:bg-white/10 rounded ml-4"><Inbox className="w-5 h-5" /> Inquiries</Link>
                     <Link to="/manager/vehicles" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded"><MdLoop className="text-2xl" /> Vehicles</Link>
+                    <Link to="/manager/service-logs" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded"><MdLoop className="text-2xl" /> Service Logs</Link>
                     <Link to="/manager/drivers" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded"><Inbox className="w-5 h-5" /> Drivers</Link>
-                    <Link to="/manager/vehicle-policy" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded">
-                        <MdLoop className="text-2xl" /> Rental Policy
-                    </Link>
-                    <Link to="/manager/reports" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded"><MdAssessment className="text-2xl" /> Reports</Link>
+                                        <Link to="/manager/vehicle-policy" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded">
+                                                <MdLoop className="text-2xl" /> Rental Policy
+                                        </Link>
+                                        <Link to="/manager/returns" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded">📝 Checklist</Link>
+                                        <Link to="/manager/reports" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded"><MdAssessment className="text-2xl" /> Reports</Link>
                     <Link to="/logout" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded"><MdLogout className="text-2xl" /> Logout</Link>
                 </div>
             </div>
@@ -60,6 +65,11 @@ export default function ManagerPage() {
                     <Route path="/tours/edit/:id" element={<TourEdit />} />
                     <Route path="/tour-inquiries" element={<TourInquiriesManagement />} />
                     <Route path="/vehicles" element={<VehicleManagement />} />
+                    <Route path="/service-logs" element={<AllServiceLogs />} />
+                    <Route path="/vehicles/logs/:vehicleId" element={<ServiceLogs />} />
+                    {/* Returns / Checklist route (absolute and relative) */}
+                    <Route path="/manager/returns" element={<Checklist />} />
+                    <Route path="/returns" element={<Checklist />} />
                     <Route path="/drivers" element={<DriversManagement />} />
                     <Route path="/vehicle-policy" element={<VehicleRentalPolicy />} />
                     <Route path="/reports" element={<h1 className="text-2xl font-bold">View Reports</h1>} />
