@@ -3,7 +3,17 @@ import { Op } from 'sequelize';
 import multer from 'multer';
 import sequelize from '../../config/database.js';
 import Vehicle from '../../models/vehicle/vehicleModel.js';
+import VehicleBooking from '../../models/vehicle/VehicleBookingModel.js';
 import supabase from '../../config/supabaseClient.js';
+import DriverPricingSetting from '../../models/vehicle/driverPricingModel.js';
+
+const BLOCKING_BOOKING_STATUSES = [
+  'pending_payment',
+  'confirmed',
+  'driver_assigned',
+  'balance_paid',
+  'ongoing',
+];
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 const calcDays = (pickupDate, returnDate) => {
@@ -79,7 +89,7 @@ const parseFeatures = (features) => {
 
 const ALLOWED_FUEL_TYPES = ['petrol', 'diesel', 'electric', 'hybrid'];
 const ALLOWED_TRANSMISSIONS = ['automatic', 'manual'];
-const ALLOWED_STATUSES = ['available', 'unavailable', 'maintenance', 'retired'];
+const ALLOWED_STATUSES = ['available', 'booked', 'maintenance', 'retired'];
 
 const getVehicleTableColumns = async () => {
   try {
@@ -221,11 +231,11 @@ export const getVehicle = async (req, res) => {
   }
 };
 
-// GET /api/vehicles/:id/availability?pickup=YYYY-MM-DD&return=YYYY-MM-DD
+// GET /api/vehicles/:id/availability?pickup=YYYY-MM-DD&return=YYYY-MM-DD&withDriver=true
 // Public — check if vehicle is free for a date range + return total price
 export const checkAvailability = async (req, res) => {
   try {
-    const { pickup, return: returnDate } = req.query;
+    const { pickup, return: returnDate, withDriver } = req.query;
 
     if (!pickup || !returnDate) {
       return res.status(400).json({
@@ -234,7 +244,17 @@ export const checkAvailability = async (req, res) => {
       });
     }
 
-    const days = calcDays(pickup, returnDate);
+    const pickupDate = new Date(pickup);
+    const returnDateObj = new Date(returnDate);
+
+    if (Number.isNaN(pickupDate.getTime()) || Number.isNaN(returnDateObj.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'pickup and return must be valid dates',
+      });
+    }
+
+    const days = calcDays(pickupDate, returnDateObj);
     if (days < 1) {
       return res.status(400).json({
         success: false,
@@ -259,16 +279,54 @@ export const checkAvailability = async (req, res) => {
       });
     }
 
-    const available = vehicle.status === 'available';
-    const totalPrice = available ? (days * parseFloat(vehicle.pricePerDay)).toFixed(2) : null;
+    const overlappingBooking = await VehicleBooking.findOne({
+      where: {
+        vehicleId: Number(req.params.id),
+        status: { [Op.in]: BLOCKING_BOOKING_STATUSES },
+        pickupDatetime: { [Op.lt]: returnDateObj },
+        returnDatetime: { [Op.gt]: pickupDate },
+      },
+      attributes: ['bookingNo'],
+    });
+
+    if (overlappingBooking) {
+      return res.json({
+        success: true,
+        data: {
+          available: false,
+          reason: 'Vehicle already has a booking for the selected date range',
+          conflictingBookingNo: overlappingBooking.bookingNo,
+          days,
+          totalPrice: null,
+        },
+      });
+    }
+
+    let driverFee = 0;
+    if (withDriver === 'true' || withDriver === true) {
+      const driverSetting = await DriverPricingSetting.findByPk(1);
+      driverFee = driverSetting ? parseFloat(driverSetting.driverPricePerDay || 0) : 0;
+    }
+
+    const vehicleRate = parseFloat(vehicle.pricePerDay || 0);
+    const subtotal = (vehicleRate + driverFee) * days;
+    const totalPrice = parseFloat(subtotal.toFixed(2));
+
+    const depositPercentage = 30;
+    const depositAmount = parseFloat(((totalPrice * depositPercentage) / 100).toFixed(2));
+    const balanceAmount = parseFloat((totalPrice - depositAmount).toFixed(2));
 
     res.json({
       success: true,
       data: {
-        available,
+        available: true,
         days,
-        pricePerDay: vehicle.pricePerDay,
-        totalPrice,
+        pricePerDay: vehicleRate.toFixed(2),
+        driverFee: driverFee > 0 ? (driverFee * days).toFixed(2) : null,
+        totalPrice: totalPrice.toFixed(2),
+        depositPercentage,
+        depositAmount: depositAmount.toFixed(2),
+        balanceAmount: balanceAmount.toFixed(2),
       },
     });
   } catch (err) {
