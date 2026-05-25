@@ -59,6 +59,18 @@ const BookingSummary = () => {
     const handleConfirmBooking = async () => {
         setIsProcessing(true);
         try {
+            const token = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
+            if (!token) {
+                // User is not logged in! Redirect to dedicated guest details collection page.
+                navigate("/booking-details", {
+                    state: {
+                        bookingData,
+                        selectedRooms,
+                    }
+                });
+                return;
+            }
+
             navigate("/payment", {
                 state: {
                     bookingData,

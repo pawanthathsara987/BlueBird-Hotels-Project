@@ -2,7 +2,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import HomePage from "./pages/homePage";
 import ReceptionistLogin from "./pages/admin/ReceptionistLogin";
 import ManagerLogin from "./pages/admin/ManagerLogin";
-import CustomerRegister from "./pages/CustomerRegister";
+import CustomerLoginPage from "./pages/auth/CustomerLoginPage";
+import CustomerRegister from "./pages/auth/CustomerRegister";
 import AdminPage from "./pages/admin/AdminPage";
 import PasswordResetPage from "./pages/reception/PasswordResetPage";
 import CustomerPasswordResetPage from "./pages/client/PasswordResetPage";
@@ -14,12 +15,12 @@ import TourViewPage from "./pages/client/booking/tourbooking/TourViewing";
 import TourDetailsPage from "./pages/client/booking/tourbooking/TourDetailsPage";
 import TourInquiryPage from "./pages/client/booking/tourbooking/TourInquiryPage";
 import RoomPaymentPage from "./pages/client/booking/roombooking/RoomPayment";
-import CustomerLoginPage from "./pages/CustomerLoginPage";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import BookingSummary from "./pages/client/booking/roombooking/BookingSummary";
 import BookingConfirmation from "./pages/client/booking/roombooking/BookingConfirmation";
 import ContactPage from "./pages/Contact_us";
 import CustomerDashboard from "./pages/client/dashboard/CustomerDashboard";
+import CustomerDetailsPage from "./pages/client/booking/roombooking/CustomerDetailsPage";
 
 export default function App() {
     return (
@@ -30,6 +31,7 @@ export default function App() {
                     <Routes>
                         <Route path="/booking" element={<BookingRoom />} />
                         <Route path="/booking-summary" element={<BookingSummary />} />
+                        <Route path="/booking-details" element={<CustomerDetailsPage />} />
                         <Route path="/booking-confirm" element={<BookingConfirmation />} />
                         <Route path="/booking/tour" element={<TourViewPage />} />
                         <Route path="/booking/tour-details" element={<TourDetailsPage />} />

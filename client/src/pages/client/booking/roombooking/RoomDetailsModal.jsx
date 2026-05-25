@@ -221,15 +221,6 @@ export default function RoomDetailsModal({ selectedRoom, onClose }) {
                   {roomDescription2}
                 </p>
               </div>
-
-              {/* Star Rating Badge */}
-              <div className="flex items-center gap-2 bg-amber-50 border border-amber-100 rounded-2xl p-2 px-3.5 self-start shrink-0">
-                <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                <div className="leading-tight">
-                  <p className="text-xs font-black text-stone-900">4.9 / 5</p>
-                  <p className="text-xs font-bold text-stone-500 uppercase tracking-wider">Premium rated</p>
-                </div>
-              </div>
             </div>
 
             {/* Comprehensive Room Description */}
