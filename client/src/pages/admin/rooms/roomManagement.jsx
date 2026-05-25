@@ -1,7 +1,8 @@
-import { Bed, Sparkles, Layers } from "lucide-react";
+import { Bed, Sparkles, Layers, DollarSign } from "lucide-react";
 import RoomView from './RoomView';
 import AmenitiesView from "./AmenitiesView";
 import RoomTypeView from "./RoomTypeView";
+import RoomPriceView from "./RoomPriceView";
 import { useState } from "react";
 
 export default function RoomManagement() {
@@ -69,6 +70,17 @@ export default function RoomManagement() {
                             <Layers size={16} />
                             <span>Room Type</span>
                         </button>
+                        <button
+                            onClick={() => saveSelectBtn('prices')}
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 cursor-pointer ${
+                                selectBtn === 'prices'
+                                    ? "bg-white text-blue-600 shadow-md shadow-slate-200/50 scale-[1.02]"
+                                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-50/50"
+                            }`}
+                        >
+                            <DollarSign size={16} />
+                            <span>Room Price</span>
+                        </button>
                     </div>
                 </div>
 
@@ -79,8 +91,10 @@ export default function RoomManagement() {
                             <RoomView />
                         ) : selectBtn === 'amenities' ? (
                             <AmenitiesView />
-                        ) : (
+                        ) : selectBtn === 'packages' ? (
                             <RoomTypeView />
+                        ) : (
+                            <RoomPriceView />
                         )}
                     </div>
                 </div>
