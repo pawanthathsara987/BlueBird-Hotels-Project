@@ -4,7 +4,7 @@ import Logo from "../../assets/bluebird logo.png";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 
-export default function ReceptionistLogin() {
+export default function ManagerLogin() {
 
     const [emailVerified, setEmailVerified] = useState(false);
     const [shouldRegister, setShouldRegister] = useState(false);
@@ -29,7 +29,7 @@ export default function ReceptionistLogin() {
 
             const res = await axios.post(
                 import.meta.env.VITE_BACKEND_URL + "/users/verify-email",
-                { email: email.trim(), role: "receptionist" }
+                { email: email.trim(), role: "manager" }
             );
 
             const showLogin = res?.data?.showLogin;
@@ -68,11 +68,11 @@ export default function ReceptionistLogin() {
             const res = await axios.post(import.meta.env.VITE_BACKEND_URL + "/users/login", {
                 email: email,
                 password: password,
-                role: "receptionist"
+                role: "manager"
             });
 
             toast.success(res?.data?.message || "Login successful.");
-            navigate("/reception");
+            navigate("/manager");
         } catch (error) {
             toast.error(error?.response?.data?.message || "Login failed.");
         }
@@ -116,14 +116,14 @@ export default function ReceptionistLogin() {
                     <img src={Logo} alt="Logo" className="w-28 mx-auto object-contain transition hover:scale-105 duration-300" />
                     
                     <div className="space-y-1">
-                        <span className="inline-block px-3 py-1 text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-full tracking-wider uppercase">
-                            Front Desk Portal
+                        <span className="inline-block px-3 py-1 text-[10px] font-bold text-violet-600 bg-violet-50 border border-violet-100 rounded-full tracking-wider uppercase">
+                            Management Portal
                         </span>
                         <h2 className="text-xl font-bold text-slate-800 tracking-tight pt-1">
-                            Receptionist Login
+                            Manager Login
                         </h2>
                         <p className="text-slate-400 text-xs font-medium">
-                            Verify your credentials to access the receptionist console
+                            Verify your credentials to access the manager console
                         </p>
                     </div>
                 </div>
@@ -140,7 +140,7 @@ export default function ReceptionistLogin() {
                             disabled={emailVerified}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="username@bluebird.com"
-                            className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200 disabled:opacity-75 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                            className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200 disabled:opacity-75 disabled:bg-slate-100 disabled:cursor-not-allowed"
                         />
                     </div>
 
@@ -149,7 +149,7 @@ export default function ReceptionistLogin() {
                         <button
                             onClick={handleVerifyEmail}
                             disabled={isVerifying}
-                            className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl transition duration-200 shadow-md shadow-blue-500/10 hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer mt-2"
+                            className="w-full h-11 bg-violet-600 hover:bg-violet-700 text-white font-bold text-sm rounded-xl transition duration-200 shadow-md shadow-violet-500/10 hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer mt-2"
                         >
                             {isVerifying ? (
                                 <div className="flex items-center gap-2">
@@ -183,7 +183,7 @@ export default function ReceptionistLogin() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="Create password"
-                                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200"
+                                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200"
                                 />
                             </div>
                             <div className="space-y-1.5">
@@ -193,7 +193,7 @@ export default function ReceptionistLogin() {
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
                                     placeholder="Confirm password"
-                                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200"
+                                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200"
                                 />
                             </div>
                             <button
@@ -211,7 +211,7 @@ export default function ReceptionistLogin() {
                             <div className="space-y-1.5">
                                 <div className="flex justify-between items-center">
                                     <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide">Password</label>
-                                    <Link to="/reset-password" className="text-xs font-bold text-blue-600 hover:text-blue-800 transition">
+                                    <Link to="/reset-password" className="text-xs font-bold text-violet-600 hover:text-violet-800 transition">
                                         Forgot Password?
                                     </Link>
                                 </div>
@@ -220,13 +220,13 @@ export default function ReceptionistLogin() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="Enter your password"
-                                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200"
+                                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200"
                                 />
                             </div>
 
                             <button
                                 onClick={handleLogin}
-                                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl transition duration-200 shadow-md shadow-blue-500/10 hover:scale-[1.01] flex items-center justify-center cursor-pointer mt-2"
+                                className="w-full h-11 bg-violet-600 hover:bg-violet-700 text-white font-bold text-sm rounded-xl transition duration-200 shadow-md shadow-violet-500/10 hover:scale-[1.01] flex items-center justify-center cursor-pointer mt-2"
                             >
                                 Sign In
                             </button>

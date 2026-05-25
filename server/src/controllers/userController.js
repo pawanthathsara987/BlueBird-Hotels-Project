@@ -27,7 +27,26 @@ const transporter = nodemailer.createTransport(
 
 export async function userLogin(req, res) {
     try {
-        const { email, password } = req.body;
+        const { email, password, role } = req.body;
+
+        if (role) {
+            const staffMember = await StaffMember.findOne({
+                where: { email: email.trim() },
+                include: [
+                    {
+                        model: Role,
+                        where: { roleName: role }
+                    }
+                ]
+            });
+
+            if (!staffMember) {
+                return res.status(403).json({
+                    message: `You are not authorized to login as a ${role}`
+                });
+            }
+        }
+
         const user = await UserRegisterModel.findOne({ where: { email: email } });
 
         if (!user) {
@@ -54,6 +73,24 @@ export async function userLogin(req, res) {
     }
 }
 
+const uploadImageToSupabase = async (file) => {
+    if (!file) return null;
+    const fileName = `${Date.now()}-${file.originalname}`;
+
+    const { error } = await supabase.storage.from("staff-members").upload(
+        `images/${fileName}`,
+        file.buffer,
+        { contentType: file.mimetype, upsert: false }
+    );
+
+    if (error) {
+        throw new Error(`Image upload failed: ${error.message}`);
+    }
+
+    const { data } = supabase.storage.from("staff-members").getPublicUrl(`images/${fileName}`);
+    return data.publicUrl;
+};
+
 export async function registerUser(req, res) {
 
     try {
@@ -61,6 +98,11 @@ export async function registerUser(req, res) {
         const data = req.body;
 
         console.log(req.body);
+
+        let imageUrl = null;
+        if (req.file) {
+            imageUrl = await uploadImageToSupabase(req.file);
+        }
 
         const staffMember = await StaffMember.create(
             {
@@ -71,7 +113,7 @@ export async function registerUser(req, res) {
                 roleId: data.roleId,
                 nicNumber: data.nicNumber,
                 address: data.address,
-                imageUrl: data.imageUrl
+                imageUrl: imageUrl
             }
         );
 
@@ -150,9 +192,38 @@ export async function updateUser(req, res) {
     const userId = req.params.id;
 
     try {
-        await StaffMember.update(req.body, {
+        const data = req.body;
+        let imageUrl = data.imageUrl;
+
+        if (req.file) {
+            imageUrl = await uploadImageToSupabase(req.file);
+
+            const oldStaffMember = await StaffMember.findByPk(userId);
+            if (oldStaffMember && oldStaffMember.imageUrl) {
+                try {
+                    const oldPath = oldStaffMember.imageUrl.split("/staff-members/")[1];
+                    if (oldPath) {
+                        await supabase.storage.from("staff-members").remove([oldPath]);
+                    }
+                } catch (e) {
+                    console.error("Error deleting old profile image:", e);
+                }
+            }
+        }
+
+        await StaffMember.update({
+            name: data.name,
+            userName: data.userName,
+            email: data.email,
+            roleId: data.roleId,
+            phoneNumber: data.phoneNumber,
+            nicNumber: data.nicNumber,
+            address: data.address,
+            imageUrl: imageUrl
+        }, {
             where: { userId: userId }
         });
+
         res.json({ message: "User updated successfully" });
     } catch (error) {
         res.status(500).json({
@@ -179,7 +250,7 @@ export async function deleteUser(req, res) {
             });
 
             if (!staffMember) {
-                return res.status(404).json({ message: "User not found" });
+                return null;
             }
 
             await DeletedStaffMember.create({
@@ -189,7 +260,7 @@ export async function deleteUser(req, res) {
                 roleId: staffMember.Role.roleId,
                 roleName: staffMember.Role.roleName,
                 phoneNumber: staffMember.phoneNumber
-            });
+            }, { transaction });
 
             await UserRegisterModel.destroy({
                 where: { email: staffMember.email },
@@ -202,7 +273,7 @@ export async function deleteUser(req, res) {
             });
         });
 
-        if (!deletedCount) {
+        if (deletedCount === null) {
             return res.status(404).json({ message: "User not found" });
         }
 
@@ -258,10 +329,36 @@ export async function searchUsers(req, res) {
 export async function verifyEmail(req, res) {
     try {
 
-        const email = req.body.email;
+        const { email, role } = req.body;
+
+        if (!email) {
+            return res.status(400).json({
+                message: "Email is required"
+            });
+        }
+
+        const targetRole = role || "receptionist";
+
+        const staffMember = await StaffMember.findOne({
+            where: { email: email.trim() },
+            include: [
+                {
+                    model: Role,
+                    where: { roleName: targetRole }
+                }
+            ]
+        });
+
+        if (!staffMember) {
+            return res.json({
+                showLogin: false,
+                showRegister: false,
+                message: `Email is not authorized as a ${targetRole}`
+            });
+        }
 
         const registeredUser = await UserRegisterModel.findOne({
-            where: { email: email }
+            where: { email: email.trim() }
         });
 
         if (registeredUser) {
@@ -271,30 +368,9 @@ export async function verifyEmail(req, res) {
             });
         }
 
-        const staffMember = await StaffMember.findOne({
-            where: {
-                email: email,
-                role: "receptionist"
-            },
-            include: [
-                {
-                    model: Role,
-                    where: { roleName: "receptionist" },
-                }
-            ]
-        });
-
-        if (staffMember) {
-            return res.json({
-                showLogin: false,
-                showRegister: true
-            });
-        }
-
         return res.json({
             showLogin: false,
-            showRegister: false,
-            message: "Email is not allowed"
+            showRegister: true
         });
 
     } catch (error) {

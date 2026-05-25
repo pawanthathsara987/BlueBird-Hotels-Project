@@ -166,7 +166,9 @@ const RoomPayment = () => {
                 checkOut: r.checkOutDate,
                 actualAdults: r.adults,
                 actualKids: r.kids,
-                actualKidAges: r.actualKidAges || []
+                actualKidAges: r.actualKidAges || [],
+                roomType: r.roomType,
+                boardType: r.boardType
               })),
               airportPickup: airportPickup?.enabled
                 ? {

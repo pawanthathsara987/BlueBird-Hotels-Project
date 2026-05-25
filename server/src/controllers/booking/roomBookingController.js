@@ -1,20 +1,47 @@
 import { col, fn, Op, QueryTypes } from "sequelize";
 import sequelize from "../../config/database.js";
 import { sendEmail, sendBookingConfirmationEmail } from "../../services/emailService.js";
-import { Customer, Room, BookedRoom, RoomPackage, Reservation, AirPortPickup } from "../../models/index.js";
+import { Customer, Room, BookedRoom, Reservation, AirPortPickup } from "../../models/index.js";
 
+    return {
+        totalPrice,
+        nightlyRate: totalPrice / stayNights,
+        stayNights,
+        roomType: roomType.type,
+        boardType: boardType.type,
+        occupancyType: occupancyType.type
+    };
+};
 
 // available room list with packages
 const availableRooms = async (req, res) => {
     try {
         const avlRooms = await Room.findAll({
-            where: { roomstatus: "available" },
+            where: { roomStatus: "available" },
             include: [
                 {
                     model: RoomPackage,
                     attributes: ["id", "pname", "maxAdults", "maxKids", "pprice", "pimage"],
                 }
             ]
+        });
+
+        // Query dynamic pricing combinations
+        const pricingCatalogue = await RoomPrice.findAll({
+            include: [
+                { model: RoomType, as: "roomType", attributes: ["id", "type"] },
+                { model: OccupancyType, as: "occupancyType", attributes: ["id", "type"] },
+                { model: BoardType, as: "boardType", attributes: ["id", "type"] },
+                { model: SeasonalDiscount, as: "season" }
+            ]
+        });
+
+        // Query active seasonal discounts
+        const activeSeasonalDiscounts = await SeasonalDiscount.findAll({
+            where: {
+                startDate: { [Op.lte]: new Date() },
+                endDate: { [Op.gte]: new Date() }
+            }
         });
 
         if (avlRooms.length === 0) {
@@ -29,6 +56,8 @@ const availableRooms = async (req, res) => {
             message: "Available rooms found",
             count: avlRooms.length,
             data: avlRooms,
+            pricingCatalogue,
+            activeSeasonalDiscounts
         });
 
     } catch (error) {
@@ -86,23 +115,11 @@ const createBooking = async (req, res) => {
         }
 
         // -----------------------------
-        // 2. Create Reservation
+        // 2. Validate + process rooms (Calculate Server-Side Total Price)
         // -----------------------------
-        const reservation = await Reservation.create(
-            {
-                guest_id: guestId,
-                check_in_date: checkInDate,
-                total_price,
-                status: "confirmed"
-            },
-            { transaction: t }
-        );
-
+        let calculatedTotalPrice = 0;
         const bookedRoomEntries = [];
 
-        // -----------------------------
-        // 3. Validate + process rooms
-        // -----------------------------
         for (const roomData of rooms) {
             const {
                 roomId,
@@ -110,7 +127,9 @@ const createBooking = async (req, res) => {
                 checkOut,
                 actualAdults = 1,
                 actualKids = 0,
-                actualKidAges = []
+                actualKidAges = [],
+                roomType: clientRoomType,
+                boardType: clientBoardType
             } = roomData;
 
             if (!roomId || !checkIn || !checkOut) {
@@ -123,6 +142,7 @@ const createBooking = async (req, res) => {
                     id: roomId,
                     roomStatus: "available"
                 },
+                include: [RoomPackage],
                 transaction: t,
                 lock: t.LOCK.UPDATE
             });
@@ -146,31 +166,81 @@ const createBooking = async (req, res) => {
                 throw new Error(`Room ${roomId} is already booked for selected dates`);
             }
 
+            // DYNAMIC PRICE CALCULATION
+            const resolvedRoomType = clientRoomType || (room.RoomPackage ? room.RoomPackage.pname : "Deluxe King Room");
+            const resolvedBoardType = clientBoardType || "Room Only";
+
+            const priceDetails = await calculateRoomStayPrice(
+                resolvedRoomType,
+                resolvedBoardType,
+                actualAdults,
+                checkIn,
+                checkOut
+            );
+
+            calculatedTotalPrice += priceDetails.totalPrice;
+
             bookedRoomEntries.push({
-                reservation_id: reservation.id,
                 room_id: roomId,
                 checkIn,
                 checkOut,
                 actualAdults,
                 actualKids,
                 actualKidAges,
+                adults: actualAdults,
+                kids: actualKids,
                 status: "reserved"
             });
         }
 
-        // -----------------------------
-        // 4. Bulk insert booked rooms
-        // -----------------------------
-        await BookedRoom.bulkCreate(bookedRoomEntries, { transaction: t });
-
+        // Add airport pickup surcharge if enabled
         if (airportPickup?.enabled) {
             if (!airportPickup.pickupDate || !airportPickup.pickupTime) {
                 throw new Error("Airport pickup date and time are required");
             }
+            calculatedTotalPrice += 50.00;
+        }
 
+        // Compare price discrepancy (tolerance of $1.50 for minor floating point rounding differences)
+        const clientPrice = parseFloat(total_price);
+        const priceDiscrepancy = Math.abs(calculatedTotalPrice - clientPrice);
+        if (priceDiscrepancy > 1.50) {
+            throw new Error(`Price verification failed. Server calculated $${calculatedTotalPrice.toFixed(2)}, but client submitted $${clientPrice.toFixed(2)}.`);
+        }
+
+        // -----------------------------
+        // 3. Create Reservation
+        // -----------------------------
+        const reservation = await Reservation.create(
+            {
+                guest_id: guestId,
+                customer_id: guestId, // Reservation/Booking table uses customer_id
+                check_in_date: checkInDate,
+                total_price: calculatedTotalPrice, // Use the secure server-calculated price
+                status: "confirmed",
+                kids_age: rooms.flatMap(r => r.actualKidAges || []), // Aggregate kids ages onto the booking
+                note: personalRequest || null
+            },
+            { transaction: t }
+        );
+
+        // Assign reservation_id and booking_id (for compatibility)
+        const entriesWithBookingId = bookedRoomEntries.map(entry => ({
+            ...entry,
+            reservation_id: reservation.id,
+            booking_id: reservation.id
+        }));
+
+        // -----------------------------
+        // 4. Bulk insert booked rooms
+        // -----------------------------
+        await BookedRoom.bulkCreate(entriesWithBookingId, { transaction: t });
+
+        if (airportPickup?.enabled) {
             await AirPortPickup.create(
                 {
                     guest_id: guestId,
+                    customer_id: guestId,
                     pickup_date: airportPickup.pickupDate,
                     pickup_time: airportPickup.pickupTime,
                 },
@@ -437,6 +507,129 @@ const getAvailablePackagesByDate = async (req, res) => {
     }
 };
 
+// Expose dynamic price matrix lookup
+const getPricingMatrix = async (req, res) => {
+    try {
+        const matrix = await RoomPrice.findAll({
+            include: [
+                { model: RoomType, as: "roomType", attributes: ["id", "type"] },
+                { model: OccupancyType, as: "occupancyType", attributes: ["id", "type"] },
+                { model: BoardType, as: "boardType", attributes: ["id", "type"] },
+                { model: SeasonalDiscount, as: "season" }
+            ]
+        });
+
+        const activeDiscounts = await SeasonalDiscount.findAll({
+            where: {
+                startDate: { [Op.lte]: new Date() },
+                endDate: { [Op.gte]: new Date() }
+            }
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Pricing matrix retrieved successfully",
+            count: matrix.length,
+            data: {
+                matrix,
+                activeDiscounts
+            }
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Failed to retrieve pricing matrix",
+            error: error.message
+        });
+    }
+};
+
+// Endpoint to dry-run pricing calculation
+const checkBookingPrice = async (req, res) => {
+    try {
+        const { checkInDate, checkOutDate, rooms, airportPickup } = req.body;
+
+        if (!checkInDate || !checkOutDate || !Array.isArray(rooms)) {
+            return res.status(400).json({
+                success: false,
+                message: "checkInDate, checkOutDate, and rooms list are required"
+            });
+        }
+
+        let calculatedTotalPrice = 0;
+        const breakdown = [];
+
+        for (const roomData of rooms) {
+            const {
+                roomId,
+                actualAdults = 2,
+                roomType,
+                boardType
+            } = roomData;
+
+            let resolvedRoomType = roomType;
+            let resolvedBoardType = boardType || "Room Only";
+
+            if (roomId && (!resolvedRoomType)) {
+                const room = await Room.findByPk(roomId, { include: [RoomPackage] });
+                if (room && room.RoomPackage) {
+                    resolvedRoomType = room.RoomPackage.pname;
+                }
+            }
+
+            if (!resolvedRoomType) {
+                return res.status(400).json({
+                    success: false,
+                    message: "roomType or valid roomId is required for each room in list"
+                });
+            }
+
+            const priceDetails = await calculateRoomStayPrice(
+                resolvedRoomType,
+                resolvedBoardType,
+                actualAdults,
+                checkInDate,
+                checkOutDate
+            );
+
+            calculatedTotalPrice += priceDetails.totalPrice;
+            breakdown.push({
+                roomId,
+                requestedRoomType: resolvedRoomType,
+                requestedBoardType: resolvedBoardType,
+                resolvedRoomType: priceDetails.roomType,
+                resolvedBoardType: priceDetails.boardType,
+                resolvedOccupancyType: priceDetails.occupancyType,
+                stayNights: priceDetails.stayNights,
+                avgNightlyRate: priceDetails.nightlyRate,
+                roomTotalPrice: priceDetails.totalPrice
+            });
+        }
+
+        let airportPickupSurcharge = 0;
+        if (airportPickup?.enabled) {
+            calculatedTotalPrice += 50.00;
+            airportPickupSurcharge = 50.00;
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                totalPrice: calculatedTotalPrice,
+                airportPickupSurcharge,
+                stayNights: breakdown[0]?.stayNights || 1,
+                breakdown
+            }
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Price calculation failed",
+            error: error.message
+        });
+    }
+};
+
 export {
     createBooking,
     getAllBookings,
@@ -445,5 +638,8 @@ export {
     updateBooking,
     availableRooms,
     getAvailableRoomAssignForPackage,
-    getAvailablePackagesByDate
+    getAvailablePackagesByDate,
+    getPricingMatrix,
+    checkBookingPrice,
+    calculateRoomStayPrice
 }
