@@ -18,6 +18,7 @@ import {
 import { addRoom, updateRoom, deleteRoom, getAllRooms, searchRooms } from "../controllers/admin/roomController.js";
 import {getAllRoomTypes, createRoomType, updateRoomType, deleteRoomType } from "../controllers/admin/roomTypeController.js";
 import { getAllOccupancyTypes } from "../controllers/admin/occupancyTypeController.js";
+import { getAllRoomPrices, getRoomPriceMetadata, createRoomPrice, updateRoomPrice, deleteRoomPrice } from "../controllers/admin/roomPriceController.js";
 
 const router = express.Router();
 
@@ -59,5 +60,12 @@ router.get('/rooms/search/:query', searchRooms);
 router.post('/rooms', addRoom);
 router.put('/rooms/:id', updateRoom);
 router.delete('/rooms/:id', deleteRoom);
+
+// Room Price routes
+router.get('/room-prices', getAllRoomPrices);
+router.get('/room-prices/metadata', getRoomPriceMetadata);
+router.post('/room-prices', createRoomPrice);
+router.put('/room-prices/:id', updateRoomPrice);
+router.delete('/room-prices/:id', deleteRoomPrice);
 
 export default router;

@@ -10,6 +10,7 @@ import StaffManagement from "./user/StaffManegement";
 import AddNewStaffMember from "./user/AddNewStaffMember";
 import UpdateStaffMember from "./user/UpdateStaffMember";
 import ViewDeletedStaff from "./user/ViewDeletedStaff";
+import AdminDashboard from "./AdminDashboard";
 
 export default function AdminPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -117,7 +118,7 @@ export default function AdminPage() {
             {/* Main content */}
             <div className="flex-1 h-full bg-gray-100 overflow-y-scroll pt-14 md:pt-0">
                 <Routes>
-                    <Route path="/" element={<h1 className="p-5">Welcome to Admin Dashboard</h1>} />
+                    <Route path="/" element={<AdminDashboard />} />
                     <Route path="/rooms/roomManagement" element={<RoomManagement />} />
                     <Route path="/rooms/room/add" element={<RoomForm />} />
                     <Route path="/rooms/room/edit" element={<RoomForm />} />
