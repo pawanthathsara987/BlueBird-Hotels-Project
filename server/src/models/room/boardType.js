@@ -1,4 +1,4 @@
-import {Model, DataTypes} from 'sequelize';
+import { Model, DataTypes } from 'sequelize';
 import sequelize from '../../config/database.js';
 
 class BoardType extends Model {}
@@ -15,6 +15,14 @@ BoardType.init({
         allowNull: false,
         unique: true,
     },
+    icon: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    tagline: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    }
 }, {
     sequelize,
     modelName: "BoardType",
