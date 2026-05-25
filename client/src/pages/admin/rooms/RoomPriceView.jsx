@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
-import { Plus, Edit, Trash2, DollarSign, X, Layers, Users, Sparkles } from "lucide-react";
+import { Plus, Edit, Trash2, DollarSign, X, Layers, Users, Sparkles, SlidersHorizontal } from "lucide-react";
 
 export default function RoomPriceView() {
     const [prices, setPrices] = useState([]);
@@ -31,6 +31,8 @@ export default function RoomPriceView() {
         boardTypeId: "",
         price: ""
     });
+
+    const [roomTypeFilter, setRoomTypeFilter] = useState("all");
 
     useEffect(() => {
         fetchPrices();
@@ -84,6 +86,15 @@ export default function RoomPriceView() {
             console.error("Error fetching physical rooms:", error);
         }
     };
+
+    const filteredPrices = useMemo(() => {
+        return prices.filter((item) => {
+            if (roomTypeFilter !== "all" && roomTypeFilter !== "") {
+                return String(item.roomTypeId || item.roomType?.id || "") === String(roomTypeFilter);
+            }
+            return true;
+        });
+    }, [prices, roomTypeFilter]);
 
     // Filter occupancy types that are associated with the selected roomTypeId in the physical inventory
     const getFilteredOccupancyTypes = () => {
@@ -254,6 +265,27 @@ export default function RoomPriceView() {
                 </button>
             </div>
 
+            {/* Room Type Filter Section */}
+            <div className="flex flex-col md:flex-row items-center justify-end gap-4 bg-slate-50/70 p-4 rounded-2xl border border-slate-100 animate-fadeIn">
+                <div className="flex w-full md:w-auto items-center gap-3">
+                    <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2.5 w-full md:w-64">
+                        <SlidersHorizontal size={16} className="text-slate-400 shrink-0" />
+                        <select
+                            value={roomTypeFilter}
+                            onChange={(e) => setRoomTypeFilter(e.target.value)}
+                            className="outline-none bg-transparent text-sm font-bold text-slate-600 pr-4 cursor-pointer w-full"
+                        >
+                            <option value="all">All Room Types</option>
+                            {metadata.roomTypes.map((type) => (
+                                <option key={type.id} value={type.id}>
+                                    {type.type}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
             {/* List Pricing Table */}
             {isLoading ? (
                 <div className="py-16 text-center">
@@ -261,9 +293,13 @@ export default function RoomPriceView() {
                         <span className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></span>
                     </div>
                 </div>
-            ) : prices.length === 0 ? (
+            ) : filteredPrices.length === 0 ? (
                 <div className="text-center py-16 border border-dashed border-slate-200 rounded-2xl bg-slate-50/30">
-                    <p className="text-slate-400 font-medium text-base">No pricing rules configured. Click "Configure Price" to define standard rates.</p>
+                    <p className="text-slate-400 font-medium text-base">
+                        {prices.length === 0
+                            ? "No pricing rules configured. Click \"Configure Price\" to define standard rates."
+                            : "No pricing rules match the selected room type filter."}
+                    </p>
                 </div>
             ) : (
                 <div className="overflow-x-auto rounded-2xl border border-slate-100 shadow-sm">
@@ -279,7 +315,7 @@ export default function RoomPriceView() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {prices.map((item) => (
+                            {filteredPrices.map((item) => (
                                 <tr key={item.id} className="hover:bg-slate-50/40 transition-colors duration-150">
                                     <td className="px-6 py-4 text-sm font-bold text-slate-400">
                                         #{item.id}

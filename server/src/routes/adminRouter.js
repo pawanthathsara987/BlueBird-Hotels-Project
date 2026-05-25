@@ -11,6 +11,12 @@ import { getAllOccupancyTypes } from "../controllers/admin/occupancyTypeControll
 import { getAllBoardTypes } from "../controllers/admin/boardTypeController.js";
 import { upload } from "../controllers/admin/imageUploadController.js";
 import { getAllRoomPrices, getRoomPriceMetadata, createRoomPrice, updateRoomPrice, deleteRoomPrice } from "../controllers/admin/roomPriceController.js";
+import {
+    getAllOtherItemPrices,
+    createOtherItemPrice,
+    updateOtherItemPrice,
+    deleteOtherItemPrice
+} from "../controllers/admin/otherItemPriceController.js";
 
 const router = express.Router();
 
@@ -48,5 +54,11 @@ router.get('/room-prices/metadata', getRoomPriceMetadata);
 router.post('/room-prices', createRoomPrice);
 router.put('/room-prices/:id', updateRoomPrice);
 router.delete('/room-prices/:id', deleteRoomPrice);
+
+// Other Item Price routes
+router.get('/other-item-prices', getAllOtherItemPrices);
+router.post('/other-item-prices', createOtherItemPrice);
+router.put('/other-item-prices/:id', updateOtherItemPrice);
+router.delete('/other-item-prices/:id', deleteOtherItemPrice);
 
 export default router;

@@ -117,7 +117,7 @@ const RoomView = () => {
                     <Search size={18} className="text-slate-400 shrink-0" />
                     <input
                         type="search"
-                        placeholder="Search rooms by number or status..."
+                        placeholder="Search rooms by number, status or occupancy type..."
                         className="outline-none w-full bg-transparent text-sm text-slate-700 placeholder-slate-400 font-medium"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
