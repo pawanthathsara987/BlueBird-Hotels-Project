@@ -5,6 +5,41 @@ import Customer from '../../models/User/Customer.js';
 import Payment from '../../models/vehicle/paymentModel.js';
 import StaffMember from '../../models/User/StaffMember.js';
 import sequelize from '../../config/database.js';
+import { Op } from 'sequelize';
+
+// Get all vehicle bookings
+export const getVehicleBookings = async (req, res) => {
+  try {
+    const { status, startDate, endDate } = req.query;
+    
+    const where = {};
+    if (status) {
+      where.status = status;
+    }
+    
+    if (startDate || endDate) {
+      where.pickupDatetime = {};
+      if (startDate) where.pickupDatetime[Op.gte] = new Date(startDate);
+      if (endDate) where.pickupDatetime[Op.lte] = new Date(endDate);
+    }
+
+    const bookings = await VehicleBooking.findAll({
+      where,
+      include: [
+        { association: 'vehicle' },
+        { association: 'customer' },
+        { association: 'driver' },
+        { association: 'payments' },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+
+    return res.json({ success: true, data: bookings });
+  } catch (err) {
+    console.error('getVehicleBookings error', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
 
 // Get a single vehicle booking with all associations
 export const getVehicleBooking = async (req, res) => {
@@ -119,6 +154,27 @@ export const assignDriver = async (req, res) => {
       if (driver.status !== 'active') {
         await t.rollback();
         return res.status(400).json({ success: false, message: 'Selected driver is not active' });
+      }
+
+      // Check driver is not already assigned to an overlapping booking
+      const overlappingDriverBooking = await VehicleBooking.findOne({
+        where: {
+          driverId,
+          id: { [Op.ne]: booking.id },
+          status: { [Op.in]: ['confirmed', 'driver_assigned', 'balance_paid', 'ongoing'] },
+          pickupDatetime: { [Op.lt]: booking.returnDatetime },
+          returnDatetime: { [Op.gt]: booking.pickupDatetime },
+        },
+        attributes: ['id', 'bookingNo', 'pickupDatetime', 'returnDatetime'],
+        transaction: t,
+      });
+
+      if (overlappingDriverBooking) {
+        await t.rollback();
+        return res.status(409).json({
+          success: false,
+          message: `Driver is already assigned to booking ${overlappingDriverBooking.bookingNo} for overlapping dates`,
+        });
       }
     }
 
