@@ -28,6 +28,7 @@ import {
 // Manager auth temporarily disabled for testing
 // Checklist routes removed
 import {
+    getVehicleBookings,
     getVehicleBooking,
     updateBookingStatus,
     assignDriver,
@@ -74,6 +75,7 @@ router.delete('/drivers/:id', deleteDriver);
 
 // Checklist routes removed
 // manager specific: vehicle bookings (picker)
+router.get('/vehicle-bookings', getVehicleBookings);
 router.get('/vehicle-bookings/:id', getVehicleBooking);
 router.put('/vehicle-bookings/:id/status', updateBookingStatus);
 router.put('/vehicle-bookings/:id/assign-driver', assignDriver);
