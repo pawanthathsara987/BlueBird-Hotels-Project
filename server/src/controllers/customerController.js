@@ -40,7 +40,7 @@ export async function registerCustomer(req, res) {
             });
         }
 
-        const hashedPassword = await bcrypt.hashSync(data.password, 10);
+        const hashedPassword = await bcrypt.hash(data.password, 10);
 
         const newCustomer = await Customer.create({
             firstName: data.firstName,
@@ -121,17 +121,88 @@ export async function loginCustomer(req, res) {
             address: customer.address
         };
 
-        const token = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+        const accessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "15m" });
+        const refreshToken = jwt.sign(userResponse, process.env.JWT_REFRESH_KEY, { expiresIn: "7d" });
 
-        console.log(token);
+        const isProduction = process.env.NODE_ENV === "production";
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? "strict" : "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
         res.status(200).json({
             message: "Customer logged in successfully",
-            token: token,
+            token: accessToken,
             user: userResponse
         });
 
     } catch (error) {
         console.error("Error logging in customer:", error);
+        res.status(500).json({
+            message: "Internal server error"
+        });
+    }
+}
+
+export async function refreshToken(req, res) {
+    const token = req.cookies.refreshToken;
+
+    if (!token) {
+        return res.status(401).json({ message: "Refresh token is missing" });
+    }
+
+    jwt.verify(token, process.env.JWT_REFRESH_KEY, async (err, decoded) => {
+        if (err) {
+            return res.status(403).json({ message: "Invalid or expired refresh token" });
+        }
+
+        try {
+            const customer = await Customer.findByPk(decoded.id);
+            if (!customer) {
+                return res.status(403).json({ message: "Customer not found" });
+            }
+
+            const userResponse = {
+                id: customer.customerId,
+                firstName: customer.firstName,
+                lastName: customer.lastName,
+                email: customer.email,
+                phoneNumber: customer.phoneNumber,
+                country: customer.country,
+                idType: customer.idType,
+                idNumber: customer.idNumber,
+                address: customer.address
+            };
+
+            const newAccessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "15m" });
+
+            res.status(200).json({
+                token: newAccessToken,
+                accessToken: newAccessToken,
+                user: userResponse
+            });
+        } catch (error) {
+            console.error("Refresh token error:", error);
+            res.status(500).json({ message: "Internal server error" });
+        }
+    });
+}
+
+export async function logoutCustomer(req, res) {
+    try {
+        const isProduction = process.env.NODE_ENV === "production";
+        res.clearCookie("refreshToken", {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? "strict" : "lax"
+        });
+        res.status(200).json({
+            message: "Logged out successfully"
+        });
+    } catch (error) {
+        console.error("Error logging out customer:", error);
         res.status(500).json({
             message: "Internal server error"
         });
@@ -279,11 +350,20 @@ export async function googleLogin(req, res) {
             address: user.address
         };
 
-        const token = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+        const accessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "15m" });
+        const refreshToken = jwt.sign(userResponse, process.env.JWT_REFRESH_KEY, { expiresIn: "7d" });
+
+        const isProduction = process.env.NODE_ENV === "production";
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? "strict" : "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
 
         return res.status(200).json({
             message: "Customer logged in successfully",
-            token: token,
+            token: accessToken,
             user: userResponse
         });
 
