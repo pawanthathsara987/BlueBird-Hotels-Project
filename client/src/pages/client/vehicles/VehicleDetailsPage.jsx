@@ -105,11 +105,12 @@ export default function VehicleDetailsPage() {
               </div>
 
               <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5 space-y-3">
-                <div className="text-sm font-semibold text-slate-700">What's included</div>
+                <div className="text-sm font-semibold text-slate-700">Vehicle details</div>
                 <ul className="text-xs text-slate-600 space-y-2">
-                  <li className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5">✓</span> Full insurance coverage</li>
-                  <li className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5">✓</span> 24/7 roadside assistance</li>
-                  <li className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5">✓</span> Free cancellation up to 48h</li>
+                  {vehicle.year && <li className="flex items-start gap-2"><span className="text-slate-400 mt-0.5 font-bold">Year</span> {vehicle.year}</li>}
+                  {vehicle.color && <li className="flex items-start gap-2"><span className="text-slate-400 mt-0.5 font-bold">Color</span> <span className="capitalize">{vehicle.color}</span></li>}
+                  {vehicle.plateNumber && <li className="flex items-start gap-2"><span className="text-slate-400 mt-0.5 font-bold">Plate</span> {vehicle.plateNumber}</li>}
+                  {vehicle.insuranceExpiry && <li className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5">✓</span> Insured until {vehicle.insuranceExpiry}</li>}
                   <li className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5">✓</span> Optional driver available</li>
                 </ul>
               </div>
