@@ -6,14 +6,14 @@ import {
   updateVehicleType,
   deleteVehicleType,
 } from '../controllers/manager/vehicleTypeController.js';
-import { requireAuth, requireRole } from '../middleware/authMiddleware.js';
+// import { requireAuth, requireRole } from '../middleware/authMiddleware.js'; // TODO: re-enable auth
 
 const router = express.Router();
 
 router.get('/', getVehicleTypes);
 router.get('/:id', getVehicleType);
-router.post('/', requireAuth, requireRole('manager'), createVehicleType);
-router.put('/:id', requireAuth, requireRole('manager'), updateVehicleType);
-router.delete('/:id', requireAuth, requireRole('manager'), deleteVehicleType);
+router.post('/', createVehicleType);
+router.put('/:id', updateVehicleType);
+router.delete('/:id', deleteVehicleType);
 
 export default router;
