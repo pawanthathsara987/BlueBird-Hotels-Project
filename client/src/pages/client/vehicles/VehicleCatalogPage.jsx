@@ -264,19 +264,7 @@ export default function VehicleCatalogPage() {
               </select>
             </div>
 
-            <div className="lg:col-span-2">
-              <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Status</label>
-              <select
-                value={filters.status}
-                onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))}
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-100"
-              >
-                <option value="available">Available</option>
-                <option value="">All status</option>
-                <option value="maintenance">Maintenance</option>
-                <option value="retired">Retired</option>
-              </select>
-            </div>
+            {/* Status locked to 'available' for customers — no dropdown needed */}
 
             <div className="lg:col-span-2">
               <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Min price</label>
