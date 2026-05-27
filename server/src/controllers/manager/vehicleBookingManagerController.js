@@ -65,25 +65,7 @@ export const getVehicleBooking = async (req, res) => {
   }
 };
 
-// Sync vehicle status based on booking status
-const syncVehicleStatus = async (vehicleId, bookingStatus, transaction) => {
-  const activeStatuses = ['confirmed', 'driver_assigned', 'balance_paid', 'ongoing'];
-  const terminalStatuses = ['completed', 'cancelled', 'expired'];
 
-  let vehicleStatus = null;
-  if (activeStatuses.includes(bookingStatus)) {
-    vehicleStatus = 'booked';
-  } else if (terminalStatuses.includes(bookingStatus)) {
-    vehicleStatus = 'available';
-  }
-
-  if (vehicleStatus && vehicleId) {
-    const vehicle = await Vehicle.findByPk(vehicleId, { transaction });
-    if (vehicle && vehicle.status !== 'maintenance' && vehicle.status !== 'retired') {
-      await vehicle.update({ status: vehicleStatus }, { transaction });
-    }
-  }
-};
 
 // Update booking status manually
 export const updateBookingStatus = async (req, res) => {
@@ -116,7 +98,6 @@ export const updateBookingStatus = async (req, res) => {
     }
 
     await booking.update({ status }, { transaction: t });
-    await syncVehicleStatus(booking.vehicleId, status, t);
 
     await t.commit();
     return res.json({ success: true, message: `Booking status updated to ${status}`, data: booking });
@@ -187,9 +168,6 @@ export const assignDriver = async (req, res) => {
     }
 
     await booking.update(updates, { transaction: t });
-    if (updates.status) {
-      await syncVehicleStatus(booking.vehicleId, updates.status, t);
-    }
 
     await t.commit();
     return res.json({ success: true, message: 'Driver assigned successfully', data: booking });
@@ -253,7 +231,7 @@ export const collectBalance = async (req, res) => {
       receivedAt: new Date(),
     }, { transaction: t });
 
-    await syncVehicleStatus(booking.vehicleId, 'balance_paid', t);
+
 
     await t.commit();
     return res.json({ success: true, message: 'Balance payment recorded successfully', data: { booking, payment } });
@@ -295,7 +273,7 @@ export const cancelBooking = async (req, res) => {
       cancellationReason: cancellationReason || 'Cancelled by manager',
     }, { transaction: t });
 
-    await syncVehicleStatus(booking.vehicleId, 'cancelled', t);
+
 
     await t.commit();
     return res.json({ success: true, message: 'Booking cancelled successfully', data: booking });
