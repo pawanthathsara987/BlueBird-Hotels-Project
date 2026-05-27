@@ -198,6 +198,143 @@ export const sendBookingConfirmationEmail = async (booking) => {
 };
 
 
+/**
+ * Send vehicle booking confirmation email after a successful reservation
+ * @param {Object} options - Vehicle booking details
+ * @param {string} options.email - Customer email
+ * @param {string} options.name - Customer name
+ * @param {string} options.bookingNo - Booking reference number
+ * @param {string} options.vehicleName - Vehicle brand + model
+ * @param {string} options.pickupDatetime - Pickup date
+ * @param {string} options.returnDatetime - Return date
+ * @param {number} options.numDays - Number of days
+ * @param {string} options.hireType - 'with_driver' or 'without_driver'
+ * @param {string} options.pickupLocation - Pickup location
+ * @param {string} options.dropoffLocation - Dropoff location
+ * @param {number} options.totalPayable - Total price
+ * @param {number} options.depositAmount - 30% deposit
+ * @param {number} options.balanceAmount - Remaining balance
+ */
+export const sendVehicleBookingConfirmationEmail = async (options) => {
+  try {
+    const {
+      email, name, bookingNo, vehicleName,
+      pickupDatetime, returnDatetime, numDays, hireType,
+      pickupLocation, dropoffLocation,
+      totalPayable, depositAmount, balanceAmount,
+    } = options;
+
+    if (!email) {
+      throw new Error("Customer email not provided for vehicle booking confirmation");
+    }
+
+    const pickupFormatted = new Date(pickupDatetime).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' });
+    const returnFormatted = new Date(returnDatetime).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' });
+    const driverLabel = hireType === 'with_driver' ? 'With Driver' : 'Self-Drive';
+
+    const subject = `Vehicle Booking Confirmed - ${bookingNo}`;
+
+    const emailBody = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; background: #f8fafc; color: #1f2937; }
+            .container { max-width: 640px; margin: 0 auto; background: #ffffff; padding: 0; border-radius: 16px; overflow: hidden; }
+            .header { background: linear-gradient(135deg, #0f172a, #0369a1); color: #ffffff; padding: 32px 24px; }
+            .header h1 { margin: 0 0 8px; font-size: 24px; }
+            .header p { margin: 0; opacity: 0.85; font-size: 14px; }
+            .body { padding: 24px; }
+            .section { margin-top: 20px; }
+            .card { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; }
+            .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+            .row:last-child { border-bottom: none; }
+            .label { color: #6b7280; }
+            .value { font-weight: 600; color: #1e293b; }
+            .deposit-card { background: #eff6ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; text-align: center; margin-top: 20px; }
+            .deposit-amount { font-size: 32px; font-weight: 800; color: #1e40af; margin: 8px 0; }
+            .balance-note { font-size: 13px; color: #6b7280; margin-top: 8px; }
+            .footer { margin-top: 28px; padding: 20px 24px; background: #f8fafc; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🚗 Vehicle Reservation Confirmed</h1>
+              <p>Your booking reference: <strong>${bookingNo}</strong></p>
+            </div>
+
+            <div class="body">
+              <p>Dear ${name || 'Guest'},</p>
+              <p>Your vehicle rental has been successfully reserved. Please find the details below.</p>
+
+              <div class="section card">
+                <div class="row">
+                  <span class="label">Vehicle</span>
+                  <span class="value">${vehicleName || 'Premium Vehicle'}</span>
+                </div>
+                <div class="row">
+                  <span class="label">Hire Type</span>
+                  <span class="value">${driverLabel}</span>
+                </div>
+                <div class="row">
+                  <span class="label">Pickup Date</span>
+                  <span class="value">${pickupFormatted}</span>
+                </div>
+                <div class="row">
+                  <span class="label">Return Date</span>
+                  <span class="value">${returnFormatted}</span>
+                </div>
+                <div class="row">
+                  <span class="label">Duration</span>
+                  <span class="value">${numDays} day${numDays > 1 ? 's' : ''}</span>
+                </div>
+                ${pickupLocation ? `
+                <div class="row">
+                  <span class="label">Pickup Location</span>
+                  <span class="value">${pickupLocation}</span>
+                </div>` : ''}
+                ${dropoffLocation ? `
+                <div class="row">
+                  <span class="label">Dropoff Location</span>
+                  <span class="value">${dropoffLocation}</span>
+                </div>` : ''}
+                <div class="row" style="border-top: 2px solid #e5e7eb; padding-top: 12px; margin-top: 4px;">
+                  <span class="label" style="font-weight: 600; color: #1e293b;">Total Price</span>
+                  <span class="value" style="font-size: 18px; color: #0f172a;">$${Number(totalPayable || 0).toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div class="deposit-card">
+                <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: #3b82f6; font-weight: 700;">Advance Deposit Required (30%)</div>
+                <div class="deposit-amount">$${Number(depositAmount || 0).toLocaleString()}</div>
+                <div class="balance-note">Remaining balance of <strong>$${Number(balanceAmount || 0).toLocaleString()}</strong> is payable at vehicle pickup.</div>
+              </div>
+
+              <div class="section" style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 16px; font-size: 13px;">
+                <strong>⚠️ Important:</strong> Please pay the 30% deposit to confirm your reservation. Unpaid bookings will be automatically released after 24 hours.
+              </div>
+            </div>
+
+            <div class="footer">
+              <p>If you have any questions, please reply to this email or contact us at support@bluebird-hotels.com</p>
+              <p>Best regards,<br/>BlueJay Hotels Team</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    await sendEmail({ to: email, subject, html: emailBody });
+    console.log(`[EMAIL] Vehicle booking confirmation sent to ${email} for ${bookingNo}`);
+    return true;
+  } catch (error) {
+    console.error("Error sending vehicle booking confirmation email:", error);
+    // Don't throw — email failure should not break the booking
+    return false;
+  }
+};
+
 
 
 /**

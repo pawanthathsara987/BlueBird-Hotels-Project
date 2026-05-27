@@ -4,6 +4,7 @@ import Vehicle from '../../models/vehicle/vehicleModel.js';
 import VehicleBooking from '../../models/vehicle/VehicleBookingModel.js';
 import Customer from '../../models/User/Customer.js';
 import DriverPricingSetting from '../../models/vehicle/driverPricingModel.js';
+import { sendVehicleBookingConfirmationEmail } from '../../services/emailService.js';
 
 const BLOCKING_BOOKING_STATUSES = [
   'pending_payment',
@@ -141,8 +142,25 @@ export const createVehicleBooking = async (req, res) => {
 
       await t.commit();
 
+      // Send confirmation email (fire-and-forget — don't block the response)
+      sendVehicleBookingConfirmationEmail({
+        email,
+        name,
+        bookingNo: booking.bookingNo,
+        vehicleName: `${vehicle.brand || ''} ${vehicle.model || ''}`.trim(),
+        pickupDatetime: pickupDate,
+        returnDatetime: returnDate,
+        numDays,
+        hireType: withDriver ? 'with_driver' : 'without_driver',
+        pickupLocation: pickupLocation || '',
+        dropoffLocation: dropoffLocation || '',
+        totalPayable,
+        depositAmount,
+        balanceAmount,
+      }).catch((emailErr) => console.error('[EMAIL] Vehicle booking email failed:', emailErr));
+
       // Return deposit amount and booking details
-      return res.status(201).json({ success: true, data: { bookingId: booking.id, bookingNo: booking.bookingNo, depositAmount, payLink: `/pay/vehicle/${booking.id}` } });
+      return res.status(201).json({ success: true, data: { bookingId: booking.id, bookingNo: booking.bookingNo, depositAmount, balanceAmount, payLink: `/pay/vehicle/${booking.id}` } });
     } catch (dbErr) {
       await t.rollback();
       throw dbErr;

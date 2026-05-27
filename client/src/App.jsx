@@ -49,12 +49,12 @@ export default function App() {
                         <Route path="/admin/*" element={< AdminPage />} />
                         <Route path="/manager/*" element={< ManagerPage />} />
                         <Route path="/reception/*" element={< ReceptionPage />} />
-                        <Route path="/*" element={<HomePage />} />
                         <Route path="/contact" element={<ContactPage />} />
                         <Route path="/customer/dashboard" element={<CustomerDashboard />} />
                         <Route path="/vehicles" element={<VehicleCatalogPage />} />
                         <Route path="/vehicles/:id" element={<VehicleDetailsPage />} />
                         <Route path="/vehicles/:id/book" element={<VehicleBookingPage />} />
+                        <Route path="/*" element={<HomePage />} />
                     </Routes>
                 </div>
             </BrowserRouter>
