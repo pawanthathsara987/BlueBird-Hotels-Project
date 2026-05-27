@@ -39,7 +39,9 @@ export default function VehicleBookingPage() {
     phone: "",
     pickupLocation: "",
     dropoffLocation: "",
-    specialRequirements: ""
+    specialRequirements: "",
+    customerLicenseNo: "",
+    customerLicenseExpiry: ""
   });
   
   const [bookingLoading, setBookingLoading] = useState(false);
@@ -332,6 +334,22 @@ export default function VehicleBookingPage() {
                       </div>
                     </div>
                   </div>
+
+                  {driverOption === "without" && (
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900 mb-4 border-b border-slate-100 pb-2">Driver's License (Self-Drive)</h3>
+                      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                        <div>
+                          <label className="block text-xs font-bold uppercase text-slate-500 mb-2">License Number *</label>
+                          <input required={driverOption === "without"} type="text" value={bookingForm.customerLicenseNo} onChange={(e) => setBookingForm({ ...bookingForm, customerLicenseNo: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-100 transition bg-slate-50/50" placeholder="e.g. B1234567" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold uppercase text-slate-500 mb-2">License Expiry *</label>
+                          <input required={driverOption === "without"} type="date" value={bookingForm.customerLicenseExpiry} onChange={(e) => setBookingForm({ ...bookingForm, customerLicenseExpiry: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-100 transition bg-slate-50/50" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div>
                     <h3 className="text-lg font-bold text-slate-900 mb-4 border-b border-slate-100 pb-2">Trip Details</h3>

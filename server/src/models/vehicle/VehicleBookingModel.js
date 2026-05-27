@@ -182,8 +182,7 @@ VehicleBooking.init(
     // ── Cancellation ──────────────────────────────
     cancelledBy: {
       type: DataTypes.INTEGER,
-      allowNull: true,          // FK → staff_members.userId (or customer id depending on actor)
-      references: { model: 'staff_members', key: 'userId' },
+      allowNull: true,          // staff_members.userId or customer.id depending on who cancelled
     },
     cancelledAt: {
       type: DataTypes.DATE,

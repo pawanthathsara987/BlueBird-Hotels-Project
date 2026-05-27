@@ -25,7 +25,7 @@ const calcDays = (pickup, ret) => {
 export const createVehicleBooking = async (req, res) => {
   try {
     const vehicleId = Number(req.params.id);
-    const { name, email, phone, pickupDatetime, returnDatetime, pickupLocation, dropoffLocation, withDriver = false, specialRequirements } = req.body;
+    const { name, email, phone, pickupDatetime, returnDatetime, pickupLocation, dropoffLocation, withDriver = false, specialRequirements, customerLicenseNo, customerLicenseExpiry } = req.body;
 
     if (!vehicleId) return res.status(400).json({ success: false, message: 'vehicle id required' });
     if (!name || !email || !phone) return res.status(400).json({ success: false, message: 'customer name, email and phone are required' });
@@ -42,6 +42,12 @@ export const createVehicleBooking = async (req, res) => {
       return res.status(400).json({ success: false, message: 'return datetime must be after pickup datetime' });
     }
 
+    if (!withDriver) {
+      if (!customerLicenseNo || !customerLicenseExpiry) {
+        return res.status(400).json({ success: false, message: 'License details are required for self-drive bookings' });
+      }
+    }
+
     const t = await sequelize.transaction();
     try {
       const vehicle = await Vehicle.findByPk(vehicleId, { transaction: t, lock: t.LOCK.UPDATE });
@@ -54,6 +60,8 @@ export const createVehicleBooking = async (req, res) => {
         await t.rollback();
         return res.status(400).json({ success: false, message: `Vehicle is ${vehicle.status}` });
       }
+
+
 
       const overlappingBooking = await VehicleBooking.findOne({
         where: {
@@ -116,8 +124,8 @@ export const createVehicleBooking = async (req, res) => {
         numDays,
         pickupLocation: pickupLocation || '',
         dropoffLocation: dropoffLocation || '',
-        customerLicenseNo: null,
-        customerLicenseExpiry: null,
+        customerLicenseNo: customerLicenseNo || null,
+        customerLicenseExpiry: customerLicenseExpiry || null,
         vehicleRatePerDay: vehicleRatePerDay,
         driverRatePerDay: driverRatePerDay,
         subtotal: subtotal.toFixed(2),
@@ -145,4 +153,28 @@ export const createVehicleBooking = async (req, res) => {
   }
 };
 
-export default { createVehicleBooking };
+export const getCustomerVehicleBookings = async (req, res) => {
+  try {
+    const customerId = req.user?.id;
+    if (!customerId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const bookings = await VehicleBooking.findAll({
+      where: { customerId },
+      include: [
+        { association: 'vehicle' },
+        { association: 'driver' },
+        { association: 'payments' },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+
+    return res.json({ success: true, data: bookings });
+  } catch (err) {
+    console.error('getCustomerVehicleBookings error', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export default { createVehicleBooking, getCustomerVehicleBookings };
