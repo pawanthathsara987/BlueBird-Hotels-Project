@@ -100,7 +100,7 @@ export const createDriver = async (req, res) => {
       licenseExpiry: req.body.licenseExpiry,
       employmentType: req.body.employmentType || 'full_time',
       status: req.body.status || 'active',
-      languageSkills: req.body.languageSkills || [],
+      languageSkills: (() => { try { return JSON.parse(req.body.languageSkills || '[]'); } catch { return []; } })(),
       driverImage: image,
       notes: req.body.notes || null,
     };
@@ -150,7 +150,7 @@ export const updateDriver = async (req, res) => {
       licenseExpiry: req.body.licenseExpiry,
       employmentType: req.body.employmentType || driver.employmentType,
       status: req.body.status || driver.status,
-      languageSkills: req.body.languageSkills || driver.languageSkills,
+      languageSkills: (() => { try { return JSON.parse(req.body.languageSkills || 'null') ?? driver.languageSkills; } catch { return driver.languageSkills; } })(),
       driverImage: image,
       notes: req.body.notes || driver.notes,
     };
