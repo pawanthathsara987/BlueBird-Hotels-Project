@@ -15,7 +15,7 @@ const initialMessages = [
 ];
 
 const quickReplies = [
-  "Check package availability",
+  "Check room availability",
   "Cheap rooms for 2 adults",
   "Available rooms today",
   "Available tours",

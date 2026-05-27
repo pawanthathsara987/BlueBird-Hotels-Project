@@ -6,10 +6,19 @@ import { DateRange } from "react-date-range";
 import { addDays, format } from "date-fns";
 import { Plus, Minus, Calendar, Users, Globe, ChevronDown, ChevronLeft, ChevronRight, Info, Sparkles, Coffee, Utensils, Check, Moon, ArrowRight, Trash2, Lock, Unlock, Car, Clock, ClipboardList } from "lucide-react";
 import toast from "react-hot-toast";
-import RoomDetailsModal from "../../pages/client/booking/roombooking/RoomDetailsModal";
+import RoomDetailsModal from "./RoomDetailsModal";
 
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
+
+const getBoardTypeColor = (type) => {
+  const normalized = (type || "").toLowerCase();
+  if (normalized.includes("room only")) return "from-stone-400 to-stone-600";
+  if (normalized.includes("breakfast")) return "from-amber-400 to-amber-600";
+  if (normalized.includes("half")) return "from-rose-400 to-rose-600";
+  if (normalized.includes("full")) return "from-emerald-500 to-teal-700";
+  return "from-blue-500 to-indigo-600";
+};
 
 /* ---------------- MAIN ---------------- */
 const RoomSelector = () => {
@@ -41,7 +50,7 @@ const RoomSelector = () => {
 
   // Global settings
   const [nationality, setNationality] = useState(() => {
-    return location.state?.bookingData?.nationality || "Sri Lankan";
+    return location.state?.bookingData?.nationality || "";
   });
 
   // Extra booking options (Personal requests & airport pickup)
@@ -65,123 +74,222 @@ const RoomSelector = () => {
     }
   });
 
-  // Set packages config
-  const packages = [
-    {
-      id: 1,
-      name: "Room Only",
-      tagline: "Maximum stay flexibility",
-      icon: Sparkles,
-      color: "from-stone-400 to-stone-600",
-      description: "Enjoy luxurious accommodation with full access to resort amenities. Customize your dining experience during your stay.",
-      features: ["Five-star Luxury Room", "High-speed Resort Wi-Fi", "Access to Infinity Pools & Beach", "24/7 Butler Support"],
-    },
-    {
-      id: 2,
-      name: "Bed & Breakfast",
-      tagline: "Gourmet coastal breakfast",
-      icon: Coffee,
-      color: "from-amber-400 to-amber-600",
-      description: "Awake to fresh ocean breezes and gourmet breakfast buffet featuring international and Sri Lankan specialties.",
-      features: ["Five-star Luxury Room", "Gourmet Beachfront Breakfast Buffet", "Welcome Tropical Mocktails", "Daily Fresh Fruit Platter"],
-    },
-    {
-      id: 3,
-      name: "Half Board",
-      tagline: "Curated gourmet dining",
-      icon: Utensils,
-      color: "from-rose-400 to-rose-600",
-      description: "Treat your senses to culinary excellence. Includes breakfast buffet and a bespoke 3-course dinner daily.",
-      features: ["Gourmet Beachfront Breakfast", "Daily 3-Course Dinner", "Priority Table Reservations", "15% off Spa treatments"],
-    },
-    {
-      id: 4,
-      name: "Full Board",
-      tagline: "All-inclusive gastronomy",
-      icon: Utensils,
-      color: "from-emerald-500 to-teal-700",
-      description: "Immerse yourself in total carefree culinary bliss. Enjoy fine breakfast, lunch, and dinner curated by master chefs.",
-      features: ["All Gourmet Meals Included", "Premium Beachfront Venues", "Private Dining Consultation", "Selected complimentary beverages"],
-    },
-  ];
+  // Dynamic Board Types state
+  const [boardTypes, setBoardTypes] = useState([]);
 
-  // Available luxury room categories with images & price guides
-  const roomTypes = [
-    {
-      name: "Deluxe King Room",
-      maxOccupancy: 3,
-      image: "https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=600&q=80",
-      images: [
-        "https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=600&q=80",
-        "https://images.unsplash.com/photo-1591088398332-8a7791972843?auto=format&fit=crop&w=600&q=80",
-        "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=600&q=80"
-      ],
-      price: "$250",
-      description: "Savor elegant coastal living in our Deluxe King Room. Featuring high ceilings, custom-crafted teak furniture, and a private sanctuary terrace offering serene garden views.",
-      tagline: "Refined sanctuary with hand-selected designer touches.",
-      roomSize: "45 m² / 484 sq ft",
-      cancellationPolicy: "Free cancellation up to 24 hours prior to check-in.",
-      paymentPolicy: "No deposit required. Pay upon arrival at the front desk."
-    },
-    {
-      name: "Ocean Front Suite",
-      maxOccupancy: 4,
-      image: "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=600&q=80",
-      images: [
-        "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=600&q=80",
-        "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=600&q=80",
-        "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?auto=format&fit=crop&w=600&q=80"
-      ],
-      price: "$450",
-      description: "Gaze upon uninterrupted Indian Ocean panoramas from our Ocean Front Suite. Complete with a signature plush king bed, deep soaking marble tub, and a spacious sun-drenched balcony.",
-      tagline: "Captivating ocean vistas meets sophisticated beach luxury.",
-      roomSize: "72 m² / 775 sq ft",
-      cancellationPolicy: "Free cancellation up to 48 hours prior to arrival.",
-      paymentPolicy: "Guaranteed booking. Pay on check-in."
-    },
-    {
-      name: "Sunset Beach Villa",
-      maxOccupancy: 5,
-      image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80",
-      images: [
-        "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80",
-        "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?auto=format&fit=crop&w=600&q=80",
-        "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=600&q=80"
-      ],
-      price: "$750",
-      description: "Step directly onto powdery white sands from your private Sunset Beach Villa. Features a personal plunge pool, open-air garden rain shower, and front-row seats to majestic daily sunsets.",
-      tagline: "Your private beachfront sanctuary with an infinity plunge pool.",
-      roomSize: "115 m² / 1,238 sq ft",
-      cancellationPolicy: "Free cancellation up to 7 days prior to arrival.",
-      paymentPolicy: "10% refundable deposit required to hold reservation."
-    },
-    {
-      name: "Grand Presidential Suite",
-      maxOccupancy: 6,
-      image: "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=600&q=80",
-      images: [
-        "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=600&q=80",
-        "https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&w=600&q=80",
-        "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=600&q=80"
-      ],
-      price: "$1,250",
-      description: "The peak of opulent resort living. Our two-bedroom Grand Presidential Suite features a private fitness studio, absolute ocean frontage, massive dining terrace, and a dedicated 24-hour private butler.",
-      tagline: "Unrivaled coastal majesty, supreme comfort, and elite butler service.",
-      roomSize: "240 m² / 2,583 sq ft",
-      cancellationPolicy: "Free cancellation up to 14 days prior to arrival.",
-      paymentPolicy: "Guaranteed reservation. Major credit cards pre-authorized."
+  // Fetch Board Types dynamically on mount
+  useEffect(() => {
+    const fetchBoardTypes = async () => {
+      try {
+        const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api").trim().replace(/\/$/, "");
+        const response = await fetch(`${backendBaseUrl}/admin/board-types`);
+        const result = await response.json();
+        if (result && result.success && Array.isArray(result.data)) {
+          setBoardTypes(result.data);
+        }
+      } catch (err) {
+        console.error("Failed to load BoardTypes from backend:", err);
+      }
+    };
+    fetchBoardTypes();
+  }, []);
+
+  // Dynamic Other Prices state
+  const [otherPrices, setOtherPrices] = useState([]);
+
+  // Dynamic Hotel Policy state
+  const [policy, setPolicy] = useState(null);
+
+  // Dynamic Room Types state
+  const [roomTypes, setRoomTypes] = useState([]);
+
+  // Fetch Room Types dynamically based on selected date range
+  useEffect(() => {
+    const fetchRoomTypes = async () => {
+      if (!dateRange[0]?.startDate || !dateRange[0]?.endDate) return;
+      try {
+        const checkIn = format(dateRange[0].startDate, "yyyy-MM-dd");
+        const checkOut = format(dateRange[0].endDate, "yyyy-MM-dd");
+        const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api").trim().replace(/\/$/, "");
+        const response = await fetch(`${backendBaseUrl}/roombook/available-packages?checkIn=${checkIn}&checkOut=${checkOut}`);
+        const result = await response.json();
+        if (result && result.success && Array.isArray(result.data)) {
+          const physicalRooms = Array.isArray(result.availableRooms) ? result.availableRooms : [];
+
+          if (Array.isArray(result.otherPrices)) {
+            setOtherPrices(result.otherPrices);
+          }
+
+          const fetchedPolicy = Array.isArray(result.policies) && result.policies.length > 0
+            ? result.policies[0]
+            : null;
+
+          if (fetchedPolicy) {
+            setPolicy(fetchedPolicy);
+          }
+
+          const amenitiesMap = {};
+          if (Array.isArray(result.roomTypeAmenities)) {
+            result.roomTypeAmenities.forEach(item => {
+              amenitiesMap[item.id] = Array.isArray(item.Amenities)
+                ? item.Amenities.map(a => a.name)
+                : [];
+            });
+          }
+
+          // Group by unique room type first so we only have one card per room type
+          const groupedRoomTypes = {};
+          result.data.forEach(item => {
+            const rtId = item.room_type_id;
+            if (!groupedRoomTypes[rtId]) {
+              groupedRoomTypes[rtId] = {
+                ...item,
+                boardPrices: {} // Store all board type prices from the DB
+              };
+            }
+            groupedRoomTypes[rtId].boardPrices[item.board_type_name.toLowerCase()] = parseFloat(item.price);
+          });
+
+          const uniqueTypesList = Object.values(groupedRoomTypes);
+
+          const mapped = uniqueTypesList.map(rt => {
+            const name = rt.room_type_name;
+            const norm = name.toLowerCase();
+
+            // Base price is the Room Only price from the DB, fallback to rt.price or 250
+            const priceVal = rt.boardPrices["room only"] || parseFloat(rt.price) || 250;
+
+            // Determine max occupancy from backend columns
+            const dbMaxAdults = Number(rt.max_adults) || 3;
+            const dbMaxKids = Number(rt.max_kids) || 0;
+            const dbKidsAllow = !!rt.kids_allow;
+
+            // Determine size
+            let size = "45 m² / 484 sq ft";
+            if (norm.includes("presidential") || norm.includes("grand")) size = "240 m² / 2,583 sq ft";
+            else if (norm.includes("villa") || norm.includes("beach")) size = "115 m² / 1,238 sq ft";
+            else if (norm.includes("suite") || norm.includes("ocean")) size = "72 m² / 775 sq ft";
+
+            // Policies dynamically populated from DB
+            const cancelPolicy = fetchedPolicy?.cancellation_policy || (norm.includes("deluxe")
+              ? "Free cancellation up to 24 hours prior to check-in."
+              : norm.includes("suite")
+                ? "Free cancellation up to 48 hours prior to arrival."
+                : "Free cancellation up to 7 days prior to arrival.");
+
+            const payPolicy = fetchedPolicy?.payment_policy || (norm.includes("deluxe")
+              ? "No deposit required. Pay upon arrival at the front desk."
+              : norm.includes("suite")
+                ? "Guaranteed booking. Pay on check-in."
+                : "10% refundable deposit required to hold reservation.");
+
+            const checkInTime = fetchedPolicy?.check_in_time || "2:00 PM";
+            const checkOutTime = fetchedPolicy?.check_out_time || "12:00 PM";
+
+            // Dynamic Description & Tagline
+            const tagline = norm.includes("presidential")
+              ? "Unrivaled coastal majesty, supreme comfort, and elite butler service."
+              : norm.includes("villa")
+                ? "Your private beachfront sanctuary with an infinity plunge pool."
+                : norm.includes("suite")
+                  ? "Captivating ocean vistas meets sophisticated beach luxury."
+                  : "Refined sanctuary with hand-selected designer touches.";
+
+            const description = norm.includes("presidential")
+              ? "The peak of opulent resort living. Our Grand Presidential Suite features a private fitness studio, absolute ocean frontage, and private butler."
+              : norm.includes("villa")
+                ? "Step directly onto powdery white sands from your private Beach Villa. Features a plunge pool and open-air rain shower."
+                : norm.includes("suite")
+                  ? "Gaze upon Indian Ocean panoramas from our Suite. Complete with plush bedding and sun-drenched balcony."
+                  : "Savor elegant coastal living in our Deluxe Room. Featuring custom-crafted furniture and a private sanctuary terrace.";
+
+            const features = amenitiesMap[rt.room_type_id] || [];
+
+            // Get available physical rooms for this type
+            const typeAvailableRooms = physicalRooms
+              .filter(r => Number(r.room_type_id) === Number(rt.room_type_id))
+              .map(r => ({
+                id: r.id,
+                roomNumber: r.room_number,
+                floor: r.floor
+              }));
+
+            return {
+              id: rt.room_type_id,
+              name: name,
+              maxOccupancy: dbMaxAdults,
+              maxAdults: dbMaxAdults,
+              maxKids: dbKidsAllow ? dbMaxKids : 0,
+              kidsAllow: dbKidsAllow,
+              image: rt.image_url,
+              images: [rt.image_url],
+              price: `$${priceVal}`,
+              description,
+              tagline,
+              roomSize: size,
+              cancellationPolicy: cancelPolicy,
+              paymentPolicy: payPolicy,
+              checkIn: checkInTime,
+              checkOut: checkOutTime,
+              features,
+              availableRooms: typeAvailableRooms,
+              availableRoomsCount: rt.available_rooms_count,
+              boardPrices: rt.boardPrices
+            };
+          });
+          setRoomTypes(mapped);
+        }
+      } catch (err) {
+        console.error("Failed to load RoomTypes from backend:", err);
+      }
+    };
+    fetchRoomTypes();
+  }, [dateRange]);
+
+  // Sync category and board type indices when fetched data arrives
+  useEffect(() => {
+    if (roomTypes.length > 0 || boardTypes.length > 0) {
+      setAddedRooms(prev => prev.map(r => {
+        const typeIdx = roomTypes.findIndex(t => t.name === r.roomType);
+        const pkgIdx = boardTypes.findIndex(p => p.type === r.boardType);
+        return {
+          ...r,
+          categoryIndex: typeIdx >= 0 ? typeIdx : r.categoryIndex,
+          packageIndex: pkgIdx >= 0 ? pkgIdx : r.packageIndex,
+          price: calculateRoomPrice(r.roomType, r.boardType)
+        };
+      }));
     }
-  ];
+  }, [roomTypes, boardTypes]);
 
   // Helper to calculate room price dynamically based on room type and board type
   const calculateRoomPrice = (roomType, boardType) => {
     if (!roomType) return 0;
     const typeObj = roomTypes.find(t => t.name === roomType);
     if (!typeObj) return 0;
-    const base = Number(typeObj.price.replace(/[^0-9.]/g, '')) || 0;
-    const addons = { "Room Only": 0, "Bed & Breakfast": 40, "Half Board": 90, "Full Board": 150 };
-    return base + (addons[boardType] || 0);
+
+    const normalizedBoardType = (boardType || "Room Only").toLowerCase();
+
+    if (typeObj.boardPrices && typeObj.boardPrices[normalizedBoardType] !== undefined) {
+      return typeObj.boardPrices[normalizedBoardType];
+    }
+
+    return 0;
   };
+
+  // Helper to fetch airport pickup price dynamically from otherPrices state
+  const getAirportPickupPrice = () => {
+    const item = otherPrices.find(op => op.item_name.toLowerCase() === "airport pickup");
+    return item ? parseFloat(item.price) : 50.00;
+  };
+
+  const hasAirportPickup = otherPrices.some(op => op.item_name.toLowerCase() === "airport pickup");
+
+  useEffect(() => {
+    if (otherPrices.length > 0 && !hasAirportPickup) {
+      setAirportPickupEnabled(false);
+    }
+  }, [otherPrices, hasAirportPickup]);
 
   // Dynamic added rooms list (Initialize with one default room using selected board type, initially unconfigured or restored from location state)
   const [addedRooms, setAddedRooms] = useState(() => {
@@ -189,7 +297,8 @@ const RoomSelector = () => {
     if (Array.isArray(passedRooms) && passedRooms.length > 0) {
       return passedRooms.map(r => {
         const typeIdx = roomTypes.findIndex(t => t.name === r.roomType);
-        const pkgIdx = packages.findIndex(p => p.name === r.boardType);
+        const pkgNames = ["Room Only", "Bed & Breakfast", "Half Board", "Full Board"];
+        const pkgIdx = pkgNames.findIndex(p => p.toLowerCase() === (r.boardType || "").toLowerCase());
         return {
           id: r.frontendRoomId || Date.now() + Math.random(),
           roomType: r.roomType || "",
@@ -207,10 +316,10 @@ const RoomSelector = () => {
     return [
       {
         id: 1,
-        roomType: "", // Enforce selection!
+        roomType: "",
         adults: 2,
         children: 0,
-        childAges: [], // Enforce specify child age
+        childAges: [],
         boardType: "Room Only",
         price: 0,
         isConfigured: false,
@@ -316,8 +425,9 @@ const RoomSelector = () => {
   const handlePackagePrev = (roomId) => {
     setAddedRooms(prev => prev.map(r => {
       if (r.id === roomId) {
-        const newIndex = (r.packageIndex - 1 + packages.length) % packages.length;
-        const newBoardType = packages[newIndex].name;
+        const len = boardTypes.length || 1;
+        const newIndex = (r.packageIndex - 1 + len) % len;
+        const newBoardType = boardTypes[newIndex]?.type || "Room Only";
         return {
           ...r,
           packageIndex: newIndex,
@@ -332,8 +442,9 @@ const RoomSelector = () => {
   const handlePackageNext = (roomId) => {
     setAddedRooms(prev => prev.map(r => {
       if (r.id === roomId) {
-        const newIndex = (r.packageIndex + 1) % packages.length;
-        const newBoardType = packages[newIndex].name;
+        const len = boardTypes.length || 1;
+        const newIndex = (r.packageIndex + 1) % len;
+        const newBoardType = boardTypes[newIndex]?.type || "Room Only";
         return {
           ...r,
           packageIndex: newIndex,
@@ -347,7 +458,7 @@ const RoomSelector = () => {
 
   // Board Type Selection Handler
   const handleBoardTypeChange = (roomId, newBoardType) => {
-    const pkgIdx = packages.findIndex(p => p.name === newBoardType);
+    const pkgIdx = boardTypes.findIndex(p => p.type === newBoardType);
     setAddedRooms(prev => prev.map(r =>
       r.id === roomId ? {
         ...r,
@@ -361,14 +472,28 @@ const RoomSelector = () => {
   // Room Type Selection Handler
   const handleRoomTypeChange = (roomId, newType) => {
     const typeIdx = roomTypes.findIndex(t => t.name === newType);
-    setAddedRooms(prev => prev.map(r =>
-      r.id === roomId ? {
-        ...r,
-        roomType: newType,
-        categoryIndex: typeIdx >= 0 ? typeIdx : r.categoryIndex,
-        price: calculateRoomPrice(newType, r.boardType)
-      } : r
-    ));
+    const category = roomTypes[typeIdx];
+    const maxAdults = category?.maxAdults || 3;
+    const maxKids = category?.maxKids || 0;
+    const kidsAllow = category?.kidsAllow ?? true;
+
+    setAddedRooms(prev => prev.map(r => {
+      if (r.id === roomId) {
+        const nextAdults = Math.min(r.adults, maxAdults);
+        const nextKids = kidsAllow ? Math.min(r.children, maxKids) : 0;
+        const nextAges = (r.childAges || []).slice(0, nextKids);
+        return {
+          ...r,
+          roomType: newType,
+          categoryIndex: typeIdx >= 0 ? typeIdx : r.categoryIndex,
+          price: calculateRoomPrice(newType, r.boardType),
+          adults: nextAdults,
+          children: nextKids,
+          childAges: nextAges
+        };
+      }
+      return r;
+    }));
   };
 
   // Child Age Selection Handler
@@ -387,10 +512,19 @@ const RoomSelector = () => {
   const handleUpdateRoomGuests = (roomId, type, delta) => {
     setAddedRooms(prev => prev.map(r => {
       if (r.id === roomId) {
+        const category = roomTypes.find(t => t.name === r.roomType);
+        const maxAdults = category?.maxAdults || 3;
+        const maxKids = category?.maxKids || 0;
+        const kidsAllow = category?.kidsAllow ?? true;
+
         if (type === "adults") {
-          return { ...r, adults: Math.max(1, r.adults + delta) };
+          const nextAdults = r.adults + delta;
+          if (nextAdults < 1 || nextAdults > maxAdults) return r;
+          return { ...r, adults: nextAdults };
         } else if (type === "children") {
-          const nextChildren = Math.max(0, r.children + delta);
+          if (!kidsAllow) return r;
+          const nextChildren = r.children + delta;
+          if (nextChildren < 0 || nextChildren > maxKids) return r;
           let nextAges = [...(r.childAges || [])];
           if (delta > 0) {
             for (let i = 0; i < delta; i++) {
@@ -442,6 +576,11 @@ const RoomSelector = () => {
   };
 
   const handleFinalBookingSubmit = () => {
+    if (!nationality || nationality === "") {
+      toast.error("Please select your Nationality in the search bar above before proceeding.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     const nights = getStayNights();
 
     // Calculate total nightly rate of all rooms
@@ -454,6 +593,7 @@ const RoomSelector = () => {
       JSON.stringify({
         enabled: airportPickupEnabled,
         time: pickupTime,
+        price: getAirportPickupPrice()
       })
     );
 
@@ -462,19 +602,43 @@ const RoomSelector = () => {
       checkInDate: dateRange[0].startDate.toISOString(),
       checkOutDate: dateRange[0].endDate.toISOString(),
       nights: nights,
-      totalPrice: totalNightlyRate * nights + (airportPickupEnabled ? 50 : 0),
+      totalPrice: totalNightlyRate * nights + (airportPickupEnabled ? getAirportPickupPrice() : 0),
       nationality: nationality,
     };
 
-    // Construct selectedRooms list expected by BookingSummary.jsx
-    const selectedRooms = addedRooms.map((r, i) => {
+    // Track allocated physical room IDs to prevent booking the same room multiple times
+    const allocatedRoomIds = new Set();
+    const resolvedRooms = [];
+
+    for (let i = 0; i < addedRooms.length; i++) {
+      const r = addedRooms[i];
       const roomNights = nights;
       const roomNightlyRate = r.price || 0;
-      return {
+
+      // Find corresponding room type to resolve physical roomId
+      const typeObj = roomTypes.find(t => t.name === r.roomType);
+      let assignedRoomId = null;
+
+      if (typeObj && Array.isArray(typeObj.availableRooms)) {
+        // Find the first available room ID that hasn't been assigned to another room in this reservation
+        const availableRoom = typeObj.availableRooms.find(room => !allocatedRoomIds.has(room.id));
+        if (availableRoom) {
+          assignedRoomId = availableRoom.id;
+          allocatedRoomIds.add(availableRoom.id);
+        }
+      }
+
+      if (!assignedRoomId) {
+        toast.error(`No more available rooms for category: ${r.roomType || "Unselected"}. Please choose a different category or change dates.`);
+        return;
+      }
+
+      resolvedRooms.push({
         frontendRoomId: r.id,
         packageName: `${r.roomType} (${r.boardType})`,
         roomType: r.roomType,
         boardType: r.boardType,
+        roomId: assignedRoomId, // Assign the physical room ID securely!
         adults: r.adults,
         kids: r.children,
         kidAges: r.childAges,
@@ -486,8 +650,8 @@ const RoomSelector = () => {
         discount: 0,
         checkInDate: dateRange[0].startDate.toISOString(),
         checkOutDate: dateRange[0].endDate.toISOString(),
-      };
-    });
+      });
+    }
 
     toast.success("Redirecting to your booking summary...");
 
@@ -495,7 +659,7 @@ const RoomSelector = () => {
     navigate("/booking-summary", {
       state: {
         bookingData,
-        selectedRooms,
+        selectedRooms: resolvedRooms,
       }
     });
   };
@@ -535,7 +699,11 @@ const RoomSelector = () => {
             className="flex-1 flex items-center justify-between border border-stone-200/80 bg-white hover:border-emerald-600 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500/20 px-4 py-3.5 rounded-xl transition text-left cursor-pointer group shadow-xs"
           >
             <span className="text-stone-800 font-bold text-sm flex items-center gap-2">
-              {nationality === "Sri Lankan" ? "🇱🇰 Sri Lankan" : "🌐 Non-Sri Lankan"}
+              {nationality === "Sri Lankan" 
+                ? "🇱🇰 Sri Lankan" 
+                : (nationality === "Non Sri Lankan Resident" || nationality === "Non-Sri Lankan" || nationality === "Non Sri Lankan")
+                  ? "🌐 Non-Sri Lankan"
+                  : "❓ Please Select"}
             </span>
             <ChevronDown className={`w-4 h-4 text-stone-400 transition-transform ${showNationalityDropdown ? "rotate-180 text-emerald-800" : "group-hover:text-stone-600"}`} />
           </button>
@@ -777,9 +945,11 @@ const RoomSelector = () => {
                       </span>
                       <span className="text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-150 px-2 py-0.5 rounded-md flex items-center gap-1">
                         {(() => {
-                          const pkg = packages.find(p => p.name === room.boardType);
-                          const PkgIcon = pkg ? pkg.icon : Sparkles;
-                          return <PkgIcon className="w-2.5 h-2.5 text-emerald-800" />;
+                          const bt = boardTypes.find(b => b.type === room.boardType);
+                          if (bt && bt.icon) {
+                            return <img src={bt.icon} alt={room.boardType} className="w-3 h-3 object-contain" />;
+                          }
+                          return <Sparkles className="w-3 h-3 text-emerald-800" />;
                         })()}
                         {room.boardType}
                       </span>
@@ -906,11 +1076,13 @@ const RoomSelector = () => {
                     </div>
                     <div className="pt-2 border-t border-stone-200/40">
                       <span className="font-bold text-stone-400 block text-xs uppercase tracking-wider mb-0.5">Selected Board Type</span>
-                      <span className="font-bold block text-sm text-emerald-850 flex items-center gap-1.5">
+                      <span className="font-bold block text-sm text-emerald-850 flex items-center gap-1.5 font-sans">
                         {(() => {
-                          const pkg = packages.find(p => p.name === room.boardType);
-                          const PkgIcon = pkg ? pkg.icon : Sparkles;
-                          return <PkgIcon className="w-3.5 h-3.5 text-emerald-800" />;
+                          const bt = boardTypes.find(b => b.type === room.boardType);
+                          if (bt && bt.icon) {
+                            return <img src={bt.icon} alt={room.boardType} className="w-3.5 h-3.5 object-contain" />;
+                          }
+                          return <Sparkles className="w-3.5 h-3.5 text-emerald-800" />;
                         })()}
                         {room.boardType || "Room Only"}
                       </span>
@@ -932,8 +1104,9 @@ const RoomSelector = () => {
                             <span>{room.boardType} Add-on:</span>
                             <span>
                               +${(() => {
-                                const addons = { "Room Only": 0, "Bed & Breakfast": 40, "Half Board": 90, "Full Board": 150 };
-                                return addons[room.boardType] || 0;
+                                const addons = { "room only": 0, "bed & breakfast": 40, "half board": 90, "full board": 150 };
+                                const normalized = (room.boardType || "Room Only").toLowerCase();
+                                return addons[normalized] !== undefined ? addons[normalized] : 0;
                               })()}
                             </span>
                           </div>
@@ -949,20 +1122,44 @@ const RoomSelector = () => {
                   </div>
 
                   {/* Occupancy counters for this specific room */}
-                  <div className="flex flex-col gap-3">
+                  <div className={`flex flex-col gap-3 relative transition-all duration-300 ${!room.roomType ? "opacity-50 pointer-events-none select-none cursor-not-allowed" : ""}`}>
+                    {!room.roomType && (
+                      <div className="absolute inset-0 bg-white/40 z-10 flex items-center justify-center rounded-xl">
+                        <span className="text-[10px] text-amber-800 font-black tracking-widest uppercase bg-amber-50 border border-amber-200 px-3 py-1 rounded-md shadow-3xs animate-pulse">
+                          Select Category First
+                        </span>
+                      </div>
+                    )}
+
+                    {room.roomType && (
+                      <div className="text-[10px] text-stone-550 font-bold bg-stone-100/50 p-2 rounded-lg flex justify-between items-center border border-stone-200/40 select-none animate-fadeIn">
+                        <span>Combined Guest Capacity Limit:</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-black border ${(room.adults + room.children) >= (roomTypes.find(t => t.name === room.roomType)?.maxAdults || 0)
+                          ? "bg-rose-50 text-rose-800 border-rose-200/50"
+                          : "bg-emerald-50 text-emerald-800 border-emerald-200/50"
+                          }`}>
+                          {room.adults + room.children} / {roomTypes.find(t => t.name === room.roomType)?.maxAdults || 0} Max
+                        </span>
+                      </div>
+                    )}
 
                     {/* Adults Count */}
                     <div className="flex items-center justify-between bg-white border border-stone-200/60 p-3 rounded-xl shadow-3xs">
                       <div className="flex flex-col">
-                        <span className="text-xs font-bold text-stone-800">Adults</span>
-                        <span className="text-xs text-stone-400 font-bold">Ages 11+</span>
+                        <span className="text-xs font-bold text-stone-850">Adults</span>
+                        <span className="text-[10px] text-stone-400 font-extrabold uppercase tracking-wide">
+                          {(() => {
+                            const category = roomTypes.find(t => t.name === room.roomType);
+                            return category ? `Max ${category.maxAdults} (Ages 11+)` : "Ages 11+";
+                          })()}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
                           onClick={() => handleUpdateRoomGuests(room.id, "adults", -1)}
-                          disabled={room.adults <= 1}
-                          className="w-6.5 h-6.5 rounded-full border border-stone-200 flex items-center justify-center text-stone-500 hover:border-stone-400 active:scale-90 transition bg-stone-50 disabled:opacity-30 disabled:pointer-events-none"
+                          disabled={room.adults <= 1 || !room.roomType}
+                          className="w-6.5 h-6.5 rounded-full border border-stone-200 flex items-center justify-center text-stone-500 hover:border-stone-400 active:scale-90 transition bg-stone-50 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
                         >
                           <Minus className="w-3.5 h-3.5" />
                         </button>
@@ -970,7 +1167,12 @@ const RoomSelector = () => {
                         <button
                           type="button"
                           onClick={() => handleUpdateRoomGuests(room.id, "adults", 1)}
-                          className="w-6.5 h-6.5 rounded-full border border-stone-200 flex items-center justify-center text-stone-500 hover:border-stone-400 active:scale-90 transition bg-stone-50"
+                          disabled={(() => {
+                            const category = roomTypes.find(t => t.name === room.roomType);
+                            if (!category) return true;
+                            return (room.adults + room.children) >= category.maxAdults;
+                          })()}
+                          className="w-6.5 h-6.5 rounded-full border border-stone-200 flex items-center justify-center text-stone-500 hover:border-stone-400 active:scale-90 transition bg-stone-50 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
                         >
                           <Plus className="w-3.5 h-3.5" />
                         </button>
@@ -980,15 +1182,21 @@ const RoomSelector = () => {
                     {/* Kids Count */}
                     <div className="flex items-center justify-between bg-white border border-stone-200/60 p-3 rounded-xl shadow-3xs animate-fadeIn">
                       <div className="flex flex-col">
-                        <span className="text-xs font-bold text-stone-800">Kids</span>
-                        <span className="text-xs text-stone-400 font-bold">Ages 0-11</span>
+                        <span className="text-xs font-bold text-stone-850">Kids</span>
+                        <span className="text-[10px] text-stone-400 font-extrabold uppercase tracking-wide">
+                          {(() => {
+                            const category = roomTypes.find(t => t.name === room.roomType);
+                            if (category && !category.kidsAllow) return "Not Allowed";
+                            return category ? `Max ${category.maxKids} (Ages 0-11)` : "Ages 0-11";
+                          })()}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
                           onClick={() => handleUpdateRoomGuests(room.id, "children", -1)}
-                          disabled={room.children <= 0}
-                          className="w-6.5 h-6.5 rounded-full border border-stone-200 flex items-center justify-center text-stone-500 hover:border-stone-400 active:scale-90 transition bg-stone-50 disabled:opacity-30 disabled:pointer-events-none"
+                          disabled={room.children <= 0 || !room.roomType}
+                          className="w-6.5 h-6.5 rounded-full border border-stone-200 flex items-center justify-center text-stone-500 hover:border-stone-400 active:scale-90 transition bg-stone-50 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
                         >
                           <Minus className="w-3.5 h-3.5" />
                         </button>
@@ -996,7 +1204,12 @@ const RoomSelector = () => {
                         <button
                           type="button"
                           onClick={() => handleUpdateRoomGuests(room.id, "children", 1)}
-                          className="w-6.5 h-6.5 rounded-full border border-stone-200 flex items-center justify-center text-stone-500 hover:border-stone-400 active:scale-90 transition bg-stone-50"
+                          disabled={(() => {
+                            const category = roomTypes.find(t => t.name === room.roomType);
+                            if (!category || !category.kidsAllow) return true;
+                            return room.children >= category.maxKids || (room.adults + room.children) >= category.maxAdults;
+                          })()}
+                          className="w-6.5 h-6.5 rounded-full border border-stone-200 flex items-center justify-center text-stone-500 hover:border-stone-400 active:scale-90 transition bg-stone-50 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
                         >
                           <Plus className="w-3.5 h-3.5" />
                         </button>
@@ -1075,79 +1288,108 @@ const RoomSelector = () => {
                     <div className="relative w-full">
                       {/* Grid track wrapper with premium border, background, and spacing */}
                       <div className="w-full rounded-2xl border-3 border-stone-200/70 bg-white/40 p-3 shadow-3xs">
-                        <div className="flex gap-4 pb-1 pt-1 items-stretch overflow-x-auto scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent">
-                          {roomTypes.map((type) => {
-                            const isSelected = room.roomType === type.name;
-                            return (
-                              <div
-                                key={type.name}
-                                onClick={() => handleRoomTypeChange(room.id, type.name)}
-                                className={`min-w-[195px] w-[195px] bg-white rounded-xl border-2 transition-all duration-350 cursor-pointer overflow-hidden flex flex-col justify-between group relative active:scale-98 ${isSelected
-                                  ? "border-emerald-600 ring-4 ring-emerald-500/15 scale-[1.03] shadow-[0_12px_24px_rgba(6,95,70,0.12)] z-10"
-                                  : "border-stone-200/80 hover:border-emerald-600/40 hover:scale-[1.01] hover:shadow-2xs"
-                                  }`}
-                              >
-                                {/* HD room thumbnail preview */}
-                                <div className="relative h-28 overflow-hidden shrink-0">
-                                  <img
-                                    src={type.image}
-                                    alt={type.name}
-                                    className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                                  />
-                                  <div className="absolute top-2 right-2 z-10">
-                                    {isSelected ? (
-                                      <span className="w-6 h-6 rounded-full bg-emerald-800 text-white flex items-center justify-center shadow-md border border-white/20">
-                                        <Check className="w-3.5 h-3.5" />
-                                      </span>
-                                    ) : (
-                                      <span className="w-6 h-6 rounded-full bg-white/90 text-stone-500 flex items-center justify-center backdrop-blur-3xs shadow-sm border border-stone-200/50 hover:bg-stone-50">
-                                        <Plus className="w-3.5 h-3.5" />
-                                      </span>
-                                    )}
-                                  </div>
+                        {roomTypes.length === 0 ? (
+                          <div className="w-full py-10 text-center flex flex-col items-center justify-center p-6 bg-white rounded-xl border border-stone-200/50 shadow-3xs animate-fadeIn">
+                            <Info className="w-8 h-8 text-amber-600 mb-2 animate-bounce" />
+                            <h5 className="font-extrabold text-stone-850 text-sm tracking-tight">No Available Room Categories</h5>
+                            <p className="text-xs text-stone-500 max-w-sm mt-1 leading-relaxed font-semibold">
+                              We are fully booked or have no available rooms matching your stay dates. Please select other dates in the stay bar above.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex gap-4 pb-1 pt-1 items-stretch overflow-x-auto scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent">
+                            {roomTypes.map((type) => {
+                              const otherRoomsCount = addedRooms.filter(r => r.id !== room.id && r.roomType === type.name).length;
+                              const remainingRoomsCount = Math.max(0, (type.availableRoomsCount || 0) - otherRoomsCount);
+                              const isSelected = room.roomType === type.name;
+                              return (
+                                <div
+                                  key={type.name}
+                                  onClick={() => {
+                                    if (!isSelected && remainingRoomsCount <= 0) {
+                                      toast.error(`All available rooms of category "${type.name}" are already selected.`);
+                                      return;
+                                    }
+                                    handleRoomTypeChange(room.id, type.name);
+                                  }}
+                                  className={`min-w-[195px] w-[195px] bg-white rounded-xl border-2 transition-all duration-350 cursor-pointer overflow-hidden flex flex-col justify-between group relative active:scale-98 ${isSelected
+                                    ? "border-emerald-600 ring-4 ring-emerald-500/15 scale-[1.03] shadow-[0_12px_24px_rgba(6,95,70,0.12)] z-10"
+                                    : remainingRoomsCount <= 0
+                                      ? "border-stone-200 opacity-60 cursor-not-allowed filter grayscale"
+                                      : "border-stone-200/80 hover:border-emerald-600/40 hover:scale-[1.01] hover:shadow-2xs"
+                                    }`}
+                                >
+                                  {/* HD room thumbnail preview */}
+                                  <div className="relative h-28 overflow-hidden shrink-0">
+                                    <img
+                                      src={type.image}
+                                      alt={type.name}
+                                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                                    />
+                                    <div className="absolute top-2 right-2 z-10">
+                                      {isSelected ? (
+                                        <span className="w-6 h-6 rounded-full bg-emerald-800 text-white flex items-center justify-center shadow-md border border-white/20">
+                                          <Check className="w-3.5 h-3.5" />
+                                        </span>
+                                      ) : (
+                                        <span className="w-6 h-6 rounded-full bg-white/90 text-stone-500 flex items-center justify-center backdrop-blur-3xs shadow-sm border border-stone-200/50 hover:bg-stone-50">
+                                          <Plus className="w-3.5 h-3.5" />
+                                        </span>
+                                      )}
+                                    </div>
 
-                                  {/* Info Trigger Button (Top-left always visible with interactive hover scale) */}
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setDetailingRoom(type);
-                                    }}
-                                    className="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-white/95 text-stone-600 hover:text-emerald-800 flex items-center justify-center backdrop-blur-3xs shadow-sm border border-stone-200/50 hover:border-stone-300 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
-                                    title="View suite details"
-                                  >
-                                    <Info className="w-3.5 h-3.5" />
-                                  </button>
-
-                                  {/* Price Tag Badge */}
-                                  <div className="absolute bottom-2 left-2 bg-stone-950/85 text-white px-2.5 py-0.5 rounded text-xs font-black tracking-wider backdrop-blur-3xs">
-                                    {type.price} / night
-                                  </div>
-                                </div>
-
-                                {/* Card metadata details */}
-                                <div className="p-3.5 flex-1 flex flex-col justify-between space-y-2">
-                                  <h5 className="font-extrabold text-stone-850 text-xs leading-tight tracking-tight group-hover:text-emerald-900 transition">
-                                    {type.name}
-                                  </h5>
-                                  <div className="flex items-center justify-between text-[11px] font-bold text-stone-400 pt-2 border-t border-stone-100">
+                                    {/* Info Trigger Button (Top-left always visible with interactive hover scale) */}
                                     <button
                                       type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setDetailingRoom(type);
                                       }}
-                                      className="text-stone-450 hover:text-emerald-850 transition duration-200 font-extrabold flex items-center gap-0.5 cursor-pointer hover:underline"
+                                      className="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-white/95 text-stone-600 hover:text-emerald-800 flex items-center justify-center backdrop-blur-3xs shadow-sm border border-stone-200/50 hover:border-stone-300 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+                                      title="View suite details"
                                     >
-                                      <Info className="w-3 h-3" /> Details
+                                      <Info className="w-3.5 h-3.5" />
                                     </button>
-                                    <span className="text-stone-650 bg-stone-50 px-2 py-0.5 rounded text-[10px] font-bold">{type.maxOccupancy} Guests</span>
+
+                                    {/* Price Tag Badge */}
+                                    <div className="absolute bottom-2 left-2 bg-stone-950/85 text-white px-2.5 py-0.5 rounded text-xs font-black tracking-wider backdrop-blur-3xs">
+                                      {type.price} / night
+                                    </div>
+                                  </div>
+
+                                  {/* Card metadata details */}
+                                  <div className="p-3.5 flex-1 flex flex-col justify-between space-y-2">
+                                    <h5 className="font-extrabold text-stone-850 text-xs leading-tight tracking-tight group-hover:text-emerald-900 transition">
+                                      {type.name}
+                                    </h5>
+                                    <div className="flex items-center justify-between text-[11px] font-bold text-stone-400 pt-2 border-t border-stone-100">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setDetailingRoom(type);
+                                        }}
+                                        className="text-stone-450 hover:text-emerald-850 transition duration-200 font-extrabold flex items-center gap-0.5 cursor-pointer hover:underline"
+                                      >
+                                        <Info className="w-3.5 h-3.5" /> Details
+                                      </button>
+
+                                      <div className="flex flex-col items-end gap-1 shrink-0">
+                                        <span className="text-stone-650 bg-stone-100 px-2 py-0.5 rounded text-[10px] font-bold">{type.maxOccupancy} Guests</span>
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-black tracking-wide border ${remainingRoomsCount > 0
+                                          ? "bg-emerald-50 text-emerald-800 border-emerald-250/30"
+                                          : "bg-rose-50 text-rose-800 border-rose-250/30 animate-pulse"
+                                          }`}>
+                                          {remainingRoomsCount} Available
+                                        </span>
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            );
-                          })}
-                        </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1165,23 +1407,27 @@ const RoomSelector = () => {
                     <div className="relative w-full">
                       {/* Grid track wrapper with premium border, background, and spacing */}
                       <div className="w-full rounded-2xl border-3 border-stone-200/70 bg-white/40 p-3 shadow-3xs">
-                        <div className="flex gap-4 pb-1 pt-1 items-stretch overflow-x-auto scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent">
-                          {packages.map((pkg) => {
-                            const isSelected = room.boardType === pkg.name;
-                            const IconComponent = pkg.icon;
+                        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 pb-1 pt-1">
+                          {boardTypes.map((bt) => {
+                            const isSelected = room.boardType === bt.type;
+                            const cardColor = getBoardTypeColor(bt.type);
                             return (
                               <div
-                                key={pkg.id}
-                                onClick={() => handleBoardTypeChange(room.id, pkg.name)}
-                                className={`min-w-[195px] w-[195px] bg-white rounded-xl border-2 p-3.5 transition-all duration-350 cursor-pointer overflow-hidden flex flex-col justify-between group relative active:scale-98 ${isSelected
+                                key={bt.id}
+                                onClick={() => handleBoardTypeChange(room.id, bt.type)}
+                                className={`w-full bg-white rounded-xl border-2 p-3.5 transition-all duration-350 cursor-pointer overflow-hidden flex flex-col justify-between group relative active:scale-98 ${isSelected
                                   ? "border-emerald-600 ring-4 ring-emerald-500/15 scale-[1.03] shadow-[0_12px_24px_rgba(6,95,70,0.12)] z-10"
                                   : "border-stone-200/80 hover:border-emerald-600/40 hover:scale-[1.01] hover:shadow-2xs"
                                   }`}
                               >
-                                <div className={`h-1.5 bg-gradient-to-r ${pkg.color} absolute top-0 left-0 right-0`} />
+                                <div className={`h-1.5 bg-gradient-to-r ${cardColor} absolute top-0 left-0 right-0`} />
                                 <div className="flex justify-between items-center pt-2">
-                                  <div className="p-1.5 rounded-lg bg-emerald-50 border border-emerald-100">
-                                    <IconComponent className="w-4 h-4 text-emerald-800" />
+                                  <div className="p-1.5 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center w-8 h-8 shrink-0">
+                                    {bt.icon ? (
+                                      <img src={bt.icon} alt={bt.type} className="w-4 h-4 object-contain" />
+                                    ) : (
+                                      <Sparkles className="w-4 h-4 text-emerald-800" />
+                                    )}
                                   </div>
                                   {isSelected ? (
                                     <span className="w-6 h-6 rounded-full bg-emerald-800 text-white flex items-center justify-center shadow-md border border-white/20">
@@ -1194,8 +1440,8 @@ const RoomSelector = () => {
                                   )}
                                 </div>
                                 <div className="mt-3.5">
-                                  <h6 className="text-stone-850 font-black text-xs tracking-tight">{pkg.name}</h6>
-                                  <p className="text-[11px] text-stone-400 leading-tight mt-1 font-semibold">{pkg.tagline}</p>
+                                  <h6 className="text-stone-850 font-black text-xs tracking-tight">{bt.type}</h6>
+                                  <p className="text-[11px] text-stone-400 leading-tight mt-1 font-semibold">{bt.tagline}</p>
                                 </div>
                               </div>
                             );
@@ -1220,90 +1466,92 @@ const RoomSelector = () => {
           <p className="text-sm text-stone-500">Elevate your stay with premium resort services and special requests</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className={`grid grid-cols-1 gap-6 ${hasAirportPickup ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
           {/* Card A: Premium Airport Pickup */}
-          <div
-            className={`border rounded-2xl p-6 transition-all duration-350 shadow-3xs flex flex-col justify-between ${airportPickupEnabled
+          {hasAirportPickup && (
+            <div
+              className={`border rounded-2xl p-6 transition-all duration-350 shadow-3xs flex flex-col justify-between ${airportPickupEnabled
                 ? "border-emerald-600 bg-emerald-50/5 ring-4 ring-emerald-500/5"
                 : "border-stone-200 bg-stone-50/30 hover:border-emerald-600/30"
-              }`}
-          >
-            <div>
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-xl border ${airportPickupEnabled ? "bg-emerald-100 border-emerald-250 text-emerald-800" : "bg-white border-stone-200 text-stone-500"}`}>
-                    <Car className="w-5 h-5" />
+                }`}
+            >
+              <div>
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-xl border ${airportPickupEnabled ? "bg-emerald-100 border-emerald-250 text-emerald-800" : "bg-white border-stone-200 text-stone-500"}`}>
+                      <Car className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-stone-850 text-sm sm:text-base leading-tight">Sanctuary Airport Shuttle</h4>
+                      <p className="text-xs text-stone-400 font-semibold mt-0.5">Private transfer from airport to resort</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-extrabold text-stone-850 text-sm sm:text-base leading-tight">Sanctuary Airport Shuttle</h4>
-                    <p className="text-xs text-stone-400 font-semibold mt-0.5">Private transfer from airport to resort</p>
-                  </div>
+
+                  {/* Surcharge Badge */}
+                  <span className="text-xs font-black text-emerald-850 bg-emerald-50 border border-emerald-200/60 px-2.5 py-1 rounded-lg">
+                    +${getAirportPickupPrice().toFixed(2)} / trip
+                  </span>
                 </div>
 
-                {/* Surcharge Badge */}
-                <span className="text-xs font-black text-emerald-850 bg-emerald-50 border border-emerald-200/60 px-2.5 py-1 rounded-lg">
-                  +$50.00 / trip
-                </span>
-              </div>
+                <p className="text-xs text-stone-500 leading-relaxed font-medium mb-4">
+                  A private chauffeur will meet you at the terminal arrivals lobby with a custom name board and drive you directly to BlueBird Hotels.
+                </p>
 
-              <p className="text-xs text-stone-500 leading-relaxed font-medium mb-4">
-                A private chauffeur will meet you at the terminal arrivals lobby with a custom name board and drive you directly to BlueBird Hotels.
-              </p>
+                {/* Shuttle Schedule Inputs */}
+                {airportPickupEnabled && (
+                  <div className="bg-white border border-stone-200/80 p-4 rounded-xl space-y-3.5 shadow-3xs animate-fadeIn mb-4">
+                    <span className="text-xs uppercase font-extrabold tracking-widest text-emerald-850 block border-b border-stone-100 pb-1.5 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5" /> Transfer Schedule
+                    </span>
 
-              {/* Shuttle Schedule Inputs */}
-              {airportPickupEnabled && (
-                <div className="bg-white border border-stone-200/80 p-4 rounded-xl space-y-3.5 shadow-3xs animate-fadeIn mb-4">
-                  <span className="text-xs uppercase font-extrabold tracking-widest text-emerald-850 block border-b border-stone-100 pb-1.5 flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5" /> Transfer Schedule
-                  </span>
+                    <div className="grid grid-cols-2 gap-3.5">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-extrabold text-stone-400 uppercase tracking-wider">Shuttle Date</span>
+                        <div className="border text-xs rounded-lg px-3 py-2 bg-stone-50 text-stone-600 font-bold border-stone-250 cursor-not-allowed select-none">
+                          {format(dateRange[0].startDate, "dd MMM yyyy")}
+                        </div>
+                      </div>
 
-                  <div className="grid grid-cols-2 gap-3.5">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[10px] font-extrabold text-stone-400 uppercase tracking-wider">Shuttle Date</span>
-                      <div className="border text-xs rounded-lg px-3 py-2 bg-stone-50 text-stone-600 font-bold border-stone-250 cursor-not-allowed select-none">
-                        {format(dateRange[0].startDate, "dd MMM yyyy")}
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-extrabold text-stone-400 uppercase tracking-wider">Arrival Time</span>
+                        <input
+                          type="time"
+                          value={pickupTime}
+                          onChange={(e) => setPickupTime(e.target.value)}
+                          className="border text-xs rounded-lg px-3 py-2 bg-white text-stone-700 font-bold border-stone-200 hover:border-stone-300 focus:ring-1 focus:ring-emerald-500/20 focus:border-emerald-600 transition cursor-pointer"
+                        />
                       </div>
                     </div>
-
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[10px] font-extrabold text-stone-400 uppercase tracking-wider">Arrival Time</span>
-                      <input
-                        type="time"
-                        value={pickupTime}
-                        onChange={(e) => setPickupTime(e.target.value)}
-                        className="border text-xs rounded-lg px-3 py-2 bg-white text-stone-700 font-bold border-stone-200 hover:border-stone-300 focus:ring-1 focus:ring-emerald-500/20 focus:border-emerald-600 transition cursor-pointer"
-                      />
-                    </div>
+                    <p className="text-[10px] text-emerald-800 font-semibold italic">
+                      * The pickup date matches your check-in date. Please update check-in date above if needed.
+                    </p>
                   </div>
-                  <p className="text-[10px] text-emerald-800 font-semibold italic">
-                    * The pickup date matches your check-in date. Please update check-in date above if needed.
-                  </p>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            {/* Toggle Switch */}
-            <div className="flex items-center justify-between border-t border-stone-150/40 pt-4 mt-auto">
-              <span className="text-xs font-extrabold text-stone-600">Request Airport Pickup</span>
-              <button
-                type="button"
-                onClick={() => setAirportPickupEnabled(!airportPickupEnabled)}
-                className={`w-12 h-6.5 rounded-full p-1 transition-colors duration-300 focus:outline-none shadow-inner cursor-pointer relative ${airportPickupEnabled ? "bg-emerald-800" : "bg-stone-200"
-                  }`}
-              >
-                <div
-                  className={`w-4.5 h-4.5 rounded-full bg-white shadow-md transform transition-transform duration-300 ${airportPickupEnabled ? "translate-x-5.5" : "translate-x-0"
+              {/* Toggle Switch */}
+              <div className="flex items-center justify-between border-t border-stone-150/40 pt-4 mt-auto">
+                <span className="text-xs font-extrabold text-stone-600">Request Airport Pickup</span>
+                <button
+                  type="button"
+                  onClick={() => setAirportPickupEnabled(!airportPickupEnabled)}
+                  className={`w-12 h-6.5 rounded-full p-1 transition-colors duration-300 focus:outline-none shadow-inner cursor-pointer relative ${airportPickupEnabled ? "bg-emerald-800" : "bg-stone-200"
                     }`}
-                />
-              </button>
+                >
+                  <div
+                    className={`w-4.5 h-4.5 rounded-full bg-white shadow-md transform transition-transform duration-300 ${airportPickupEnabled ? "translate-x-5.5" : "translate-x-0"
+                      }`}
+                  />
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Card B: Personal & Special Requests */}
           <div
             className={`border rounded-2xl p-6 transition-all duration-350 shadow-3xs flex flex-col justify-between ${personalRequest.trim().length > 0
-                ? "border-emerald-600 bg-emerald-50/5 ring-4 ring-emerald-500/5"
-                : "border-stone-200 bg-stone-50/30 hover:border-emerald-600/30"
+              ? "border-emerald-600 bg-emerald-50/5 ring-4 ring-emerald-500/5"
+              : "border-stone-200 bg-stone-50/30 hover:border-emerald-600/30"
               }`}
           >
             <div className="flex flex-col h-full justify-between">
@@ -1329,7 +1577,7 @@ const RoomSelector = () => {
                   onChange={(e) => setPersonalRequest(e.target.value)}
                   placeholder="e.g., Allergen-free feather pillows, celebrating our wedding anniversary, arrival cake setup, extra child bed option..."
                   maxLength={500}
-                  rows={4}
+                  rows={5}
                   className="w-full text-xs font-semibold text-stone-750 bg-white border border-stone-200 hover:border-stone-300 rounded-xl p-3.5 focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-600 transition placeholder-stone-400 outline-hidden resize-none shadow-3xs"
                 />
                 <div className="flex justify-between items-center text-[10px] text-stone-400 font-bold px-1">
@@ -1361,13 +1609,19 @@ const RoomSelector = () => {
               </span>
             </div>
             {airportPickupEnabled && (
-              <div className="flex flex-col items-end sm:items-start text-right sm:text-left bg-emerald-50/40 border border-emerald-200/60 px-4.5 py-2.5 rounded-2xl shadow-3xs animate-fadeIn shrink-0">
+              <div className="flex flex-col items-end sm:items-start text-right sm:text-left bg-emerald-50/40 border border-emerald-250/60 px-4.5 py-2.5 rounded-2xl shadow-3xs animate-fadeIn shrink-0">
                 <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-emerald-800 mb-0.5">Shuttle Surcharge</span>
                 <span className="text-emerald-950 font-black text-lg sm:text-xl tracking-tight">
-                  +$50.00 <span className="text-xs font-bold text-stone-450">one-time</span>
+                  +${getAirportPickupPrice().toFixed(2)} <span className="text-xs font-bold text-stone-450">one-time</span>
                 </span>
               </div>
             )}
+            <div className="flex flex-col items-end sm:items-start text-right sm:text-left bg-emerald-800 text-white border border-emerald-900/15 px-4.5 py-2.5 rounded-2xl shadow-[0_6px_16px_rgba(6,95,70,0.18)] animate-fadeIn shrink-0">
+              <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-emerald-200 mb-0.5">Total for {getStayNights()} {getStayNights() === 1 ? 'Night' : 'Nights'}</span>
+              <span className="font-black text-lg sm:text-xl tracking-tight text-white">
+                ${(totalNightlyRate * getStayNights() + (airportPickupEnabled ? getAirportPickupPrice() : 0)).toFixed(2)}
+              </span>
+            </div>
           </div>
         )}
 

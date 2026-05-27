@@ -1,59 +1,24 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { 
   X, Check, Star, BedDouble, UserCheck, Clock3, ShieldCheck, 
-  Wifi, Wind, Tv, Coffee, Shield, Sparkles, CalendarDays, Coins 
+  Sparkles, CalendarDays
 } from 'lucide-react';
 
-const defaultAmenities = [
-  { name: "High-Speed Wi-Fi", icon: Wifi },
-  { name: "Individual A/C", icon: Wind },
-  { name: "Espresso Maker", icon: Coffee },
-  { name: "55\" Smart TV", icon: Tv },
-  { name: "Luxury Mini-Bar", icon: Coins },
-  { name: "In-Room Safe", icon: Shield },
-  { name: "24/7 Room Service", icon: Sparkles },
-  { name: "Premium Toiletries", icon: Check }
-];
+// Room Details Modal component that escapes CSS transform scopes using a React Portal.
 
 export default function RoomDetailsModal({ selectedRoom, onClose }) {
   const [imageList, setImageList] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  if (!selectedRoom) return null;
-
-  // Resolve naming conventions for backend/frontend fields
-  const roomName = selectedRoom.name || selectedRoom.pname || "Island Luxury Room";
-  
-  // Robust price parsing to handle string prices like "$250" or "$1,250" from mock models
-  const parsePrice = (val) => {
-    if (!val) return 0;
-    if (typeof val === 'number') return val;
-    const cleanStr = String(val).replace(/[^0-9.]/g, '');
-    return Number(cleanStr) || 0;
-  };
-
-  const roomPrice = parsePrice(selectedRoom.price || selectedRoom.pprice || 0);
-  const roomOriginalPrice = parsePrice(selectedRoom.originalPrice || selectedRoom.pprice || selectedRoom.price || 0);
-  const roomDiscount = Number(selectedRoom.discount || 0);
-  const roomImage = selectedRoom.image || selectedRoom.pimage || "";
-  const roomDescription = selectedRoom.description || selectedRoom.pdescription || "Indulge in unmatched comfort and premium amenities in this beautifully designed five-star room.";
-  const roomDescription2 = selectedRoom.description2 || selectedRoom.tagline || "Experience signature luxury with breathtaking coastal details.";
-  
-  const roomGuests = selectedRoom.maxGuests || selectedRoom.maxOccupancy || 
-    (selectedRoom.maxAdults ? `${selectedRoom.maxAdults} Adults ${selectedRoom.maxKids ? `& ${selectedRoom.maxKids} Kids` : ""}` : "3 Guests");
-  
-  const roomSize = selectedRoom.roomSize || selectedRoom.size || "45 m² / 484 sq ft";
-  const roomCheckIn = selectedRoom.checkIn || "2:00 PM";
-  const roomCheckOut = selectedRoom.checkOut || "12:00 PM";
-
-  const roomCancellationPolicy = selectedRoom.cancellationPolicy || selectedRoom.cancelPolicy || 
-    "Free cancellation up to 48 hours prior to arrival.";
-  const roomPaymentPolicy = selectedRoom.paymentPolicy || 
-    "No prepayment required. Secure your booking online and pay at the hotel.";
+  // Safe extraction of variables that might be needed in hooks dependency array
+  const roomImage = selectedRoom?.image || selectedRoom?.pimage || "";
 
   useEffect(() => {
+    if (!selectedRoom) return;
+
     // If the room object directly contains predefined images/imageList (e.g. mock roomTypes)
     if (selectedRoom.imageList && Array.isArray(selectedRoom.imageList)) {
       setImageList(selectedRoom.imageList);
@@ -66,7 +31,7 @@ export default function RoomDetailsModal({ selectedRoom, onClose }) {
       return;
     }
 
-    if (!selectedRoom?.id) {
+    if (!selectedRoom.id) {
       setImageList(roomImage ? [roomImage] : []);
       setLoading(false);
       return;
@@ -109,7 +74,7 @@ export default function RoomDetailsModal({ selectedRoom, onClose }) {
 
   // Keyboard navigation support
   useEffect(() => {
-    if (!canSlide) return;
+    if (!selectedRoom || !canSlide) return;
     const onKey = (e) => {
       if (e.key === 'ArrowLeft') handlePrev();
       if (e.key === 'ArrowRight') handleNext();
@@ -117,21 +82,53 @@ export default function RoomDetailsModal({ selectedRoom, onClose }) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [canSlide, handlePrev, handleNext, onClose]);
+  }, [selectedRoom, canSlide, handlePrev, handleNext, onClose]);
+
+  // Early return placed AFTER all hooks have run!
+  if (!selectedRoom) return null;
+
+  // Resolve naming conventions for backend/frontend fields
+  const roomName = selectedRoom.name || selectedRoom.pname || "Island Luxury Room";
+  
+  // Robust price parsing to handle string prices like "$250" or "$1,250" from mock models
+  const parsePrice = (val) => {
+    if (!val) return 0;
+    if (typeof val === 'number') return val;
+    const cleanStr = String(val).replace(/[^0-9.]/g, '');
+    return Number(cleanStr) || 0;
+  };
+
+  const roomPrice = parsePrice(selectedRoom.price || selectedRoom.pprice || 0);
+  const roomOriginalPrice = parsePrice(selectedRoom.originalPrice || selectedRoom.pprice || selectedRoom.price || 0);
+  const roomDiscount = Number(selectedRoom.discount || 0);
+  const roomDescription = selectedRoom.description || selectedRoom.pdescription || "Indulge in unmatched comfort and premium amenities in this beautifully designed five-star room.";
+  const roomDescription2 = selectedRoom.description2 || selectedRoom.tagline || "Experience signature luxury with breathtaking coastal details.";
+  
+  const roomGuests = selectedRoom.maxGuests || selectedRoom.maxOccupancy || 
+    (selectedRoom.maxAdults ? `${selectedRoom.maxAdults} Adults ${selectedRoom.maxKids ? `& ${selectedRoom.maxKids} Kids` : ""}` : "3 Guests");
+  
+  const roomSize = selectedRoom.roomSize || selectedRoom.size || "45 m² / 484 sq ft";
+  const roomCheckIn = selectedRoom.checkIn || "2:00 PM";
+  const roomCheckOut = selectedRoom.checkOut || "12:00 PM";
+
+  const roomCancellationPolicy = selectedRoom.cancellationPolicy || selectedRoom.cancelPolicy || 
+    "Free cancellation up to 48 hours prior to arrival.";
+  const roomPaymentPolicy = selectedRoom.paymentPolicy || 
+    "No prepayment required. Secure your booking online and pay at the hotel.";
 
   const currentImage = imageList[currentIndex] ?? roomImage;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/75 p-3 backdrop-blur-xs sm:p-5 animate-fadeIn">
-      <div className="relative flex max-h-[92vh] w-full max-w-4xl flex-col md:flex-row overflow-hidden rounded-3xl border border-stone-250/10 bg-white shadow-[0_25px_60px_rgba(28,25,23,0.25)] transition-all duration-300 animate-slideUp">
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/75 p-2 backdrop-blur-xs sm:p-4 animate-fadeIn">
+      <div className="relative flex h-[94vh] w-[96vw] max-w-6xl flex-col md:flex-row overflow-hidden rounded-3xl border border-stone-250/10 bg-white shadow-[0_25px_60px_rgba(28,25,23,0.25)] transition-all duration-300 animate-slideUp">
         
-        {/* Absolute Close Button for mobile */}
+        {/* Floating Close Button - Always visible on desktop and mobile */}
         <button
           onClick={onClose}
           aria-label="Close details"
-          className="absolute right-4 top-4 z-40 rounded-xl bg-white/90 p-2 text-stone-700 shadow-md backdrop-blur-xs hover:bg-white transition cursor-pointer active:scale-95 border border-stone-200/50 md:hidden"
+          className="absolute right-4 top-4 z-50 rounded-full bg-white/90 p-2 text-stone-700 shadow-md backdrop-blur-xs hover:bg-white hover:text-emerald-850 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-stone-200/50"
         >
-          <X className="h-4.5 w-4.5" />
+          <X className="h-4 w-4" />
         </button>
 
         {/* ── Left Side: Interactive Media Hub ── */}
@@ -212,7 +209,7 @@ export default function RoomDetailsModal({ selectedRoom, onClose }) {
         <div className="flex-1 flex flex-col justify-between overflow-hidden bg-white">
           
           {/* Scrollable details wrapper */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-5 sm:p-7 md:p-8 space-y-6">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-5 sm:p-7 md:p-8 pr-12 md:pr-14 space-y-6">
             
             {/* Header Block */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-stone-100 pb-4.5">
@@ -223,15 +220,6 @@ export default function RoomDetailsModal({ selectedRoom, onClose }) {
                 <p className="text-xs sm:text-sm text-stone-500 font-semibold leading-relaxed">
                   {roomDescription2}
                 </p>
-              </div>
-
-              {/* Star Rating Badge */}
-              <div className="flex items-center gap-2 bg-amber-50 border border-amber-100 rounded-2xl p-2 px-3.5 self-start shrink-0">
-                <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                <div className="leading-tight">
-                  <p className="text-xs font-black text-stone-900">4.9 / 5</p>
-                  <p className="text-xs font-bold text-stone-500 uppercase tracking-wider">Premium rated</p>
-                </div>
               </div>
             </div>
 
@@ -291,18 +279,17 @@ export default function RoomDetailsModal({ selectedRoom, onClose }) {
             {/* Curated Luxury Amenities Grid */}
             <div className="space-y-3">
               <h4 className="text-xs font-black uppercase tracking-widest text-stone-405">Included Amenities</h4>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                {defaultAmenities.map((amenity, idx) => {
-                  const Icon = amenity.icon;
-                  return (
-                    <div key={idx} className="flex items-center gap-2 bg-stone-50/50 hover:bg-stone-50 border border-stone-200/50 px-2.5 py-2 rounded-xl transition duration-200">
-                      <div className="flex h-6.5 w-6.5 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-850 shadow-3xs">
-                        <Icon className="h-3.5 w-3.5" />
-                      </div>
-                      <span className="text-xs font-extrabold text-stone-700 truncate leading-snug">{amenity.name}</span>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+                {Array.isArray(selectedRoom.features) && selectedRoom.features.length > 0 ? (
+                  selectedRoom.features.map((name, idx) => (
+                    <div key={idx} className="flex items-center gap-2.5 bg-stone-50/50 hover:bg-stone-50 border border-stone-200/50 px-3 py-2 rounded-xl transition duration-200 animate-fadeIn">
+                      <Check className="h-4 w-4 text-emerald-700 shrink-0" />
+                      <span className="text-xs font-extrabold text-stone-700 truncate leading-snug">{name}</span>
                     </div>
-                  );
-                })}
+                  ))
+                ) : (
+                  <p className="text-xs text-stone-450 italic col-span-full">No specific amenities configured for this suite.</p>
+                )}
               </div>
             </div>
 
@@ -334,9 +321,9 @@ export default function RoomDetailsModal({ selectedRoom, onClose }) {
           </div>
 
           {/* ── Immersive Footer Sizing ── */}
-          <div className="shrink-0 border-t border-stone-150 bg-stone-50/50 px-5 py-4 sm:px-7 sm:py-5 flex flex-row items-center justify-between gap-4">
+          <div className="shrink-0 border-t border-stone-150 bg-stone-50/50 px-4 py-3.5 sm:px-7 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             
-            <div className="flex flex-col">
+            <div className="flex flex-col w-full sm:w-auto">
               <span className="text-xs font-extrabold uppercase tracking-widest text-stone-450 leading-none mb-1">Total Stay Value</span>
               <div className="flex items-baseline gap-1.5 leading-none">
                 {roomDiscount > 0 && roomOriginalPrice > roomPrice && (
@@ -350,11 +337,11 @@ export default function RoomDetailsModal({ selectedRoom, onClose }) {
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-xl border border-stone-200 hover:border-stone-400 bg-white hover:bg-stone-50 px-5 py-3 text-xs font-bold text-stone-700 transition cursor-pointer active:scale-95 shadow-3xs"
+                className="flex-1 sm:flex-initial rounded-xl border border-stone-200 hover:border-stone-400 bg-white hover:bg-stone-50 px-5 py-3 text-xs font-bold text-stone-700 transition cursor-pointer active:scale-95 shadow-3xs"
               >
                 Close
               </button>
@@ -387,6 +374,7 @@ export default function RoomDetailsModal({ selectedRoom, onClose }) {
         .animate-fadeIn { animation: fadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .animate-slideUp { animation: slideUp 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
       `}</style>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import Logo from "../assets/bluebird logo.png";
+import Logo from "../../assets/bluebird logo.png";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -8,11 +8,11 @@ import { FcGoogle } from "react-icons/fc";
 import { FaEnvelope, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
 
 // Import local background assets from slider Images folder
-import bgFront from "../assets/slider Images/front-2048x1014.jpg";
-import bgSlider2 from "../assets/slider Images/home-slider2-2048x1014.jpg";
-import bgSlider3 from "../assets/slider Images/home-slider3-2048x1014.jpg";
-import bgSlider4 from "../assets/slider Images/home-slider4-2048x1014.jpg";
-import bgRestaurant from "../assets/slider Images/restaurent-2048x1014.jpg";
+import bgFront from "../../assets/slider Images/front-2048x1014.jpg";
+import bgSlider2 from "../../assets/slider Images/home-slider2-2048x1014.jpg";
+import bgSlider3 from "../../assets/slider Images/home-slider3-2048x1014.jpg";
+import bgSlider4 from "../../assets/slider Images/home-slider4-2048x1014.jpg";
+import bgRestaurant from "../../assets/slider Images/restaurent-2048x1014.jpg";
 
 export default function CustomerLoginPage() {
     const [showPassword, setShowPassword] = useState(false);
@@ -51,8 +51,9 @@ export default function CustomerLoginPage() {
                 }
 
                 const from = location.state?.from || "/";
+                const targetRoute = (from === "/booking-details" && location.state?.selectedRooms) ? "/payment" : from;
                 toast.success("Google login successful!");
-                navigate(from);
+                navigate(targetRoute, { state: location.state });
 
             } catch (error) {
                 console.error("Google login error:", error);
@@ -89,9 +90,10 @@ export default function CustomerLoginPage() {
             }
 
             const from = location.state?.from || "/";
+            const targetRoute = (from === "/booking-details" && location.state?.selectedRooms) ? "/payment" : from;
             toast.success("Login successful!");
             setLoading(false);
-            navigate(from);
+            navigate(targetRoute, { state: location.state });
         } catch (error) {
             setLoading(false);
             toast.error(error.response?.data?.message || "Login failed");

@@ -10,6 +10,8 @@ import StaffManagement from "./user/StaffManegement";
 import AddNewStaffMember from "./user/AddNewStaffMember";
 import UpdateStaffMember from "./user/UpdateStaffMember";
 import ViewDeletedStaff from "./user/ViewDeletedStaff";
+import AdminDashboard from "./AdminDashboard";
+import OtherItemPriceView from "./rooms/OtherItemPriceView";
 
 export default function AdminPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -77,6 +79,10 @@ export default function AdminPage() {
                                 <MdPeople className="text-xl" />
                                 <span>Users</span>
                             </NavLink>
+                            <NavLink to="/admin/extra-charges" onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}>
+                                <MdBookOnline className="text-xl" />
+                                <span>Extra Charges</span>
+                            </NavLink>
                         </div>
                     </div>
 
@@ -117,7 +123,7 @@ export default function AdminPage() {
             {/* Main content */}
             <div className="flex-1 h-full bg-gray-100 overflow-y-scroll pt-14 md:pt-0">
                 <Routes>
-                    <Route path="/" element={<h1 className="p-5">Welcome to Admin Dashboard</h1>} />
+                    <Route path="/" element={<AdminDashboard />} />
                     <Route path="/rooms/roomManagement" element={<RoomManagement />} />
                     <Route path="/rooms/room/add" element={<RoomForm />} />
                     <Route path="/rooms/room/edit" element={<RoomForm />} />
@@ -131,6 +137,7 @@ export default function AdminPage() {
                     <Route path="/users/addStaffMember" element={<AddNewStaffMember />} />
                     <Route path="/users/updateStaffMember" element={<UpdateStaffMember />} />
                     <Route path="/users/viewDeletedStaff" element={<ViewDeletedStaff />} />
+                    <Route path="/extra-charges" element={<OtherItemPriceView />} />
                     <Route path="/settings" element={<h1 className="p-5">Settings</h1>} />
                 </Routes>
             </div>

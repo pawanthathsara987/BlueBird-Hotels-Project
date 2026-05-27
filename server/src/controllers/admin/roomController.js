@@ -1,5 +1,5 @@
 import { Op } from "sequelize";
-import { Amenities, OccupancyType, Room, RoomAmenities, RoomType } from "../../models/index.js";
+import { Amenities, OccupancyType, Room, RoomAmenities, RoomType, BookedRoom, Booking } from "../../models/index.js";
 import roomModel from "../../models/room/roomModel.js";
 
 export async function getAllRooms(req, res) {
@@ -19,6 +19,16 @@ export async function getAllRooms(req, res) {
                     include: [
                         {
                             model: Amenities,
+                        },
+                    ],
+                },
+                {
+                    model: BookedRoom,
+                    as: "bookedRooms",
+                    include: [
+                        {
+                            model: Booking,
+                            as: "booking",
                         },
                     ],
                 },
@@ -51,6 +61,7 @@ export async function searchRooms(req, res) {
                 [Op.or]: [
                     { room_number: { [Op.like]: `%${query}%` } },
                     { status: { [Op.like]: `%${query}%` } },
+                    { '$occupancyType.type$': { [Op.like]: `%${query}%` } },
                 ],
             },
             include: [
@@ -67,6 +78,16 @@ export async function searchRooms(req, res) {
                     include: [
                         {
                             model: Amenities,
+                        },
+                    ],
+                },
+                {
+                    model: BookedRoom,
+                    as: "bookedRooms",
+                    include: [
+                        {
+                            model: Booking,
+                            as: "booking",
                         },
                     ],
                 },

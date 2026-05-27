@@ -1,7 +1,147 @@
 import { col, fn, Op, QueryTypes } from "sequelize";
 import sequelize from "../../config/database.js";
 import { sendEmail, sendBookingConfirmationEmail } from "../../services/emailService.js";
-import { Customer, Room, BookedRoom, Reservation, AirPortPickup } from "../../models/index.js";
+import { Customer, Room, BookedRoom, Reservation, AirPortPickup, OtherItemPrice, RoomType, Amenities, Policy } from "../../models/index.js";
+
+/**
+ * Helper to calculate dynamic price for a room stay based on RoomType, OccupancyType, BoardType and SeasonalDiscount.
+ */
+const calculateRoomStayPrice = async (roomTypeName, boardTypeName, adultsCount, checkInDate, checkOutDate) => {
+    // 1. Resolve RoomType
+    const roomType = await RoomType.findOne({
+        where: { type: { [Op.like]: `%${roomTypeName}%` } }
+    });
+    if (!roomType) {
+        throw new Error(`Room type "${roomTypeName}" not found in database`);
+    }
+
+    // 2. Resolve BoardType
+    const boardType = await BoardType.findOne({
+        where: { type: { [Op.like]: `%${boardTypeName}%` } }
+    });
+    if (!boardType) {
+        throw new Error(`Board type "${boardTypeName}" not found in database`);
+    }
+
+    // 3. Resolve OccupancyType based on guest numbers
+    // Single if adultsCount <= 1, Double if adultsCount === 2, Triple if adultsCount === 3, Family if adultsCount >= 4
+    let occupancyTypeName = "Double";
+    if (adultsCount <= 1) {
+        occupancyTypeName = "Single";
+    } else if (adultsCount === 2) {
+        occupancyTypeName = "Double";
+    } else if (adultsCount === 3) {
+        occupancyTypeName = "Triple";
+    } else {
+        occupancyTypeName = "Quadruple";
+    }
+
+    let occupancyType = await OccupancyType.findOne({
+        where: { type: { [Op.like]: `%${occupancyTypeName}%` } }
+    });
+
+    if (!occupancyType) {
+        occupancyType = await OccupancyType.findOne({
+            where: { type: { [Op.like]: "%Double%" } }
+        });
+    }
+    if (!occupancyType) {
+        occupancyType = await OccupancyType.findOne();
+    }
+    if (!occupancyType) {
+        throw new Error(`No occupancy types defined in database`);
+    }
+
+    // 4. Find standard RoomPrice for this combination
+    let roomPrice = await RoomPrice.findOne({
+        where: {
+            roomTypeId: roomType.id,
+            boardTypeId: boardType.id,
+            occupancyTypeId: occupancyType.id
+        },
+        include: [{
+            model: SeasonalDiscount,
+            as: "season"
+        }]
+    });
+
+    // Fallback: If exact occupancy combination doesn't exist, try getting standard Double occupancy price
+    if (!roomPrice) {
+        const doubleOcc = await OccupancyType.findOne({ where: { type: { [Op.like]: "%Double%" } } });
+        if (doubleOcc) {
+            roomPrice = await RoomPrice.findOne({
+                where: {
+                    roomTypeId: roomType.id,
+                    boardTypeId: boardType.id,
+                    occupancyTypeId: doubleOcc.id
+                },
+                include: [{
+                    model: SeasonalDiscount,
+                    as: "season"
+                }]
+            });
+        }
+    }
+
+    // Fallback 2: Get any price combination for this room type and board type
+    if (!roomPrice) {
+        roomPrice = await RoomPrice.findOne({
+            where: {
+                roomTypeId: roomType.id,
+                boardTypeId: boardType.id
+            },
+            include: [{
+                model: SeasonalDiscount,
+                as: "season"
+            }]
+        });
+    }
+
+    if (!roomPrice) {
+        throw new Error(`Pricing not configured for room type "${roomTypeName}" with board type "${boardTypeName}"`);
+    }
+
+    let baseRate = parseFloat(roomPrice.price);
+    const start = new Date(checkInDate);
+    const end = new Date(checkOutDate);
+    const stayNights = Math.max(1, Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)));
+
+    let totalPrice = 0;
+
+    // Calculate price night by night to accurately apply seasonal discounts if check-in spans multiple periods
+    for (let day = 0; day < stayNights; day++) {
+        const currentNightDate = new Date(start);
+        currentNightDate.setDate(start.getDate() + day);
+
+        let nightlyRate = baseRate;
+
+        // Query SeasonalDiscount for this specific night
+        const activeDiscount = await SeasonalDiscount.findOne({
+            where: {
+                startDate: { [Op.lte]: currentNightDate },
+                endDate: { [Op.gte]: currentNightDate }
+            }
+        });
+
+        if (activeDiscount) {
+            if (activeDiscount.discountType === "percentage") {
+                nightlyRate = nightlyRate * (1 - activeDiscount.discountValue / 100);
+            } else if (activeDiscount.discountType === "fixed") {
+                nightlyRate = Math.max(0, nightlyRate - activeDiscount.discountValue);
+            }
+        } else if (roomPrice.season) {
+            const season = roomPrice.season;
+            if (currentNightDate >= new Date(season.startDate) && currentNightDate <= new Date(season.endDate)) {
+                if (season.discountType === "percentage") {
+                    nightlyRate = nightlyRate * (1 - season.discountValue / 100);
+                } else if (season.discountType === "fixed") {
+                    nightlyRate = Math.max(0, nightlyRate - season.discountValue);
+                }
+            }
+        }
+
+        totalPrice += nightlyRate;
+    }
 
     return {
         totalPrice,
@@ -198,7 +338,12 @@ const createBooking = async (req, res) => {
             if (!airportPickup.pickupDate || !airportPickup.pickupTime) {
                 throw new Error("Airport pickup date and time are required");
             }
-            calculatedTotalPrice += 50.00;
+            const pickupPriceRecord = await OtherItemPrice.findOne({
+                where: { item_name: { [Op.like]: "%airport pickup%" }, status: true },
+                transaction: t
+            });
+            const pickupPrice = pickupPriceRecord ? parseFloat(pickupPriceRecord.price) : 50.00;
+            calculatedTotalPrice += pickupPrice;
         }
 
         // Compare price discrepancy (tolerance of $1.50 for minor floating point rounding differences)
@@ -279,7 +424,7 @@ const createBooking = async (req, res) => {
                 to: "sandeepal513@gmail.com",
                 subject: "Personal Request",
                 html: "<h1>Personal Request</h1>" +
-                        "<p>Personal Request: " + personalRequest + "</p>",
+                    "<p>Personal Request: " + personalRequest + "</p>",
                 text: personalRequest,
             });
         }
@@ -310,10 +455,10 @@ const getAllBookings = async (req, res) => {
         const bookings = await Reservation.findAll({
             include: [
                 { model: Customer },
-                { 
-                    model: BookedRoom, 
+                {
+                    model: BookedRoom,
                     as: 'bookedRooms',
-                    include: [Room] 
+                    include: [Room]
                 }
             ]
         });
@@ -351,7 +496,7 @@ const updateBooking = async (req, res) => {
         if (!reservation) throw new Error("Reservation not found");
 
         await reservation.update({ status, total_price }, { transaction: t });
-        
+
         await t.commit();
         return res.status(200).json({ success: true, message: "Updated" });
     } catch (error) {
@@ -449,7 +594,7 @@ const getAvailableRoomAssignForPackage = async (req, res) => {
     }
 };
 
-const getAvailablePackagesByDate = async (req, res) => {
+const getAvailableRoomTypesByDate = async (req, res) => {
     try {
         const { checkIn, checkOut } = req.query;
 
@@ -462,40 +607,108 @@ const getAvailablePackagesByDate = async (req, res) => {
 
         const query = `
             SELECT 
-                p.id,
-                p.pname,
-                p.pprice,
-                p.discount,
-                p.pimage,
-                p.maxAdults,
-                p.maxKids,
-                p.description,
-                COUNT(DISTINCT r.id) AS available_room
-            FROM room_package p
-            JOIN room r ON p.id = r.packageId
-            WHERE r.roomStatus = 'available'
+                rt.id AS room_type_id,
+                rt.type AS room_type_name,
+                rt.image_url,
+                rp.occupancyTypeId,
+                rp.boardTypeId,
+                bt.type AS board_type_name,
+                rp.price,
+                COUNT(r.id) AS available_rooms_count,
+                MAX(ot.capacity) AS max_adults,
+                MAX(r.kids) AS max_kids,
+                MAX(r.kids_allow) AS kids_allow
+            FROM room_type rt
+            JOIN room r ON rt.id = r.room_type_id
+            JOIN occupancy_type ot ON r.occupancy_type_id = ot.id
+            JOIN room_price rp ON rt.id = rp.roomTypeId
+            JOIN board_type bt ON rp.boardTypeId = bt.id
+            WHERE r.status = 'available'
+            AND r.occupancy_type_id = rp.occupancyTypeId
             AND r.id NOT IN (
-                SELECT br.room_id
+                SELECT br.room_id 
                 FROM booked_rooms br
-                WHERE br.status NOT IN ('cancelled', 'checked_out')
-                AND br.checkIn < :checkOut
-                AND br.checkOut > :checkIn
+                WHERE br.status IN ('reserved', 'checked_in')
+                    AND br.checkIn < :checkOut
+                    AND br.checkOut > :checkIn
             )
-            GROUP BY p.id
+            GROUP BY 
+                rt.id, 
+                rt.type, 
+                rt.image_url, 
+                rp.occupancyTypeId, 
+                rp.boardTypeId, 
+                bt.type, 
+                rp.price
         `;
 
-        const packagesList = await sequelize.query(query, {
-            replacements: { 
-                checkIn: checkIn, 
-                checkOut: checkOut 
+        const roomTypeList = await sequelize.query(query, {
+            replacements: {
+                checkIn: checkIn,
+                checkOut: checkOut
             },
             type: QueryTypes.SELECT
         });
 
+        // Fetch detailed available physical rooms list to allow client-side room assignment
+        const roomsQuery = `
+            SELECT r.id, r.room_number, r.floor, r.room_type_id, r.kids_allow, r.kids AS max_kids, ot.capacity AS max_adults
+            FROM room r
+            JOIN occupancy_type ot ON r.occupancy_type_id = ot.id
+            WHERE r.status = 'available'
+            AND r.id NOT IN (
+                SELECT br.room_id 
+                FROM booked_rooms br
+                WHERE br.status IN ('reserved', 'checked_in')
+                    AND br.checkIn < :checkOut
+                    AND br.checkOut > :checkIn
+            )
+        `;
+
+        const availableRoomsList = await sequelize.query(roomsQuery, {
+            replacements: {
+                checkIn: checkIn,
+                checkOut: checkOut
+            },
+            type: QueryTypes.SELECT
+        });
+
+        const otherPricesList = await OtherItemPrice.findAll({
+            where: { status: true }
+        });
+
+        const roomTypeAmenitiesList = await RoomType.findAll({
+            include: [{
+                model: Amenities,
+                attributes: ["id", "name"],
+                through: { attributes: [] }
+            }]
+        });
+
+        // Load active policies from DB, seed if empty
+        let policiesList = await Policy.findAll({
+            where: { status: true }
+        });
+
+        if (policiesList.length === 0) {
+            const defaultPolicy = await Policy.create({
+                policy_name: "Default Hotel Policy",
+                cancellation_policy: "Free cancellation up to 48 hours prior to arrival. Cancellations made within 48 hours are subject to a one-night charge.",
+                payment_policy: "No prepayment required. Secure your booking online and pay 50% advance on checkout to hold your luxury stay.",
+                check_in_time: "2:00 PM",
+                check_out_time: "12:00 PM"
+            });
+            policiesList = [defaultPolicy];
+        }
+
         return res.status(200).json({
             success: true,
-            message: packagesList.length > 0 ? "Packages found" : "No packages available",
-            data: packagesList
+            message: roomTypeList.length > 0 ? "Room Types found" : " No Room Types available",
+            data: roomTypeList,
+            availableRooms: availableRoomsList,
+            otherPrices: otherPricesList,
+            roomTypeAmenities: roomTypeAmenitiesList,
+            policies: policiesList
         });
 
     } catch (error) {
@@ -608,8 +821,12 @@ const checkBookingPrice = async (req, res) => {
 
         let airportPickupSurcharge = 0;
         if (airportPickup?.enabled) {
-            calculatedTotalPrice += 50.00;
-            airportPickupSurcharge = 50.00;
+            const pickupPriceRecord = await OtherItemPrice.findOne({
+                where: { item_name: { [Op.like]: "%airport pickup%" }, status: true }
+            });
+            const pickupPrice = pickupPriceRecord ? parseFloat(pickupPriceRecord.price) : 50.00;
+            calculatedTotalPrice += pickupPrice;
+            airportPickupSurcharge = pickupPrice;
         }
 
         return res.status(200).json({
@@ -638,7 +855,7 @@ export {
     updateBooking,
     availableRooms,
     getAvailableRoomAssignForPackage,
-    getAvailablePackagesByDate,
+    getAvailableRoomTypesByDate,
     getPricingMatrix,
     checkBookingPrice,
     calculateRoomStayPrice

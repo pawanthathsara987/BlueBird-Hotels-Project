@@ -33,14 +33,14 @@ export default function DashboardHeader({
   maskEmail
 }) {
   return (
-    <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-lg border-b border-slate-100 flex items-center justify-between px-6 py-4">
+    <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-slate-200/60 flex items-center justify-between px-6 py-4">
       <div className="flex items-center space-x-3">
         <button
           onClick={() => setIsMobileSidebarOpen(true)}
-          className="p-2 hover:bg-slate-50 rounded-lg text-slate-600 md:hidden transition-colors"
+          className="p-2.5 bg-slate-900/5 hover:bg-slate-900/10 active:scale-95 rounded-xl text-slate-700 md:hidden transition-all border border-slate-200/60"
           aria-label="Open sidebar menu"
         >
-          <Menu size={22} />
+          <Menu size={20} />
         </button>
         {/* Premium Luxury Logo */}
         <Link to="/" className="flex items-center space-x-2.5 focus:outline-none hover:opacity-90 transition-opacity">
@@ -60,7 +60,7 @@ export default function DashboardHeader({
           placeholder="Search reservations, itineraries, luxury transfers..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full bg-slate-50/80 border border-slate-200/80 focus:border-cyan-600 focus:bg-white focus:ring-1 focus:ring-cyan-600 rounded-full py-2.5 pl-11 pr-4 text-sm transition-all outline-none"
+          className="w-full bg-slate-50/80 border border-slate-200/80 focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-500 rounded-full py-2.5 pl-11 pr-4 text-sm transition-all outline-none"
         />
         {searchQuery && (
           <button
@@ -92,12 +92,12 @@ export default function DashboardHeader({
 
           {/* Notification Panel Popover */}
           {isNotifDropdownOpen && (
-            <div className="absolute right-0 mt-3 w-80 bg-white/95 backdrop-blur-md border border-slate-100 rounded-2xl shadow-xl z-50 py-3 animate-in fade-in slide-in-from-top-3 duration-250">
+            <div className="absolute right-0 mt-3 w-80 bg-white border border-slate-200/80 rounded-2xl shadow-xl z-50 py-3 animate-in fade-in slide-in-from-top-3 duration-250">
               <div className="flex justify-between items-center px-4 pb-2 border-b border-slate-100">
                 <h4 className="font-semibold text-sm text-blue-950">Luxury Concierge Alerts</h4>
                 <button
                   onClick={handleMarkAllRead}
-                  className="text-xs text-cyan-600 hover:text-cyan-800 hover:underline"
+                  className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
                 >
                   Mark all read
                 </button>
@@ -113,7 +113,7 @@ export default function DashboardHeader({
                     >
                       <div className="flex justify-between items-start">
                         <span className="font-medium text-xs text-blue-950 flex items-center gap-1.5">
-                          {!n.read && <span className="w-1.5 h-1.5 bg-cyan-600 rounded-full inline-block"></span>}
+                          {!n.read && <span className="w-1.5 h-1.5 bg-blue-600 rounded-full inline-block animate-pulse"></span>}
                           {n.title}
                         </span>
                         <span className="text-[10px] text-slate-400 whitespace-nowrap">{n.time}</span>
@@ -129,7 +129,7 @@ export default function DashboardHeader({
                     setActiveTab("notifications");
                     setIsNotifDropdownOpen(false);
                   }}
-                  className="text-xs text-blue-900 font-semibold hover:text-cyan-700 w-full"
+                  className="text-xs text-blue-900 font-semibold hover:text-blue-700 w-full"
                 >
                   Open Full Notification Center
                 </button>
@@ -151,7 +151,7 @@ export default function DashboardHeader({
             <img
               src={profile.avatar}
               alt={profile.name}
-              className="w-8 h-8 rounded-full object-cover border border-blue-900/10"
+              className="w-8 h-8 rounded-full object-cover border border-slate-800/10"
             />
             <div className="hidden lg:block text-left">
               <p className="text-xs font-semibold text-blue-950 leading-tight">{profile.name}</p>
@@ -161,8 +161,8 @@ export default function DashboardHeader({
 
           {/* Profile Dropdown Popover */}
           {isProfileDropdownOpen && (
-            <div className="absolute right-0 mt-3 w-56 bg-white border border-slate-100 rounded-2xl shadow-xl z-50 py-2.5 animate-in fade-in slide-in-from-top-3 duration-250">
-              <div className="px-4 py-2 border-b border-slate-50">
+            <div className="absolute right-0 mt-3 w-56 bg-white border border-slate-200/80 rounded-2xl shadow-xl z-50 py-2.5 animate-in fade-in slide-in-from-top-3 duration-250">
+              <div className="px-4 py-2 border-b border-slate-100">
                 <p className="text-xs font-semibold text-blue-950">{profile.name}</p>
                 <p className="text-[10px] text-slate-400 truncate mt-0.5">{maskEmail(profile.email)}</p>
               </div>
@@ -171,7 +171,7 @@ export default function DashboardHeader({
                   setActiveTab("profile");
                   setIsProfileDropdownOpen(false);
                 }}
-                className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-blue-50/40 hover:text-blue-900 transition-colors flex items-center space-x-2"
+                className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-blue-50/60 hover:text-blue-900 transition-colors flex items-center space-x-2"
               >
                 <User size={14} />
                 <span>My Luxury Profile</span>
@@ -181,7 +181,7 @@ export default function DashboardHeader({
                   setActiveTab("payments");
                   setIsProfileDropdownOpen(false);
                 }}
-                className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-blue-50/40 hover:text-blue-900 transition-colors flex items-center space-x-2"
+                className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-blue-50/60 hover:text-blue-900 transition-colors flex items-center space-x-2"
               >
                 <CreditCard size={14} />
                 <span>Payments &amp; Receipts</span>
@@ -192,7 +192,7 @@ export default function DashboardHeader({
                   setIsProfileDropdownOpen(false);
                   toast.success(showRealPII ? "Private data masked securely" : "Private data revealed");
                 }}
-                className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-blue-50/40 hover:text-blue-900 transition-colors flex items-center space-x-2 border-b border-slate-50"
+                className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-blue-50/60 hover:text-blue-900 transition-colors flex items-center space-x-2 border-b border-slate-100"
               >
                 {showRealPII ? <EyeOff size={14} /> : <Eye size={14} />}
                 <span>{showRealPII ? "Mask Private Data" : "Reveal Private Data"}</span>

@@ -1,18 +1,18 @@
 import { useMemo, useState, useEffect } from "react";
 import { getCountries, getCountryCallingCode, isValidPhoneNumber } from "libphonenumber-js";
-import Logo from "../assets/bluebird logo.png";
+import Logo from "../../assets/bluebird logo.png";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { FaUser, FaEnvelope, FaGlobe, FaPhone, FaLock, FaEye, FaEyeSlash, FaIdCard, FaMapMarkerAlt } from "react-icons/fa";
-import { validateSriLankanNIC, validatePassport } from "../utils/validation";
+import { validateSriLankanNIC, validatePassport } from "../../utils/validation";
 
 // Import local background assets from slider Images folder
-import bgFront from "../assets/slider Images/front-2048x1014.jpg";
-import bgSlider2 from "../assets/slider Images/home-slider2-2048x1014.jpg";
-import bgSlider3 from "../assets/slider Images/home-slider3-2048x1014.jpg";
-import bgSlider4 from "../assets/slider Images/home-slider4-2048x1014.jpg";
-import bgRestaurant from "../assets/slider Images/restaurent-2048x1014.jpg";
+import bgFront from "../../assets/slider Images/front-2048x1014.jpg";
+import bgSlider2 from "../../assets/slider Images/home-slider2-2048x1014.jpg";
+import bgSlider3 from "../../assets/slider Images/home-slider3-2048x1014.jpg";
+import bgSlider4 from "../../assets/slider Images/home-slider4-2048x1014.jpg";
+import bgRestaurant from "../../assets/slider Images/restaurent-2048x1014.jpg";
 
 export default function CustomerRegister() {
     const [loading, setLoading] = useState(false);

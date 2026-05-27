@@ -42,7 +42,7 @@ const BookingSummary = () => {
 
     const hasDiscount = (room) => Number(room.discount || 0) > 0 && Number(room.originalTotalPrice || 0) > Number(room.totalPrice || 0);
 
-    const shuttleCost = airportPickup?.enabled ? 50.00 : 0.00;
+    const shuttleCost = airportPickup?.enabled ? (parseFloat(airportPickup.price) || 50.00) : 0.00;
     const totalCost = selectedRooms.reduce((sum, room) => sum + calculateRoomTotal(room), 0) + shuttleCost;
     const originalTotalCost = selectedRooms.reduce((sum, room) => sum + calculateOriginalRoomTotal(room), 0) + shuttleCost;
     const totalSavings = Math.max(0, originalTotalCost - totalCost);
@@ -59,6 +59,18 @@ const BookingSummary = () => {
     const handleConfirmBooking = async () => {
         setIsProcessing(true);
         try {
+            const token = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
+            if (!token) {
+                // User is not logged in! Redirect to dedicated guest details collection page.
+                navigate("/booking-details", {
+                    state: {
+                        bookingData,
+                        selectedRooms,
+                    }
+                });
+                return;
+            }
+
             navigate("/payment", {
                 state: {
                     bookingData,
@@ -179,7 +191,7 @@ const BookingSummary = () => {
                                                 </p>
                                                 <p className="flex justify-between text-xs pt-1.5 border-t border-emerald-100 text-emerald-800 font-bold">
                                                     <span>Shuttle Fee:</span>
-                                                    <span className="font-extrabold">$50.00 (One-time)</span>
+                                                    <span className="font-extrabold">${shuttleCost.toFixed(2)} (One-time)</span>
                                                 </p>
                                             </div>
                                         </div>
@@ -347,7 +359,7 @@ const BookingSummary = () => {
                                         <span className="flex items-center gap-1.5">
                                             <Car className="h-3.5 w-3.5" /> Airport Shuttle
                                         </span>
-                                        <span>+$50.00</span>
+                                        <span>+${shuttleCost.toFixed(2)}</span>
                                     </div>
                                 )}
                             </div>
