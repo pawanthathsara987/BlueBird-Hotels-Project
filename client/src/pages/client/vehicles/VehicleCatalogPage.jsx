@@ -46,7 +46,7 @@ export default function VehicleCatalogPage() {
       try {
         setLoading(true);
         const [vehiclesRes, typesRes] = await Promise.all([
-          axios.get(`${backendBaseUrl}/vehicles`),
+          axios.get(`${backendBaseUrl}/vehicles?status=available`),
           axios.get(`${backendBaseUrl}/vehicle-types`),
         ]);
         setVehicles(Array.isArray(vehiclesRes.data?.data) ? vehiclesRes.data.data : []);

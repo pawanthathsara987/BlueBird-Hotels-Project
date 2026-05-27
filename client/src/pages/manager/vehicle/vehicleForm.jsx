@@ -59,7 +59,7 @@ const defaultVehicle = {
 
 const ALLOWED_FUEL_TYPES = ["petrol", "diesel", "electric", "hybrid"];
 const ALLOWED_TRANSMISSIONS = ["automatic", "manual"];
-const ALLOWED_STATUSES = ["available", "booked", "maintenance", "retired"];
+const ALLOWED_STATUSES = ["available", "maintenance", "retired"];
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
 const normalizeFeaturesForInput = (features) => {
@@ -90,7 +90,7 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 	useEffect(() => {
 		axios.get(`${backendBaseUrl}/vehicle-types`)
 			.then(res => setVehicleTypes(Array.isArray(res.data?.data) ? res.data.data : []))
-			.catch(() => {});
+			.catch(() => { });
 	}, [backendBaseUrl]);
 
 	const initialValues = useMemo(() => {
@@ -131,7 +131,7 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 
 	const handleChange = (event) => {
 		const { name, value, type, files } = event.target;
-		
+
 		if (type === "file") {
 			const file = files?.[0] || null;
 			const preview = file ? URL.createObjectURL(file) : null;
@@ -446,7 +446,6 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 						<FieldLabel text="Status" error={errors.status} />
 						<select name="status" value={form.status} onChange={handleChange} className={inputClassName(!!errors.status)}>
 							<option value="available">Available</option>
-							<option value="booked">Booked</option>
 							<option value="maintenance">Maintenance</option>
 							<option value="retired">Retired</option>
 						</select>

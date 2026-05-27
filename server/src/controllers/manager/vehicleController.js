@@ -89,7 +89,7 @@ const parseFeatures = (features) => {
 
 const ALLOWED_FUEL_TYPES = ['petrol', 'diesel', 'electric', 'hybrid'];
 const ALLOWED_TRANSMISSIONS = ['automatic', 'manual'];
-const ALLOWED_STATUSES = ['available', 'booked', 'maintenance', 'retired'];
+const ALLOWED_STATUSES = ['available', 'maintenance', 'retired'];
 
 const getVehicleTableColumns = async () => {
   try {
@@ -285,6 +285,8 @@ export const checkAvailability = async (req, res) => {
       });
     }
 
+
+
     const overlappingBooking = await VehicleBooking.findOne({
       where: {
         vehicleId: Number(req.params.id),
@@ -468,7 +470,17 @@ export const deleteVehicle = async (req, res) => {
       });
     }
 
-    // Delete image from Supabase if exists
+    const pastBooking = await VehicleBooking.findOne({
+      where: { vehicleId: vehicle.id },
+      attributes: ['id'],
+    });
+
+    if (pastBooking) {
+      await vehicle.update({ status: 'retired' });
+      return res.json({ success: true, message: 'Vehicle retired successfully (cannot be completely deleted due to booking history)' });
+    }
+
+    // Delete image from Supabase if exists and no bookings exist
     try {
       await deleteImageFromSupabase(vehicle.image);
     } catch (err) {
