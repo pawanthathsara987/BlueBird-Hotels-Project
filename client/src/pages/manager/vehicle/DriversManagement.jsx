@@ -138,9 +138,9 @@ export default function DriversManagement() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-3 gap-4">
-          <div className="rounded-2xl p-5 border bg-white">Total<br/><div className="text-2xl font-bold">{stats.total}</div></div>
-          <div className="rounded-2xl p-5 border bg-white">Active<br/><div className="text-2xl font-bold">{stats.active}</div></div>
-          <div className="rounded-2xl p-5 border bg-white">On Leave<br/><div className="text-2xl font-bold">{stats.onLeave}</div></div>
+          <div className="rounded-2xl p-5 border bg-white">Total<br /><div className="text-2xl font-bold">{stats.total}</div></div>
+          <div className="rounded-2xl p-5 border bg-white">Active<br /><div className="text-2xl font-bold">{stats.active}</div></div>
+          <div className="rounded-2xl p-5 border bg-white">On Leave<br /><div className="text-2xl font-bold">{stats.onLeave}</div></div>
         </div>
 
         <Card>
@@ -199,7 +199,7 @@ export default function DriversManagement() {
                     </div>
                     <div className="flex flex-col gap-2">
                       <button onClick={() => openEdit(d)} className="inline-flex items-center gap-2 px-3 py-1 rounded bg-amber-500 text-white">Edit</button>
-                      <button disabled={deletingId===d.id} onClick={() => handleDelete(d)} className="inline-flex items-center gap-2 px-3 py-1 rounded bg-rose-600 text-white">{deletingId===d.id ? 'Deleting...' : 'Delete'}</button>
+                      <button disabled={deletingId === d.id} onClick={() => handleDelete(d)} className="inline-flex items-center gap-2 px-3 py-1 rounded bg-rose-600 text-white">{deletingId === d.id ? 'Deleting...' : 'Delete'}</button>
                     </div>
                   </div>
                 </div>
