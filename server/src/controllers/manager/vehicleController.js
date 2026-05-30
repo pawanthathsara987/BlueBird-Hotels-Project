@@ -18,7 +18,7 @@ const BLOCKING_BOOKING_STATUSES = [
 // ── Helper ────────────────────────────────────────────────────────────────────
 const calcDays = (pickupDate, returnDate) => {
   const ms = new Date(returnDate) - new Date(pickupDate);
-  return Math.ceil(ms / (1000 * 60 * 60 * 24));
+  return Math.max(1, Math.ceil(ms / (1000 * 60 * 60 * 24)));
 };
 
 // Configure multer to store uploads in memory (required for Supabase)
