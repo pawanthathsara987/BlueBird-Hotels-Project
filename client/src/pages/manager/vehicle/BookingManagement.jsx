@@ -1,24 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
-import { 
-  Search, 
-  Calendar, 
-  User, 
-  Car, 
-  CreditCard, 
-  AlertTriangle, 
-  CheckCircle2, 
-  XCircle, 
-  RefreshCw, 
-  SlidersHorizontal, 
-  DollarSign, 
-  UserCheck, 
+import {
+  Search,
+  Calendar,
+  User,
+  Car,
+  CreditCard,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  RefreshCw,
+  SlidersHorizontal,
+  DollarSign,
+  UserCheck,
   X,
   FileText,
   Clock,
-  ShieldAlert
+  ShieldAlert,
+  Printer
 } from "lucide-react";
+import FinalBillModal from "./FinalBillModal";
 
 // Inline helper components
 const Card = ({ children, className = "" }) => (
@@ -35,6 +37,8 @@ const badgeClassByStatus = (status) => {
       return "bg-cyan-50 text-cyan-700 border-cyan-200 border";
     case "ongoing":
       return "bg-blue-50 text-blue-700 border-blue-200 border";
+    case "returned":
+      return "bg-violet-50 text-violet-700 border-violet-200 border";
     case "completed":
       return "bg-indigo-50 text-indigo-700 border-indigo-200 border";
     case "cancelled":
@@ -63,27 +67,55 @@ const formatMoney = (value) => {
   return Number.isFinite(amount) ? `LKR ${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "LKR 0.00";
 };
 
+// Valid status transitions — must match the backend state machine
+const VALID_TRANSITIONS = {
+  pending_payment: ['confirmed', 'payment_failed', 'cancelled', 'expired'],
+  confirmed:       ['driver_assigned', 'balance_paid', 'ongoing', 'cancelled'],
+  payment_failed:  ['pending_payment', 'cancelled', 'expired'],
+  driver_assigned: ['confirmed', 'balance_paid', 'ongoing', 'cancelled'],
+  balance_paid:    ['ongoing', 'cancelled'],
+  ongoing:         ['returned', 'cancelled'],
+  returned:        ['completed'],
+  completed:       [],
+  cancelled:       [],
+  expired:         ['pending_payment'],
+};
+
+const STATUS_LABELS = {
+  pending_payment: 'Pending Payment',
+  confirmed:       'Confirmed',
+  payment_failed:  'Payment Failed',
+  driver_assigned: 'Driver Assigned',
+  balance_paid:    'Balance Paid',
+  ongoing:         'Ongoing (Vehicle Hired Out)',
+  returned:        'Returned (Pending Inspection)',
+  completed:       'Completed',
+  cancelled:       'Cancelled',
+  expired:         'Expired',
+};
+
 export default function BookingManagement() {
   const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api").replace(/\/$/, "");
-  
+
   const [bookings, setBookings] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  
+
   // Filters & Search
   const [statusFilter, setStatusFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [startDateFilter, setStartDateFilter] = useState("");
   const [endDateFilter, setEndDateFilter] = useState("");
-  
+
   // Modals state
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showDriverModal, setShowDriverModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
-  
+  const [showBillModal, setShowBillModal] = useState(false);
+
   // Modal forms
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
@@ -91,6 +123,13 @@ export default function BookingManagement() {
   const [paymentNotes, setPaymentNotes] = useState("");
   const [cancellationReason, setCancellationReason] = useState("");
   const [targetStatus, setTargetStatus] = useState("");
+
+  // Bill generation state
+  const [billPreview, setBillPreview] = useState(null);
+  const [applyCleaningFee, setApplyCleaningFee] = useState(false);
+  const [manualDamageFee, setManualDamageFee] = useState("");
+  const [billExtraNotes, setBillExtraNotes] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const token = localStorage.getItem("managerToken") || localStorage.getItem("token") || localStorage.getItem("accessToken");
@@ -179,16 +218,19 @@ export default function BookingManagement() {
     if (!selectedBooking) return;
     try {
       setSubmitting(true);
+      const isFinal = selectedBooking.status === "completed";
+      const endpoint = isFinal ? "collect-final-settlement" : "collect-balance";
+      
       await axios.put(
-        `${backendBaseUrl}/manager/vehicle-bookings/${selectedBooking.id}/collect-balance`,
-        { 
-          paymentMethod, 
-          notes: paymentNotes, 
-          receiptNo: paymentReceiptNo 
+        `${backendBaseUrl}/manager/vehicle-bookings/${selectedBooking.id}/${endpoint}`,
+        {
+          paymentMethod,
+          notes: paymentNotes,
+          receiptNo: paymentReceiptNo
         },
         config
       );
-      toast.success("Balance payment recorded!");
+      toast.success(isFinal ? "Final settlement payment recorded!" : "Balance payment recorded!");
       setShowPaymentModal(false);
       fetchBookings();
     } catch (err) {
@@ -238,6 +280,191 @@ export default function BookingManagement() {
     }
   };
 
+  const handleMarkReturned = async (booking) => {
+    if (!window.confirm(`Mark booking ${booking.bookingNo} as returned? This indicates the vehicle has been physically returned and is ready for inspection.`)) return;
+    try {
+      await axios.put(
+        `${backendBaseUrl}/manager/vehicle-bookings/${booking.id}/status`,
+        { status: 'returned' },
+        config
+      );
+      toast.success("Vehicle marked as returned. You can now inspect and generate the final bill.");
+      fetchBookings();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to mark as returned");
+    }
+  };
+
+  const handlePrintBill = (booking) => {
+    const totalExtras =
+      Number(booking.finalBill?.lateFee || 0) +
+      Number(booking.finalBill?.extraMileageFee || 0) +
+      Number(booking.finalBill?.cleaningFee || 0) +
+      Number(booking.finalBill?.damageFee || 0);
+
+    const content = `
+      <html>
+        <head>
+          <title>Final Settlement Bill - ${booking.bookingNo}</title>
+          <style>
+            body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; color: #1e293b; max-width: 800px; margin: 0 auto; line-height: 1.5; }
+            .header { text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
+            .header h1 { margin: 0; color: #3b82f6; font-size: 28px; font-weight: 800; }
+            .header h2 { margin: 5px 0 0; color: #64748b; font-size: 18px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+            .details-grid { display: flex; justify-content: space-between; margin-bottom: 40px; background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; }
+            .detail-group p { margin: 8px 0; font-size: 14px; }
+            .detail-group strong { color: #475569; display: inline-block; width: 140px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+            th, td { padding: 16px 12px; text-align: left; border-bottom: 1px solid #f1f5f9; }
+            th { background-color: #f8fafc; font-weight: 700; color: #64748b; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; }
+            td { font-size: 15px; color: #334155; }
+            .val-col { text-align: right; font-variant-numeric: tabular-nums; }
+            .total-row td { font-weight: 700; font-size: 16px; color: #0f172a; border-top: 2px solid #e2e8f0; }
+            .final-total td { background-color: #eff6ff; color: #1d4ed8; font-size: 20px; font-weight: 800; padding: 20px 12px; border-top: 2px solid #bfdbfe; border-bottom: 2px solid #bfdbfe; }
+            .footer { text-align: center; font-size: 13px; color: #94a3b8; margin-top: 60px; }
+            @media print {
+              body { padding: 0; }
+              .header { border-bottom: 1px solid #000; }
+              .details-grid { border: none; border-bottom: 1px solid #000; border-radius: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>BlueBird Hotels</h1>
+            <h2>Vehicle Rental - Final Settlement</h2>
+          </div>
+          
+          <div class="details-grid">
+            <div class="detail-group">
+              <p><strong>Booking Ref:</strong> <span style="font-weight: 700; color: #0f172a;">${booking.bookingNo}</span></p>
+              <p><strong>Customer:</strong> ${booking.customer?.firstName} ${booking.customer?.lastName}</p>
+              <p><strong>Phone:</strong> ${booking.customer?.phoneNumber || 'N/A'}</p>
+            </div>
+            <div class="detail-group">
+              <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+              <p><strong>Vehicle:</strong> ${booking.vehicle?.brand} ${booking.vehicle?.model} (${booking.vehicle?.plateNumber})</p>
+              <p><strong>Hire Type:</strong> ${booking.hireType.replace('_', ' ').toUpperCase()}</p>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Charge Description</th>
+                <th class="val-col">Amount (LKR)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Base Vehicle Rate (${booking.numDays} days)</td>
+                <td class="val-col">${formatMoney(booking.subtotal)}</td>
+              </tr>
+              <tr>
+                <td>Late Return Fee</td>
+                <td class="val-col">${formatMoney(booking.finalBill?.lateFee)}</td>
+              </tr>
+              <tr>
+                <td>Extra Mileage Fee</td>
+                <td class="val-col">${formatMoney(booking.finalBill?.extraMileageFee)}</td>
+              </tr>
+              <tr>
+                <td>Cleaning Fee</td>
+                <td class="val-col">${formatMoney(booking.finalBill?.cleaningFee)}</td>
+              </tr>
+              <tr>
+                <td>Damage Fee</td>
+                <td class="val-col">${formatMoney(booking.finalBill?.damageFee)}</td>
+              </tr>
+              <tr class="total-row">
+                <td>Total Extra Charges</td>
+                <td class="val-col">${formatMoney(totalExtras)}</td>
+              </tr>
+              <tr>
+                <td style="padding-top: 30px; font-weight: 600; color: #64748b;">Subtotal (Base + Extras)</td>
+                <td class="val-col" style="padding-top: 30px; font-weight: 600; color: #64748b;">${formatMoney(Number(booking.subtotal) + totalExtras)}</td>
+              </tr>
+              <tr>
+                <td>Less: Advance Deposit Paid</td>
+                <td class="val-col" style="color: #10b981; font-weight: 600;">- ${formatMoney(booking.depositAmount)}</td>
+              </tr>
+              <tr class="final-total">
+                <td>Final Balance Payable</td>
+                <td class="val-col">${formatMoney(booking.balanceAmount)}</td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <div class="footer">
+            <p>Thank you for choosing BlueBird Hotels. Have a safe journey!</p>
+            <p>Printed on: ${new Date().toLocaleString()}</p>
+          </div>
+          
+          <script>
+            window.onload = () => { 
+              setTimeout(() => {
+                window.print();
+              }, 500);
+            }
+          </script>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(content);
+      printWindow.document.close();
+    } else {
+      toast.error("Please allow popups to print the bill");
+    }
+  };
+
+  const handleGenerateBill = async (e) => {
+    e.preventDefault();
+    if (!selectedBooking) return;
+
+    setSubmitting(true);
+    try {
+      const res = await axios.post(
+        `${backendBaseUrl}/manager/vehicle-bookings/${selectedBooking.id}/generate-bill`,
+        {
+          applyCleaningFee,
+          manualDamageFee: manualDamageFee ? parseFloat(manualDamageFee) : 0,
+          extraNotes: billExtraNotes,
+        },
+        config
+      );
+      toast.success(res.data.message);
+      setShowBillModal(false);
+      fetchBookings();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to generate bill");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openBillModal = async (booking) => {
+    setSelectedBooking(booking);
+    setBillPreview(null);
+    setApplyCleaningFee(false);
+    setManualDamageFee("");
+    setBillExtraNotes("");
+    setShowBillModal(true);
+    setPreviewLoading(true);
+
+    try {
+      const res = await axios.get(`${backendBaseUrl}/manager/vehicle-bookings/${booking.id}/bill-preview`, config);
+      setBillPreview(res.data.data);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to preview bill");
+      setShowBillModal(false);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   // Helpers to trigger modals
   const openDriverModal = (booking) => {
     setSelectedBooking(booking);
@@ -261,7 +488,8 @@ export default function BookingManagement() {
 
   const openStatusModal = (booking) => {
     setSelectedBooking(booking);
-    setTargetStatus(booking.status);
+    const validNext = VALID_TRANSITIONS[booking.status] || [];
+    setTargetStatus(validNext.length > 0 ? validNext[0] : booking.status);
     setShowStatusModal(true);
   };
 
@@ -357,6 +585,7 @@ export default function BookingManagement() {
               <option value="driver_assigned">Driver Assigned</option>
               <option value="balance_paid">Balance Paid</option>
               <option value="ongoing">Ongoing (Active Hire)</option>
+              <option value="returned">Returned (Pending Bill)</option>
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
               <option value="expired">Expired</option>
@@ -406,21 +635,25 @@ export default function BookingManagement() {
       ) : (
         <div className="grid grid-cols-1 gap-6">
           {filteredBookings.map((booking) => {
+            const totalPaidAtHotel = (booking.payments || []).reduce((sum, p) => 
+              (p.type === 'balance' || p.type === 'extra') ? sum + parseFloat(p.amount) : sum
+            , 0);
+            const remainingBalance = parseFloat(booking.balanceAmount || 0) - totalPaidAtHotel;
+            const hasRemainingBalance = remainingBalance > 0.01;
             const isWithDriver = booking.hireType === "with_driver";
             const needsDriver = isWithDriver && !booking.driverId;
-            const requiresBalance = !booking.balancePaidAt && ["confirmed", "driver_assigned", "ongoing"].includes(booking.status);
 
             return (
               <Card key={booking.id} className="relative overflow-hidden">
                 {/* Visual Status Indicator Bar */}
-                <div className={`absolute top-0 left-0 w-2 h-full ${
-                  booking.status === 'completed' ? 'bg-indigo-500' :
-                  booking.status === 'cancelled' ? 'bg-rose-500' :
-                  booking.status === 'ongoing' ? 'bg-blue-500' :
-                  booking.status === 'balance_paid' ? 'bg-cyan-500' :
-                  booking.status === 'driver_assigned' ? 'bg-teal-500' :
-                  'bg-amber-500'
-                }`} />
+                <div className={`absolute top-0 left-0 w-2 h-full ${booking.status === 'completed' ? 'bg-indigo-500' :
+                  booking.status === 'returned' ? 'bg-violet-500' :
+                    booking.status === 'cancelled' ? 'bg-rose-500' :
+                      booking.status === 'ongoing' ? 'bg-blue-500' :
+                        booking.status === 'balance_paid' ? 'bg-cyan-500' :
+                          booking.status === 'driver_assigned' ? 'bg-teal-500' :
+                            'bg-amber-500'
+                  }`} />
 
                 <div className="pl-2 space-y-6">
                   {/* Row 1: Booking Header */}
@@ -452,8 +685,8 @@ export default function BookingManagement() {
                           {booking.driverId ? "Reassign Driver" : "Assign Driver"}
                         </button>
                       )}
-                      
-                      {requiresBalance && (
+
+                      {(!booking.balancePaidAt && ["confirmed", "driver_assigned", "ongoing", "returned"].includes(booking.status)) && (
                         <button
                           onClick={() => openPaymentModal(booking)}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs rounded-xl border border-emerald-200 transition"
@@ -463,7 +696,47 @@ export default function BookingManagement() {
                         </button>
                       )}
 
-                      {!["completed", "cancelled", "expired"].includes(booking.status) && (
+                      {booking.status === "completed" && hasRemainingBalance && (
+                        <button
+                          onClick={() => openPaymentModal(booking)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs rounded-xl border border-emerald-200 transition shadow-sm"
+                        >
+                          <DollarSign className="w-3.5 h-3.5" />
+                          Collect Final Payment
+                        </button>
+                      )}
+
+                      {booking.status === "ongoing" && (
+                        <button
+                          onClick={() => handleMarkReturned(booking)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 font-bold text-xs rounded-xl border border-violet-200 transition"
+                        >
+                          <Car className="w-3.5 h-3.5" />
+                          Mark as Returned
+                        </button>
+                      )}
+
+                      {booking.status === "returned" && !booking.finalBill && (
+                        <button
+                          onClick={() => openBillModal(booking)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs rounded-xl border border-purple-200 transition"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          Generate Final Bill
+                        </button>
+                      )}
+
+                      {booking.finalBill && (
+                        <button
+                          onClick={() => handlePrintBill(booking)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded-xl border border-indigo-200 transition"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          Download / Print Bill
+                        </button>
+                      )}
+
+                      {!["completed", "cancelled", "expired", "returned"].includes(booking.status) && (
                         <>
                           <button
                             onClick={() => openStatusModal(booking)}
@@ -472,7 +745,7 @@ export default function BookingManagement() {
                             <SlidersHorizontal className="w-3.5 h-3.5" />
                             Update Status
                           </button>
-                          
+
                           <button
                             onClick={() => openCancelModal(booking)}
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl border border-rose-200 transition"
@@ -673,7 +946,7 @@ export default function BookingManagement() {
           <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="px-6 py-4 bg-[#29384d] text-white flex items-center justify-between">
               <h3 className="font-bold text-lg flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-emerald-400" /> Collect Balance Payment
+                <DollarSign className="w-5 h-5 text-emerald-400" /> {selectedBooking.status === "completed" ? "Collect Final Payment" : "Collect Balance Payment"}
               </h3>
               <button onClick={() => setShowPaymentModal(false)} className="text-white/70 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition">
                 <X className="w-5 h-5" />
@@ -682,7 +955,13 @@ export default function BookingManagement() {
             <form onSubmit={handleCollectBalance} className="p-6 space-y-4">
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-1">
                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Balance Due</p>
-                <h3 className="text-2xl font-black text-rose-600">{formatMoney(selectedBooking.balanceAmount)}</h3>
+                <h3 className="text-2xl font-black text-rose-600">
+                  {formatMoney(
+                    selectedBooking.status === "completed"
+                      ? parseFloat(selectedBooking.balanceAmount || 0) - (selectedBooking.payments || []).reduce((sum, p) => (p.type === 'balance' || p.type === 'extra') ? sum + parseFloat(p.amount) : sum, 0)
+                      : selectedBooking.balanceAmount
+                  )}
+                </h3>
                 <p className="text-[11px] text-slate-500 font-medium">For Booking {selectedBooking.bookingNo}</p>
               </div>
 
@@ -762,20 +1041,27 @@ export default function BookingManagement() {
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Target Status</label>
-                <select
-                  value={targetStatus}
-                  onChange={(e) => setTargetStatus(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500"
-                  required
-                >
-                  <option value="pending_payment">Pending Payment</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="driver_assigned">Driver Assigned</option>
-                  <option value="balance_paid">Balance Paid</option>
-                  <option value="ongoing">Ongoing (Vehicle Hired Out)</option>
-                  <option value="completed">Completed (Vehicle Returned)</option>
-                  <option value="expired">Expired</option>
-                </select>
+                {(() => {
+                  const validNext = VALID_TRANSITIONS[selectedBooking.status] || [];
+                  return validNext.length === 0 ? (
+                    <p className="text-sm text-slate-500 py-2 px-3 bg-slate-50 rounded-xl border border-slate-100 italic">
+                      This booking is in a terminal state ({formatStatusText(selectedBooking.status)}). No further transitions are available.
+                    </p>
+                  ) : (
+                    <select
+                      value={targetStatus}
+                      onChange={(e) => setTargetStatus(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500"
+                      required
+                    >
+                      {validNext.map((s) => (
+                        <option key={s} value={s}>
+                          {STATUS_LABELS[s] || formatStatusText(s)}
+                        </option>
+                      ))}
+                    </select>
+                  );
+                })()}
               </div>
               <div className="flex gap-3 justify-end pt-4 border-t border-slate-100">
                 <button
@@ -851,6 +1137,25 @@ export default function BookingManagement() {
           </div>
         </div>
       )}
+
+      {/* Final Bill Modal */}
+      <FinalBillModal
+        show={showBillModal}
+        onClose={() => setShowBillModal(false)}
+        selectedBooking={selectedBooking}
+        billPreview={billPreview}
+        previewLoading={previewLoading}
+        applyCleaningFee={applyCleaningFee}
+        setApplyCleaningFee={setApplyCleaningFee}
+        manualDamageFee={manualDamageFee}
+        setManualDamageFee={setManualDamageFee}
+        billExtraNotes={billExtraNotes}
+        setBillExtraNotes={setBillExtraNotes}
+        submitting={submitting}
+        handleGenerateBill={handleGenerateBill}
+        formatMoney={formatMoney}
+      />
+
     </div>
   );
 }
