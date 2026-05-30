@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, Routes, Route } from "react-router-dom";
 import { MdDashboard, MdBedroomParent, MdLoop, MdAssessment, MdLogout, MdMenu, MdClose } from "react-icons/md";
-import { Inbox, Calendar } from "lucide-react";
+import { Inbox, Calendar, Wrench, ClipboardCheck } from "lucide-react";
 import AddTour from "./tours/TourForm";
 import TourEdit from "./tours/TourEdit";
 import TourItemForm from "./tours/TourItemForm";
@@ -15,6 +15,8 @@ import DriversManagement from "./vehicle/DriversManagement";
 import VehicleRentalPolicy from "./vehicle/VehicleRentalPolicy";
 import BookingManagement from "./vehicle/BookingManagement";
 import VehicleReports from "./vehicle/VehicleReports";
+import ServiceLogManagement from "./vehicle/ServiceLogManagement";
+import ChecklistManagement from "./vehicle/ChecklistManagement";
 
 export default function ManagerPage() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -47,10 +49,12 @@ export default function ManagerPage() {
                     <Link to="/manager/vehicles" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded"><MdLoop className="text-2xl" /> Vehicles</Link>
                     <Link to="/manager/vehicle-bookings" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded"><Calendar className="w-5 h-5" /> Bookings</Link>
                     <Link to="/manager/drivers" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded"><Inbox className="w-5 h-5" /> Drivers</Link>
-                                        <Link to="/manager/vehicle-policy" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded">
-                                                <MdLoop className="text-2xl" /> Rental Policy
-                                        </Link>
-                                        <Link to="/manager/reports" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded"><MdAssessment className="text-2xl" /> Reports</Link>
+                    <Link to="/manager/vehicle-policy" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded">
+                        <MdLoop className="text-2xl" /> Rental Policy
+                    </Link>
+                    <Link to="/manager/service-logs" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded"><Wrench className="w-5 h-5" /> Service Logs</Link>
+                    <Link to="/manager/checklists" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded"><ClipboardCheck className="w-5 h-5" /> Checklists</Link>
+                    <Link to="/manager/reports" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded"><MdAssessment className="text-2xl" /> Reports</Link>
                     <Link to="/logout" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded"><MdLogout className="text-2xl" /> Logout</Link>
                 </div>
             </div>
@@ -64,7 +68,8 @@ export default function ManagerPage() {
                     <Route path="tour-inquiries" element={<TourInquiriesManagement />} />
                     <Route path="vehicles" element={<VehicleManagement />} />
                     <Route path="vehicle-bookings" element={<BookingManagement />} />
-                    {/* Service logs and checklist removed */}
+                    <Route path="service-logs" element={<ServiceLogManagement />} />
+                    <Route path="checklists" element={<ChecklistManagement />} />
                     <Route path="drivers" element={<DriversManagement />} />
                     <Route path="vehicle-policy" element={<VehicleRentalPolicy />} />
                     <Route path="reports" element={<VehicleReports />} />
