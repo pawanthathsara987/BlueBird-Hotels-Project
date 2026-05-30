@@ -152,7 +152,8 @@ VehicleBooking.init(
         'driver_assigned',      // Manager assigned driver (with_driver only)
         'balance_paid',         // Manager recorded balance at hotel
         'ongoing',              // vehicle handed over to customer
-        'completed',            // vehicle returned
+        'returned',             // vehicle returned, pending inspection & final bill
+        'completed',            // vehicle inspected, final bill generated
         'cancelled',            // cancelled by customer or Manager
         'expired'               // booking not paid within time limit
       ),
