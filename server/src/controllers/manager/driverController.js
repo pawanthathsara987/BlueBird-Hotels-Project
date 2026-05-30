@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import multer from 'multer';
 import Driver from '../../models/vehicle/driverModel.js';
 import VehicleBooking from '../../models/vehicle/VehicleBookingModel.js';
@@ -170,8 +171,12 @@ export const deleteDriver = async (req, res) => {
     const driver = await Driver.findByPk(req.params.id);
     if (!driver) return res.status(404).json({ success: false, message: 'Driver not found' });
 
+    // Only block delete if driver has active (non-terminal) bookings
     const assignedBooking = await VehicleBooking.findOne({
-      where: { driverId: driver.id },
+      where: {
+        driverId: driver.id,
+        status: { [Op.in]: ['confirmed', 'driver_assigned', 'balance_paid', 'ongoing', 'returned'] },
+      },
       attributes: ['id', 'bookingNo', 'status'],
     });
 
