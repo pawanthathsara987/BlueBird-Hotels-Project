@@ -33,9 +33,27 @@ import {
     updateBookingStatus,
     assignDriver,
     collectBalance,
-    cancelBooking
+    cancelBooking,
+    previewBill,
+    generateBill,
+    collectFinalSettlement
 } from '../controllers/manager/vehicleBookingManagerController.js';
 import { getVehicleReportDashboard } from '../controllers/manager/vehicleReportController.js';
+import {
+    getServiceLogs,
+    getServiceLog,
+    createServiceLog,
+    updateServiceLog,
+    deleteServiceLog,
+    upload as serviceLogUpload,
+} from '../controllers/manager/serviceLogController.js';
+import {
+    getChecklists,
+    getChecklist,
+    createChecklist,
+    updateChecklist,
+    deleteChecklist
+} from '../controllers/manager/checklistController.js';
 
 const router = express.Router();
 
@@ -73,14 +91,30 @@ router.post('/drivers', driverUpload.single('driverImage'), createDriver);
 router.put('/drivers/:id', driverUpload.single('driverImage'), updateDriver);
 router.delete('/drivers/:id', deleteDriver);
 
-// Checklist routes removed
-// manager specific: vehicle bookings (picker)
+// Vehicle bookings (manager)
 router.get('/vehicle-bookings', getVehicleBookings);
 router.get('/vehicle-bookings/:id', getVehicleBooking);
 router.put('/vehicle-bookings/:id/status', updateBookingStatus);
 router.put('/vehicle-bookings/:id/assign-driver', assignDriver);
 router.put('/vehicle-bookings/:id/collect-balance', collectBalance);
 router.put('/vehicle-bookings/:id/cancel', cancelBooking);
+router.get('/vehicle-bookings/:id/bill-preview', previewBill);
+router.post('/vehicle-bookings/:id/generate-bill', generateBill);
+router.put('/vehicle-bookings/:id/collect-final-settlement', collectFinalSettlement);
 router.get('/vehicle-reports', getVehicleReportDashboard);
+
+// Vehicle service logs CRUD
+router.get('/service-logs', getServiceLogs);
+router.get('/service-logs/:id', getServiceLog);
+router.post('/service-logs', serviceLogUpload.single('receiptImage'), createServiceLog);
+router.put('/service-logs/:id', serviceLogUpload.single('receiptImage'), updateServiceLog);
+router.delete('/service-logs/:id', deleteServiceLog);
+
+// Vehicle checklists CRUD
+router.get('/checklists', getChecklists);
+router.get('/checklists/:id', getChecklist);
+router.post('/checklists', createChecklist);
+router.put('/checklists/:id', updateChecklist);
+router.delete('/checklists/:id', deleteChecklist);
 
 export default router;
