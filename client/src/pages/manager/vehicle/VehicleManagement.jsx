@@ -269,7 +269,7 @@ export default function VehicleManagement() {
                           <Pencil className="w-4 h-4" />
                           Edit
                         </button>
-                        <Link to={`/manager/vehicles/logs/${vehicle.id}`} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-sky-200 bg-white text-sky-700 font-semibold hover:bg-sky-50 transition-colors">
+                        <Link to={`/manager/service-logs?vehicle=${vehicle.id}`} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-sky-200 bg-white text-sky-700 font-semibold hover:bg-sky-50 transition-colors">
                           <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
                           Service Logs
                         </Link>
