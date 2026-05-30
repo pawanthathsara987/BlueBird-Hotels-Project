@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { Plus, RefreshCw, Users } from "lucide-react";
@@ -28,9 +28,12 @@ export default function DriversManagement() {
   const [deletingId, setDeletingId] = useState(null);
 
   const token = localStorage.getItem("managerToken") || localStorage.getItem("token") || localStorage.getItem("accessToken");
-  const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+  const config = useMemo(
+    () => (token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+    [token]
+  );
 
-  const fetchDriverPrice = async () => {
+  const fetchDriverPrice = useCallback(async () => {
     try {
       setPriceLoading(true);
       const res = await axios.get(`${backendBaseUrl}/manager/driver-price`, config);
@@ -43,9 +46,9 @@ export default function DriversManagement() {
     } finally {
       setPriceLoading(false);
     }
-  };
+  }, [backendBaseUrl, config]);
 
-  const fetchDrivers = async () => {
+  const fetchDrivers = useCallback(async () => {
     try {
       setLoading(true);
       const res = await axios.get(`${backendBaseUrl}/manager/drivers`, config);
@@ -57,12 +60,12 @@ export default function DriversManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [backendBaseUrl, config]);
 
   useEffect(() => {
     fetchDrivers();
     fetchDriverPrice();
-  }, []);
+  }, [fetchDrivers, fetchDriverPrice]);
 
   const stats = useMemo(() => {
     const total = drivers.length;
@@ -135,9 +138,9 @@ export default function DriversManagement() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-3 gap-4">
-          <div className="rounded-2xl p-5 border bg-white">Total<br/><div className="text-2xl font-bold">{stats.total}</div></div>
-          <div className="rounded-2xl p-5 border bg-white">Active<br/><div className="text-2xl font-bold">{stats.active}</div></div>
-          <div className="rounded-2xl p-5 border bg-white">On Leave<br/><div className="text-2xl font-bold">{stats.onLeave}</div></div>
+          <div className="rounded-2xl p-5 border bg-white">Total<br /><div className="text-2xl font-bold">{stats.total}</div></div>
+          <div className="rounded-2xl p-5 border bg-white">Active<br /><div className="text-2xl font-bold">{stats.active}</div></div>
+          <div className="rounded-2xl p-5 border bg-white">On Leave<br /><div className="text-2xl font-bold">{stats.onLeave}</div></div>
         </div>
 
         <Card>
@@ -183,7 +186,7 @@ export default function DriversManagement() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {drivers.map((d) => (
               <Card key={d.id} className="flex items-center gap-4">
-                <div className="w-20 h-20 rounded-full overflow-hidden bg-slate-100 flex-shrink-0">
+                <div className="w-20 h-20 rounded-full overflow-hidden bg-slate-100 shrink-0">
                   {d.driverImage ? <img src={d.driverImage} alt={d.fullName} className="w-full h-full object-cover" /> : <div className="w-full h-full" />}
                 </div>
                 <div className="flex-1">
@@ -196,7 +199,7 @@ export default function DriversManagement() {
                     </div>
                     <div className="flex flex-col gap-2">
                       <button onClick={() => openEdit(d)} className="inline-flex items-center gap-2 px-3 py-1 rounded bg-amber-500 text-white">Edit</button>
-                      <button disabled={deletingId===d.id} onClick={() => handleDelete(d)} className="inline-flex items-center gap-2 px-3 py-1 rounded bg-rose-600 text-white">{deletingId===d.id ? 'Deleting...' : 'Delete'}</button>
+                      <button disabled={deletingId === d.id} onClick={() => handleDelete(d)} className="inline-flex items-center gap-2 px-3 py-1 rounded bg-rose-600 text-white">{deletingId === d.id ? 'Deleting...' : 'Delete'}</button>
                     </div>
                   </div>
                 </div>

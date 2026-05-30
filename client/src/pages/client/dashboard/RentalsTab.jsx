@@ -20,7 +20,7 @@ export default function RentalsTab({
       {buttonText && (
         <button
           onClick={onClickAction}
-          className="px-6 py-2.5 bg-gradient-to-r from-blue-900 to-cyan-700 hover:from-blue-800 hover:to-cyan-600 text-white font-medium text-sm rounded-xl transition-all duration-300 shadow-md shadow-blue-900/10 hover:shadow-blue-900/20 active:scale-95"
+          className="px-6 py-2.5 bg-linear-to-r from-blue-900 to-cyan-700 hover:from-blue-800 hover:to-cyan-600 text-white font-medium text-sm rounded-xl transition-all duration-300 shadow-md shadow-blue-900/10 hover:shadow-blue-900/20 active:scale-95"
         >
           {buttonText}
         </button>
@@ -61,7 +61,7 @@ export default function RentalsTab({
                   alt={v.model}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
+                <div className="absolute inset-0 bg-linear-to-t from-slate-900/60 to-transparent"></div>
                 <div className="absolute top-3.5 left-3.5 px-3 py-1 bg-white/95 text-[9px] font-bold text-blue-950 rounded-full tracking-wider uppercase">
                   {v.type}
                 </div>
@@ -115,7 +115,7 @@ export default function RentalsTab({
                     onClick={() => {
                       toast.success("Custom airport shuttle pre-delivery requested!");
                     }}
-                    className="px-4 py-2 bg-gradient-to-r from-blue-950 to-cyan-800 hover:from-blue-900 text-white font-semibold text-xs rounded-xl transition-all"
+                    className="px-4 py-2 bg-linear-to-r from-blue-950 to-cyan-800 hover:from-blue-900 text-white font-semibold text-xs rounded-xl transition-all"
                   >
                     Request Private Chauffeur
                   </button>

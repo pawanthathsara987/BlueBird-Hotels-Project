@@ -30,6 +30,8 @@ app.use('/api/reception', receptionRouter);
 app.use('/api/customers', customerRouter);
 app.use('/api/vehicles', vehicleRouter);
 app.use('/api/vehicle-types', vehicleTypeRouter);
+// Vehicle service logs: nested under vehicles and standalone for log operations
+// Vehicle service logs removed
 app.post('/api/chat', chatBot);
 
 export default app;

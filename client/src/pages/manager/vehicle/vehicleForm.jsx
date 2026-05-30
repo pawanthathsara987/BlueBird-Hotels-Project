@@ -38,8 +38,8 @@ const inputClassName = (hasError) =>
 
 const defaultVehicle = {
 	plateNumber: "",
+	vehicleTypeId: "",
 	brand: "",
-	vehicleType: "",
 	model: "",
 	year: "",
 	capacity: "",
@@ -48,6 +48,9 @@ const defaultVehicle = {
 	color: "",
 	pricePerDay: "",
 	status: "available",
+	insuranceNo: "",
+	insuranceExpiry: "",
+	revenueLicenseExpiry: "",
 	description: "",
 	image: null,
 	imagePreview: null,
@@ -56,7 +59,7 @@ const defaultVehicle = {
 
 const ALLOWED_FUEL_TYPES = ["petrol", "diesel", "electric", "hybrid"];
 const ALLOWED_TRANSMISSIONS = ["automatic", "manual"];
-const ALLOWED_STATUSES = ["available", "unavailable", "maintenance", "retired"];
+const ALLOWED_STATUSES = ["available", "maintenance", "retired"];
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
 const normalizeFeaturesForInput = (features) => {
@@ -82,6 +85,14 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 	const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api").replace(/\/$/, "");
 	const isEditMode = Boolean(vehicle?.id);
 
+	// Load vehicle types from API for the dropdown
+	const [vehicleTypes, setVehicleTypes] = useState([]);
+	useEffect(() => {
+		axios.get(`${backendBaseUrl}/vehicle-types`)
+			.then(res => setVehicleTypes(Array.isArray(res.data?.data) ? res.data.data : []))
+			.catch(() => { });
+	}, [backendBaseUrl]);
+
 	const initialValues = useMemo(() => {
 		if (!vehicle) {
 			return defaultVehicle;
@@ -89,8 +100,8 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 
 		return {
 			plateNumber: vehicle.plateNumber || "",
+			vehicleTypeId: vehicle.vehicleTypeId ? String(vehicle.vehicleTypeId) : "",
 			brand: vehicle.brand || "",
-			vehicleType: vehicle.vehicleType || "",
 			model: vehicle.model || "",
 			year: vehicle.year ? String(vehicle.year) : "",
 			capacity: vehicle.capacity ? String(vehicle.capacity) : "",
@@ -99,6 +110,9 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 			color: vehicle.color || "",
 			pricePerDay: vehicle.pricePerDay ? String(vehicle.pricePerDay) : "",
 			status: vehicle.status || "available",
+			insuranceNo: vehicle.insuranceNo || "",
+			insuranceExpiry: vehicle.insuranceExpiry || "",
+			revenueLicenseExpiry: vehicle.revenueLicenseExpiry || "",
 			description: vehicle.description || "",
 			image: null,
 			imagePreview: vehicle.image || null,
@@ -117,7 +131,7 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 
 	const handleChange = (event) => {
 		const { name, value, type, files } = event.target;
-		
+
 		if (type === "file") {
 			const file = files?.[0] || null;
 			const preview = file ? URL.createObjectURL(file) : null;
@@ -137,7 +151,7 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 
 		if (!form.plateNumber.trim()) nextErrors.plateNumber = "Plate number is required.";
 		if (!form.brand.trim()) nextErrors.brand = "Brand is required.";
-		if (!form.vehicleType.trim()) nextErrors.vehicleType = "Vehicle type is required.";
+		if (!form.vehicleTypeId) nextErrors.vehicleTypeId = "Vehicle type is required.";
 		if (!form.model.trim()) nextErrors.model = "Model is required.";
 		if (!String(form.year).trim()) nextErrors.year = "Year is required.";
 		if (!String(form.capacity).trim()) nextErrors.capacity = "Capacity is required.";
@@ -146,6 +160,9 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 		if (!form.transmission) nextErrors.transmission = "Transmission is required.";
 		if (!form.color.trim()) nextErrors.color = "Color is required.";
 		if (!form.status) nextErrors.status = "Status is required.";
+		if (!form.insuranceNo.trim()) nextErrors.insuranceNo = "Insurance number is required.";
+		if (!String(form.insuranceExpiry).trim()) nextErrors.insuranceExpiry = "Insurance expiry is required.";
+		if (!String(form.revenueLicenseExpiry).trim()) nextErrors.revenueLicenseExpiry = "Revenue license expiry is required.";
 		if (!form.description.trim()) nextErrors.description = "Description is required.";
 		if (!normalizedFeatures.length) nextErrors.features = "Add at least one feature.";
 		if (!isEditMode && !form.image) nextErrors.image = "Vehicle image is required.";
@@ -214,7 +231,7 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 		const formData = new FormData();
 		formData.append("plateNumber", form.plateNumber.trim());
 		formData.append("brand", form.brand.trim() || null);
-		formData.append("vehicleType", form.vehicleType.trim());
+		formData.append("vehicleTypeId", Number(form.vehicleTypeId));
 		formData.append("model", form.model.trim());
 		formData.append("year", form.year ? Number(form.year) : null);
 		formData.append("capacity", Number(form.capacity));
@@ -223,6 +240,9 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 		formData.append("color", form.color.trim() || null);
 		formData.append("pricePerDay", Number(form.pricePerDay));
 		formData.append("status", form.status);
+		formData.append("insuranceNo", form.insuranceNo.trim());
+		formData.append("insuranceExpiry", form.insuranceExpiry);
+		formData.append("revenueLicenseExpiry", form.revenueLicenseExpiry);
 		formData.append("description", form.description.trim() || null);
 		formData.append(
 			"features",
@@ -332,15 +352,13 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 					</div>
 
 					<div>
-						<FieldLabel text="Vehicle Type" required error={errors.vehicleType} />
-						<input
-							type="text"
-							name="vehicleType"
-							value={form.vehicleType}
-							onChange={handleChange}
-							className={inputClassName(!!errors.vehicleType)}
-							placeholder="SUV, Van, Car, Bus"
-						/>
+						<FieldLabel text="Vehicle Type" required error={errors.vehicleTypeId} />
+						<select name="vehicleTypeId" value={form.vehicleTypeId} onChange={handleChange} className={inputClassName(!!errors.vehicleTypeId)}>
+							<option value="">Select vehicle type</option>
+							{vehicleTypes.map((vt) => (
+								<option key={vt.id} value={vt.id}>{vt.name}</option>
+							))}
+						</select>
 					</div>
 
 					<div>
@@ -428,10 +446,43 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 						<FieldLabel text="Status" error={errors.status} />
 						<select name="status" value={form.status} onChange={handleChange} className={inputClassName(!!errors.status)}>
 							<option value="available">Available</option>
-							<option value="unavailable">Unavailable</option>
 							<option value="maintenance">Maintenance</option>
 							<option value="retired">Retired</option>
 						</select>
+					</div>
+
+					<div>
+						<FieldLabel text="Insurance No" required error={errors.insuranceNo} />
+						<input
+							type="text"
+							name="insuranceNo"
+							value={form.insuranceNo}
+							onChange={handleChange}
+							className={inputClassName(!!errors.insuranceNo)}
+							placeholder="INS-123456"
+						/>
+					</div>
+
+					<div>
+						<FieldLabel text="Insurance Expiry" required error={errors.insuranceExpiry} />
+						<input
+							type="date"
+							name="insuranceExpiry"
+							value={form.insuranceExpiry}
+							onChange={handleChange}
+							className={inputClassName(!!errors.insuranceExpiry)}
+						/>
+					</div>
+
+					<div>
+						<FieldLabel text="Revenue License Expiry" required error={errors.revenueLicenseExpiry} />
+						<input
+							type="date"
+							name="revenueLicenseExpiry"
+							value={form.revenueLicenseExpiry}
+							onChange={handleChange}
+							className={inputClassName(!!errors.revenueLicenseExpiry)}
+						/>
 					</div>
 				</div>
 

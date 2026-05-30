@@ -1,5 +1,7 @@
+import { Op } from 'sequelize';
 import multer from 'multer';
 import Driver from '../../models/vehicle/driverModel.js';
+import VehicleBooking from '../../models/vehicle/VehicleBookingModel.js';
 import supabase from '../../config/supabaseClient.js';
 
 // Multer memory storage for image uploads
@@ -99,7 +101,7 @@ export const createDriver = async (req, res) => {
       licenseExpiry: req.body.licenseExpiry,
       employmentType: req.body.employmentType || 'full_time',
       status: req.body.status || 'active',
-      languageSkills: req.body.languageSkills || [],
+      languageSkills: (() => { try { return JSON.parse(req.body.languageSkills || '[]'); } catch { return []; } })(),
       driverImage: image,
       notes: req.body.notes || null,
     };
@@ -149,7 +151,7 @@ export const updateDriver = async (req, res) => {
       licenseExpiry: req.body.licenseExpiry,
       employmentType: req.body.employmentType || driver.employmentType,
       status: req.body.status || driver.status,
-      languageSkills: req.body.languageSkills || driver.languageSkills,
+      languageSkills: (() => { try { return JSON.parse(req.body.languageSkills || 'null') ?? driver.languageSkills; } catch { return driver.languageSkills; } })(),
       driverImage: image,
       notes: req.body.notes || driver.notes,
     };
@@ -168,6 +170,22 @@ export const deleteDriver = async (req, res) => {
   try {
     const driver = await Driver.findByPk(req.params.id);
     if (!driver) return res.status(404).json({ success: false, message: 'Driver not found' });
+
+    // Only block delete if driver has active (non-terminal) bookings
+    const assignedBooking = await VehicleBooking.findOne({
+      where: {
+        driverId: driver.id,
+        status: { [Op.in]: ['confirmed', 'driver_assigned', 'balance_paid', 'ongoing', 'returned'] },
+      },
+      attributes: ['id', 'bookingNo', 'status'],
+    });
+
+    if (assignedBooking) {
+      return res.status(409).json({
+        success: false,
+        message: `Cannot delete driver with assigned booking ${assignedBooking.bookingNo || assignedBooking.id}`,
+      });
+    }
 
     try {
       await deleteImageFromSupabase(driver.driverImage);
