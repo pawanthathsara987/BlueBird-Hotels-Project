@@ -143,6 +143,16 @@ const buildVehicleValidationErrors = (body, { requireImage = false, imageFile = 
     errors.pricePerDay = 'Price per day must be greater than zero.';
   }
 
+  if (body.currentMileage !== undefined && body.currentMileage !== null) {
+    if (Number.isNaN(Number(body.currentMileage))) {
+      errors.currentMileage = 'Mileage must be a number.';
+    } else if (Number(body.currentMileage) < 0) {
+      errors.currentMileage = 'Mileage cannot be negative.';
+    }
+  }
+
+  if (!String(body.chassisNo || '').trim()) errors.chassisNo = 'Chassis number (VIN) is required.';
+
   if (!String(body.fuelType || '').trim()) {
     errors.fuelType = 'Fuel type is required.';
   } else if (!ALLOWED_FUEL_TYPES.includes(body.fuelType)) {

@@ -61,6 +61,18 @@ Vehicle.init(
       allowNull: false,
     },
 
+    // ── Real World Fleet Tracking ───────────────
+    currentMileage: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+    chassisNo: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      unique: true,
+    },
+
 
     // ── Compliance ──────────────────────────────
     // ✅ ADD: needed for Manager expiry alerts (30-day warning)

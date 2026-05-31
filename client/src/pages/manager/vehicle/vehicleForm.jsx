@@ -36,13 +36,14 @@ const baseInput =
 const inputClassName = (hasError) =>
 	`${baseInput} border ${hasError ? "border-red-400 bg-red-50" : "border-slate-200 bg-slate-50 hover:bg-white"}`;
 
-const defaultVehicle = {
 	plateNumber: "",
+	chassisNo: "",
 	vehicleTypeId: "",
 	brand: "",
 	model: "",
 	year: "",
 	capacity: "",
+	currentMileage: "0",
 	fuelType: "",
 	transmission: "",
 	color: "",
@@ -100,11 +101,13 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 
 		return {
 			plateNumber: vehicle.plateNumber || "",
+			chassisNo: vehicle.chassisNo || "",
 			vehicleTypeId: vehicle.vehicleTypeId ? String(vehicle.vehicleTypeId) : "",
 			brand: vehicle.brand || "",
 			model: vehicle.model || "",
 			year: vehicle.year ? String(vehicle.year) : "",
 			capacity: vehicle.capacity ? String(vehicle.capacity) : "",
+			currentMileage: vehicle.currentMileage !== undefined ? String(vehicle.currentMileage) : "0",
 			fuelType: vehicle.fuelType || "",
 			transmission: vehicle.transmission || "",
 			color: vehicle.color || "",
@@ -150,11 +153,13 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 			.filter(Boolean);
 
 		if (!form.plateNumber.trim()) nextErrors.plateNumber = "Plate number is required.";
+		if (!form.chassisNo.trim()) nextErrors.chassisNo = "Chassis No (VIN) is required.";
 		if (!form.brand.trim()) nextErrors.brand = "Brand is required.";
 		if (!form.vehicleTypeId) nextErrors.vehicleTypeId = "Vehicle type is required.";
 		if (!form.model.trim()) nextErrors.model = "Model is required.";
 		if (!String(form.year).trim()) nextErrors.year = "Year is required.";
 		if (!String(form.capacity).trim()) nextErrors.capacity = "Capacity is required.";
+		if (!String(form.currentMileage).trim()) nextErrors.currentMileage = "Mileage is required.";
 		if (!String(form.pricePerDay).trim()) nextErrors.pricePerDay = "Price per day is required.";
 		if (!form.fuelType) nextErrors.fuelType = "Fuel type is required.";
 		if (!form.transmission) nextErrors.transmission = "Transmission is required.";
@@ -185,6 +190,12 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 			nextErrors.capacity = "Capacity must be a number.";
 		} else if (form.capacity && Number(form.capacity) <= 0) {
 			nextErrors.capacity = "Capacity must be greater than zero.";
+		}
+
+		if (form.currentMileage && Number.isNaN(Number(form.currentMileage))) {
+			nextErrors.currentMileage = "Mileage must be a number.";
+		} else if (form.currentMileage && Number(form.currentMileage) < 0) {
+			nextErrors.currentMileage = "Mileage cannot be negative.";
 		}
 
 		if (form.pricePerDay && Number.isNaN(Number(form.pricePerDay))) {
@@ -230,11 +241,13 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 
 		const formData = new FormData();
 		formData.append("plateNumber", form.plateNumber.trim());
+		formData.append("chassisNo", form.chassisNo.trim());
 		formData.append("brand", form.brand.trim() || null);
 		formData.append("vehicleTypeId", Number(form.vehicleTypeId));
 		formData.append("model", form.model.trim());
 		formData.append("year", form.year ? Number(form.year) : null);
 		formData.append("capacity", Number(form.capacity));
+		formData.append("currentMileage", Number(form.currentMileage));
 		formData.append("fuelType", form.fuelType || null);
 		formData.append("transmission", form.transmission || null);
 		formData.append("color", form.color.trim() || null);
@@ -340,6 +353,18 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 					</div>
 
 					<div>
+						<FieldLabel text="Chassis No (VIN)" required error={errors.chassisNo} />
+						<input
+							type="text"
+							name="chassisNo"
+							value={form.chassisNo}
+							onChange={handleChange}
+							className={inputClassName(!!errors.chassisNo)}
+							placeholder="JT123456789..."
+						/>
+					</div>
+
+					<div>
 						<FieldLabel text="Brand" error={errors.brand} />
 						<input
 							type="text"
@@ -386,7 +411,7 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 					</div>
 
 					<div>
-						<FieldLabel text="Capacity" required error={errors.capacity} />
+						<FieldLabel text="Capacity (Seats)" required error={errors.capacity} />
 						<input
 							type="number"
 							name="capacity"
@@ -394,6 +419,18 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 							onChange={handleChange}
 							className={inputClassName(!!errors.capacity)}
 							placeholder="4"
+						/>
+					</div>
+
+					<div>
+						<FieldLabel text="Initial / Current Mileage (km)" required error={errors.currentMileage} />
+						<input
+							type="number"
+							name="currentMileage"
+							value={form.currentMileage}
+							onChange={handleChange}
+							className={inputClassName(!!errors.currentMileage)}
+							placeholder="0"
 						/>
 					</div>
 
