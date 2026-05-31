@@ -91,6 +91,14 @@ export const createChecklist = async (req, res) => {
       customerSignature: conditions.customerSignature ? true : false,
     });
 
+    // Auto-update vehicle mileage on return checklist
+    if (type === 'return' && mileage) {
+      const vehicle = await Vehicle.findByPk(vehicleId);
+      if (vehicle && Number(mileage) > vehicle.currentMileage) {
+        await vehicle.update({ currentMileage: Number(mileage) });
+      }
+    }
+
     res.status(201).json({ success: true, data: checklist });
   } catch (err) {
     console.error('createChecklist error:', err);
@@ -107,6 +115,14 @@ export const updateChecklist = async (req, res) => {
     }
 
     await checklist.update(req.body);
+
+    // If mileage is updated on a return checklist, update vehicle
+    if (checklist.type === 'return' && req.body.mileage) {
+      const vehicle = await Vehicle.findByPk(checklist.vehicleId);
+      if (vehicle && Number(req.body.mileage) > vehicle.currentMileage) {
+        await vehicle.update({ currentMileage: Number(req.body.mileage) });
+      }
+    }
 
     res.json({ success: true, data: checklist });
   } catch (err) {
