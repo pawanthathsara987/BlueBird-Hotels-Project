@@ -1,7 +1,7 @@
 import { col, fn, Op, QueryTypes } from "sequelize";
 import sequelize from "../../config/database.js";
 import { sendEmail, sendBookingConfirmationEmail } from "../../services/emailService.js";
-import { Customer, Room, BookedRoom, Reservation, AirPortPickup, OtherItemPrice, RoomType, Amenities, Policy } from "../../models/index.js";
+import { Customer, Room, BookedRoom, Reservation, AirPortPickup, OtherItemPrice, RoomType, Amenities, Policy, BoardType, OccupancyType, RoomPrice, SeasonalDiscount } from "../../models/index.js";
 
 /**
  * Helper to calculate dynamic price for a room stay based on RoomType, OccupancyType, BoardType and SeasonalDiscount.
@@ -157,11 +157,11 @@ const calculateRoomStayPrice = async (roomTypeName, boardTypeName, adultsCount, 
 const availableRooms = async (req, res) => {
     try {
         const avlRooms = await Room.findAll({
-            where: { roomStatus: "available" },
+            where: { status: "available" },
             include: [
                 {
-                    model: RoomPackage,
-                    attributes: ["id", "pname", "maxAdults", "maxKids", "pprice", "pimage"],
+                    model: RoomType,
+                    as: "roomType"
                 }
             ]
         });
@@ -280,9 +280,9 @@ const createBooking = async (req, res) => {
             const room = await Room.findOne({
                 where: {
                     id: roomId,
-                    roomStatus: "available"
+                    status: "available"
                 },
-                include: [RoomPackage],
+                include: [{ model: RoomType, as: "roomType" }],
                 transaction: t,
                 lock: t.LOCK.UPDATE
             });
@@ -307,7 +307,7 @@ const createBooking = async (req, res) => {
             }
 
             // DYNAMIC PRICE CALCULATION
-            const resolvedRoomType = clientRoomType || (room.RoomPackage ? room.RoomPackage.pname : "Deluxe King Room");
+            const resolvedRoomType = clientRoomType || (room.roomType ? room.roomType.type : "Deluxe King Room");
             const resolvedBoardType = clientBoardType || "Room Only";
 
             const priceDetails = await calculateRoomStayPrice(
@@ -362,7 +362,7 @@ const createBooking = async (req, res) => {
                 customer_id: guestId, // Reservation/Booking table uses customer_id
                 check_in_date: checkInDate,
                 total_price: calculatedTotalPrice, // Use the secure server-calculated price
-                status: "confirmed",
+                status: req.body.status || "confirmed",
                 kids_age: rooms.flatMap(r => r.actualKidAges || []), // Aggregate kids ages onto the booking
                 note: personalRequest || null
             },
@@ -395,28 +395,30 @@ const createBooking = async (req, res) => {
 
         await t.commit();
 
-        try {
-            const confirmedBooking = await Reservation.findByPk(reservation.id, {
-                include: [
-                    { model: Customer },
-                    {
-                        model: BookedRoom,
-                        as: "bookedRooms",
-                        include: [
-                            {
-                                model: Room,
-                                include: [RoomPackage],
-                            },
-                        ],
-                    },
-                ],
-            });
+        if (reservation.status === "confirmed") {
+            try {
+                const confirmedBooking = await Reservation.findByPk(reservation.id, {
+                    include: [
+                        { model: Customer },
+                        {
+                            model: BookedRoom,
+                            as: "bookedRooms",
+                            include: [
+                                {
+                                    model: Room,
+                                    include: [{ model: RoomType, as: "roomType" }],
+                                },
+                            ],
+                        },
+                    ],
+                });
 
-            if (confirmedBooking) {
-                await sendBookingConfirmationEmail(confirmedBooking);
+                if (confirmedBooking) {
+                    await sendBookingConfirmationEmail(confirmedBooking);
+                }
+            } catch (emailError) {
+                console.error("BOOKING CONFIRMATION EMAIL ERROR:", emailError);
             }
-        } catch (emailError) {
-            console.error("BOOKING CONFIRMATION EMAIL ERROR:", emailError);
         }
 
         if (personalRequest && personalRequest != null) {
@@ -567,7 +569,7 @@ const getAvailableRoomAssignForPackage = async (req, res) => {
             SELECT r.*
             FROM room r
             WHERE r.packageId = :packageId
-            AND r.roomStatus = 'available'
+            AND r.status = 'available'
             AND r.id NOT IN (
                 SELECT br.room_id
                 FROM booked_rooms br
@@ -784,9 +786,9 @@ const checkBookingPrice = async (req, res) => {
             let resolvedBoardType = boardType || "Room Only";
 
             if (roomId && (!resolvedRoomType)) {
-                const room = await Room.findByPk(roomId, { include: [RoomPackage] });
-                if (room && room.RoomPackage) {
-                    resolvedRoomType = room.RoomPackage.pname;
+                const room = await Room.findByPk(roomId, { include: [{ model: RoomType, as: "roomType" }] });
+                if (room && room.roomType) {
+                    resolvedRoomType = room.roomType.type;
                 }
             }
 

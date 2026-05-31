@@ -55,7 +55,7 @@ export async function registerCustomer(req, res) {
         });
 
         const userResponse = {
-            id: newCustomer.customerId,
+            id: newCustomer.id,
             firstName: newCustomer.firstName,
             lastName: newCustomer.lastName,
             email: newCustomer.email,
@@ -110,7 +110,7 @@ export async function loginCustomer(req, res) {
         }
 
         const userResponse = {
-            id: customer.customerId,
+            id: customer.id,
             firstName: customer.firstName,
             lastName: customer.lastName,
             email: customer.email,
@@ -165,7 +165,7 @@ export async function refreshToken(req, res) {
             }
 
             const userResponse = {
-                id: customer.customerId,
+                id: customer.id,
                 firstName: customer.firstName,
                 lastName: customer.lastName,
                 email: customer.email,
@@ -339,7 +339,7 @@ export async function googleLogin(req, res) {
         }
         
         const userResponse = {
-            id: user.customerId,
+            id: user.id,
             firstName: user.firstName,
             lastName: user.lastName,
             email: user.email,

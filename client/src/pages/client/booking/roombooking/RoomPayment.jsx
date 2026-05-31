@@ -14,11 +14,14 @@ const RoomPayment = () => {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  const [cardData, setCardData] = useState({
-    cardName: '',
-    cardNumber: '',
-    expiryDate: '',
-    cvv: '',
+  const [billingDetails, setBillingDetails] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    country: ''
   });
 
   // Redirect if no booking data
@@ -26,7 +29,33 @@ const RoomPayment = () => {
     if (!bookingData && !localStorage.getItem("currentBooking")) {
       alert('❌ No booking information found. Please complete booking first.');
       navigate('/booking', { replace: true });
+      return;
     }
+
+    let saved = {};
+    try {
+      saved = JSON.parse(localStorage.getItem("bookingDetails")) || {};
+    } catch {
+      saved = {};
+    }
+
+    const token = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
+    let guest = {};
+    if (token) {
+      try {
+        guest = jwtDecode(token) || {};
+      } catch {}
+    }
+
+    setBillingDetails({
+      firstName: saved.firstName || guest.firstName || 'Guest',
+      lastName: saved.lastName || guest.lastName || 'Customer',
+      email: saved.email || guest.email || 'guest@bluebird.com',
+      phone: saved.phone || guest.phoneNumber || '0771234567',
+      address: `${saved.addressLine1 || ""} ${saved.addressLine2 || ""}`.trim() || 'No 1, Galle Road',
+      city: saved.city || 'Colombo',
+      country: saved.country || 'Sri Lanka'
+    });
   }, []);
 
   const selectedRooms = location.state?.selectedRooms || [];
@@ -47,42 +76,9 @@ const RoomPayment = () => {
   const advanceAmount = Number((totalAmount * 0.5).toFixed(2));
   const remainingAmount = Number((totalAmount - advanceAmount).toFixed(2));
 
-  const handleCardChange = (e) => {
-    const { name, value } = e.target;
-    setCardData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const validateCardPayment = () => {
-    if (!cardData.cardName.trim()) {
-      setError('Cardholder name is required');
-      return false;
-    }
-    if (!cardData.cardNumber.trim() || cardData.cardNumber.replace(/\s/g, '').length !== 16) {
-      setError('Valid 16-digit card number is required');
-      return false;
-    }
-    if (!cardData.expiryDate || !/^\d{2}\/\d{2}$/.test(cardData.expiryDate)) {
-      setError('Expiry date must be in MM/YY format');
-      return false;
-    }
-    if (!cardData.cvv || cardData.cvv.length !== 3) {
-      setError('Valid 3-digit CVV is required');
-      return false;
-    }
-    return true;
-  };
-
   const handlePayment = async (e) => {
     e.preventDefault();
     setError('');
-
-    if (!validateCardPayment()) {
-      return;
-    }
-
     setProcessing(true);
 
     const token = localStorage.getItem("customerToken") ||
@@ -112,6 +108,7 @@ const RoomPayment = () => {
 
     if (!token) {
       setError("User not authenticated");
+      setProcessing(false);
       return;
     }
     let guest;
@@ -120,102 +117,131 @@ const RoomPayment = () => {
       guest = jwtDecode(token);
     } catch (err) {
       setError("Invalid session. Please login again.");
+      setProcessing(false);
       return;
     }
 
     if (!guest?.id) {
       setError("Invalid user data in token");
+      setProcessing(false);
       return;
     }
 
     try {
-      const paymentPayload = {
-        bookingId: bookingConfirmation?.booking_id,
-        userId: guest.id,
-        amount: advanceAmount,
-        paymentMethod: 'card',
-        bookingType: 'room',
-        card: cardData,
-      };
-
-      // Simulate payment processing (replace with actual API call)
-      const response = await new Promise((resolve) => {
-        setTimeout(() => {
-          // Simulate successful payment
-          resolve({
-            success: true,
-            message: 'Payment processed successfully',
-            paymentId: `PAY_${Date.now()}`,
-            data: paymentPayload
-          });
-        }, 2000);
-      });
-
-      if (response.success) {
-        try {
-          const saveRes = await axios.post(
-            `${import.meta.env.VITE_BACKEND_URL}/roombook/booking`,
-            {
-              guestId: guest.id,
-              checkInDate:
-                passedBookingData?.checkInDate || savedBookingDetails?.checkInDate,
-              total_price: Number(totalAmount),
-              rooms: selectedRooms.map(r => ({
-                roomId: r.roomId,
-                checkIn: r.checkInDate,
-                checkOut: r.checkOutDate,
-                actualAdults: r.adults,
-                actualKids: r.kids,
-                actualKidAges: r.actualKidAges || [],
-                roomType: r.roomType,
-                boardType: r.boardType
-              })),
-              airportPickup: airportPickup?.enabled
-                ? {
-                    enabled: true,
-                    pickupDate:
-                      passedBookingData?.checkInDate || savedBookingDetails?.checkInDate || null,
-                    pickupTime: airportPickup?.time || "",
-                  }
-                : null,
-              personalRequest,
-            },
-            {
-              headers: {
-                Authorization: `Bearer ${token}`
+      // 1. Create booking in PENDING status first
+      const saveRes = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/roombook/booking`,
+        {
+          guestId: guest.id,
+          checkInDate:
+            passedBookingData?.checkInDate || savedBookingDetails?.checkInDate,
+          total_price: Number(totalAmount),
+          status: "pending",
+          rooms: selectedRooms.map(r => ({
+            roomId: r.roomId,
+            checkIn: r.checkInDate,
+            checkOut: r.checkOutDate,
+            actualAdults: r.adults,
+            actualKids: r.kids,
+            actualKidAges: r.actualKidAges || [],
+            roomType: r.roomType,
+            boardType: r.boardType
+          })),
+          airportPickup: airportPickup?.enabled
+            ? {
+                enabled: true,
+                pickupDate:
+                  passedBookingData?.checkInDate || savedBookingDetails?.checkInDate || null,
+                pickupTime: airportPickup?.time || "",
               }
-            }
-          );
-
-        } catch (err) {
-          console.error("❌ Failed to save booking:", err);
-          setError("Payment done, but booking save failed");
-          return;
+            : null,
+          personalRequest,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
         }
+      );
 
-        setSuccessMessage('✅ Payment successful! Your room booking is confirmed.');
-
-        // Redirect to booking confirmation after 2 seconds
-        setTimeout(() => {
-          localStorage.removeItem("bookingDetails");
-          localStorage.removeItem("airportPickUp");
-          navigate('/booking-confirm', {
-            state: {
-              bookingData: passedBookingData,
-              selectedRooms,
-              bookingConfirmation,
-              paymentConfirmation: response.data
-            }
-          });
-        }, 2000);
-      } else {
-        throw new Error(response.message || 'Payment failed');
+      if (!saveRes.data?.success || !saveRes.data?.data?.reservationId) {
+        throw new Error(saveRes.data?.message || "Failed to register pending booking");
       }
 
-    } catch (error) {
-      console.error('❌ Payment error:', error);
-      setError(error.message || 'Payment processing failed. Please try again.');
-    } finally {
+      const reservationId = saveRes.data.data.reservationId;
+
+      // 2. Fetch the secure signature hash from the backend
+      const hashRes = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/payment/payhere-hash`,
+        {
+          orderId: String(reservationId),
+          amount: advanceAmount,
+          currency: "LKR"
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!hashRes.data?.success || !hashRes.data?.hash) {
+        throw new Error("Failed to generate payment signature hash");
+      }
+
+      const { hash, merchantId } = hashRes.data;
+
+      // 3. Serialize booking details into localStorage so they are restored on return
+      localStorage.setItem("completedBookingDetails", JSON.stringify({
+        bookingData: passedBookingData,
+        selectedRooms: selectedRooms,
+        bookingConfirmation: { bookingId: reservationId }
+      }));
+
+      setSuccessMessage("Booking registered. Redirecting to PayHere Secure Portal...");
+
+      // 4. Dynamically construct and submit the HTML checkout form
+      setTimeout(() => {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'https://sandbox.payhere.lk/pay/checkout';
+
+        const addField = (name, val) => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = name;
+          input.value = val;
+          form.appendChild(input);
+        };
+
+        addField('merchant_id', merchantId);
+        addField('return_url', `${window.location.origin}/booking-confirm?order_id=${reservationId}`);
+        addField('cancel_url', `${window.location.origin}/payment`);
+        addField('notify_url', "https://465b-175-157-188-97.ngrok-free.app/api/payment/notify");
+
+        // Customer details
+        addField('first_name', billingDetails.firstName);
+        addField('last_name', billingDetails.lastName);
+        addField('email', billingDetails.email);
+        addField('phone', billingDetails.phone);
+        addField('address', billingDetails.address);
+        addField('city', billingDetails.city);
+        addField('country', billingDetails.country);
+
+        // Order details
+        addField('order_id', reservationId);
+        addField('items', `BlueBird Room Booking #${reservationId}`);
+        addField('currency', 'LKR');
+        addField('amount', advanceAmount.toFixed(2));
+        addField('hash', hash);
+
+        document.body.appendChild(form);
+        form.submit();
+      }, 1000);
+
+    } catch (err) {
+      console.error('❌ PayHere Redirection error:', err);
+      setError(err.response?.data?.message || err.message || 'Payment initiation failed. Please try again.');
       setProcessing(false);
     }
   };
@@ -235,16 +261,16 @@ const RoomPayment = () => {
           </button>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Payment Form */}
+            {/* Payment Portal */}
             <div className="lg:col-span-2">
               <div className="bg-white rounded-2xl shadow-lg p-8">
-                <div className="mb-8 flex items-center gap-4 rounded-2xl border border-emerald-100 bg-emerald-50/70 px-5 py-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-700 text-white shadow-md shadow-emerald-700/20">
-                    <CreditCard className="h-6 w-6" />
+                <div className="mb-8 flex items-center gap-4 rounded-2xl border border-teal-100 bg-teal-50/70 px-5 py-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-teal-700 text-white shadow-md shadow-teal-700/20">
+                    <Lock className="h-6 w-6" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Secure card payment</p>
-                    <h2 className="text-2xl font-bold text-stone-900">Pay with Credit Card</h2>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Official Payment Gateway</p>
+                    <h2 className="text-2xl font-bold text-stone-900">PayHere Secure Checkout</h2>
                   </div>
                 </div>
 
@@ -264,94 +290,70 @@ const RoomPayment = () => {
                   </div>
                 )}
 
-                <form onSubmit={handlePayment} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-stone-700 mb-1">Cardholder Name</label>
-                    <input
-                      type="text"
-                      name="cardName"
-                      value={cardData.cardName}
-                      onChange={handleCardChange}
-                      placeholder="John Doe"
-                      className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700"
-                      disabled={processing}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-stone-700 mb-1">Card Number</label>
-                    <input
-                      type="text"
-                      name="cardNumber"
-                      value={cardData.cardNumber}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\s/g, '').replace(/\D/g, '');
-                        handleCardChange({
-                          target: { name: 'cardNumber', value: value.replace(/(\d{4})/g, '$1 ').trim() }
-                        });
-                      }}
-                      placeholder="1234 5678 9012 3456"
-                      className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700"
-                      disabled={processing}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
+                {/* Billing Details Review */}
+                <div className="mb-8 p-6 bg-stone-50 border border-stone-200 rounded-2xl">
+                  <h3 className="text-md font-bold text-stone-900 mb-4 pb-2 border-b border-stone-200">Billing & Contact Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
-                      <label className="block text-sm font-semibold text-stone-700 mb-1">Expiry Date</label>
-                      <input
-                        type="text"
-                        name="expiryDate"
-                        value={cardData.expiryDate}
-                        onChange={(e) => {
-                          let value = e.target.value.replace(/\D/g, '');
-                          if (value.length >= 2) {
-                            value = value.slice(0, 2) + '/' + value.slice(2, 4);
-                          }
-                          handleCardChange({ target: { name: 'expiryDate', value } });
-                        }}
-                        placeholder="MM/YY"
-                        className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700"
-                        disabled={processing}
-                      />
+                      <p className="text-stone-500 text-xs">Customer Name</p>
+                      <p className="font-semibold text-stone-800">{billingDetails.firstName} {billingDetails.lastName}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-stone-700 mb-1">CVV</label>
-                      <input
-                        type="text"
-                        name="cvv"
-                        value={cardData.cvv}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '').slice(0, 3);
-                          handleCardChange({ target: { name: 'cvv', value } });
-                        }}
-                        placeholder="123"
-                        className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700"
-                        disabled={processing}
-                      />
+                      <p className="text-stone-500 text-xs">Email Address</p>
+                      <p className="font-semibold text-stone-800">{billingDetails.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-stone-500 text-xs">Phone Number</p>
+                      <p className="font-semibold text-stone-800">{billingDetails.phone}</p>
+                    </div>
+                    <div>
+                      <p className="text-stone-500 text-xs">Destination City & Country</p>
+                      <p className="font-semibold text-stone-800">{billingDetails.city}, {billingDetails.country}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <p className="text-stone-500 text-xs">Billing Address</p>
+                      <p className="font-semibold text-stone-800">{billingDetails.address}</p>
                     </div>
                   </div>
+                </div>
 
+                <div className="p-6 bg-emerald-50/50 border border-emerald-100 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+                  <div className="flex gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800">
+                      <Check className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-emerald-950">50% Advance Guarantee</p>
+                      <p className="text-xs text-emerald-700/80">Pay half today securely, pay the remaining half at check-in.</p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-stone-500 text-[10px] font-bold uppercase tracking-wider">Pay Today</p>
+                    <p className="text-3xl font-black text-emerald-800">${advanceAmount.toFixed(2)}</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handlePayment}>
                   <button
                     type="submit"
                     disabled={processing}
-                    className="w-full bg-emerald-700 hover:bg-emerald-800 disabled:bg-stone-400 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg transition flex items-center justify-center gap-2 mt-6"
+                    className="w-full bg-teal-700 hover:bg-teal-800 disabled:bg-stone-400 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl transition flex items-center justify-center gap-2 mt-6 shadow-lg shadow-teal-700/10 hover:shadow-teal-800/20 active:scale-[0.98]"
                   >
                     {processing ? (
                       <>
                         <Loader className="h-5 w-5 animate-spin" />
-                        Processing...
+                        Initializing PayHere Portal...
                       </>
                     ) : (
                       <>
                         <Lock className="h-5 w-5" />
-                        Pay ${advanceAmount.toFixed(2)} (50% Advance)
+                        Proceed to Pay ${advanceAmount.toFixed(2)} with PayHere
                       </>
                     )}
                   </button>
                 </form>
 
-                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex gap-3">
+                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl flex gap-3">
                   <AlertCircle className="h-5 w-5 text-blue-600 shrink-0" />
                   <div className="text-sm text-blue-700">
                     <p className="font-semibold mb-1">Payment Information</p>
