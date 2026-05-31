@@ -385,6 +385,33 @@ export default function VehicleBookingPage() {
                     </div>
                   )}
 
+                  {/* Rental Terms & Conditions */}
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5">
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500 mb-3">Rental Terms & Conditions</h3>
+                    <ul className="space-y-2 text-sm text-slate-700">
+                      <li className="flex items-start gap-2">
+                        <span className="mt-0.5 text-sky-500">✓</span>
+                        <span>30% advance deposit is <strong>non-refundable</strong> upon cancellation.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="mt-0.5 text-sky-500">✓</span>
+                        <span>Vehicle must be returned in the <strong>same condition</strong> as received.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="mt-0.5 text-sky-500">✓</span>
+                        <span>Vehicle must be returned with the <strong>same fuel level</strong>.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="mt-0.5 text-sky-500">✓</span>
+                        <span>Vehicle <strong>cannot be lent</strong> to third parties under any circumstances.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="mt-0.5 text-sky-500">✓</span>
+                        <span>Late returns may incur additional charges as per rental policy.</span>
+                      </li>
+                    </ul>
+                  </div>
+
                   <div className="pt-2">
                     <button
                       type="submit"
@@ -396,7 +423,7 @@ export default function VehicleBookingPage() {
                       {bookingLoading ? "Processing your reservation..." : "Confirm Reservation"}
                     </button>
                     <p className="mt-4 text-center text-xs text-slate-500">
-                      You will secure this reservation by paying the 30% advance deposit.
+                      By confirming, you agree to the rental terms above. You will secure this reservation by paying the 30% advance deposit.
                     </p>
                   </div>
                 </section>

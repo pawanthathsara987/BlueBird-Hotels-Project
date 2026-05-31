@@ -11,6 +11,7 @@ import TourManagement from "./tours/tourManagement";
 import TourInquiriesManagement from "./TourInquiriesManagement";
 import ManagerDashboard from "./ManagerDashboard";
 import VehicleManagement from "./vehicle/VehicleManagement";
+import VehicleTypeManagement from "./vehicle/VehicleTypeManagement";
 import DriversManagement from "./vehicle/DriversManagement";
 import VehicleRentalPolicy from "./vehicle/VehicleRentalPolicy";
 import BookingManagement from "./vehicle/BookingManagement";
@@ -67,6 +68,7 @@ export default function ManagerPage() {
                     <Route path="tours/edit/:id" element={<TourEdit />} />
                     <Route path="tour-inquiries" element={<TourInquiriesManagement />} />
                     <Route path="vehicles" element={<VehicleManagement />} />
+                    <Route path="vehicle-types" element={<VehicleTypeManagement />} />
                     <Route path="vehicle-bookings" element={<BookingManagement />} />
                     <Route path="service-logs" element={<ServiceLogManagement />} />
                     <Route path="checklists" element={<ChecklistManagement />} />
