@@ -77,7 +77,7 @@ export default function FinalBillModal({
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Damage Fee (Manual Entry)</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">Rs.</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
                     <input
                       type="number"
                       min="0"
