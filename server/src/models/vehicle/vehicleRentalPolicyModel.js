@@ -11,26 +11,6 @@ VehicleRentalPolicy.init(
       allowNull: false,
       defaultValue: 1,
     },
-    depositNonRefundable: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: true,
-    },
-    sameConditionRequired: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: true,
-    },
-    sameFuelLevelRequired: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: true,
-    },
-    thirdPartyLendingAllowed: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    },
     lateReturnGraceHours: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -69,7 +49,7 @@ VehicleRentalPolicy.init(
     extraMileageCurrency: {
       type: DataTypes.STRING(10),
       allowNull: false,
-      defaultValue: 'LKR',
+      defaultValue: 'USD',
     },
     termsAndConditions: {
       type: DataTypes.TEXT,

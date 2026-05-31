@@ -37,10 +37,6 @@ export default function VehicleRentalPolicy() {
     try {
       setSaving(true);
       const payload = {
-        depositNonRefundable: policy.depositNonRefundable,
-        sameConditionRequired: policy.sameConditionRequired,
-        sameFuelLevelRequired: policy.sameFuelLevelRequired,
-        thirdPartyLendingAllowed: policy.thirdPartyLendingAllowed,
         lateReturnGraceHours: policy.lateReturnGraceHours,
         lateReturnFeePerHour: policy.lateReturnFeePerHour,
         lateReturnFullDayAfterHours: policy.lateReturnFullDayAfterHours,
@@ -71,16 +67,6 @@ export default function VehicleRentalPolicy() {
     <div className="max-w-3xl mx-auto p-6 bg-white rounded shadow">
       <h2 className="text-2xl font-bold mb-4">Vehicle Rental Policy</h2>
       <form onSubmit={handleSave} className="space-y-4">
-        <div className="flex gap-4 items-center">
-          <label className="flex items-center gap-2"><input type="checkbox" checked={!!policy.depositNonRefundable} onChange={(e) => handleChange('depositNonRefundable', e.target.checked)} /> Deposit non-refundable</label>
-          <label className="flex items-center gap-2"><input type="checkbox" checked={!!policy.sameConditionRequired} onChange={(e) => handleChange('sameConditionRequired', e.target.checked)} /> Return in same condition</label>
-        </div>
-
-        <div className="flex gap-4 items-center">
-          <label className="flex items-center gap-2"><input type="checkbox" checked={!!policy.sameFuelLevelRequired} onChange={(e) => handleChange('sameFuelLevelRequired', e.target.checked)} /> Same fuel level required</label>
-          <label className="flex items-center gap-2"><input type="checkbox" checked={!!policy.thirdPartyLendingAllowed} onChange={(e) => handleChange('thirdPartyLendingAllowed', e.target.checked)} /> Allow lending to third parties</label>
-        </div>
-
         <div className="grid grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium">Late return grace hours</label>
@@ -130,7 +116,7 @@ export default function VehicleRentalPolicy() {
 
           <div>
             <label className="block text-sm font-medium">Extra mileage currency</label>
-            <input type="text" value={policy.extraMileageCurrency ?? 'LKR'} onChange={(e) => handleChange('extraMileageCurrency', e.target.value)} className="mt-1 w-full border rounded px-2 py-1" />
+            <input type="text" value={policy.extraMileageCurrency ?? 'USD'} onChange={(e) => handleChange('extraMileageCurrency', e.target.value)} className="mt-1 w-full border rounded px-2 py-1" />
           </div>
         </div>
 
