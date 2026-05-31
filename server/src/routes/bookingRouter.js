@@ -13,10 +13,11 @@ import {
 } from '../controllers/booking/roomBookingController.js';
 
 import { createVisitorBooking } from '../controllers/reception/visitingBookingController.js';
+import { requireAuth } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.post('/booking', createBooking);
+router.post('/booking', requireAuth, createBooking);
 router.post('/visitor-booking', createVisitorBooking);
 router.get('/bookings', getAllBookings);
 router.get('/booking/:id', getBookingById);

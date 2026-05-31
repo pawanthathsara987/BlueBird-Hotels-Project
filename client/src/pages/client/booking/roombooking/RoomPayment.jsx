@@ -179,6 +179,11 @@ const RoomPayment = () => {
                   }
                 : null,
               personalRequest,
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
             }
           );
 

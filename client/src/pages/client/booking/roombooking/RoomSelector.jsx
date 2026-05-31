@@ -26,6 +26,24 @@ const RoomSelector = () => {
   const location = useLocation();
   const [detailingRoom, setDetailingRoom] = useState(null);
   const [dateRange, setDateRange] = useState(() => {
+    const tempSaved = localStorage.getItem("tempSavedBookingState");
+    if (tempSaved) {
+      try {
+        const parsed = JSON.parse(tempSaved);
+        if (parsed.dateRange && parsed.dateRange[0]) {
+          return [
+            {
+              startDate: new Date(parsed.dateRange[0].startDate),
+              endDate: new Date(parsed.dateRange[0].endDate),
+              key: parsed.dateRange[0].key || "selection",
+            }
+          ];
+        }
+      } catch (e) {
+        console.error("Error restoring dateRange state:", e);
+      }
+    }
+
     const passedData = location.state?.bookingData;
     if (passedData?.checkInDate && passedData?.checkOutDate) {
       return [
@@ -50,14 +68,42 @@ const RoomSelector = () => {
 
   // Global settings
   const [nationality, setNationality] = useState(() => {
+    const tempSaved = localStorage.getItem("tempSavedBookingState");
+    if (tempSaved) {
+      try {
+        const parsed = JSON.parse(tempSaved);
+        if (parsed.nationality) return parsed.nationality;
+      } catch (e) {
+        console.error("Error restoring nationality state:", e);
+      }
+    }
     return location.state?.bookingData?.nationality || "";
   });
 
   // Extra booking options (Personal requests & airport pickup)
   const [personalRequest, setPersonalRequest] = useState(() => {
+    const tempSaved = localStorage.getItem("tempSavedBookingState");
+    if (tempSaved) {
+      try {
+        const parsed = JSON.parse(tempSaved);
+        if (parsed.personalRequest !== undefined) return parsed.personalRequest;
+      } catch (e) {
+        console.error("Error restoring personalRequest state:", e);
+      }
+    }
     return localStorage.getItem("personalRequest") || "";
   });
+  
   const [airportPickupEnabled, setAirportPickupEnabled] = useState(() => {
+    const tempSaved = localStorage.getItem("tempSavedBookingState");
+    if (tempSaved) {
+      try {
+        const parsed = JSON.parse(tempSaved);
+        if (parsed.airportPickup?.enabled !== undefined) return parsed.airportPickup.enabled;
+      } catch (e) {
+        console.error("Error restoring airportPickupEnabled state:", e);
+      }
+    }
     try {
       const stored = JSON.parse(localStorage.getItem("airportPickUp"));
       return !!stored?.enabled;
@@ -65,7 +111,17 @@ const RoomSelector = () => {
       return false;
     }
   });
+
   const [pickupTime, setPickupTime] = useState(() => {
+    const tempSaved = localStorage.getItem("tempSavedBookingState");
+    if (tempSaved) {
+      try {
+        const parsed = JSON.parse(tempSaved);
+        if (parsed.airportPickup?.time) return parsed.airportPickup.time;
+      } catch (e) {
+        console.error("Error restoring pickupTime state:", e);
+      }
+    }
     try {
       const stored = JSON.parse(localStorage.getItem("airportPickUp"));
       return stored?.time || "12:00";
@@ -293,6 +349,18 @@ const RoomSelector = () => {
 
   // Dynamic added rooms list (Initialize with one default room using selected board type, initially unconfigured or restored from location state)
   const [addedRooms, setAddedRooms] = useState(() => {
+    const tempSaved = localStorage.getItem("tempSavedBookingState");
+    if (tempSaved) {
+      try {
+        const parsed = JSON.parse(tempSaved);
+        if (Array.isArray(parsed.addedRooms) && parsed.addedRooms.length > 0) {
+          return parsed.addedRooms;
+        }
+      } catch (e) {
+        console.error("Error restoring addedRooms state:", e);
+      }
+    }
+
     const passedRooms = location.state?.selectedRooms;
     if (Array.isArray(passedRooms) && passedRooms.length > 0) {
       return passedRooms.map(r => {
@@ -328,6 +396,13 @@ const RoomSelector = () => {
       }
     ];
   });
+
+  // Cleanup temporary saved state after load
+  useEffect(() => {
+    if (localStorage.getItem("tempSavedBookingState")) {
+      localStorage.removeItem("tempSavedBookingState");
+    }
+  }, []);
 
   // Add Room Button Handler
   const handleAddNewRoom = () => {
@@ -576,11 +651,46 @@ const RoomSelector = () => {
   };
 
   const handleFinalBookingSubmit = () => {
+    // 1. Check user login status before proceeding
+    const token = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
+    if (!token) {
+      // Save current booking state for reuse after login
+      const bookingStateToSave = {
+        dateRange: [
+          {
+            startDate: dateRange[0].startDate.toISOString(),
+            endDate: dateRange[0].endDate.toISOString(),
+            key: dateRange[0].key
+          }
+        ],
+        nationality,
+        addedRooms,
+        personalRequest,
+        airportPickup: {
+          enabled: airportPickupEnabled,
+          time: pickupTime
+        }
+      };
+      localStorage.setItem("tempSavedBookingState", JSON.stringify(bookingStateToSave));
+
+      toast.error("Please login to your account to proceed with the booking.");
+      navigate("/customerLogin", { state: { from: "/booking" } });
+      return;
+    }
+
+    // 2. Validate nationality
     if (!nationality || nationality === "") {
       toast.error("Please select your Nationality in the search bar above before proceeding.");
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
+
+    // 3. Enforce room configuration completion
+    if (hasUnconfiguredRoom) {
+      toast.error("Please configure all rooms before confirming your luxury stay.");
+      return;
+    }
+
     const nights = getStayNights();
 
     // Calculate total nightly rate of all rooms
@@ -1628,14 +1738,13 @@ const RoomSelector = () => {
         <button
           type="button"
           onClick={handleFinalBookingSubmit}
-          disabled={hasUnconfiguredRoom}
-          className={`font-extrabold uppercase text-xs tracking-widest px-8 py-4 rounded-2xl transition-all duration-300 transform flex items-center justify-center gap-2 border group ${hasUnconfiguredRoom
-            ? "bg-stone-100 text-stone-400 border-stone-200 cursor-not-allowed scale-100 shadow-none"
-            : "bg-emerald-800 hover:bg-emerald-950 text-white border-emerald-900/10 cursor-pointer active:scale-98 hover:shadow-[0_10px_20px_rgba(6,95,70,0.15)]"
+          className={`font-extrabold uppercase text-xs tracking-widest px-8 py-4 rounded-2xl transition-all duration-300 transform flex items-center justify-center gap-2 border group cursor-pointer active:scale-98 shadow-[0_4px_12px_rgba(6,95,70,0.08)] hover:shadow-[0_10px_20px_rgba(6,95,70,0.15)] ${hasUnconfiguredRoom
+            ? "bg-amber-700 hover:bg-amber-800 text-white border-amber-900/10"
+            : "bg-emerald-800 hover:bg-emerald-950 text-white border-emerald-900/10"
             }`}
         >
           {hasUnconfiguredRoom ? "Configure All Rooms" : "Confirm Luxury Stay"}
-          <ArrowRight className={`w-4 h-4 transition-transform ${hasUnconfiguredRoom ? "text-stone-300 animate-pulse" : "text-emerald-200 group-hover:translate-x-1"}`} />
+          <ArrowRight className={`w-4 h-4 transition-transform text-white group-hover:translate-x-1`} />
         </button>
       </div>
 
