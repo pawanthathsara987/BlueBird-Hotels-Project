@@ -122,7 +122,9 @@ const RoomPayment = () => {
     }
 
     if (!guest?.id) {
-      setError("Invalid user data in token");
+      localStorage.removeItem("customerToken");
+      sessionStorage.removeItem("customerToken");
+      setError("Invalid session data. Please logout and login again.");
       setProcessing(false);
       return;
     }
@@ -217,7 +219,7 @@ const RoomPayment = () => {
         addField('merchant_id', merchantId);
         addField('return_url', `${window.location.origin}/booking-confirm?order_id=${reservationId}`);
         addField('cancel_url', `${window.location.origin}/payment`);
-        addField('notify_url', "https://465b-175-157-188-97.ngrok-free.app/api/payment/notify");
+        addField('notify_url', "https://8472-175-157-188-97.ngrok-free.app/api/payment/notify");
 
         // Customer details
         addField('first_name', billingDetails.firstName);

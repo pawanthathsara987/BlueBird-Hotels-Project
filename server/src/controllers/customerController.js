@@ -118,7 +118,8 @@ export async function loginCustomer(req, res) {
             country: customer.country,
             idType: customer.idType,
             idNumber: customer.idNumber,
-            address: customer.address
+            address: customer.address,
+            googleAuth: customer.googleAuth
         };
 
         const accessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "15m" });
@@ -173,7 +174,8 @@ export async function refreshToken(req, res) {
                 country: customer.country,
                 idType: customer.idType,
                 idNumber: customer.idNumber,
-                address: customer.address
+                address: customer.address,
+                googleAuth: customer.googleAuth
             };
 
             const newAccessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "15m" });
@@ -284,9 +286,9 @@ export async function verifyOTPAndResetPassword(req, res) {
 
 export async function googleLogin(req, res) {
 
-    const accessToken = req.body.token;
+    const googleToken = req.body.token;
 
-    if (!accessToken) {
+    if (!googleToken) {
         return res.status(400).json({
             message: "Access token is required"
         });
@@ -298,7 +300,7 @@ export async function googleLogin(req, res) {
             "https://www.googleapis.com/oauth2/v3/userinfo",
             {
                 headers: {
-                    Authorization: `Bearer ${accessToken}`
+                    Authorization: `Bearer ${googleToken}`
                 }
             }
         );
@@ -324,30 +326,28 @@ export async function googleLogin(req, res) {
             });
         }
 
-        if (user == null) {
+        let activeUser = user;
 
-            const newCustomer = await Customer.create({
+        if (activeUser == null) {
+            activeUser = await Customer.create({
                 firstName: response.data.given_name,
                 lastName: response.data.family_name,
                 email: response.data.email,
                 googleAuth: true
             });
-
-            return res.json({
-                message: "Created"
-            });
         }
-        
+
         const userResponse = {
-            id: user.id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            phoneNumber: user.phoneNumber,
-            country: user.country,
-            idType: user.idType,
-            idNumber: user.idNumber,
-            address: user.address
+            id: activeUser.id,
+            firstName: activeUser.firstName,
+            lastName: activeUser.lastName,
+            email: activeUser.email,
+            phoneNumber: activeUser.phoneNumber,
+            country: activeUser.country,
+            idType: activeUser.idType,
+            idNumber: activeUser.idNumber,
+            address: activeUser.address,
+            googleAuth: activeUser.googleAuth
         };
 
         const accessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "15m" });
@@ -368,8 +368,69 @@ export async function googleLogin(req, res) {
         });
 
     } catch (error) {
+        console.error("Google login error:", error);
         return res.status(500).json({
             message: "Google auth failed"
+        });
+    }
+}
+
+export async function updateCustomerProfile(req, res) {
+    try {
+        const customerId = req.user.id;
+        const { firstName, lastName, phoneNumber, country, idType, idNumber, address } = req.body;
+
+        const customer = await Customer.findByPk(customerId);
+        if (!customer) {
+            return res.status(404).json({
+                message: "Customer not found"
+            });
+        }
+
+        if (firstName !== undefined) customer.firstName = firstName;
+        if (lastName !== undefined) customer.lastName = lastName;
+        if (phoneNumber !== undefined) customer.phoneNumber = phoneNumber;
+        if (country !== undefined) customer.country = country;
+        if (idType !== undefined) customer.idType = idType;
+        if (idNumber !== undefined) customer.idNumber = idNumber;
+        if (address !== undefined) customer.address = address;
+
+        await customer.save();
+
+        const userResponse = {
+            id: customer.id,
+            firstName: customer.firstName,
+            lastName: customer.lastName,
+            email: customer.email,
+            phoneNumber: customer.phoneNumber,
+            country: customer.country,
+            idType: customer.idType,
+            idNumber: customer.idNumber,
+            address: customer.address,
+            googleAuth: customer.googleAuth
+        };
+
+        const accessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "15m" });
+        const refreshToken = jwt.sign(userResponse, process.env.JWT_REFRESH_KEY, { expiresIn: "7d" });
+
+        const isProduction = process.env.NODE_ENV === "production";
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? "strict" : "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        res.status(200).json({
+            message: "Profile updated successfully",
+            token: accessToken,
+            user: userResponse
+        });
+
+    } catch (error) {
+        console.error("Error updating customer profile:", error);
+        res.status(500).json({
+            message: "Internal server error"
         });
     }
 }

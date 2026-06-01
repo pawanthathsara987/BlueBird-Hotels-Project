@@ -4,10 +4,10 @@ import Logo from "../../../../assets/bluebird logo.png";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { useNavigate, useLocation } from "react-router-dom";
-import { 
-  FaUser, FaEnvelope, FaGlobe, FaPhone, FaLock, FaEye, FaEyeSlash, 
-  FaIdCard, FaMapMarkerAlt, FaArrowRight, FaArrowLeft, FaCalendar, 
-  FaUsers, FaClock, FaCheck, FaInfoCircle 
+import {
+    FaUser, FaEnvelope, FaGlobe, FaPhone, FaLock, FaEye, FaEyeSlash,
+    FaIdCard, FaMapMarkerAlt, FaArrowRight, FaArrowLeft, FaCalendar,
+    FaUsers, FaClock, FaCheck, FaInfoCircle
 } from "react-icons/fa";
 import { validateSriLankanNIC, validatePassport } from "../../../../utils/validation";
 import { jwtDecode } from "jwt-decode";
@@ -27,7 +27,7 @@ export default function CustomerDetailsPage() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    
+
     // Core Customer Fields
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
@@ -36,7 +36,7 @@ export default function CustomerDetailsPage() {
     const [phoneCountry, setPhoneCountry] = useState("LK");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
-    
+
     // ID Verification Fields
     const [idType, setIdType] = useState(isSriLankan ? "NIC" : "PASSPORT"); // 'NIC' or 'PASSPORT'
     const [idNumber, setIdNumber] = useState("");
@@ -91,18 +91,28 @@ export default function CustomerDetailsPage() {
         return selectedCountryData?.dialingCode || "+94";
     }, [selectedCountryData]);
 
-    // Preload user details if logged in
     useEffect(() => {
-        const storedToken = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
+        let storedToken = sessionStorage.getItem("customerToken");
+        if (storedToken === "undefined" || storedToken === "null") {
+            localStorage.removeItem("customerToken");
+            sessionStorage.removeItem("customerToken");
+            storedToken = null;
+        }
         if (storedToken) {
             setIsLoggedIn(true);
             try {
                 const decoded = jwtDecode(storedToken);
+                if (decoded && !decoded.id) {
+                    localStorage.removeItem("customerToken");
+                    sessionStorage.removeItem("customerToken");
+                    setIsLoggedIn(false);
+                    return;
+                }
                 if (decoded) {
                     setFirstName(decoded.firstName || "");
                     setLastName(decoded.lastName || "");
                     setEmail(decoded.email || "");
-                    
+
                     // Resolve phone number dialing code
                     const rawPhone = decoded.phoneNumber || "";
                     let parsedPhone = rawPhone;
@@ -185,14 +195,61 @@ export default function CustomerDetailsPage() {
                 return;
             }
 
-            // TODO(security): Client-side profile verification is confirmed. Profile database updates would require a dedicated profile update endpoint.
-            toast.success("Details verified successfully! Redirecting to payment...");
-            navigate("/payment", {
-                state: {
-                    bookingData,
-                    selectedRooms
+            // Construct 3-part address string to store in DB address field
+            const streetPart = addressLine2.trim()
+                ? `${addressLine1.trim()}, ${addressLine2.trim()}`
+                : addressLine1.trim();
+
+            const fullAddress = [
+                streetPart,
+                city.trim(),
+                zipCode.trim() ? zipCode.trim() : null
+            ].filter(Boolean).join(", ");
+
+            try {
+                setLoading(true);
+                const token = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
+
+                const response = await axios.put(
+                    import.meta.env.VITE_BACKEND_URL + "/customers/update-profile",
+                    {
+                        firstName: firstName.trim(),
+                        lastName: lastName.trim(),
+                        phoneNumber: `${selectedDialingCode}${phoneNumber.trim()}`,
+                        country: country.trim(),
+                        idType: idType,
+                        idNumber: idNumber.trim(),
+                        address: fullAddress
+                    },
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    }
+                );
+
+                const newToken = response.data.token;
+                if (localStorage.getItem("customerToken") !== null) {
+                    localStorage.setItem("customerToken", newToken);
+                } else if (sessionStorage.getItem("customerToken") !== null) {
+                    sessionStorage.setItem("customerToken", newToken);
+                } else {
+                    sessionStorage.setItem("customerToken", newToken);
                 }
-            });
+
+                toast.success("Details saved successfully! Redirecting to payment...");
+                navigate("/payment", {
+                    state: {
+                        bookingData,
+                        selectedRooms
+                    }
+                });
+            } catch (error) {
+                console.error("Error updating profile:", error);
+                toast.error(error.response?.data?.message || "Failed to save details. Please check your inputs.");
+            } finally {
+                setLoading(false);
+            }
             return;
         }
 
@@ -233,10 +290,10 @@ export default function CustomerDetailsPage() {
         }
 
         // Construct 3-part address string to store in DB address field
-        const streetPart = addressLine2.trim() 
-            ? `${addressLine1.trim()}, ${addressLine2.trim()}` 
+        const streetPart = addressLine2.trim()
+            ? `${addressLine1.trim()}, ${addressLine2.trim()}`
             : addressLine1.trim();
-            
+
         const fullAddress = [
             streetPart,
             city.trim(),
@@ -245,7 +302,7 @@ export default function CustomerDetailsPage() {
 
         try {
             setLoading(true);
-            
+
             // 1. Call Register Endpoint
             await axios.post(
                 import.meta.env.VITE_BACKEND_URL + "/customers/register",
@@ -295,7 +352,7 @@ export default function CustomerDetailsPage() {
 
     return (
         <div className="min-h-screen bg-stone-50 pb-20 font-sans">
-            
+
             {/* Header matches BookingSummary & RoomPayment exactly */}
             <div className="bg-white border-b border-stone-200 shadow-3xs">
                 <div className="mx-auto max-w-7xl px-4 py-6 sm:px-8 lg:px-14">
@@ -312,8 +369,8 @@ export default function CustomerDetailsPage() {
                                 {isLoggedIn ? "Verify Guest Details" : "Guest Registration Details"}
                             </h1>
                             <p className="mt-1 text-sm text-stone-500 font-semibold">
-                                {isLoggedIn 
-                                    ? "Verify and confirm your checkout information before completing your payment" 
+                                {isLoggedIn
+                                    ? "Verify and confirm your checkout information before completing your payment"
                                     : "Enter your checkout details to register your resort account"}
                             </p>
                         </div>
@@ -331,11 +388,11 @@ export default function CustomerDetailsPage() {
             {/* Page content - fits to full width max-w-7xl */}
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-8 lg:px-14">
                 <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-                    
+
                     {/* Left Column: Form Details (lg:col-span-2) */}
                     <div className="lg:col-span-2 space-y-6">
                         <div className="bg-white rounded-3xl border border-stone-200 p-6 sm:p-8 shadow-[0_4px_20px_rgba(28,25,23,0.03)] space-y-7">
-                            
+
                             {/* SECTION I: Personal Details */}
                             <div className="space-y-4">
                                 <h2 className="text-xs font-black text-emerald-850 uppercase tracking-widest pb-1.5 border-b border-stone-150">I. Personal Details</h2>
@@ -466,28 +523,26 @@ export default function CustomerDetailsPage() {
                                             {idType === "NIC" ? "NIC Number" : "Passport Number"} <span className="text-emerald-700">*</span>
                                         </label>
                                         <div className="relative group">
-                                            <FaIdCard className={`absolute left-4 top-1/2 -translate-y-1/2 text-xs transition-colors ${
-                                                idNumber === "" ? "text-emerald-850" : idError ? "text-rose-600" : "text-emerald-600"
-                                            }`} />
+                                            <FaIdCard className={`absolute left-4 top-1/2 -translate-y-1/2 text-xs transition-colors ${idNumber === "" ? "text-emerald-850" : idError ? "text-rose-600" : "text-emerald-600"
+                                                }`} />
                                             <input
                                                 type="text"
                                                 placeholder={idType === "NIC" ? "e.g. 199912345678" : "e.g. N1234567"}
                                                 value={idNumber}
                                                 onChange={(e) => setIdNumber(e.target.value)}
                                                 disabled={loading}
-                                                className={`w-full pl-10 pr-3 py-2.5 bg-white border rounded-xl focus:outline-none focus:ring-4 transition text-xs text-stone-800 placeholder-stone-400 ${
-                                                    idNumber === ""
+                                                className={`w-full pl-10 pr-3 py-2.5 bg-white border rounded-xl focus:outline-none focus:ring-4 transition text-xs text-stone-800 placeholder-stone-400 ${idNumber === ""
                                                         ? "border-stone-200 focus:ring-emerald-500/10 focus:border-emerald-600"
                                                         : idError
                                                             ? "border-rose-400 focus:ring-rose-500/10 focus:border-rose-500"
                                                             : "border-emerald-400 focus:ring-emerald-500/10 focus:border-emerald-500"
-                                                }`}
+                                                    }`}
                                             />
                                         </div>
                                         {idNumber !== "" && idError && (
                                             <p className="text-[10px] text-rose-600 font-semibold pl-1 animate-pulse">
-                                                {idType === "NIC" 
-                                                    ? "Format invalid (use 9 digits + V/X or 12 digits)." 
+                                                {idType === "NIC"
+                                                    ? "Format invalid (use 9 digits + V/X or 12 digits)."
                                                     : "Passport invalid (6-15 alphanumeric characters only)."}
                                             </p>
                                         )}
@@ -691,7 +746,7 @@ export default function CustomerDetailsPage() {
                     <div className="lg:col-span-1">
                         <div className="sticky top-4 rounded-3xl border border-stone-200 bg-white p-6 shadow-lg space-y-6">
                             <h3 className="text-lg font-black text-stone-900 tracking-tight pb-3.5 border-b border-stone-200">Reservation Summary</h3>
-                            
+
                             {/* Summary specs */}
                             <div className="space-y-3 pb-4 border-b border-stone-200 text-sm">
                                 <div className="flex justify-between">
@@ -731,7 +786,7 @@ export default function CustomerDetailsPage() {
                                     <span className="font-extrabold text-sm tracking-wide">Stay Total Cost:</span>
                                     <span className="text-2xl font-black">${Number(totalPrice || 0).toFixed(2)}</span>
                                 </div>
-                                
+
                                 <div className="p-3 bg-emerald-50 border border-emerald-150 rounded-xl flex gap-2.5">
                                     <FaCheck className="h-4 w-4 text-emerald-800 shrink-0 mt-0.5" />
                                     <div className="text-[11px] leading-tight text-emerald-800 font-semibold">
@@ -747,8 +802,8 @@ export default function CustomerDetailsPage() {
                                 onClick={handleRegisterAndPayment}
                                 className="w-full h-12 bg-emerald-800 hover:bg-emerald-950 text-white shadow-[0_4px_15px_rgba(6,95,70,0.12)] hover:shadow-[0_4px_22px_rgba(6,95,70,0.22)] rounded-xl font-extrabold text-xs tracking-widest uppercase transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center cursor-pointer gap-2 group border border-emerald-900/10"
                             >
-                                {isLoggedIn 
-                                    ? (loading ? "Verifying..." : "Confirm & Proceed to Payment") 
+                                {isLoggedIn
+                                    ? (loading ? "Verifying..." : "Confirm & Proceed to Payment")
                                     : (loading ? "Registering..." : "Register & Proceed to Payment")}
                                 {!loading && <FaArrowRight className="w-3.5 h-3.5 text-emerald-250 group-hover:translate-x-0.5 transition-transform" />}
                             </button>
