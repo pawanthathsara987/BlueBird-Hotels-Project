@@ -89,7 +89,7 @@ const parseFeatures = (features) => {
 
 const ALLOWED_FUEL_TYPES = ['petrol', 'diesel', 'electric', 'hybrid'];
 const ALLOWED_TRANSMISSIONS = ['automatic', 'manual'];
-const ALLOWED_STATUSES = ['available', 'maintenance', 'retired'];
+const ALLOWED_STATUSES = ['available', 'booked', 'pending_inspection', 'maintenance', 'retired'];
 
 const getVehicleTableColumns = async () => {
   try {
@@ -283,7 +283,9 @@ export const checkAvailability = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Vehicle not found' });
     }
 
-    if (vehicle.status !== 'available') {
+    // maintenance, retired, pending_inspection = truly unavailable
+    // booked = may still be available for different dates (overlap query checks)
+    if (!['available', 'booked'].includes(vehicle.status)) {
       return res.json({
         success: true,
         data: {
@@ -297,12 +299,39 @@ export const checkAvailability = async (req, res) => {
 
 
 
+    if (vehicle.insuranceExpiry && returnDateObj > new Date(vehicle.insuranceExpiry)) {
+      return res.json({
+        success: true,
+        data: {
+          available: false,
+          reason: 'Vehicle insurance expires before the requested return date',
+          days,
+          totalPrice: null,
+        },
+      });
+    }
+
+    if (vehicle.revenueLicenseExpiry && returnDateObj > new Date(vehicle.revenueLicenseExpiry)) {
+      return res.json({
+        success: true,
+        data: {
+          available: false,
+          reason: 'Vehicle revenue license expires before the requested return date',
+          days,
+          totalPrice: null,
+        },
+      });
+    }
+
+    // 1-Day Post-Return Buffer: existing booking's returnDatetime must not be within 24hrs before requested pickup
+    const pickupDateWithBuffer = new Date(pickupDate.getTime() - 24 * 60 * 60 * 1000);
+
     const overlappingBooking = await VehicleBooking.findOne({
       where: {
         vehicleId: Number(req.params.id),
         status: { [Op.in]: BLOCKING_BOOKING_STATUSES },
         pickupDatetime: { [Op.lt]: returnDateObj },
-        returnDatetime: { [Op.gt]: pickupDate },
+        returnDatetime: { [Op.gt]: pickupDateWithBuffer },
       },
       attributes: ['bookingNo'],
     });
@@ -330,7 +359,7 @@ export const checkAvailability = async (req, res) => {
     const subtotal = (vehicleRate + driverFee) * days;
     const totalPrice = parseFloat(subtotal.toFixed(2));
 
-    const depositPercentage = 30;
+    const depositPercentage = 50;
     const depositAmount = parseFloat(((totalPrice * depositPercentage) / 100).toFixed(2));
     const balanceAmount = parseFloat((totalPrice - depositAmount).toFixed(2));
 
