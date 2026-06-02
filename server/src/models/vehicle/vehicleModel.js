@@ -94,7 +94,7 @@ Vehicle.init(
     //    'maintenance' → Manager manually sets when vehicle is being serviced (blocked for all dates)
     //    'retired'     → soft-delete; hidden from all views
     status: {
-      type: DataTypes.ENUM('available', 'maintenance', 'retired'),
+      type: DataTypes.ENUM('available', 'booked', 'pending_inspection', 'maintenance', 'retired'),
       allowNull: false,
       defaultValue: 'available',
     },
