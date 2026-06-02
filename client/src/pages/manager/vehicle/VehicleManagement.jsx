@@ -22,6 +22,10 @@ function getStatusStyles(status) {
   switch (status) {
     case "available":
       return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    case "booked":
+      return "bg-blue-50 text-blue-700 border-blue-200";
+    case "pending_inspection":
+      return "bg-violet-50 text-violet-700 border-violet-200";
     case "maintenance":
       return "bg-amber-50 text-amber-700 border-amber-200";
     case "retired":
@@ -35,6 +39,10 @@ function getStatusCardStyles(status) {
   switch (status) {
     case "available":
       return "border-emerald-200/80 bg-linear-to-br from-emerald-50/40 via-white to-white";
+    case "booked":
+      return "border-blue-200/80 bg-linear-to-br from-blue-50/40 via-white to-white";
+    case "pending_inspection":
+      return "border-violet-200/80 bg-linear-to-br from-violet-50/40 via-white to-white";
     case "maintenance":
       return "border-amber-200/80 bg-linear-to-br from-amber-50/40 via-white to-white";
     case "retired":
@@ -43,6 +51,18 @@ function getStatusCardStyles(status) {
       return "border-rose-200/80 bg-linear-to-br from-rose-50/40 via-white to-white";
   }
 }
+
+const getExpiryStatus = (dateString) => {
+	if (!dateString) return null;
+	const expiry = new Date(dateString);
+	const now = new Date();
+	now.setHours(0, 0, 0, 0);
+	const diffDays = (expiry - now) / (1000 * 60 * 60 * 24);
+	
+	if (diffDays < 0) return { status: 'expired', message: 'Expired' };
+	if (diffDays <= 30) return { status: 'expiring', message: `Exp in ${Math.ceil(diffDays)}d` };
+	return null;
+};
 
 export default function VehicleManagement() {
   const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api").replace(/\/$/, "");
@@ -254,7 +274,19 @@ export default function VehicleManagement() {
                             {vehicle.status || "unknown"}
                           </span>
                         </div>
-                        <p className="text-slate-500 mt-1">{vehicle.vehicleType || "-"} • Plate {vehicle.plateNumber || "-"}</p>
+                        <p className="text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
+                          {vehicle.vehicleType || "-"} • Plate {vehicle.plateNumber || "-"}
+                          {getExpiryStatus(vehicle.insuranceExpiry) && (
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${getExpiryStatus(vehicle.insuranceExpiry).status === 'expired' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                              Ins: {getExpiryStatus(vehicle.insuranceExpiry).message}
+                            </span>
+                          )}
+                          {getExpiryStatus(vehicle.revenueLicenseExpiry) && (
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${getExpiryStatus(vehicle.revenueLicenseExpiry).status === 'expired' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                              Lic: {getExpiryStatus(vehicle.revenueLicenseExpiry).message}
+                            </span>
+                          )}
+                        </p>
                       </div>
 
                       <div className="flex items-center gap-2">
