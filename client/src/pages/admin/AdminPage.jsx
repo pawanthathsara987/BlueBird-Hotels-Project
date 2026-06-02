@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, Routes, Route } from "react-router-dom";
-import { MdAdminPanelSettings, MdDashboard, MdBedroomParent, MdBookOnline, MdPeople, MdSettings, MdLogout, MdMenu, MdClose } from "react-icons/md";
+import { MdAdminPanelSettings, MdDashboard, MdBedroomParent, MdBookOnline, MdPeople, MdSettings, MdLogout, MdMenu, MdClose, MdShoppingBag } from "react-icons/md";
 import RoomManagement from "./rooms/roomManagement";
 import AmenitiesForm from "./rooms/AmenitiesForm";
 import RoomForm from "./rooms/RoomForm";
@@ -12,6 +12,8 @@ import UpdateStaffMember from "./user/UpdateStaffMember";
 import ViewDeletedStaff from "./user/ViewDeletedStaff";
 import AdminDashboard from "./AdminDashboard";
 import OtherItemPriceView from "./rooms/OtherItemPriceView";
+import ShopManagement from "./shop/ShopManagement";
+
 
 export default function AdminPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -83,6 +85,10 @@ export default function AdminPage() {
                                 <MdBookOnline className="text-xl" />
                                 <span>Extra Charges</span>
                             </NavLink>
+                            <NavLink to="/admin/shop-items" onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}>
+                                <MdShoppingBag className="text-xl" />
+                                <span>Shop Items</span>
+                            </NavLink>
                         </div>
                     </div>
 
@@ -138,6 +144,7 @@ export default function AdminPage() {
                     <Route path="/users/updateStaffMember" element={<UpdateStaffMember />} />
                     <Route path="/users/viewDeletedStaff" element={<ViewDeletedStaff />} />
                     <Route path="/extra-charges" element={<OtherItemPriceView />} />
+                    <Route path="/shop-items" element={<ShopManagement />} />
                     <Route path="/settings" element={<h1 className="p-5">Settings</h1>} />
                 </Routes>
             </div>

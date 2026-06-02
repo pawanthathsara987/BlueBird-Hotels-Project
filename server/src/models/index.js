@@ -31,6 +31,8 @@ import OtherItemPrice from "./room/otherItemPrice.js";
 import Policy from "./room/policy.js";
 import VehicleFinalBill from "./vehicle/vehicleFinalBillModel.js";
 import RoomPayment from "./booking/roomPayment.js";
+import ShopItem from "./shop/ShopItem.js";
+
 
 
 // Keep `Reservation` alias for backward compatibility with existing controllers
@@ -324,6 +326,6 @@ export function initModels() {
         as: "customer",
     });
 
-    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, OtherItemPrice, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment };
+    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, OtherItemPrice, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem };
 }
-export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, OtherItemPrice, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment };
+export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, OtherItemPrice, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem };
