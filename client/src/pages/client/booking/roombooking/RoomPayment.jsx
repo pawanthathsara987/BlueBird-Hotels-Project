@@ -219,7 +219,7 @@ const RoomPayment = () => {
         addField('merchant_id', merchantId);
         addField('return_url', `${window.location.origin}/booking-confirm?order_id=${reservationId}`);
         addField('cancel_url', `${window.location.origin}/payment`);
-        addField('notify_url', "https://8472-175-157-188-97.ngrok-free.app/api/payment/notify");
+        addField('notify_url', `${import.meta.env.NOTIFY_URL}/api/payment/notify`);
 
         // Customer details
         addField('first_name', billingDetails.firstName);
