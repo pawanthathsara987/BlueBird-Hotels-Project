@@ -36,6 +36,7 @@ const baseInput =
 const inputClassName = (hasError) =>
 	`${baseInput} border ${hasError ? "border-red-400 bg-red-50" : "border-slate-200 bg-slate-50 hover:bg-white"}`;
 
+const defaultVehicle = {
 	plateNumber: "",
 	chassisNo: "",
 	vehicleTypeId: "",
@@ -60,8 +61,21 @@ const inputClassName = (hasError) =>
 
 const ALLOWED_FUEL_TYPES = ["petrol", "diesel", "electric", "hybrid"];
 const ALLOWED_TRANSMISSIONS = ["automatic", "manual"];
-const ALLOWED_STATUSES = ["available", "maintenance", "retired"];
+const ALLOWED_STATUSES = ["available", "booked", "pending_inspection", "maintenance", "retired"];
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
+const getExpiryStatus = (dateString) => {
+	if (!dateString) return null;
+	const expiry = new Date(dateString);
+	// normalize now to midnight
+	const now = new Date();
+	now.setHours(0, 0, 0, 0);
+	const diffDays = (expiry - now) / (1000 * 60 * 60 * 24);
+	
+	if (diffDays < 0) return { status: 'expired', message: 'Expired!' };
+	if (diffDays <= 30) return { status: 'expiring', message: `Expiring in ${Math.ceil(diffDays)} days` };
+	return null;
+};
 
 const normalizeFeaturesForInput = (features) => {
 	if (Array.isArray(features)) {
@@ -134,6 +148,13 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 
 	const handleChange = (event) => {
 		const { name, value, type, files } = event.target;
+
+		if (name === "status" && isEditMode) {
+			if (["booked", "pending_inspection"].includes(vehicle.status) && value !== vehicle.status) {
+				const confirmed = window.confirm(`This vehicle is currently in a system-managed state (${vehicle.status}). Are you sure you want to manually change it to ${value}? This could affect active bookings.`);
+				if (!confirmed) return;
+			}
+		}
 
 		if (type === "file") {
 			const file = files?.[0] || null;
@@ -483,6 +504,8 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 						<FieldLabel text="Status" error={errors.status} />
 						<select name="status" value={form.status} onChange={handleChange} className={inputClassName(!!errors.status)}>
 							<option value="available">Available</option>
+							<option value="booked">Booked (Auto)</option>
+							<option value="pending_inspection">Pending Inspection (Auto)</option>
 							<option value="maintenance">Maintenance</option>
 							<option value="retired">Retired</option>
 						</select>
@@ -509,6 +532,11 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 							onChange={handleChange}
 							className={inputClassName(!!errors.insuranceExpiry)}
 						/>
+						{getExpiryStatus(form.insuranceExpiry) && (
+							<p className={`text-xs mt-1.5 font-bold ${getExpiryStatus(form.insuranceExpiry).status === 'expired' ? 'text-red-600' : 'text-amber-600'}`}>
+								{getExpiryStatus(form.insuranceExpiry).status === 'expired' ? '⚠️ ' : '⏳ '}{getExpiryStatus(form.insuranceExpiry).message}
+							</p>
+						)}
 					</div>
 
 					<div>
@@ -520,6 +548,11 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 							onChange={handleChange}
 							className={inputClassName(!!errors.revenueLicenseExpiry)}
 						/>
+						{getExpiryStatus(form.revenueLicenseExpiry) && (
+							<p className={`text-xs mt-1.5 font-bold ${getExpiryStatus(form.revenueLicenseExpiry).status === 'expired' ? 'text-red-600' : 'text-amber-600'}`}>
+								{getExpiryStatus(form.revenueLicenseExpiry).status === 'expired' ? '⚠️ ' : '⏳ '}{getExpiryStatus(form.revenueLicenseExpiry).message}
+							</p>
+						)}
 					</div>
 				</div>
 

@@ -15,7 +15,7 @@ const calculateDeposit = (totalPrice) => {
   const amount = Number(totalPrice);
   if (!Number.isFinite(amount)) return { depositAmount: null, balanceAmount: null };
 
-  const depositAmount = Number((amount * 0.3).toFixed(2));
+  const depositAmount = Number((amount * 0.5).toFixed(2));
   const balanceAmount = Number((amount - depositAmount).toFixed(2));
 
   return { depositAmount, balanceAmount };
@@ -104,6 +104,15 @@ export default function VehicleBookingPage() {
       return;
     }
 
+    // Check if pickup is in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (pickupTime < today.getTime()) {
+      setAvailability({ available: false, reason: "Pickup date cannot be in the past.", days: 0, totalPrice: null, driverFee: null, pricePerDay: null });
+      setAvailabilityLoading(false);
+      return;
+    }
+
     let cancelled = false;
     const timer = window.setTimeout(async () => {
       try {
@@ -166,6 +175,18 @@ export default function VehicleBookingPage() {
       setBookingError("Please choose an available date range before confirming your reservation.");
       return;
     }
+
+    // License expiration validation
+    if (driverOption === "without" && bookingForm.customerLicenseExpiry) {
+      const expiry = new Date(bookingForm.customerLicenseExpiry).getTime();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (expiry < today.getTime()) {
+        setBookingError("Your driver's license is expired. We cannot proceed with the booking.");
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+    }
     
     setBookingLoading(true);
     setBookingError("");
@@ -223,7 +244,7 @@ export default function VehicleBookingPage() {
             <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Advance deposit required</div>
             <div className="mt-3 text-4xl font-black text-slate-950">{formatMoney(successDeposit)}</div>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              Pay the 30% advance deposit to secure the reservation. The remaining balance of {formatMoney(successBalance)} will be collected at pickup.
+              Pay the {availability?.depositPercentage || 50}% advance deposit to secure the reservation. The remaining balance of {formatMoney(successBalance)} will be collected at pickup.
             </p>
           </div>
 
@@ -391,7 +412,7 @@ export default function VehicleBookingPage() {
                     <ul className="space-y-2 text-sm text-slate-700">
                       <li className="flex items-start gap-2">
                         <span className="mt-0.5 text-sky-500">✓</span>
-                        <span>30% advance deposit is <strong>non-refundable</strong> upon cancellation.</span>
+                        <span>{availability?.depositPercentage || 50}% advance deposit is <strong>non-refundable</strong> upon cancellation.</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="mt-0.5 text-sky-500">✓</span>
@@ -423,7 +444,7 @@ export default function VehicleBookingPage() {
                       {bookingLoading ? "Processing your reservation..." : "Confirm Reservation"}
                     </button>
                     <p className="mt-4 text-center text-xs text-slate-500">
-                      By confirming, you agree to the rental terms above. You will secure this reservation by paying the 30% advance deposit.
+                      By confirming, you agree to the rental terms above. You will secure this reservation by paying the {availability?.depositPercentage || 50}% advance deposit.
                     </p>
                   </div>
                 </section>
@@ -483,7 +504,7 @@ export default function VehicleBookingPage() {
                     <span className="text-lg font-black">{availability?.totalPrice ? formatMoney(availability.totalPrice) : "—"}</span>
                   </div>
                   <div className="flex items-center justify-between rounded-2xl bg-sky-50 px-4 py-3">
-                    <span className="text-sky-900">30% deposit</span>
+                    <span className="text-sky-900">{availability?.depositPercentage || 50}% deposit</span>
                     <span className="font-semibold text-sky-950">{summaryDeposit ? formatMoney(summaryDeposit) : "—"}</span>
                   </div>
                   <div className="flex items-center justify-between rounded-2xl bg-emerald-50 px-4 py-3">
