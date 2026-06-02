@@ -122,6 +122,19 @@ export const updateBookingStatus = async (req, res) => {
 
     await booking.update({ status }, { transaction: t });
 
+    // Auto-status logic for Vehicle
+    if (status === 'ongoing') {
+      await Vehicle.update({ status: 'booked' }, { where: { id: booking.vehicleId }, transaction: t });
+    } else if (status === 'returned') {
+      await Vehicle.update({ status: 'pending_inspection' }, { where: { id: booking.vehicleId }, transaction: t });
+    } else if (status === 'cancelled') {
+      // If cancelled, ensure it is available if it was booked/pending_inspection
+      const vehicle = await Vehicle.findByPk(booking.vehicleId, { transaction: t });
+      if (vehicle && ['booked', 'pending_inspection'].includes(vehicle.status)) {
+        await vehicle.update({ status: 'available' }, { transaction: t });
+      }
+    }
+
     await t.commit();
     return res.json({ success: true, message: `Booking status updated to ${status}`, data: booking });
   } catch (err) {
@@ -385,7 +398,11 @@ export const cancelBooking = async (req, res) => {
       cancellationReason: cancellationReason || 'Cancelled by manager',
     }, { transaction: t });
 
-
+    // Auto-status logic for Vehicle if booking was active
+    const vehicle = await Vehicle.findByPk(booking.vehicleId, { transaction: t });
+    if (vehicle && ['booked', 'pending_inspection'].includes(vehicle.status)) {
+      await vehicle.update({ status: 'available' }, { transaction: t });
+    }
 
     await t.commit();
     return res.json({ success: true, message: 'Booking cancelled successfully', data: booking });
@@ -516,6 +533,12 @@ export const generateBill = async (req, res) => {
       balanceAmount: newBalanceAmount,
       status: 'completed'
     }, { transaction: t });
+
+    // Safety net: ensure vehicle is not stuck in pending_inspection or booked
+    const vehicle = await Vehicle.findByPk(booking.vehicleId, { transaction: t });
+    if (vehicle && ['pending_inspection', 'booked'].includes(vehicle.status)) {
+      await vehicle.update({ status: 'available' }, { transaction: t });
+    }
 
     await t.commit();
 

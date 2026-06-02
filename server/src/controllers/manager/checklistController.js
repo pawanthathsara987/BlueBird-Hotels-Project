@@ -91,11 +91,36 @@ export const createChecklist = async (req, res) => {
       customerSignature: conditions.customerSignature ? true : false,
     });
 
-    // Auto-update vehicle mileage on return checklist
-    if (type === 'return' && mileage) {
+    // Auto-update vehicle mileage and status on return checklist
+    if (type === 'return') {
       const vehicle = await Vehicle.findByPk(vehicleId);
-      if (vehicle && Number(mileage) > vehicle.currentMileage) {
-        await vehicle.update({ currentMileage: Number(mileage) });
+      if (vehicle) {
+        const updates = {};
+        if (mileage && Number(mileage) > vehicle.currentMileage) {
+          updates.currentMileage = Number(mileage);
+        }
+        
+        // Auto status transition from pending_inspection
+        const needsMaintenance = (
+          conditions.exteriorBody !== 'ok' ||
+          conditions.tires !== 'ok' ||
+          conditions.windshield !== 'ok' ||
+          conditions.lights !== 'ok' ||
+          conditions.mirrors !== 'ok' ||
+          conditions.interior !== 'ok' ||
+          conditions.ac !== 'ok' ||
+          conditions.damageNotes
+        );
+
+        if (needsMaintenance) {
+          updates.status = 'maintenance';
+        } else if (vehicle.status === 'pending_inspection') {
+          updates.status = 'available';
+        }
+
+        if (Object.keys(updates).length > 0) {
+          await vehicle.update(updates);
+        }
       }
     }
 
