@@ -20,10 +20,10 @@ export default function Header() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("customerToken");
-    sessionStorage.removeItem("customerToken");
+    localStorage.clear();
+    sessionStorage.clear();
     setIsLoggedIn(false);
-    toast.success("Successfully logged out. We hope to welcome you back soon!", {
+    toast.success("Successfully logged out!", {
       style: {
         border: '1px solid #10b981',
         padding: '16px',

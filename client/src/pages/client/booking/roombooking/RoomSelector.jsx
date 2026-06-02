@@ -7,6 +7,7 @@ import { addDays, format } from "date-fns";
 import { Plus, Minus, Calendar, Users, Globe, ChevronDown, ChevronLeft, ChevronRight, Info, Sparkles, Coffee, Utensils, Check, Moon, ArrowRight, Trash2, Lock, Unlock, Car, Clock, ClipboardList } from "lucide-react";
 import toast from "react-hot-toast";
 import RoomDetailsModal from "./RoomDetailsModal";
+import { jwtDecode } from "jwt-decode";
 
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
@@ -26,6 +27,24 @@ const RoomSelector = () => {
   const location = useLocation();
   const [detailingRoom, setDetailingRoom] = useState(null);
   const [dateRange, setDateRange] = useState(() => {
+    const tempSaved = localStorage.getItem("tempSavedBookingState");
+    if (tempSaved) {
+      try {
+        const parsed = JSON.parse(tempSaved);
+        if (parsed.dateRange && parsed.dateRange[0]) {
+          return [
+            {
+              startDate: new Date(parsed.dateRange[0].startDate),
+              endDate: new Date(parsed.dateRange[0].endDate),
+              key: parsed.dateRange[0].key || "selection",
+            }
+          ];
+        }
+      } catch (e) {
+        console.error("Error restoring dateRange state:", e);
+      }
+    }
+
     const passedData = location.state?.bookingData;
     if (passedData?.checkInDate && passedData?.checkOutDate) {
       return [
@@ -50,14 +69,42 @@ const RoomSelector = () => {
 
   // Global settings
   const [nationality, setNationality] = useState(() => {
+    const tempSaved = localStorage.getItem("tempSavedBookingState");
+    if (tempSaved) {
+      try {
+        const parsed = JSON.parse(tempSaved);
+        if (parsed.nationality) return parsed.nationality;
+      } catch (e) {
+        console.error("Error restoring nationality state:", e);
+      }
+    }
     return location.state?.bookingData?.nationality || "";
   });
 
   // Extra booking options (Personal requests & airport pickup)
   const [personalRequest, setPersonalRequest] = useState(() => {
+    const tempSaved = localStorage.getItem("tempSavedBookingState");
+    if (tempSaved) {
+      try {
+        const parsed = JSON.parse(tempSaved);
+        if (parsed.personalRequest !== undefined) return parsed.personalRequest;
+      } catch (e) {
+        console.error("Error restoring personalRequest state:", e);
+      }
+    }
     return localStorage.getItem("personalRequest") || "";
   });
+
   const [airportPickupEnabled, setAirportPickupEnabled] = useState(() => {
+    const tempSaved = localStorage.getItem("tempSavedBookingState");
+    if (tempSaved) {
+      try {
+        const parsed = JSON.parse(tempSaved);
+        if (parsed.airportPickup?.enabled !== undefined) return parsed.airportPickup.enabled;
+      } catch (e) {
+        console.error("Error restoring airportPickupEnabled state:", e);
+      }
+    }
     try {
       const stored = JSON.parse(localStorage.getItem("airportPickUp"));
       return !!stored?.enabled;
@@ -65,7 +112,17 @@ const RoomSelector = () => {
       return false;
     }
   });
+
   const [pickupTime, setPickupTime] = useState(() => {
+    const tempSaved = localStorage.getItem("tempSavedBookingState");
+    if (tempSaved) {
+      try {
+        const parsed = JSON.parse(tempSaved);
+        if (parsed.airportPickup?.time) return parsed.airportPickup.time;
+      } catch (e) {
+        console.error("Error restoring pickupTime state:", e);
+      }
+    }
     try {
       const stored = JSON.parse(localStorage.getItem("airportPickUp"));
       return stored?.time || "12:00";
@@ -293,6 +350,18 @@ const RoomSelector = () => {
 
   // Dynamic added rooms list (Initialize with one default room using selected board type, initially unconfigured or restored from location state)
   const [addedRooms, setAddedRooms] = useState(() => {
+    const tempSaved = localStorage.getItem("tempSavedBookingState");
+    if (tempSaved) {
+      try {
+        const parsed = JSON.parse(tempSaved);
+        if (Array.isArray(parsed.addedRooms) && parsed.addedRooms.length > 0) {
+          return parsed.addedRooms;
+        }
+      } catch (e) {
+        console.error("Error restoring addedRooms state:", e);
+      }
+    }
+
     const passedRooms = location.state?.selectedRooms;
     if (Array.isArray(passedRooms) && passedRooms.length > 0) {
       return passedRooms.map(r => {
@@ -328,6 +397,13 @@ const RoomSelector = () => {
       }
     ];
   });
+
+  // Cleanup temporary saved state after load
+  useEffect(() => {
+    if (localStorage.getItem("tempSavedBookingState")) {
+      localStorage.removeItem("tempSavedBookingState");
+    }
+  }, []);
 
   // Add Room Button Handler
   const handleAddNewRoom = () => {
@@ -576,11 +652,75 @@ const RoomSelector = () => {
   };
 
   const handleFinalBookingSubmit = () => {
+    // 1. Check user login status and token expiration before proceeding
+    let token = sessionStorage.getItem("customerToken") || localStorage.getItem("customerToken");
+    if (token === "undefined" || token === "null") {
+      sessionStorage.removeItem("customerToken");
+      localStorage.removeItem("customerToken");
+      token = null;
+    }
+
+    let isExpired = false;
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        const currentTime = Date.now() / 1000;
+        if (decoded.exp && decoded.exp < currentTime) {
+          isExpired = true;
+          sessionStorage.removeItem("customerToken");
+          localStorage.removeItem("customerToken");
+          token = null;
+        }
+      } catch (err) {
+        console.error("Token decoding error:", err);
+        sessionStorage.removeItem("customerToken");
+        localStorage.removeItem("customerToken");
+        token = null;
+      }
+    }
+
+    if (!token || isExpired) {
+      // Save current booking state for reuse after login
+      const bookingStateToSave = {
+        dateRange: [
+          {
+            startDate: dateRange[0].startDate.toISOString(),
+            endDate: dateRange[0].endDate.toISOString(),
+            key: dateRange[0].key
+          }
+        ],
+        nationality,
+        addedRooms,
+        personalRequest,
+        airportPickup: {
+          enabled: airportPickupEnabled,
+          time: pickupTime
+        }
+      };
+      localStorage.setItem("tempSavedBookingState", JSON.stringify(bookingStateToSave));
+
+      if (isExpired) {
+        toast.error("Your session has expired. Please login again to complete your booking.");
+      } else {
+        toast.error("Please login to your account to proceed with the booking.");
+      }
+      navigate("/customerLogin", { state: { from: "/booking" } });
+      return;
+    }
+
+    // 2. Validate nationality
     if (!nationality || nationality === "") {
-      toast.error("Please select your Nationality in the search bar above before proceeding.");
+      toast.error("Please select your Nationality");
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
+
+    // 3. Enforce room configuration completion
+    if (hasUnconfiguredRoom) {
+      toast.error("Please configure all rooms before confirming your stay.");
+      return;
+    }
+
     const nights = getStayNights();
 
     // Calculate total nightly rate of all rooms
@@ -699,8 +839,8 @@ const RoomSelector = () => {
             className="flex-1 flex items-center justify-between border border-stone-200/80 bg-white hover:border-emerald-600 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500/20 px-4 py-3.5 rounded-xl transition text-left cursor-pointer group shadow-xs"
           >
             <span className="text-stone-800 font-bold text-sm flex items-center gap-2">
-              {nationality === "Sri Lankan" 
-                ? "🇱🇰 Sri Lankan" 
+              {nationality === "Sri Lankan"
+                ? "🇱🇰 Sri Lankan"
                 : (nationality === "Non Sri Lankan Resident" || nationality === "Non-Sri Lankan" || nationality === "Non Sri Lankan")
                   ? "🌐 Non-Sri Lankan"
                   : "❓ Please Select"}
@@ -1037,7 +1177,186 @@ const RoomSelector = () => {
                 key={room.id}
                 className="bg-stone-50/50 border border-stone-200/80 rounded-2xl p-6 relative group hover:border-emerald-600/30 transition-all duration-300 shadow-2xs flex flex-col lg:flex-row lg:items-stretch gap-6 animate-fadeIn"
               >
-                {/* Left Side: Room details & occupancy controls */}
+                {/* Left Side: Category and Board Type Selectors Stacked */}
+                <div className="flex-1 flex flex-col min-w-0 space-y-6">
+                  {/* Category Selector */}
+                  <div className="relative w-full px-1">
+                    <label className="text-xs uppercase font-extrabold tracking-widest text-stone-400 mb-2.5 px-0.5 block flex items-center justify-between">
+                      <span>Select Room Category</span>
+                      {room.roomType && (
+                        <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-150 px-2.5 py-0.5 rounded-md normal-case tracking-normal">
+                          Active: {room.roomType}
+                        </span>
+                      )}
+                    </label>
+                    <div className="relative w-full">
+                      {/* Grid track wrapper with premium border, background, and spacing */}
+                      <div className="w-full rounded-2xl border-3 border-stone-200/70 bg-white/40 p-3 shadow-3xs">
+                        {roomTypes.length === 0 ? (
+                          <div className="w-full py-10 text-center flex flex-col items-center justify-center p-6 bg-white rounded-xl border border-stone-200/50 shadow-3xs animate-fadeIn">
+                            <Info className="w-8 h-8 text-amber-600 mb-2 animate-bounce" />
+                            <h5 className="font-extrabold text-stone-850 text-sm tracking-tight">No Available Room Categories</h5>
+                            <p className="text-xs text-stone-500 max-w-sm mt-1 leading-relaxed font-semibold">
+                              We are fully booked or have no available rooms matching your stay dates. Please select other dates in the stay bar above.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex gap-4 pb-1 pt-1 items-stretch overflow-x-auto scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent">
+                            {roomTypes.map((type) => {
+                              const otherRoomsCount = addedRooms.filter(r => r.id !== room.id && r.roomType === type.name).length;
+                              const remainingRoomsCount = Math.max(0, (type.availableRoomsCount || 0) - otherRoomsCount);
+                              const isSelected = room.roomType === type.name;
+                              return (
+                                <div
+                                  key={type.name}
+                                  onClick={() => {
+                                    if (!isSelected && remainingRoomsCount <= 0) {
+                                      toast.error(`All available rooms of category "${type.name}" are already selected.`);
+                                      return;
+                                    }
+                                    handleRoomTypeChange(room.id, type.name);
+                                  }}
+                                  className={`min-w-[195px] w-[195px] bg-white rounded-xl border-2 transition-all duration-350 cursor-pointer overflow-hidden flex flex-col justify-between group relative active:scale-98 ${isSelected
+                                    ? "border-emerald-600 ring-4 ring-emerald-500/15 scale-[1.03] shadow-[0_12px_24px_rgba(6,95,70,0.12)] z-10"
+                                    : remainingRoomsCount <= 0
+                                      ? "border-stone-200 opacity-60 cursor-not-allowed filter grayscale"
+                                      : "border-stone-200/80 hover:border-emerald-600/40 hover:scale-[1.01] hover:shadow-2xs"
+                                    }`}
+                                >
+                                  {/* HD room thumbnail preview */}
+                                  <div className="relative h-28 overflow-hidden shrink-0">
+                                    <img
+                                      src={type.image}
+                                      alt={type.name}
+                                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                                    />
+                                    <div className="absolute top-2 right-2 z-10">
+                                      {isSelected ? (
+                                        <span className="w-6 h-6 rounded-full bg-emerald-800 text-white flex items-center justify-center shadow-md border border-white/20">
+                                          <Check className="w-3.5 h-3.5" />
+                                        </span>
+                                      ) : (
+                                        <span className="w-6 h-6 rounded-full bg-white/90 text-stone-500 flex items-center justify-center backdrop-blur-3xs shadow-sm border border-stone-200/50 hover:bg-stone-50">
+                                          <Plus className="w-3.5 h-3.5" />
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Info Trigger Button (Top-left always visible with interactive hover scale) */}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDetailingRoom(type);
+                                      }}
+                                      className="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-white/95 text-stone-600 hover:text-emerald-800 flex items-center justify-center backdrop-blur-3xs shadow-sm border border-stone-200/50 hover:border-stone-300 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+                                      title="View suite details"
+                                    >
+                                      <Info className="w-3.5 h-3.5" />
+                                    </button>
+
+                                    {/* Price Tag Badge */}
+                                    <div className="absolute bottom-2 left-2 bg-stone-950/85 text-white px-2.5 py-0.5 rounded text-xs font-black tracking-wider backdrop-blur-3xs">
+                                      {type.price} / night
+                                    </div>
+                                  </div>
+
+                                  {/* Card metadata details */}
+                                  <div className="p-3.5 flex-1 flex flex-col justify-between space-y-2">
+                                    <h5 className="font-extrabold text-stone-850 text-xs leading-tight tracking-tight group-hover:text-emerald-900 transition">
+                                      {type.name}
+                                    </h5>
+                                    <div className="flex items-center justify-between text-[11px] font-bold text-stone-400 pt-2 border-t border-stone-100">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setDetailingRoom(type);
+                                        }}
+                                        className="text-stone-450 hover:text-emerald-850 transition duration-200 font-extrabold flex items-center gap-0.5 cursor-pointer hover:underline"
+                                      >
+                                        <Info className="w-3.5 h-3.5" /> Details
+                                      </button>
+
+                                      <div className="flex flex-col items-end gap-1 shrink-0">
+                                        <span className="text-stone-650 bg-stone-100 px-2 py-0.5 rounded text-[10px] font-bold">{type.maxOccupancy} Guests</span>
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-black tracking-wide border ${remainingRoomsCount > 0
+                                          ? "bg-emerald-50 text-emerald-800 border-emerald-250/30"
+                                          : "bg-rose-50 text-rose-800 border-rose-250/30 animate-pulse"
+                                          }`}>
+                                          {remainingRoomsCount} Available
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Experience Package (Board Type) Selector */}
+                  <div className="relative w-full px-1">
+                    <label className="text-xs uppercase font-extrabold tracking-widest text-stone-400 mb-2 px-0.5 block flex items-center justify-between">
+                      <span>Select Experience Package (Board Type)</span>
+                      {room.boardType && (
+                        <span className="text-xs font-bold text-emerald-850 bg-emerald-50 border border-emerald-150 px-2.5 py-0.5 rounded-md normal-case tracking-normal">
+                          Active: {room.boardType}
+                        </span>
+                      )}
+                    </label>
+                    <div className="relative w-full">
+                      {/* Grid track wrapper with premium border, background, and spacing */}
+                      <div className="w-full rounded-2xl border-3 border-stone-200/70 bg-white/40 p-3 shadow-3xs">
+                        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 pb-1 pt-1">
+                          {boardTypes.map((bt) => {
+                            const isSelected = room.boardType === bt.type;
+                            const cardColor = getBoardTypeColor(bt.type);
+                            return (
+                              <div
+                                key={bt.id}
+                                onClick={() => handleBoardTypeChange(room.id, bt.type)}
+                                className={`w-full bg-white rounded-xl border-2 p-3.5 transition-all duration-350 cursor-pointer overflow-hidden flex flex-col justify-between group relative active:scale-98 ${isSelected
+                                  ? "border-emerald-600 ring-4 ring-emerald-500/15 scale-[1.03] shadow-[0_12px_24px_rgba(6,95,70,0.12)] z-10"
+                                  : "border-stone-200/80 hover:border-emerald-600/40 hover:scale-[1.01] hover:shadow-2xs"
+                                  }`}
+                              >
+                                <div className={`h-1.5 bg-gradient-to-r ${cardColor} absolute top-0 left-0 right-0`} />
+                                <div className="flex justify-between items-center pt-2">
+                                  <div className="p-1.5 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center w-8 h-8 shrink-0">
+                                    {bt.icon ? (
+                                      <img src={bt.icon} alt={bt.type} className="w-4 h-4 object-contain" />
+                                    ) : (
+                                      <Sparkles className="w-4 h-4 text-emerald-800" />
+                                    )}
+                                  </div>
+                                  {isSelected ? (
+                                    <span className="w-6 h-6 rounded-full bg-emerald-800 text-white flex items-center justify-center shadow-md border border-white/20">
+                                      <Check className="w-3.5 h-3.5" />
+                                    </span>
+                                  ) : (
+                                    <span className="w-6 h-6 rounded-full bg-stone-50 border border-stone-200 text-stone-400 flex items-center justify-center shadow-3xs group-hover:border-stone-300">
+                                      <Plus className="w-3.5 h-3.5" />
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="mt-3.5">
+                                  <h6 className="text-stone-850 font-black text-xs tracking-tight">{bt.type}</h6>
+                                  <p className="text-[11px] text-stone-400 leading-tight mt-1 font-semibold">{bt.tagline}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Side: Room details & occupancy controls */}
                 <div className="lg:w-80 shrink-0 flex flex-col justify-between space-y-4">
 
                   {/* Room Identifier Header */}
@@ -1260,7 +1579,7 @@ const RoomSelector = () => {
                   <button
                     type="button"
                     onClick={() => handleConfirmRoom(room.id, idx)}
-                    className={`w-full font-extrabold uppercase text-xs tracking-wider py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-1.5 border shadow-2xs ${!room.roomType || (room.children > 0 && room.childAges.some(age => age === ""))
+                    className={`w-full font-extrabold uppercase text-xs tracking-wider py-3 rounded-xl transition-all duration-350 flex items-center justify-center gap-1.5 border shadow-2xs ${!room.roomType || (room.children > 0 && room.childAges.some(age => age === ""))
                       ? "bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-250/50 cursor-pointer"
                       : "bg-emerald-800 hover:bg-emerald-950 text-white border-emerald-900/10 cursor-pointer active:scale-98 shadow-[0_4px_10px_rgba(6,95,70,0.08)] hover:shadow-[0_6px_14px_rgba(6,95,70,0.12)] group"
                       }`}
@@ -1271,185 +1590,6 @@ const RoomSelector = () => {
                       }`} />
                     Confirm Room {idx + 1}
                   </button>
-                </div>
-
-                {/* Right Side: Category and Board Type Selectors Stacked */}
-                <div className="flex-1 flex flex-col min-w-0 space-y-6">
-                  {/* Category Selector */}
-                  <div className="relative w-full px-1">
-                    <label className="text-xs uppercase font-extrabold tracking-widest text-stone-400 mb-2.5 px-0.5 block flex items-center justify-between">
-                      <span>Select Room Category</span>
-                      {room.roomType && (
-                        <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-150 px-2.5 py-0.5 rounded-md normal-case tracking-normal">
-                          Active: {room.roomType}
-                        </span>
-                      )}
-                    </label>
-                    <div className="relative w-full">
-                      {/* Grid track wrapper with premium border, background, and spacing */}
-                      <div className="w-full rounded-2xl border-3 border-stone-200/70 bg-white/40 p-3 shadow-3xs">
-                        {roomTypes.length === 0 ? (
-                          <div className="w-full py-10 text-center flex flex-col items-center justify-center p-6 bg-white rounded-xl border border-stone-200/50 shadow-3xs animate-fadeIn">
-                            <Info className="w-8 h-8 text-amber-600 mb-2 animate-bounce" />
-                            <h5 className="font-extrabold text-stone-850 text-sm tracking-tight">No Available Room Categories</h5>
-                            <p className="text-xs text-stone-500 max-w-sm mt-1 leading-relaxed font-semibold">
-                              We are fully booked or have no available rooms matching your stay dates. Please select other dates in the stay bar above.
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="flex gap-4 pb-1 pt-1 items-stretch overflow-x-auto scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent">
-                            {roomTypes.map((type) => {
-                              const otherRoomsCount = addedRooms.filter(r => r.id !== room.id && r.roomType === type.name).length;
-                              const remainingRoomsCount = Math.max(0, (type.availableRoomsCount || 0) - otherRoomsCount);
-                              const isSelected = room.roomType === type.name;
-                              return (
-                                <div
-                                  key={type.name}
-                                  onClick={() => {
-                                    if (!isSelected && remainingRoomsCount <= 0) {
-                                      toast.error(`All available rooms of category "${type.name}" are already selected.`);
-                                      return;
-                                    }
-                                    handleRoomTypeChange(room.id, type.name);
-                                  }}
-                                  className={`min-w-[195px] w-[195px] bg-white rounded-xl border-2 transition-all duration-350 cursor-pointer overflow-hidden flex flex-col justify-between group relative active:scale-98 ${isSelected
-                                    ? "border-emerald-600 ring-4 ring-emerald-500/15 scale-[1.03] shadow-[0_12px_24px_rgba(6,95,70,0.12)] z-10"
-                                    : remainingRoomsCount <= 0
-                                      ? "border-stone-200 opacity-60 cursor-not-allowed filter grayscale"
-                                      : "border-stone-200/80 hover:border-emerald-600/40 hover:scale-[1.01] hover:shadow-2xs"
-                                    }`}
-                                >
-                                  {/* HD room thumbnail preview */}
-                                  <div className="relative h-28 overflow-hidden shrink-0">
-                                    <img
-                                      src={type.image}
-                                      alt={type.name}
-                                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                                    />
-                                    <div className="absolute top-2 right-2 z-10">
-                                      {isSelected ? (
-                                        <span className="w-6 h-6 rounded-full bg-emerald-800 text-white flex items-center justify-center shadow-md border border-white/20">
-                                          <Check className="w-3.5 h-3.5" />
-                                        </span>
-                                      ) : (
-                                        <span className="w-6 h-6 rounded-full bg-white/90 text-stone-500 flex items-center justify-center backdrop-blur-3xs shadow-sm border border-stone-200/50 hover:bg-stone-50">
-                                          <Plus className="w-3.5 h-3.5" />
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    {/* Info Trigger Button (Top-left always visible with interactive hover scale) */}
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setDetailingRoom(type);
-                                      }}
-                                      className="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-white/95 text-stone-600 hover:text-emerald-800 flex items-center justify-center backdrop-blur-3xs shadow-sm border border-stone-200/50 hover:border-stone-300 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
-                                      title="View suite details"
-                                    >
-                                      <Info className="w-3.5 h-3.5" />
-                                    </button>
-
-                                    {/* Price Tag Badge */}
-                                    <div className="absolute bottom-2 left-2 bg-stone-950/85 text-white px-2.5 py-0.5 rounded text-xs font-black tracking-wider backdrop-blur-3xs">
-                                      {type.price} / night
-                                    </div>
-                                  </div>
-
-                                  {/* Card metadata details */}
-                                  <div className="p-3.5 flex-1 flex flex-col justify-between space-y-2">
-                                    <h5 className="font-extrabold text-stone-850 text-xs leading-tight tracking-tight group-hover:text-emerald-900 transition">
-                                      {type.name}
-                                    </h5>
-                                    <div className="flex items-center justify-between text-[11px] font-bold text-stone-400 pt-2 border-t border-stone-100">
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setDetailingRoom(type);
-                                        }}
-                                        className="text-stone-450 hover:text-emerald-850 transition duration-200 font-extrabold flex items-center gap-0.5 cursor-pointer hover:underline"
-                                      >
-                                        <Info className="w-3.5 h-3.5" /> Details
-                                      </button>
-
-                                      <div className="flex flex-col items-end gap-1 shrink-0">
-                                        <span className="text-stone-650 bg-stone-100 px-2 py-0.5 rounded text-[10px] font-bold">{type.maxOccupancy} Guests</span>
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-black tracking-wide border ${remainingRoomsCount > 0
-                                          ? "bg-emerald-50 text-emerald-800 border-emerald-250/30"
-                                          : "bg-rose-50 text-rose-800 border-rose-250/30 animate-pulse"
-                                          }`}>
-                                          {remainingRoomsCount} Available
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Experience Package (Board Type) Selector */}
-                  <div className="relative w-full px-1">
-                    <label className="text-xs uppercase font-extrabold tracking-widest text-stone-400 mb-2 px-0.5 block flex items-center justify-between">
-                      <span>Select Experience Package (Board Type)</span>
-                      {room.boardType && (
-                        <span className="text-xs font-bold text-emerald-850 bg-emerald-50 border border-emerald-150 px-2.5 py-0.5 rounded-md normal-case tracking-normal">
-                          Active: {room.boardType}
-                        </span>
-                      )}
-                    </label>
-                    <div className="relative w-full">
-                      {/* Grid track wrapper with premium border, background, and spacing */}
-                      <div className="w-full rounded-2xl border-3 border-stone-200/70 bg-white/40 p-3 shadow-3xs">
-                        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 pb-1 pt-1">
-                          {boardTypes.map((bt) => {
-                            const isSelected = room.boardType === bt.type;
-                            const cardColor = getBoardTypeColor(bt.type);
-                            return (
-                              <div
-                                key={bt.id}
-                                onClick={() => handleBoardTypeChange(room.id, bt.type)}
-                                className={`w-full bg-white rounded-xl border-2 p-3.5 transition-all duration-350 cursor-pointer overflow-hidden flex flex-col justify-between group relative active:scale-98 ${isSelected
-                                  ? "border-emerald-600 ring-4 ring-emerald-500/15 scale-[1.03] shadow-[0_12px_24px_rgba(6,95,70,0.12)] z-10"
-                                  : "border-stone-200/80 hover:border-emerald-600/40 hover:scale-[1.01] hover:shadow-2xs"
-                                  }`}
-                              >
-                                <div className={`h-1.5 bg-gradient-to-r ${cardColor} absolute top-0 left-0 right-0`} />
-                                <div className="flex justify-between items-center pt-2">
-                                  <div className="p-1.5 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center w-8 h-8 shrink-0">
-                                    {bt.icon ? (
-                                      <img src={bt.icon} alt={bt.type} className="w-4 h-4 object-contain" />
-                                    ) : (
-                                      <Sparkles className="w-4 h-4 text-emerald-800" />
-                                    )}
-                                  </div>
-                                  {isSelected ? (
-                                    <span className="w-6 h-6 rounded-full bg-emerald-800 text-white flex items-center justify-center shadow-md border border-white/20">
-                                      <Check className="w-3.5 h-3.5" />
-                                    </span>
-                                  ) : (
-                                    <span className="w-6 h-6 rounded-full bg-stone-50 border border-stone-200 text-stone-400 flex items-center justify-center shadow-3xs group-hover:border-stone-300">
-                                      <Plus className="w-3.5 h-3.5" />
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="mt-3.5">
-                                  <h6 className="text-stone-850 font-black text-xs tracking-tight">{bt.type}</h6>
-                                  <p className="text-[11px] text-stone-400 leading-tight mt-1 font-semibold">{bt.tagline}</p>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             );
@@ -1628,14 +1768,13 @@ const RoomSelector = () => {
         <button
           type="button"
           onClick={handleFinalBookingSubmit}
-          disabled={hasUnconfiguredRoom}
-          className={`font-extrabold uppercase text-xs tracking-widest px-8 py-4 rounded-2xl transition-all duration-300 transform flex items-center justify-center gap-2 border group ${hasUnconfiguredRoom
-            ? "bg-stone-100 text-stone-400 border-stone-200 cursor-not-allowed scale-100 shadow-none"
-            : "bg-emerald-800 hover:bg-emerald-950 text-white border-emerald-900/10 cursor-pointer active:scale-98 hover:shadow-[0_10px_20px_rgba(6,95,70,0.15)]"
+          className={`font-extrabold uppercase text-xs tracking-widest px-8 py-4 rounded-2xl transition-all duration-300 transform flex items-center justify-center gap-2 border group cursor-pointer active:scale-98 shadow-[0_4px_12px_rgba(6,95,70,0.08)] hover:shadow-[0_10px_20px_rgba(6,95,70,0.15)] ${hasUnconfiguredRoom
+            ? "bg-amber-700 hover:bg-amber-800 text-white border-amber-900/10"
+            : "bg-emerald-800 hover:bg-emerald-950 text-white border-emerald-900/10"
             }`}
         >
           {hasUnconfiguredRoom ? "Configure All Rooms" : "Confirm Luxury Stay"}
-          <ArrowRight className={`w-4 h-4 transition-transform ${hasUnconfiguredRoom ? "text-stone-300 animate-pulse" : "text-emerald-200 group-hover:translate-x-1"}`} />
+          <ArrowRight className={`w-4 h-4 transition-transform text-white group-hover:translate-x-1`} />
         </button>
       </div>
 

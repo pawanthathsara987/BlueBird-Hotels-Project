@@ -1,5 +1,6 @@
 import express from "express";
-import { registerCustomer, loginCustomer, sendOTP, verifyOTPAndResetPassword, googleLogin, refreshToken, logoutCustomer } from "../controllers/customerController.js";
+import { registerCustomer, loginCustomer, sendOTP, verifyOTPAndResetPassword, googleLogin, refreshToken, logoutCustomer, updateCustomerProfile } from "../controllers/customerController.js";
+import { requireAuth } from "../middleware/authMiddleware.js";
 
 const customerRouter = express.Router();
 
@@ -10,5 +11,6 @@ customerRouter.post("/reset-password", verifyOTPAndResetPassword);
 customerRouter.post("/google-login", googleLogin);
 customerRouter.post("/refresh", refreshToken);
 customerRouter.post("/logout", logoutCustomer);
+customerRouter.put("/update-profile", requireAuth, updateCustomerProfile);
 
 export default customerRouter;

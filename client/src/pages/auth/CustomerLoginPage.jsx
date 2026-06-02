@@ -85,6 +85,7 @@ export default function CustomerLoginPage() {
 
             if (rememberMe) {
                 localStorage.setItem("customerToken", token);
+                sessionStorage.setItem("customerToken", token);
             } else {
                 sessionStorage.setItem("customerToken", token);
             }

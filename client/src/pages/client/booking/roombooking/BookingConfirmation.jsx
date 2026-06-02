@@ -7,10 +7,29 @@ const BookingConfirmation = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const bookingData = location.state?.bookingData;
-  const selectedRooms = location.state?.selectedRooms || [];
-  const bookingConfirmation = location.state?.bookingConfirmation;
-  const paymentConfirmation = location.state?.paymentConfirmation;
+  const query = new URLSearchParams(location.search);
+  const orderId = query.get("order_id");
+
+  // State values (from location.state or localStorage fallback)
+  let bookingData = location.state?.bookingData;
+  let selectedRooms = location.state?.selectedRooms || [];
+  let bookingConfirmation = location.state?.bookingConfirmation;
+  let paymentConfirmation = location.state?.paymentConfirmation;
+
+  // LocalStorage fallback for external redirects (PayHere)
+  if (!bookingData && orderId) {
+    try {
+      const stored = JSON.parse(localStorage.getItem("completedBookingDetails"));
+      if (stored && String(stored.bookingConfirmation?.bookingId) === String(orderId)) {
+        bookingData = stored.bookingData;
+        selectedRooms = stored.selectedRooms || [];
+        bookingConfirmation = stored.bookingConfirmation;
+        paymentConfirmation = { paymentId: query.get("payment_id") || `PAY_PAYHERE_${orderId}` };
+      }
+    } catch (e) {
+      console.error("Failed to restore booking state from localStorage:", e);
+    }
+  }
 
   // Convert dates for formatting
   const checkIn = bookingData?.checkInDate ? new Date(bookingData.checkInDate) : null;
@@ -26,6 +45,7 @@ const BookingConfirmation = () => {
   // Clear localStorage after component mounts (booking is confirmed)
   useEffect(() => {
     localStorage.removeItem("bookingDetails");
+    localStorage.removeItem("completedBookingDetails");
   }, []);
 
   // fallback guard
