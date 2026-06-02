@@ -57,19 +57,34 @@ export const createVehicleBooking = async (req, res) => {
         return res.status(404).json({ success: false, message: 'Vehicle not found' });
       }
 
-      if (vehicle.status !== 'available') {
+      // Allow booking if vehicle is available or already booked (for future dates)
+      // The date-overlap query below handles actual conflicts
+      if (!['available', 'booked'].includes(vehicle.status)) {
         await t.rollback();
         return res.status(400).json({ success: false, message: `Vehicle is ${vehicle.status}` });
       }
 
 
 
+      if (vehicle.insuranceExpiry && returnDate > new Date(vehicle.insuranceExpiry)) {
+        await t.rollback();
+        return res.status(400).json({ success: false, message: 'Vehicle insurance expires before the requested return date' });
+      }
+
+      if (vehicle.revenueLicenseExpiry && returnDate > new Date(vehicle.revenueLicenseExpiry)) {
+        await t.rollback();
+        return res.status(400).json({ success: false, message: 'Vehicle revenue license expires before the requested return date' });
+      }
+
+      // 1-Day Post-Return Buffer: existing booking's returnDatetime must not be within 24hrs before requested pickup
+      const pickupDateWithBuffer = new Date(pickupDate.getTime() - 24 * 60 * 60 * 1000);
+
       const overlappingBooking = await VehicleBooking.findOne({
         where: {
           vehicleId,
           status: { [Op.in]: BLOCKING_BOOKING_STATUSES },
           pickupDatetime: { [Op.lt]: returnDate },
-          returnDatetime: { [Op.gt]: pickupDate },
+          returnDatetime: { [Op.gt]: pickupDateWithBuffer },
         },
         attributes: ['id', 'bookingNo', 'pickupDatetime', 'returnDatetime'],
         transaction: t,
