@@ -11,12 +11,8 @@ import { getAllOccupancyTypes } from "../controllers/admin/occupancyTypeControll
 import { getAllBoardTypes } from "../controllers/admin/boardTypeController.js";
 import { upload } from "../controllers/admin/imageUploadController.js";
 import { getAllRoomPrices, getRoomPriceMetadata, createRoomPrice, updateRoomPrice, deleteRoomPrice } from "../controllers/admin/roomPriceController.js";
-import {
-    getAllOtherItemPrices,
-    createOtherItemPrice,
-    updateOtherItemPrice,
-    deleteOtherItemPrice
-} from "../controllers/admin/otherItemPriceController.js";
+import { getAllOtherItemPrices, createOtherItemPrice, updateOtherItemPrice, deleteOtherItemPrice } from "../controllers/admin/otherItemPriceController.js";
+import { getAllShopItems, getShopItemById, createShopItem, updateShopItem, deleteShopItem } from "../controllers/admin/shopController.js";
 
 const router = express.Router();
 
@@ -60,5 +56,12 @@ router.get('/other-item-prices', getAllOtherItemPrices);
 router.post('/other-item-prices', createOtherItemPrice);
 router.put('/other-item-prices/:id', updateOtherItemPrice);
 router.delete('/other-item-prices/:id', deleteOtherItemPrice);
+
+// Shop Items routes
+router.get('/shop-items', getAllShopItems);
+router.get('/shop-items/:id', getShopItemById);
+router.post('/shop-items', upload.array('images'), createShopItem);
+router.put('/shop-items/:id', upload.array('images'), updateShopItem);
+router.delete('/shop-items/:id', deleteShopItem);
 
 export default router;
