@@ -51,8 +51,7 @@ Customer.init(
         },
         idNumber: {
             type: DataTypes.STRING(50),
-            allowNull: true,
-            unique: true
+            allowNull: true,    
         },
         address: {
             type: DataTypes.STRING(255),

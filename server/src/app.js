@@ -11,6 +11,7 @@ import chatBot from './controllers/chatController.js';
 import customerRouter from './routes/customerRoutes.js';
 import vehicleRouter from './routes/vehicleRouter.js';
 import vehicleTypeRouter from './routes/vehicleTypeRouter.js';
+import paymentRouter from './routes/paymentRouter.js';
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.use(cors({
 }));
 app.use(cookieParser());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/roombook', bookingRouter);
 app.use('/api/tour-inquiry', tourInquiryRouter);
@@ -30,6 +32,7 @@ app.use('/api/reception', receptionRouter);
 app.use('/api/customers', customerRouter);
 app.use('/api/vehicles', vehicleRouter);
 app.use('/api/vehicle-types', vehicleTypeRouter);
+app.use('/api/payment', paymentRouter);
 // Vehicle service logs: nested under vehicles and standalone for log operations
 // Vehicle service logs removed
 app.post('/api/chat', chatBot);

@@ -115,7 +115,7 @@ export const sendBookingConfirmationEmail = async (booking) => {
     const roomSummary = bookedRooms
       .map((roomBooking, index) => {
         const room = roomBooking.Room;
-        const packageName = room?.RoomPackage?.pname || room?.RoomPackage?.packageName || "Room";
+        const packageName = room?.roomType?.type || "Room";
         const roomLabel = room?.roomNo || room?.roomNumber || room?.id || `Room ${index + 1}`;
 
         return `
