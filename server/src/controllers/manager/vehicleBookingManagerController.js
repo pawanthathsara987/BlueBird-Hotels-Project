@@ -21,7 +21,7 @@ const VALID_TRANSITIONS = {
   driver_assigned: ['confirmed', 'balance_paid', 'ongoing', 'cancelled'],
   balance_paid:    ['ongoing', 'cancelled'],
   ongoing:         ['returned', 'cancelled'],
-  returned:        ['completed'],  // ideally only via generateBill, but allow manual
+  returned:        [],             // completed only via generateBill endpoint (which validates return checklist)
   completed:       [],             // terminal
   cancelled:       [],             // terminal
   expired:         ['pending_payment'], // allow retry
@@ -120,6 +120,40 @@ export const updateBookingStatus = async (req, res) => {
       });
     }
 
+    // ── Fix #1: Deposit must be paid before confirming ──────────────────────
+    if (status === 'confirmed' && !booking.depositPaidAt) {
+      await t.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot confirm booking — the deposit has not been paid yet. The customer must complete the online deposit payment first.',
+      });
+    }
+
+    // ── Fix #2 & #4: Deposit + pickup checklist required before vehicle handover ──
+    if (status === 'ongoing') {
+      // Fix #2: Deposit must be paid
+      if (!booking.depositPaidAt) {
+        await t.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot hand over vehicle — the deposit has not been paid yet.',
+        });
+      }
+
+      // Fix #4: Pickup checklist must exist (vehicle condition documented before handover)
+      const pickupChecklist = await VehicleChecklist.findOne({
+        where: { bookingId: booking.id, type: 'pickup' },
+        transaction: t,
+      });
+      if (!pickupChecklist) {
+        await t.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot hand over vehicle — a pickup checklist has not been filed yet. Please complete the pickup inspection first.',
+        });
+      }
+    }
+
     await booking.update({ status }, { transaction: t });
 
     // Auto-status logic for Vehicle
@@ -171,6 +205,15 @@ export const assignDriver = async (req, res) => {
       if (driver.status !== 'active') {
         await t.rollback();
         return res.status(400).json({ success: false, message: 'Selected driver is not active' });
+      }
+
+      // Fix #15: Check driver license expiry
+      if (driver.licenseExpiry && new Date(driver.licenseExpiry) < new Date(booking.returnDatetime)) {
+        await t.rollback();
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Cannot assign driver: License expires before the booking return date.' 
+        });
       }
 
       // Check driver is not already assigned to an overlapping booking
@@ -231,6 +274,13 @@ export const collectBalance = async (req, res) => {
     if (!booking) {
       await t.rollback();
       return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // Only allow balance collection in appropriate statuses
+    const balanceAllowedStatuses = ['confirmed', 'driver_assigned', 'ongoing'];
+    if (!balanceAllowedStatuses.includes(booking.status)) {
+      await t.rollback();
+      return res.status(400).json({ success: false, message: `Cannot collect balance when booking is "${booking.status}". Booking must be confirmed, driver assigned, or ongoing.` });
     }
 
     // Ensure deposit has been paid before collecting balance
@@ -513,7 +563,12 @@ export const generateBill = async (req, res) => {
     const { lateFee, extraMileageFee } = await calculateExtraFees(booking, policy, returnChecklist, pickupChecklist);
 
     const cleaningFee = applyCleaningFee ? Number(policy.cleaningFee) : 0;
-    const damageFee = Number(manualDamageFee) || 0;
+    let damageFee = Number(manualDamageFee) || 0;
+
+    // Fix #8: Enforce damage liability cap
+    if (policy.damageLiabilityCap > 0 && damageFee > policy.damageLiabilityCap) {
+      damageFee = Number(policy.damageLiabilityCap);
+    }
 
     const totalExtra = lateFee + extraMileageFee + cleaningFee + damageFee;
     const newBalanceAmount = parseFloat(booking.balanceAmount) + totalExtra;
