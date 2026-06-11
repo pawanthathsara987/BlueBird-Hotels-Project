@@ -66,6 +66,21 @@ export const createChecklist = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
+    // Fix #10: Validate booking status before allowing checklist creation
+    if (type === 'pickup' && !['balance_paid'].includes(booking.status)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'A pickup checklist can only be created when the booking status is balance_paid.' 
+      });
+    }
+
+    if (type === 'return' && !['ongoing'].includes(booking.status)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'A return checklist can only be created when the booking status is ongoing.' 
+      });
+    }
+
     // Check if checklist of this type already exists for this booking
     const existing = await VehicleChecklist.findOne({ where: { bookingId, type } });
     if (existing) {
@@ -139,7 +154,21 @@ export const updateChecklist = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Checklist not found' });
     }
 
-    await checklist.update(req.body);
+    // Extract only the allowed fields to prevent overriding bookingId, vehicleId, type, etc.
+    const safeUpdates = {};
+    const allowedFields = [
+      'inspectedBy', 'inspectedAt', 'fuelLevel', 'mileage',
+      'exteriorBody', 'tires', 'windshield', 'lights', 'mirrors',
+      'interior', 'ac', 'damageNotes', 'customerSignature'
+    ];
+
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        safeUpdates[field] = req.body[field];
+      }
+    });
+
+    await checklist.update(safeUpdates);
 
     // If mileage is updated on a return checklist, update vehicle
     if (checklist.type === 'return' && req.body.mileage) {
