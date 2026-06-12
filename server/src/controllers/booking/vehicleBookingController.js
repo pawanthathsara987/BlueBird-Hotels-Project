@@ -145,7 +145,7 @@ export const createVehicleBooking = async (req, res) => {
       const subtotal = (vehicleRatePerDay + (driverRatePerDay || 0)) * numDays;
       const discount = 0.0;
       const totalPayable = subtotal - discount;
-      const depositPercentage = 30;
+      const depositPercentage = 50;
       const depositAmount = parseFloat(((totalPayable * depositPercentage) / 100).toFixed(2));
       const balanceAmount = parseFloat((totalPayable - depositAmount).toFixed(2));
 
