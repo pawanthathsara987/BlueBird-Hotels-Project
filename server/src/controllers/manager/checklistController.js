@@ -67,10 +67,11 @@ export const createChecklist = async (req, res) => {
     }
 
     // Fix #10: Validate booking status before allowing checklist creation
-    if (type === 'pickup' && !['balance_paid'].includes(booking.status)) {
+    // Allow pickup checklist at any pre-handover status (all statuses that can transition to ongoing)
+    if (type === 'pickup' && !['confirmed', 'driver_assigned', 'balance_paid'].includes(booking.status)) {
       return res.status(400).json({ 
         success: false, 
-        message: 'A pickup checklist can only be created when the booking status is balance_paid.' 
+        message: 'A pickup checklist can only be created when the booking is confirmed, driver assigned, or balance paid.' 
       });
     }
 
