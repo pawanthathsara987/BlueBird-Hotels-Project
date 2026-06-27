@@ -38,7 +38,6 @@ const inputClassName = (hasError) =>
 
 const defaultVehicle = {
 	plateNumber: "",
-	chassisNo: "",
 	vehicleTypeId: "",
 	brand: "",
 	model: "",
@@ -63,6 +62,9 @@ const ALLOWED_FUEL_TYPES = ["petrol", "diesel", "electric", "hybrid"];
 const ALLOWED_TRANSMISSIONS = ["automatic", "manual"];
 const ALLOWED_STATUSES = ["available", "booked", "pending_inspection", "maintenance", "retired"];
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
+const currentYear = new Date().getFullYear();
+const VALID_YEARS = Array.from({ length: currentYear - 1990 + 2 }, (_, i) => currentYear + 1 - i);
 
 const getExpiryStatus = (dateString) => {
 	if (!dateString) return null;
@@ -115,7 +117,6 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 
 		return {
 			plateNumber: vehicle.plateNumber || "",
-			chassisNo: vehicle.chassisNo || "",
 			vehicleTypeId: vehicle.vehicleTypeId ? String(vehicle.vehicleTypeId) : "",
 			brand: vehicle.brand || "",
 			model: vehicle.model || "",
@@ -173,8 +174,14 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 			.map((feature) => feature.trim())
 			.filter(Boolean);
 
-		if (!form.plateNumber.trim()) nextErrors.plateNumber = "Plate number is required.";
-		if (!form.chassisNo.trim()) nextErrors.chassisNo = "Chassis No (VIN) is required.";
+		if (!form.plateNumber.trim()) {
+			nextErrors.plateNumber = "Plate number is required.";
+		} else {
+			const slPlateRegex = /^([a-zA-Z]{2}\s)?([a-zA-Z]{2,3}|\d{2,3})-\d{4}$/;
+			if (!slPlateRegex.test(form.plateNumber.trim())) {
+				nextErrors.plateNumber = "Invalid Sri Lankan plate format. (e.g. WP CAA-1234, KV-5432, 15-1234)";
+			}
+		}
 		if (!form.brand.trim()) nextErrors.brand = "Brand is required.";
 		if (!form.vehicleTypeId) nextErrors.vehicleTypeId = "Vehicle type is required.";
 		if (!form.model.trim()) nextErrors.model = "Model is required.";
@@ -262,7 +269,6 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 
 		const formData = new FormData();
 		formData.append("plateNumber", form.plateNumber.trim());
-		formData.append("chassisNo", form.chassisNo.trim());
 		formData.append("brand", form.brand.trim() || null);
 		formData.append("vehicleTypeId", Number(form.vehicleTypeId));
 		formData.append("model", form.model.trim());
@@ -373,17 +379,6 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 						/>
 					</div>
 
-					<div>
-						<FieldLabel text="Chassis No (VIN)" required error={errors.chassisNo} />
-						<input
-							type="text"
-							name="chassisNo"
-							value={form.chassisNo}
-							onChange={handleChange}
-							className={inputClassName(!!errors.chassisNo)}
-							placeholder="JT123456789..."
-						/>
-					</div>
 
 					<div>
 						<FieldLabel text="Brand" error={errors.brand} />
@@ -421,14 +416,17 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 
 					<div>
 						<FieldLabel text="Year" error={errors.year} />
-						<input
-							type="number"
+						<select
 							name="year"
 							value={form.year}
 							onChange={handleChange}
 							className={inputClassName(!!errors.year)}
-							placeholder="2024"
-						/>
+						>
+							<option value="">Select year</option>
+							{VALID_YEARS.map(year => (
+								<option key={year} value={year}>{year}</option>
+							))}
+						</select>
 					</div>
 
 					<div>
@@ -440,6 +438,7 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 							onChange={handleChange}
 							className={inputClassName(!!errors.capacity)}
 							placeholder="4"
+							min="1"
 						/>
 					</div>
 
@@ -452,6 +451,7 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 							onChange={handleChange}
 							className={inputClassName(!!errors.currentMileage)}
 							placeholder="0"
+							min="0"
 						/>
 					</div>
 
@@ -497,6 +497,7 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 							className={inputClassName(!!errors.pricePerDay)}
 							placeholder="120.00"
 							step="0.01"
+							min="1"
 						/>
 					</div>
 
@@ -504,7 +505,6 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 						<FieldLabel text="Status" error={errors.status} />
 						<select name="status" value={form.status} onChange={handleChange} className={inputClassName(!!errors.status)}>
 							<option value="available">Available</option>
-							<option value="booked">Booked (Auto)</option>
 							<option value="pending_inspection">Pending Inspection (Auto)</option>
 							<option value="maintenance">Maintenance</option>
 							<option value="retired">Retired</option>
@@ -531,6 +531,7 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 							value={form.insuranceExpiry}
 							onChange={handleChange}
 							className={inputClassName(!!errors.insuranceExpiry)}
+							min={new Date().toISOString().split('T')[0]}
 						/>
 						{getExpiryStatus(form.insuranceExpiry) && (
 							<p className={`text-xs mt-1.5 font-bold ${getExpiryStatus(form.insuranceExpiry).status === 'expired' ? 'text-red-600' : 'text-amber-600'}`}>
@@ -547,6 +548,7 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 							value={form.revenueLicenseExpiry}
 							onChange={handleChange}
 							className={inputClassName(!!errors.revenueLicenseExpiry)}
+							min={new Date().toISOString().split('T')[0]}
 						/>
 						{getExpiryStatus(form.revenueLicenseExpiry) && (
 							<p className={`text-xs mt-1.5 font-bold ${getExpiryStatus(form.revenueLicenseExpiry).status === 'expired' ? 'text-red-600' : 'text-amber-600'}`}>

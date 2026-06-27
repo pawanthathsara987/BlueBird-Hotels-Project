@@ -114,7 +114,18 @@ const buildVehicleValidationErrors = (body, { requireImage = false, imageFile = 
   const errors = {};
   const features = parseFeatures(body.features);
 
-  if (!String(body.plateNumber || '').trim()) errors.plateNumber = 'Plate number is required.';
+  if (!String(body.plateNumber || '').trim()) {
+    errors.plateNumber = 'Plate number is required.';
+  } else {
+    // Sri Lanka Plate Formats:
+    // 1. WP CAA-1234 or CP KV-5432 (Province + 2/3 letters + 4 digits)
+    // 2. CAA-1234 (2/3 letters + 4 digits)
+    // 3. 15-1234 or 301-1234 (2/3 digits + 4 digits)
+    const slPlateRegex = /^([a-zA-Z]{2}\s)?([a-zA-Z]{2,3}|\d{2,3})-\d{4}$/;
+    if (!slPlateRegex.test(body.plateNumber.trim())) {
+      errors.plateNumber = 'Invalid Sri Lankan plate number. (e.g. WP CAA-1234, KV-5432, 15-1234)';
+    }
+  }
   if (!String(body.brand || '').trim()) errors.brand = 'Brand is required.';
   if (!String(body.vehicleTypeId || '').trim()) errors.vehicleTypeId = 'Vehicle type is required.';
   if (!String(body.model || '').trim()) errors.model = 'Model is required.';
@@ -151,7 +162,6 @@ const buildVehicleValidationErrors = (body, { requireImage = false, imageFile = 
     }
   }
 
-  if (!String(body.chassisNo || '').trim()) errors.chassisNo = 'Chassis number (VIN) is required.';
 
   if (!String(body.fuelType || '').trim()) {
     errors.fuelType = 'Fuel type is required.';
@@ -208,11 +218,11 @@ export const getVehicles = async (req, res) => {
 
     const where = {};
 
-    if (status)        where.status       = status;
-    if (vehicleType)   where.vehicleTypeId = vehicleType;
-    if (fuelType)      where.fuelType     = fuelType;
-    if (transmission)  where.transmission = transmission;
-    if (capacity)      where.capacity     = { [Op.gte]: Number(capacity) };
+    if (status) where.status = status;
+    if (vehicleType) where.vehicleTypeId = vehicleType;
+    if (fuelType) where.fuelType = fuelType;
+    if (transmission) where.transmission = transmission;
+    if (capacity) where.capacity = { [Op.gte]: Number(capacity) };
 
     if (minPrice || maxPrice) {
       where.pricePerDay = {};

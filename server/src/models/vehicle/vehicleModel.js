@@ -2,7 +2,7 @@
 import { Model, DataTypes } from 'sequelize';
 import sequelize from '../../config/database.js';
 
-class Vehicle extends Model {}
+class Vehicle extends Model { }
 
 Vehicle.init(
   {
@@ -67,11 +67,6 @@ Vehicle.init(
       allowNull: false,
       defaultValue: 0,
     },
-    chassisNo: {
-      type: DataTypes.STRING(100),
-      allowNull: true,
-      unique: true,
-    },
 
 
     // ── Compliance ──────────────────────────────
@@ -94,7 +89,7 @@ Vehicle.init(
     //    'maintenance' → Manager manually sets when vehicle is being serviced (blocked for all dates)
     //    'retired'     → soft-delete; hidden from all views
     status: {
-      type: DataTypes.ENUM('available', 'booked', 'pending_inspection', 'maintenance', 'retired'),
+      type: DataTypes.ENUM('available', 'pending_inspection', 'maintenance', 'retired'),
       allowNull: false,
       defaultValue: 'available',
     },
