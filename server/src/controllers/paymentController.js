@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import sequelize from '../config/database.js';
 import { Reservation, Customer, BookedRoom, Room, RoomType, RoomPayment } from "../models/index.js";
 import { sendBookingConfirmationEmail } from "../services/emailService.js";
 
@@ -157,6 +158,29 @@ export const handlePayHereNotification = async (req, res) => {
             }
         } else {
             console.log(`[PAYHERE UPDATE] Non-successful status code received: ${status_code} for Booking #${order_id}`);
+            
+            const booking = await Reservation.findByPk(order_id);
+            if (booking && booking.status === "pending") {
+                console.log(`[PAYHERE FAILURE] Booking #${order_id} failed or cancelled on PayHere. Transitioning status to cancelled.`);
+                
+                const t = await sequelize.transaction();
+                try {
+                    await booking.update({ status: "cancelled" }, { transaction: t });
+                    await BookedRoom.update({ status: "cancelled" }, { where: { reservation_id: order_id }, transaction: t });
+                    
+                    // Mark any pending RoomPayment records as failed
+                    await RoomPayment.update(
+                        { status: "failed" },
+                        { where: { booking_id: Number(order_id), status: "pending" }, transaction: t }
+                    );
+                    
+                    await t.commit();
+                    console.log(`[PAYHERE DB] Successfully cancelled failed payment Booking #${order_id}`);
+                } catch (dbErr) {
+                    await t.rollback();
+                    console.error("[PAYHERE DB ERROR] Failed to cancel booking on payment failure:", dbErr);
+                }
+            }
         }
 
         return res.status(200).send("OK");

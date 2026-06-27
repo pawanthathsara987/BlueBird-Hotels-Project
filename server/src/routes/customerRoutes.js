@@ -1,5 +1,21 @@
 import express from "express";
-import { registerCustomer, loginCustomer, sendOTP, verifyOTPAndResetPassword, googleLogin, refreshToken, logoutCustomer, updateCustomerProfile } from "../controllers/customerController.js";
+import { 
+    registerCustomer, 
+    loginCustomer, 
+    sendOTP, 
+    verifyOTPAndResetPassword, 
+    googleLogin, 
+    refreshToken, 
+    logoutCustomer, 
+    updateCustomerProfile,
+    getCustomerProfile,
+    getCustomerBookings,
+    getCustomerRentals,
+    getCustomerTours,
+    getCustomerPayments,
+    cancelCustomerBooking,
+    cancelCustomerRental
+} from "../controllers/customerController.js";
 import { requireAuth } from "../middleware/authMiddleware.js";
 
 const customerRouter = express.Router();
@@ -12,5 +28,13 @@ customerRouter.post("/google-login", googleLogin);
 customerRouter.post("/refresh", refreshToken);
 customerRouter.post("/logout", logoutCustomer);
 customerRouter.put("/update-profile", requireAuth, updateCustomerProfile);
+
+customerRouter.get("/profile", requireAuth, getCustomerProfile);
+customerRouter.get("/bookings", requireAuth, getCustomerBookings);
+customerRouter.get("/rentals", requireAuth, getCustomerRentals);
+customerRouter.get("/tours", requireAuth, getCustomerTours);
+customerRouter.get("/payments", requireAuth, getCustomerPayments);
+customerRouter.post("/bookings/:id/cancel", requireAuth, cancelCustomerBooking);
+customerRouter.post("/rentals/:id/cancel", requireAuth, cancelCustomerRental);
 
 export default customerRouter;

@@ -38,6 +38,17 @@ export default function OverviewTab({
     </div>
   );
 
+  // Compute summary stats
+  const upcomingStays = bookings.filter(b => b.status.toLowerCase() !== "cancelled" && b.status.toLowerCase() !== "completed");
+  const nextStay = upcomingStays[0];
+  const nextCheckIn = nextStay?.checkIn
+    ? new Date(nextStay.checkIn).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    : null;
+  const daysUntilCheckIn = nextStay?.checkIn
+    ? Math.max(0, Math.ceil((new Date(nextStay.checkIn) - new Date()) / (1000 * 60 * 60 * 24)))
+    : null;
+  const tripProgress = daysUntilCheckIn != null ? Math.min(100, Math.max(0, 100 - (daysUntilCheckIn / 365) * 100)) : 0;
+
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       {/* Greetings / Elite Header Banner */}
@@ -53,7 +64,9 @@ export default function OverviewTab({
             Your Next Journey Awaits, {profile.name}
           </h1>
           <p className="text-blue-200/80 text-xs md:text-sm leading-relaxed font-light">
-            Welcome back to your luxury sanctuary dashboard. Our ground coordinators and 24/7 concierge butlers have fully secured your arrangements for Mauritius in October.
+            {nextStay
+              ? `Your upcoming stay at ${nextStay.hotelName} is ${daysUntilCheckIn === 0 ? 'today!' : `${daysUntilCheckIn} day${daysUntilCheckIn !== 1 ? 's' : ''} away.`} Our 24/7 concierge team is ready for you.`
+              : "Welcome to your luxury dashboard. Browse our premium rooms, tours, and vehicle rentals to plan your next journey."}
           </p>
         </div>
       </div>
@@ -68,10 +81,10 @@ export default function OverviewTab({
           <div>
             <span className="text-[10px] text-slate-400 font-semibold tracking-wider block">UPCOMING STAYS</span>
             <span className="text-base font-bold text-blue-950 block">
-              {isEmptyState ? "None Locked" : `${bookings.length} Booked`}
+              {upcomingStays.length > 0 ? `${upcomingStays.length} Booked` : "None Booked"}
             </span>
             <span className="text-[10px] text-slate-500 font-medium font-sans">
-              {isEmptyState ? "Search retreats" : "Next trip: Oct 14"}
+              {nextCheckIn ? `Next: ${nextCheckIn}` : "Book your retreat"}
             </span>
           </div>
         </div>
@@ -84,10 +97,10 @@ export default function OverviewTab({
           <div>
             <span className="text-[10px] text-slate-400 font-semibold tracking-wider block">RENTAL CARS</span>
             <span className="text-base font-bold text-blue-950 block">
-              {isEmptyState ? "None" : `${vehicles.length} Active`}
+              {vehicles.length > 0 ? `${vehicles.length} Booking${vehicles.length > 1 ? 's' : ''}` : "None"}
             </span>
             <span className="text-[10px] text-slate-500 font-medium font-sans">
-              {isEmptyState ? "Browse sports models" : "Porsche Convertible"}
+              {vehicles.length > 0 ? vehicles[0].model : "Browse vehicles"}
             </span>
           </div>
         </div>
@@ -100,10 +113,12 @@ export default function OverviewTab({
           <div>
             <span className="text-[10px] text-slate-400 font-semibold tracking-wider block">PENDING TOURS</span>
             <span className="text-base font-bold text-blue-950 block">
-              {isEmptyState ? "None" : `${tours.filter(t => t.status === "Pending Review").length} Inquiries`}
+              {tours.filter(t => t.status === "Pending Review").length > 0
+                ? `${tours.filter(t => t.status === "Pending Review").length} Pending`
+                : "None"}
             </span>
             <span className="text-[10px] text-amber-600 font-medium font-sans">
-              {isEmptyState ? "Explore excursions" : "Helicopter tasting"}
+              {tours.length > 0 ? `${tours.length} Total Inquiries` : "Explore excursions"}
             </span>
           </div>
         </div>
@@ -114,11 +129,11 @@ export default function OverviewTab({
             <CheckCircle2 size={22} />
           </div>
           <div>
-            <span className="text-[10px] text-slate-400 font-semibold tracking-wider block">LOCKED TRAVELS</span>
+            <span className="text-[10px] text-slate-400 font-semibold tracking-wider block">TOTAL SERVICES</span>
             <span className="text-base font-bold text-blue-950 block">
-              {isEmptyState ? 0 : bookings.length + tours.length + vehicles.length}
+              {bookings.length + tours.length + vehicles.length}
             </span>
-            <span className="text-[10px] text-slate-500 font-medium font-sans">All luxury services</span>
+            <span className="text-[10px] text-slate-500 font-medium font-sans">All bookings & inquiries</span>
           </div>
         </div>
       </div>
@@ -152,43 +167,53 @@ export default function OverviewTab({
                 </span>
               </div>
 
-              <div className="my-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-center font-sans">
-                <div className="relative rounded-2xl overflow-hidden h-48 group">
-                  <img
-                    src={bookings[0].image}
-                    alt={bookings[0].hotelName}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
-                  <div className="absolute bottom-4 left-4 text-white">
-                    <p className="text-[10px] uppercase font-bold tracking-wide text-amber-400">OCTOBER 14 - OCTOBER 20</p>
-                    <p className="text-sm font-semibold text-white">6 Nights Stay</p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs text-slate-500">
-                      <span>TRIP PROGRESS</span>
-                      <span className="font-semibold text-blue-950">144 days until check-in</span>
-                    </div>
-                    <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                      <div className="bg-blue-900 h-full w-[25%] rounded-full"></div>
+                <div className="my-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-center font-sans">
+                  <div className="relative rounded-2xl overflow-hidden h-48 group">
+                    <img
+                      src={bookings[0].image}
+                      alt={bookings[0].hotelName}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
+                    <div className="absolute bottom-4 left-4 text-white">
+                      <p className="text-[10px] uppercase font-bold tracking-wide text-amber-400">
+                        {bookings[0].checkIn
+                          ? new Date(bookings[0].checkIn).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                          : ""} – {bookings[0].checkOut
+                          ? new Date(bookings[0].checkOut).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                          : ""}
+                      </p>
+                      <p className="text-sm font-semibold text-white">{bookings[0].nights} Night{bookings[0].nights !== 1 ? "s" : ""} Stay</p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 text-xs">
-                    <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-100/60">
-                      <span className="text-[9px] text-slate-400 block font-semibold">ROOMS SELECTED</span>
-                      <span className="font-bold text-blue-950 text-sm">{bookings[0].rooms.length} Suites</span>
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs text-slate-500">
+                        <span>TRIP PROGRESS</span>
+                        <span className="font-semibold text-blue-950">
+                          {daysUntilCheckIn != null
+                            ? (daysUntilCheckIn === 0 ? "Today!" : `${daysUntilCheckIn} days until check-in`)
+                            : "—"}
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                        <div className="bg-blue-900 h-full rounded-full transition-all duration-700" style={{ width: `${tripProgress}%` }}></div>
+                      </div>
                     </div>
-                    <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-100/60">
-                      <span className="text-[9px] text-slate-400 block font-semibold">AIRPORT TRANSFER</span>
-                      <span className="font-bold text-blue-950 text-sm">VIP Private Car</span>
+
+                    <div className="grid grid-cols-2 gap-4 text-xs">
+                      <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-100/60">
+                        <span className="text-[9px] text-slate-400 block font-semibold">ROOMS BOOKED</span>
+                        <span className="font-bold text-blue-950 text-sm">{bookings[0].rooms.length} Room{bookings[0].rooms.length !== 1 ? "s" : ""}</span>
+                      </div>
+                      <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-100/60">
+                        <span className="text-[9px] text-slate-400 block font-semibold">AIRPORT TRANSFER</span>
+                        <span className="font-bold text-blue-950 text-sm text-[10px] leading-snug">{bookings[0].airportTransfer === "Not Requested" ? "Not Requested" : "Requested"}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
               <div className="flex flex-col md:flex-row gap-3 pt-4 border-t border-slate-100">
                 <button

@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import {
   Calendar,
   Compass,
@@ -201,12 +203,30 @@ const INITIAL_NOTIFICATIONS = [
 // ==========================================
 
 export default function CustomerDashboard() {
+  const navigate = useNavigate();
+
   // Reactive Core State
-  const [profile, setProfile] = useState(INITIAL_PROFILE);
-  const [bookings, setBookings] = useState(INITIAL_BOOKINGS);
-  const [tours, setTours] = useState(INITIAL_TOURS);
-  const [vehicles, setVehicles] = useState(INITIAL_VEHICLES);
-  const [payments, setPayments] = useState(INITIAL_PAYMENTS);
+  const [profile, setProfile] = useState({
+    name: "Loading...",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    phoneNumber: "",
+    address: "",
+    country: "",
+    idType: "NIC",
+    idNumber: "",
+    currency: "USD ($)",
+    language: "English (US)",
+    emergencyContact: "Desk Agent (+1 555-019-9031)",
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80"
+  });
+  const [bookings, setBookings] = useState([]);
+  const [tours, setTours] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [paymentSummary, setPaymentSummary] = useState({ totalPaid: 0, totalRefunded: 0, totalPending: 0, totalTransactions: 0 });
   const [reviews, setReviews] = useState(INITIAL_REVIEWS);
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
 
@@ -222,7 +242,22 @@ export default function CustomerDashboard() {
 
   // Modals & Dynamic Form States
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
-  const [editProfileForm, setEditProfileForm] = useState({ ...INITIAL_PROFILE });
+  const [editProfileForm, setEditProfileForm] = useState({
+    name: "",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    phoneNumber: "",
+    address: "",
+    country: "",
+    idType: "NIC",
+    idNumber: "",
+    currency: "USD ($)",
+    language: "English (US)",
+    emergencyContact: "Desk Agent (+1 555-019-9031)",
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80"
+  });
   const [isAddReviewOpen, setIsAddReviewOpen] = useState(false);
   const [newReviewForm, setNewReviewForm] = useState({
     propertyName: "The Azure Velvet Sands Resort & Spa",
@@ -233,6 +268,196 @@ export default function CustomerDashboard() {
   // Cancel Booking State
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
   const [selectedBookingForCancel, setSelectedBookingForCancel] = useState(null);
+
+  // Load live data from the backend APIs
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      const token = sessionStorage.getItem("customerToken") || localStorage.getItem("customerToken");
+      if (!token) {
+        toast.error("Please login to access the dashboard", { id: "auth-toast" });
+        navigate("/customerLogin");
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const headers = { Authorization: `Bearer ${token}` };
+        const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
+        // 1. Fetch Profile
+        const profileRes = await axios.get(`${backendUrl}/customers/profile`, { headers });
+        const pData = profileRes.data.data;
+        const profileObj = {
+          name: `${pData.firstName || ""} ${pData.lastName || ""}`.trim() || "Valued Guest",
+          firstName: pData.firstName || "",
+          lastName: pData.lastName || "",
+          email: pData.email || "",
+          phone: pData.phoneNumber || "Not Provided",
+          phoneNumber: pData.phoneNumber || "Not Provided",
+          address: pData.address || "Not Provided",
+          country: pData.country || "Not Provided",
+          idType: pData.idType || "NIC",
+          idNumber: pData.idNumber || "",
+          currency: "USD ($)",
+          language: "English (US)",
+          emergencyContact: "Desk Agent (+1 555-019-9031)",
+          avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80"
+        };
+        setProfile(profileObj);
+        setEditProfileForm(profileObj);
+
+        // 2. Fetch Bookings (Hotel stays)
+        const bookingsRes = await axios.get(`${backendUrl}/customers/bookings`, { headers });
+        const rawBookings = bookingsRes.data.data;
+        const mappedBookings = rawBookings.map(b => {
+          // Dates: pull from first booked room's checkIn/checkOut
+          const firstRoom = b.bookedRooms?.[0];
+          const checkIn = firstRoom?.checkIn || b.createdAt;
+          let checkOut = firstRoom?.checkOut || checkIn;
+          b.bookedRooms?.forEach(r => {
+            if (new Date(r.checkOut) > new Date(checkOut)) {
+              checkOut = r.checkOut;
+            }
+          });
+          const msPerDay = 1000 * 60 * 60 * 24;
+          const nights = Math.max(1, Math.round(Math.abs(new Date(checkOut) - new Date(checkIn)) / msPerDay));
+
+          // Rooms: get room type name and guest count from each booked room
+          const rooms = b.bookedRooms?.map(r => ({
+            type: r.Room?.roomType?.type || r.Room?.RoomType?.type || "Deluxe Room",
+            roomNumber: r.Room?.room_number ? `Room ${r.Room.room_number}` : "",
+            guests: `${r.adults || 1} Adult${(r.adults || 1) > 1 ? 's' : ''}` + (r.kids > 0 ? `, ${r.kids} Child${r.kids > 1 ? 'ren' : ''}` : "")
+          })) || [];
+
+          let totalAdults = 0;
+          let totalKids = 0;
+          b.bookedRooms?.forEach(r => {
+            totalAdults += r.adults || 0;
+            totalKids += r.kids || 0;
+          });
+          const guestsSummary = `${totalAdults} Adult${totalAdults !== 1 ? 's' : ''}` + (totalKids > 0 ? `, ${totalKids} Child${totalKids > 1 ? 'ren' : ''}` : "");
+
+          // Airport pickup
+          const pickupMatch = bookingsRes.data.airportPickups?.find(p => p.booking_id === b.id || p.guest_id === b.customer_id);
+          const airportTransfer = pickupMatch 
+            ? `Requested - ${new Date(pickupMatch.pickup_date).toLocaleDateString()} at ${pickupMatch.pickup_time || ""}`
+            : "Not Requested";
+
+          // Room type image if available
+          const firstRoomTypeImg = b.bookedRooms?.[0]?.Room?.roomType?.image_url;
+          const fallbackImages = [
+            "https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=600&q=80",
+            "https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=600&q=80",
+            "https://images.unsplash.com/photo-1518019382147-37c065706598?auto=format&fit=crop&w=600&q=80"
+          ];
+          const imgUrl = firstRoomTypeImg || fallbackImages[b.id % fallbackImages.length];
+
+          // Payment status from associated payments
+          const paidPayment = b.payments?.find(p => p.status === "success" || p.status === "paid");
+          let displayStatus = b.status ? (b.status.charAt(0).toUpperCase() + b.status.slice(1)) : "Pending";
+          let paymentStatus = "Unpaid";
+          if (paidPayment) {
+            paymentStatus = "Paid";
+          } else if (b.status === "confirmed" || b.status === "completed") {
+            paymentStatus = "Paid";
+          } else if (b.status === "cancelled") {
+            paymentStatus = "Cancelled";
+          }
+
+          const totalAmount = parseFloat(b.total_price) || 0;
+
+          return {
+            id: `BB-BK-${b.id}`,
+            realId: b.id,
+            hotelName: "BlueBird Luxury Hotels & Resorts",
+            location: "Galle Face, Colombo, Sri Lanka",
+            image: imgUrl,
+            checkIn,
+            checkOut,
+            nights,
+            rooms,
+            guestsSummary,
+            status: displayStatus,
+            paymentStatus,
+            amount: totalAmount,
+            airportTransfer,
+            amenities: ["24/7 Concierge Service", "Infinity Pool Access", "Complimentary Breakfast"],
+            note: b.note || "",
+            tax: b.tax || 0,
+            taxPercentage: b.tax_percentage || 0
+          };
+        });
+        setBookings(mappedBookings);
+
+        // 3. Fetch Rentals (Vehicles)
+        const rentalsRes = await axios.get(`${backendUrl}/customers/rentals`, { headers });
+        const rawRentals = rentalsRes.data.data;
+        const mappedRentals = rawRentals.map(r => ({
+          id: `BB-CAR-${r.id}`,
+          realId: r.id,
+          model: r.vehicle ? `${r.vehicle.brand} ${r.vehicle.model}` : "Premium Fleet Vehicle",
+          type: r.vehicle?.capacity ? `${r.vehicle.capacity} Seater` : "Luxury Car",
+          image: r.vehicle?.image || "https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?auto=format&fit=crop&w=600&q=80",
+          pickupLocation: r.pickupLocation || "Airport Terminal",
+          dropoffLocation: r.dropoffLocation || "Airport Terminal",
+          startDate: r.pickupDatetime,
+          endDate: r.returnDatetime,
+          status: r.status.replace("_", " ").toUpperCase(),
+          price: parseFloat(r.totalPayable),
+          unlimitedMileage: true
+        }));
+        setVehicles(mappedRentals);
+
+        // 4. Fetch Tours
+        const toursRes = await axios.get(`${backendUrl}/customers/tours`, { headers });
+        const rawTours = toursRes.data.data;
+        const mappedTours = rawTours.map(t => {
+          const notes = t.specialRequests || "No special requests submitted.";
+          const reply = t.status === "accepted" 
+            ? "Your excursion request has been accepted. We have locked details in your itinerary." 
+            : t.status === "rejected" 
+              ? `We regret that we cannot fulfill this excursion: ${t.rejectionReason || "Slot unavailable"}`
+              : "We are currently reviewing your custom excursion request with our ground guide team.";
+
+          return {
+            id: t.inquiryRef || `BB-TOUR-${t.id}`,
+            realId: t.id,
+            destination: t.Tour?.packageName || "Curated Excursion",
+            location: t.Tour?.location || "Sri Lanka Coastline",
+            requestedDate: t.startDate,
+            groupSize: `${t.numberOfAdults} Adults` + (t.numberOfChildren > 0 ? `, ${t.numberOfChildren} Kids` : ""),
+            status: t.status === "accepted" ? "Approved" : t.status === "rejected" ? "Declined" : "Pending Review",
+            price: parseFloat(t.Tour?.price || 0),
+            conciergeNotes: reply,
+            lastUpdated: new Date(t.updatedAt).toLocaleDateString()
+          };
+        });
+        setTours(mappedTours);
+
+        // 5. Fetch Payments
+        const paymentsRes = await axios.get(`${backendUrl}/customers/payments`, { headers });
+        setPayments(paymentsRes.data.data || []);
+        if (paymentsRes.data.summary) {
+          setPaymentSummary(paymentsRes.data.summary);
+        }
+
+        // Update empty state flag if nothing exists
+        if (mappedBookings.length === 0 && mappedRentals.length === 0 && mappedTours.length === 0) {
+          setIsEmptyState(true);
+        } else {
+          setIsEmptyState(false);
+        }
+
+      } catch (error) {
+        console.error("Error loading dashboard data:", error);
+        toast.error("Failed to load dashboard data from database.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [navigate]);
 
   // Simulation helper to demonstrate skeleton state
   const handleTriggerSkeleton = () => {
@@ -299,17 +524,64 @@ export default function CustomerDashboard() {
   };
 
   // Manage Profile Settings Save
-  const handleSaveProfile = (e) => {
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
-    setProfile({ ...editProfileForm });
-    setIsEditProfileOpen(false);
-    toast.success("Luxury Profile details updated seamlessly.", {
-      style: {
-        borderRadius: '8px',
-        background: '#1e3a8a',
-        color: '#fff',
+    const token = sessionStorage.getItem("customerToken") || localStorage.getItem("customerToken");
+    if (!token) {
+      toast.error("Please login to update profile");
+      return;
+    }
+
+    const nameParts = editProfileForm.name.trim().split(/\s+/);
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "";
+
+    try {
+      const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/customers/update-profile`, {
+        firstName,
+        lastName,
+        phoneNumber: editProfileForm.phone,
+        country: editProfileForm.country,
+        idType: editProfileForm.idType,
+        idNumber: editProfileForm.idNumber,
+        address: editProfileForm.address
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.data.token) {
+        if (localStorage.getItem("customerToken")) {
+          localStorage.setItem("customerToken", res.data.token);
+        }
+        sessionStorage.setItem("customerToken", res.data.token);
       }
-    });
+
+      const p = res.data.user;
+      const updatedProfile = {
+        name: `${p.firstName || ""} ${p.lastName || ""}`.trim() || "Valued Guest",
+        firstName: p.firstName || "",
+        lastName: p.lastName || "",
+        email: p.email || "",
+        phone: p.phoneNumber || "Not Provided",
+        phoneNumber: p.phoneNumber || "Not Provided",
+        address: p.address || "Not Provided",
+        country: p.country || "Not Provided",
+        idType: p.idType || "NIC",
+        idNumber: p.idNumber || "",
+        currency: profile.currency,
+        language: profile.language,
+        emergencyContact: profile.emergencyContact,
+        avatar: profile.avatar
+      };
+
+      setProfile(updatedProfile);
+      setEditProfileForm(updatedProfile);
+      setIsEditProfileOpen(false);
+      toast.success("Luxury Profile details updated seamlessly.");
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to update profile");
+    }
   };
 
   // Cancel Booking Request Flow
@@ -318,20 +590,31 @@ export default function CustomerDashboard() {
     setIsCancelConfirmOpen(true);
   };
 
-  const handleConfirmCancel = () => {
+  const handleConfirmCancel = async () => {
     if (!selectedBookingForCancel) return;
-    setBookings(prev =>
-      prev.map(b => b.id === selectedBookingForCancel.id ? { ...b, status: "Cancellation Pending" } : b)
-    );
-    setIsCancelConfirmOpen(false);
-    toast.success(`Cancellation request for ${selectedBookingForCancel.id} submitted for concierge processing.`, {
-      style: {
-        borderRadius: '8px',
-        background: '#991b1b',
-        color: '#fff',
-      }
-    });
-    setSelectedBookingForCancel(null);
+    const token = sessionStorage.getItem("customerToken") || localStorage.getItem("customerToken");
+    if (!token) {
+      toast.error("Please login to cancel bookings");
+      return;
+    }
+
+    try {
+      const bookingId = selectedBookingForCancel.realId;
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/customers/bookings/${bookingId}/cancel`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setBookings(prev =>
+        prev.map(b => b.id === selectedBookingForCancel.id ? { ...b, status: "Cancelled" } : b)
+      );
+      setIsCancelConfirmOpen(false);
+      toast.success(`Booking ${selectedBookingForCancel.id} has been cancelled successfully.`);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to cancel booking");
+    } finally {
+      setSelectedBookingForCancel(null);
+    }
   };
 
   // Notification Read Toggle
@@ -478,6 +761,7 @@ export default function CustomerDashboard() {
               {activeTab === "payments" && (
                 <PaymentsTab
                   payments={payments}
+                  paymentSummary={paymentSummary}
                   isEmptyState={isEmptyState}
                   maskCard={maskCard}
                 />

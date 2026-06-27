@@ -209,8 +209,52 @@ const availableRooms = async (req, res) => {
     }
 };
 
+/**
+ * Asynchronously checks for pending bookings older than 10 minutes and cancels them to release blocked rooms.
+ */
+const expireOldPendingBookings = async () => {
+    try {
+        const expirationTime = new Date(Date.now() - 10 * 60 * 1000); // 10 minutes ago
+        
+        const oldPendingReservations = await Reservation.findAll({
+            where: {
+                status: "pending",
+                createdAt: { [Op.lt]: expirationTime }
+            }
+        });
+
+        if (oldPendingReservations.length > 0) {
+            console.log(`[CLEANUP] Found ${oldPendingReservations.length} expired pending bookings. Cancelling them.`);
+            for (const resv of oldPendingReservations) {
+                const t = await sequelize.transaction();
+                try {
+                    await resv.update({ status: "cancelled" }, { transaction: t });
+                    await BookedRoom.update({ status: "cancelled" }, { where: { reservation_id: resv.id }, transaction: t });
+                    
+                    // Mark pending payment logs as failed
+                    await RoomPayment.update(
+                        { status: "failed" },
+                        { where: { booking_id: resv.id, status: "pending" }, transaction: t }
+                    );
+
+                    await t.commit();
+                    console.log(`[CLEANUP] Successfully cancelled expired Booking #${resv.id} and released rooms.`);
+                } catch (err) {
+                    await t.rollback();
+                    console.error(`[CLEANUP ERROR] Failed to cancel expired Booking #${resv.id}:`, err);
+                }
+            }
+        }
+    } catch (error) {
+        console.error("[CLEANUP ERROR] Failed to run expired pending bookings cleanup:", error);
+    }
+};
+
 // Add booking
 const createBooking = async (req, res) => {
+    // Run cleanup for expired pending bookings before processing a new reservation
+    await expireOldPendingBookings();
+
     const t = await sequelize.transaction();
 
     try {
@@ -601,6 +645,9 @@ const deleteBookingById = async (req, res) => {
 
 // get all available roomlist for specific package and checkin checkout dates no book
 const getAvailableRoomAssignForPackage = async (req, res) => {
+    // Run cleanup for expired pending bookings before querying package availability
+    await expireOldPendingBookings();
+
     try {
         const { packageId, checkIn, checkOut } = req.body;
 
@@ -643,6 +690,9 @@ const getAvailableRoomAssignForPackage = async (req, res) => {
 };
 
 const getAvailableRoomTypesByDate = async (req, res) => {
+    // Run cleanup for expired pending bookings before querying availability
+    await expireOldPendingBookings();
+
     try {
         const { checkIn, checkOut } = req.query;
 
