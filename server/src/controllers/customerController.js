@@ -8,6 +8,10 @@ import axios from "axios";
 import { response } from "express";
 dotenv.config();
 
+import sequelize from "../config/database.js";
+import { Booking, BookedRoom, Room, RoomType, AirPortPickup, VehicleBooking, Vehicle, TourInquiry, Tour, Payment, RoomPayment } from "../models/index.js";
+
+
 
 const transporter = nodemailer.createTransport(
     {
@@ -434,3 +438,279 @@ export async function updateCustomerProfile(req, res) {
         });
     }
 }
+
+export async function getCustomerProfile(req, res) {
+    try {
+        const customerId = req.user.id;
+        const customer = await Customer.findByPk(customerId);
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found" });
+        }
+        res.status(200).json({ success: true, data: customer });
+    } catch (error) {
+        console.error("Error fetching customer profile:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export async function getCustomerBookings(req, res) {
+    try {
+        const customerId = req.user.id;
+        const bookings = await Booking.findAll({
+            where: { customer_id: customerId },
+            include: [
+                {
+                    model: BookedRoom,
+                    as: "bookedRooms",
+                    include: [
+                        {
+                            model: Room,
+                            as: undefined,
+                            attributes: ["id", "room_number", "floor", "status", "room_type_id"],
+                            include: [
+                                {
+                                    model: RoomType,
+                                    as: "roomType",
+                                    attributes: ["id", "type", "image_url"]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    model: RoomPayment,
+                    as: "payments",
+                    attributes: ["id", "amount", "status", "method"],
+                    required: false
+                }
+            ],
+            order: [["createdAt", "DESC"]]
+        });
+
+        const airportPickups = await AirPortPickup.findAll({
+            where: { customer_id: customerId }
+        });
+
+        res.status(200).json({
+            success: true,
+            data: bookings,
+            airportPickups
+        });
+    } catch (error) {
+        console.error("Error fetching customer bookings:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export async function getCustomerRentals(req, res) {
+    try {
+        const customerId = req.user.id;
+        const rentals = await VehicleBooking.findAll({
+            where: { customerId: customerId },
+            include: [
+                {
+                    model: Vehicle,
+                    as: "vehicle"
+                }
+            ],
+            order: [["createdAt", "DESC"]]
+        });
+        res.status(200).json({ success: true, data: rentals });
+    } catch (error) {
+        console.error("Error fetching customer rentals:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export async function getCustomerTours(req, res) {
+    try {
+        const customerId = req.user.id;
+        const customer = await Customer.findByPk(customerId);
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found" });
+        }
+
+        const inquiries = await TourInquiry.findAll({
+            where: { email: customer.email },
+            include: [
+                {
+                    model: Tour,
+                    attributes: ["packageName", "location", "price", "image"]
+                }
+            ],
+            order: [["createdAt", "DESC"]]
+        });
+
+        res.status(200).json({ success: true, data: inquiries });
+    } catch (error) {
+        console.error("Error fetching customer tours:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export async function getCustomerPayments(req, res) {
+    try {
+        const customerId = req.user.id;
+
+        const roomPayments = await RoomPayment.findAll({
+            where: { customer_id: customerId },
+            order: [["createdAt", "DESC"]]
+        });
+
+        const vehiclePayments = await Payment.findAll({
+            include: [
+                {
+                    model: VehicleBooking,
+                    as: "booking",
+                    where: { customerId: customerId },
+                    attributes: ["bookingNo"]
+                }
+            ],
+            order: [["createdAt", "DESC"]]
+        });
+
+        const mappedRoomPayments = roomPayments.map(p => ({
+            id: `PAY-RM-${p.id}`,
+            refNo: p.payment_no || `RM-${p.id}`,
+            date: p.createdAt,
+            category: "Room Booking",
+            description: `Room Booking Payment`,
+            bookingRef: `#${p.booking_id}`,
+            method: p.method || "online",
+            currency: p.currency || "LKR",
+            amount: parseFloat(p.amount),
+            isRefund: false,
+            status: p.status === "success" ? "Succeeded" : p.status === "pending" ? "Pending" : "Failed"
+        }));
+
+        const mappedVehiclePayments = vehiclePayments.map(p => ({
+            id: `PAY-VH-${p.id}`,
+            refNo: p.receiptNo || p.gatewayRef || `VH-${p.id}`,
+            date: p.createdAt,
+            category: "Vehicle Rental",
+            description: `Vehicle Rental – ${p.type.charAt(0).toUpperCase() + p.type.slice(1)}`,
+            bookingRef: `#${p.booking?.bookingNo || p.bookingId}`,
+            method: p.method || "online",
+            currency: "LKR",
+            amount: parseFloat(p.amount),
+            isRefund: p.type === "refund",
+            notes: p.notes || null,
+            status: p.type === "refund" ? "Refunded" : "Succeeded"
+        }));
+
+        const allPayments = [...mappedRoomPayments, ...mappedVehiclePayments].sort(
+            (a, b) => new Date(b.date) - new Date(a.date)
+        );
+
+        // Compute summary totals
+        const totalPaid = allPayments
+            .filter(p => p.status === "Succeeded" && !p.isRefund)
+            .reduce((sum, p) => sum + p.amount, 0);
+        const totalRefunded = allPayments
+            .filter(p => p.status === "Refunded" || p.isRefund)
+            .reduce((sum, p) => sum + p.amount, 0);
+        const totalPending = allPayments
+            .filter(p => p.status === "Pending")
+            .reduce((sum, p) => sum + p.amount, 0);
+
+        res.status(200).json({
+            success: true,
+            data: allPayments,
+            summary: {
+                totalPaid: parseFloat(totalPaid.toFixed(2)),
+                totalRefunded: parseFloat(totalRefunded.toFixed(2)),
+                totalPending: parseFloat(totalPending.toFixed(2)),
+                totalTransactions: allPayments.length
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching customer payments:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+
+export async function cancelCustomerBooking(req, res) {
+    const t = await sequelize.transaction();
+    try {
+        const { id } = req.params;
+        const customerId = req.user.id;
+
+        const booking = await Booking.findOne({
+            where: { id, customer_id: customerId },
+            transaction: t
+        });
+
+        if (!booking) {
+            await t.rollback();
+            return res.status(404).json({ message: "Booking not found or not authorized to cancel" });
+        }
+
+        if (booking.status === "cancelled" || booking.status === "completed") {
+            await t.rollback();
+            return res.status(400).json({ message: `Cannot cancel a booking that is already ${booking.status}` });
+        }
+
+        await booking.update({ status: "cancelled" }, { transaction: t });
+
+        await BookedRoom.update(
+            { status: "cancelled" },
+            {
+                where: { booking_id: id },
+                transaction: t
+            }
+        );
+
+        await RoomPayment.update(
+            { status: "failed" },
+            {
+                where: { booking_id: id, status: "pending" },
+                transaction: t
+            }
+        );
+
+        await t.commit();
+        res.status(200).json({ success: true, message: "Booking cancelled successfully" });
+    } catch (error) {
+        await t.rollback();
+        console.error("Error cancelling booking:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export async function cancelCustomerRental(req, res) {
+    const t = await sequelize.transaction();
+    try {
+        const { id } = req.params;
+        const customerId = req.user.id;
+
+        const rental = await VehicleBooking.findOne({
+            where: { id, customerId: customerId },
+            transaction: t
+        });
+
+        if (!rental) {
+            await t.rollback();
+            return res.status(404).json({ message: "Rental booking not found or not authorized to cancel" });
+        }
+
+        if (rental.status === "cancelled" || rental.status === "completed" || rental.status === "ongoing" || rental.status === "returned") {
+            await t.rollback();
+            return res.status(400).json({ message: `Cannot cancel a rental that is in status ${rental.status}` });
+        }
+
+        await rental.update({
+            status: "cancelled",
+            cancelledBy: customerId,
+            cancelledAt: new Date(),
+            cancellationReason: "Cancelled by customer via dashboard"
+        }, { transaction: t });
+
+        await t.commit();
+        res.status(200).json({ success: true, message: "Rental booking cancelled successfully" });
+    } catch (error) {
+        await t.rollback();
+        console.error("Error cancelling rental booking:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
