@@ -81,7 +81,8 @@ export async function userLogin(req, res) {
                 id: staffMember ? staffMember.userId : user.id,
                 email: user.email,
                 name: staffMember ? staffMember.name : null,
-                role: userRole
+                role: userRole,
+                imageUrl: staffMember ? staffMember.imageUrl : null
             }
         });
 

@@ -45,6 +45,12 @@ export default function ReceptionPage() {
         }`;
     };
 
+    const storedUser = localStorage.getItem("user");
+    const user = storedUser ? JSON.parse(storedUser) : null;
+    const receptionistName = user ? user.name : "Receptionist";
+    const receptionistRole = user ? user.role : "receptionist";
+    const userImageUrl = user ? user.imageUrl : null;
+
     if (!authorized) {
         return null;
     }
@@ -69,9 +75,31 @@ export default function ReceptionPage() {
 
             {/* Sidebar */}
             <div className={`fixed md:static z-30 w-72 md:w-64 lg:w-72 h-full flex flex-col bg-[#29384d] transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 shadow-xl md:shadow-none`}>
-                <div className="w-full h-24 md:h-28 flex flex-col items-center justify-center px-4 mt-4 md:mt-0 flex-shrink-0">
-                    <MdPersonPin className="w-14 h-14 md:w-16 md:h-16 text-white drop-shadow-md" />
-                    <h1 className="text-lg md:text-xl font-bold text-white mt-1 tracking-wide">Reception</h1>
+                <div className="w-full py-6 flex flex-col items-center justify-center px-4 flex-shrink-0 border-b border-white/10">
+                    {/* Reception Profile Image */}
+                    <div className="relative group">
+                        {userImageUrl ? (
+                            <img 
+                                src={userImageUrl} 
+                                alt="Receptionist" 
+                                className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover border-4 border-white/20 shadow-lg transition-transform duration-300 group-hover:scale-105"
+                            />
+                        ) : (
+                            <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-blue-500/10 border-4 border-white/20 flex items-center justify-center text-white text-xl font-black shadow-lg">
+                                {receptionistName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
+                            </div>
+                        )}
+                        <span className="absolute bottom-1 right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-[#29384d] rounded-full" />
+                    </div>
+                    {/* Role & Name */}
+                    <div className="text-center mt-3 space-y-1">
+                        <span className="inline-block px-2.5 py-0.5 text-[9px] font-bold text-blue-300 bg-blue-500/20 border border-blue-500/30 rounded-full tracking-wider uppercase">
+                            {receptionistRole}
+                        </span>
+                        <h2 className="text-sm md:text-base font-bold text-white tracking-wide truncate max-w-[200px]">
+                            {receptionistName}
+                        </h2>
+                    </div>
                 </div>
                 <nav className="w-full flex-1 flex flex-col px-4 pt-2 md:pt-4 space-y-2 pb-6 overflow-y-auto">
                     <Link to="/reception" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception")}><MdDashboard className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Dashboard</span></Link>
