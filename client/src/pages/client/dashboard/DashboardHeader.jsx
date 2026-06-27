@@ -1,4 +1,5 @@
 import React from "react";
+import axios from "axios";
 import { Link } from "react-router-dom";
 import logo from "../../../assets/bluebird logo.png";
 import {
@@ -198,11 +199,18 @@ export default function DashboardHeader({
                 <span>{showRealPII ? "Mask Private Data" : "Reveal Private Data"}</span>
               </button>
               <button
-                onClick={() => {
-                  toast.error("Logout simulation triggered");
+                onClick={async () => {
+                  try {
+                    await axios.post(import.meta.env.VITE_BACKEND_URL + "/customers/logout");
+                  } catch (e) {
+                    console.error("Logout API error:", e);
+                  }
+                  localStorage.removeItem("customerToken");
+                  sessionStorage.removeItem("customerToken");
+                  toast.success("Successfully logged out!");
                   setIsProfileDropdownOpen(false);
                   setTimeout(() => {
-                    window.location.reload();
+                    window.location.href = "/";
                   }, 1000);
                 }}
                 className="w-full text-left px-4 py-2 text-xs text-rose-600 hover:bg-rose-50/60 transition-colors flex items-center space-x-2"

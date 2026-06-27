@@ -44,11 +44,8 @@ export default function CustomerLoginPage() {
                     token: response.access_token
                 });
 
-                if (rememberMe) {
-                    localStorage.setItem("customerToken", res.data.token);
-                } else {
-                    sessionStorage.setItem("customerToken", res.data.token);
-                }
+                localStorage.setItem("customerToken", res.data.token);
+                sessionStorage.setItem("customerToken", res.data.token);
 
                 const from = location.state?.from || "/";
                 const targetRoute = (from === "/booking-details" && location.state?.selectedRooms) ? "/payment" : from;
@@ -83,12 +80,8 @@ export default function CustomerLoginPage() {
 
             const token = res.data.token;
 
-            if (rememberMe) {
-                localStorage.setItem("customerToken", token);
-                sessionStorage.setItem("customerToken", token);
-            } else {
-                sessionStorage.setItem("customerToken", token);
-            }
+            localStorage.setItem("customerToken", token);
+            sessionStorage.setItem("customerToken", token);
 
             const from = location.state?.from || "/";
             const targetRoute = (from === "/booking-details" && location.state?.selectedRooms) ? "/payment" : from;

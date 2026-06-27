@@ -1,4 +1,5 @@
 import React from "react";
+import axios from "axios";
 import { Link } from "react-router-dom";
 import logo from "../../../assets/bluebird logo.png";
 import {
@@ -31,10 +32,17 @@ export default function DashboardSidebar({
     setSearchQuery("");
   };
 
-  const handleSignOut = () => {
-    toast.error("Logout simulation triggered");
+  const handleSignOut = async () => {
+    try {
+      await axios.post(import.meta.env.VITE_BACKEND_URL + "/customers/logout");
+    } catch (e) {
+      console.error("Logout API error:", e);
+    }
+    localStorage.removeItem("customerToken");
+    sessionStorage.removeItem("customerToken");
+    toast.success("Successfully logged out!");
     setTimeout(() => {
-      window.location.reload();
+      window.location.href = "/";
     }, 1000);
   };
 

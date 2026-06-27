@@ -272,7 +272,12 @@ export default function CustomerDashboard() {
   // Load live data from the backend APIs
   useEffect(() => {
     const fetchDashboardData = async () => {
-      const token = sessionStorage.getItem("customerToken") || localStorage.getItem("customerToken");
+      let token = sessionStorage.getItem("customerToken") || localStorage.getItem("customerToken");
+      if (token === "undefined" || token === "null") {
+        sessionStorage.removeItem("customerToken");
+        localStorage.removeItem("customerToken");
+        token = null;
+      }
       if (!token) {
         toast.error("Please login to access the dashboard", { id: "auth-toast" });
         navigate("/customerLogin");
@@ -450,13 +455,36 @@ export default function CustomerDashboard() {
 
       } catch (error) {
         console.error("Error loading dashboard data:", error);
-        toast.error("Failed to load dashboard data from database.");
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          sessionStorage.removeItem("customerToken");
+          localStorage.removeItem("customerToken");
+          toast.error("Your session has expired. Please login again.", { id: "auth-toast" });
+          navigate("/customerLogin");
+        } else {
+          toast.error("Failed to load dashboard data from database.");
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchDashboardData();
+
+    const handleStorageChange = (e) => {
+      if (!e.key || e.key === "customerToken") {
+        const storedToken = localStorage.getItem("customerToken");
+        if (!storedToken) {
+          sessionStorage.removeItem("customerToken");
+          toast.error("Session closed in another tab. Redirecting to home...", { id: "auth-toast" });
+          navigate("/");
+        } else if (e.newValue) {
+          sessionStorage.setItem("customerToken", e.newValue);
+          fetchDashboardData();
+        }
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, [navigate]);
 
   // Simulation helper to demonstrate skeleton state
@@ -580,7 +608,14 @@ export default function CustomerDashboard() {
       toast.success("Luxury Profile details updated seamlessly.");
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.message || "Failed to update profile");
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        localStorage.removeItem("customerToken");
+        sessionStorage.removeItem("customerToken");
+        toast.error("Your session has expired. Please login again.");
+        navigate("/customerLogin");
+      } else {
+        toast.error(err.response?.data?.message || "Failed to update profile");
+      }
     }
   };
 
@@ -611,7 +646,14 @@ export default function CustomerDashboard() {
       toast.success(`Booking ${selectedBookingForCancel.id} has been cancelled successfully.`);
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.message || "Failed to cancel booking");
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        localStorage.removeItem("customerToken");
+        sessionStorage.removeItem("customerToken");
+        toast.error("Your session has expired. Please login again.");
+        navigate("/customerLogin");
+      } else {
+        toast.error(err.response?.data?.message || "Failed to cancel booking");
+      }
     } finally {
       setSelectedBookingForCancel(null);
     }

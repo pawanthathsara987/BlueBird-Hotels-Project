@@ -39,7 +39,12 @@ const RoomPayment = () => {
       saved = {};
     }
 
-    const token = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
+    let token = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
+    if (token === "undefined" || token === "null") {
+      localStorage.removeItem("customerToken");
+      sessionStorage.removeItem("customerToken");
+      token = null;
+    }
     let guest = {};
     if (token) {
       try {
@@ -81,8 +86,13 @@ const RoomPayment = () => {
     setError('');
     setProcessing(true);
 
-    const token = localStorage.getItem("customerToken") ||
+    let token = localStorage.getItem("customerToken") ||
                   sessionStorage.getItem("customerToken");
+    if (token === "undefined" || token === "null") {
+      localStorage.removeItem("customerToken");
+      sessionStorage.removeItem("customerToken");
+      token = null;
+    }
 
     let savedBookingDetails = {};
     let airportPickup = null;

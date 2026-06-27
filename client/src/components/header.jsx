@@ -19,22 +19,47 @@ export default function Header() {
 
   useEffect(() => {
     getWeather();
-    const token =
-      localStorage.getItem("customerToken") ||
-      sessionStorage.getItem("customerToken");
-    setIsLoggedIn(!!token);
-
-    // Try to read user name from stored token payload
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        const first = payload.firstName || "";
-        const last = payload.lastName || "";
-        setUserName((first + " " + last).trim() || "Guest");
-      } catch {
-        setUserName("Guest");
+    const checkAuth = (e) => {
+      if (e) {
+        if (!e.key || e.key === "customerToken") {
+          const storedToken = localStorage.getItem("customerToken");
+          if (!storedToken) {
+            sessionStorage.removeItem("customerToken");
+          } else if (e.newValue) {
+            sessionStorage.setItem("customerToken", e.newValue);
+          }
+        }
       }
-    }
+
+      let token =
+        localStorage.getItem("customerToken") ||
+        sessionStorage.getItem("customerToken");
+      if (token === "undefined" || token === "null") {
+        localStorage.removeItem("customerToken");
+        sessionStorage.removeItem("customerToken");
+        token = null;
+      }
+      setIsLoggedIn(!!token);
+
+      // Try to read user name from stored token payload
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split(".")[1]));
+          const first = payload.firstName || "";
+          const last = payload.lastName || "";
+          setUserName((first + " " + last).trim() || "Guest");
+        } catch {
+          setUserName("Guest");
+        }
+      } else {
+        setUserName("");
+      }
+    };
+
+    checkAuth();
+
+    window.addEventListener("storage", checkAuth);
+    return () => window.removeEventListener("storage", checkAuth);
   }, [location]); // re-check on route change so logout is reflected
 
   // Close profile dropdown when clicking outside BOTH dropdown containers
@@ -50,7 +75,12 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await axios.post(import.meta.env.VITE_BACKEND_URL + "/customers/logout");
+    } catch (e) {
+      console.error("Logout API error:", e);
+    }
     localStorage.clear();
     sessionStorage.clear();
     setIsLoggedIn(false);
