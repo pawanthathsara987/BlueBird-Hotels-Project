@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import logo from "../../../assets/bluebird logo.png";
@@ -12,6 +12,7 @@ import {
   Star,
   Sliders,
   LogOut,
+  ChevronUp,
   X
 } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -25,8 +26,12 @@ export default function DashboardSidebar({
   tours,
   isEmptyState,
   isMobileSidebarOpen,
-  setIsMobileSidebarOpen
+  setIsMobileSidebarOpen,
+  setIsProfileModalOpen
 }) {
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [isMobileProfileDropdownOpen, setIsMobileProfileDropdownOpen] = useState(false);
+
   const handleTabClick = (tabId) => {
     setActiveTab(tabId);
     setSearchQuery("");
@@ -56,7 +61,6 @@ export default function DashboardSidebar({
 
   const preferenceTabs = [
     { id: "reviews", label: "My Reviews", icon: <Star size={16} /> },
-    { id: "profile", label: "Profile Settings", icon: <User size={16} /> },
     { id: "notifications", label: "Notifications", icon: <Bell size={16} /> }
   ];
 
@@ -135,25 +139,56 @@ export default function DashboardSidebar({
           </div>
         </nav>
 
-        {/* Customer Profile & Sign Out section at bottom */}
-        <div className="p-4 border-t border-slate-800/80 bg-slate-900/30">
-          <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-800/20 border border-slate-800/40 mb-3 font-sans overflow-hidden">
-            <img
-              src={profile.avatar}
-              alt={profile.name}
-              className="w-9 h-9 rounded-lg object-cover border border-slate-800/80 shrink-0"
-            />
-            <div className="flex-1 min-w-0 overflow-hidden">
-              <h4 className="text-xs font-semibold text-slate-200 truncate">{profile.name}</h4>
-              <p className="text-[10px] text-slate-500 truncate">{profile.email}</p>
+        {/* Customer Profile section at bottom */}
+        <div className="relative p-4 border-t border-slate-800/80 bg-slate-900/30">
+          
+          {/* Dropdown Menu (Desktop) */}
+          {isProfileDropdownOpen && (
+            <div className="absolute bottom-full left-4 right-4 mb-2 bg-[#1e293b] border border-slate-700/80 rounded-2xl shadow-xl z-50 py-2 animate-in slide-in-from-bottom-2 duration-200">
+              <div className="px-4 py-2 border-b border-slate-700/40">
+                <p className="text-xs font-semibold text-slate-200">{profile.name}</p>
+                <p className="text-[10px] text-slate-500 truncate mt-0.5">{profile.email}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setIsProfileModalOpen(true);
+                  setIsProfileDropdownOpen(false);
+                }}
+                className="w-full text-left px-4 py-2.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center space-x-2.5 border-b border-slate-700/40"
+              >
+                <User size={14} className="text-slate-400" />
+                <span>My Luxury Profile</span>
+              </button>
+              <button
+                onClick={() => {
+                  handleSignOut();
+                  setIsProfileDropdownOpen(false);
+                }}
+                className="w-full text-left px-4 py-2.5 text-xs text-rose-400 hover:bg-rose-950/30 hover:text-rose-300 transition-colors flex items-center space-x-2.5"
+              >
+                <LogOut size={14} />
+                <span>Sign Out</span>
+              </button>
             </div>
-          </div>
+          )}
+
+          {/* Profile Card Button (Desktop) */}
           <button
-            onClick={handleSignOut}
-            className="flex items-center justify-center gap-2 w-full py-2.5 px-4 text-xs font-medium text-rose-400 hover:text-white bg-rose-500/10 hover:bg-rose-600 border border-rose-500/20 hover:border-rose-600 rounded-xl transition-all duration-300 shadow-sm shadow-rose-950/20"
+            onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+            className="flex items-center justify-between w-full p-2.5 rounded-xl bg-slate-800/20 border border-slate-800/40 text-left font-sans overflow-hidden focus:outline-none hover:bg-slate-800/40 active:scale-[0.98] transition-all"
           >
-            <LogOut size={14} />
-            <span>Sign Out</span>
+            <div className="flex items-center gap-3 overflow-hidden">
+              <img
+                src={profile.avatar}
+                alt={profile.name}
+                className="w-9 h-9 rounded-lg object-cover border border-slate-800/80 shrink-0"
+              />
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <h4 className="text-xs font-semibold text-slate-200 truncate">{profile.name}</h4>
+                <p className="text-[10px] text-slate-500 truncate">{profile.email}</p>
+              </div>
+            </div>
+            <ChevronUp size={14} className="text-slate-400 shrink-0 ml-1.5" />
           </button>
         </div>
       </aside>
@@ -239,16 +274,57 @@ export default function DashboardSidebar({
               </div>
             </nav>
 
-            <div className="pt-4 border-t border-slate-800/80 mt-4">
+            <div className="relative pt-4 border-t border-slate-800/80 mt-auto bg-slate-900/30 -mx-5 px-5 pb-1">
+              
+              {/* Dropdown Menu (Mobile) */}
+              {isMobileProfileDropdownOpen && (
+                <div className="absolute bottom-full left-4 right-4 mb-2 bg-[#1e293b] border border-slate-700/80 rounded-2xl shadow-xl z-50 py-2 animate-in slide-in-from-bottom-2 duration-200">
+                  <div className="px-4 py-2 border-b border-slate-700/40">
+                    <p className="text-xs font-semibold text-slate-200">{profile.name}</p>
+                    <p className="text-[10px] text-slate-500 truncate mt-0.5">{profile.email}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsProfileModalOpen(true);
+                      setIsMobileProfileDropdownOpen(false);
+                      setIsMobileSidebarOpen(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center space-x-2.5 border-b border-slate-700/40"
+                  >
+                    <User size={14} className="text-slate-400" />
+                    <span>My Luxury Profile</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleSignOut();
+                      setIsMobileProfileDropdownOpen(false);
+                      setIsMobileSidebarOpen(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-xs text-rose-400 hover:bg-rose-950/30 hover:text-rose-300 transition-colors flex items-center space-x-2.5"
+                  >
+                    <LogOut size={14} />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Profile Card Button (Mobile) */}
               <button
-                onClick={() => {
-                  handleSignOut();
-                  setIsMobileSidebarOpen(false);
-                }}
-                className="flex items-center justify-center gap-2 w-full py-2.5 px-4 text-xs font-medium text-rose-400 hover:text-white bg-rose-500/10 hover:bg-rose-600 border border-rose-500/20 hover:border-rose-600 rounded-xl transition-all duration-300 shadow-sm shadow-rose-950/20"
+                onClick={() => setIsMobileProfileDropdownOpen(!isMobileProfileDropdownOpen)}
+                className="flex items-center justify-between w-full p-2.5 rounded-xl bg-slate-800/20 border border-slate-800/40 text-left font-sans overflow-hidden focus:outline-none hover:bg-slate-800/40 active:scale-[0.98] transition-all"
               >
-                <LogOut size={14} />
-                <span>Sign Out</span>
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <img
+                    src={profile.avatar}
+                    alt={profile.name}
+                    className="w-9 h-9 rounded-lg object-cover border border-slate-800/80 shrink-0"
+                  />
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <h4 className="text-xs font-semibold text-slate-200 truncate">{profile.name}</h4>
+                    <p className="text-[10px] text-slate-500 truncate">{profile.email}</p>
+                  </div>
+                </div>
+                <ChevronUp size={14} className="text-slate-400 shrink-0 ml-1.5" />
               </button>
             </div>
           </div>

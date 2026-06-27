@@ -7,7 +7,8 @@ import {
   Car,
   User,
   Sliders,
-  Activity
+  Activity,
+  X
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -220,7 +221,8 @@ export default function CustomerDashboard() {
     currency: "USD ($)",
     language: "English (US)",
     emergencyContact: "Desk Agent (+1 555-019-9031)",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80"
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80",
+    googleAuth: false
   });
   const [bookings, setBookings] = useState([]);
   const [tours, setTours] = useState([]);
@@ -235,13 +237,12 @@ export default function CustomerDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isEmptyState, setIsEmptyState] = useState(false);
-  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isNotifDropdownOpen, setIsNotifDropdownOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [showRealPII, setShowRealPII] = useState(false);
 
   // Modals & Dynamic Form States
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [editProfileForm, setEditProfileForm] = useState({
     name: "",
     firstName: "",
@@ -256,7 +257,14 @@ export default function CustomerDashboard() {
     currency: "USD ($)",
     language: "English (US)",
     emergencyContact: "Desk Agent (+1 555-019-9031)",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80"
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80",
+    googleAuth: false
+  });
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [changePasswordForm, setChangePasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmNewPassword: ""
   });
   const [isAddReviewOpen, setIsAddReviewOpen] = useState(false);
   const [newReviewForm, setNewReviewForm] = useState({
@@ -306,7 +314,8 @@ export default function CustomerDashboard() {
           currency: "USD ($)",
           language: "English (US)",
           emergencyContact: "Desk Agent (+1 555-019-9031)",
-          avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80"
+          avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80",
+          googleAuth: pData.googleAuth || false
         };
         setProfile(profileObj);
         setEditProfileForm(profileObj);
@@ -504,21 +513,9 @@ export default function CustomerDashboard() {
   };
 
   // PII Masking Utilities
-  const maskEmail = (email) => {
-    if (showRealPII) return email;
-    const [user, domain] = email.split("@");
-    return `${user.substring(0, 3)}*********@${domain}`;
-  };
-
-  const maskPhone = (phone) => {
-    if (showRealPII) return phone;
-    return phone.replace(/(\d{3})-(\d{4})/, "***-$2");
-  };
-
-  const maskCard = (cardStr) => {
-    if (showRealPII) return cardStr;
-    return cardStr.replace(/ending in (\d+)/, "ending in •••• $1");
-  };
+  const maskEmail = (email) => email || "";
+  const maskPhone = (phone) => phone || "";
+  const maskCard = (cardStr) => cardStr || "";
 
   // Manage Review Addition
   const handleAddReviewSubmit = (e) => {
@@ -599,7 +596,8 @@ export default function CustomerDashboard() {
         currency: profile.currency,
         language: profile.language,
         emergencyContact: profile.emergencyContact,
-        avatar: profile.avatar
+        avatar: profile.avatar,
+        googleAuth: profile.googleAuth
       };
 
       setProfile(updatedProfile);
@@ -616,6 +614,48 @@ export default function CustomerDashboard() {
       } else {
         toast.error(err.response?.data?.message || "Failed to update profile");
       }
+    }
+  };
+
+  // Manage Change Password Save
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (changePasswordForm.newPassword !== changePasswordForm.confirmNewPassword) {
+      toast.error("New passwords do not match");
+      return;
+    }
+    if (changePasswordForm.newPassword.length < 8) {
+      toast.error("New password must be at least 8 characters long");
+      return;
+    }
+    const token = sessionStorage.getItem("customerToken") || localStorage.getItem("customerToken");
+    if (!token) {
+      toast.error("Please login to change password");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/customers/change-password`, {
+        currentPassword: changePasswordForm.currentPassword,
+        newPassword: changePasswordForm.newPassword,
+        confirmNewPassword: changePasswordForm.confirmNewPassword
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setIsChangePasswordOpen(false);
+      setChangePasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmNewPassword: ""
+      });
+      toast.success("Password changed successfully.");
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to change password");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -725,13 +765,9 @@ export default function CustomerDashboard() {
         setSearchQuery={setSearchQuery}
         notifications={notifications}
         setNotifications={setNotifications}
-        isProfileDropdownOpen={isProfileDropdownOpen}
-        setIsProfileDropdownOpen={setIsProfileDropdownOpen}
         isNotifDropdownOpen={isNotifDropdownOpen}
         setIsNotifDropdownOpen={setIsNotifDropdownOpen}
         setIsMobileSidebarOpen={setIsMobileSidebarOpen}
-        showRealPII={showRealPII}
-        setShowRealPII={setShowRealPII}
         setActiveTab={setActiveTab}
         handleMarkAllRead={handleMarkAllRead}
         maskEmail={maskEmail}
@@ -751,6 +787,7 @@ export default function CustomerDashboard() {
           isEmptyState={isEmptyState}
           isMobileSidebarOpen={isMobileSidebarOpen}
           setIsMobileSidebarOpen={setIsMobileSidebarOpen}
+          setIsProfileModalOpen={setIsProfileModalOpen}
         />
 
         {/* MAIN CONTENT PANE */}
@@ -817,18 +854,6 @@ export default function CustomerDashboard() {
                 />
               )}
 
-              {activeTab === "profile" && (
-                <ProfileTab
-                  profile={profile}
-                  setEditProfileForm={setEditProfileForm}
-                  setIsEditProfileOpen={setIsEditProfileOpen}
-                  showRealPII={showRealPII}
-                  setShowRealPII={setShowRealPII}
-                  maskEmail={maskEmail}
-                  maskPhone={maskPhone}
-                />
-              )}
-
               {activeTab === "notifications" && (
                 <NotificationsTab
                   notifications={notifications}
@@ -855,8 +880,12 @@ export default function CustomerDashboard() {
           <button
             key={nav.id}
             onClick={() => {
-              setActiveTab(nav.id);
-              setSearchQuery("");
+              if (nav.id === "profile") {
+                setIsProfileModalOpen(true);
+              } else {
+                setActiveTab(nav.id);
+                setSearchQuery("");
+              }
             }}
             className={`flex flex-col items-center space-y-0.5 px-2.5 py-1.5 rounded-xl transition-all focus:outline-none ${activeTab === nav.id ? 'text-amber-400 scale-105' : 'text-blue-300/70 hover:text-white'}`}
           >
@@ -866,6 +895,31 @@ export default function CustomerDashboard() {
         ))}
       </nav>
 
+      {/* PROFILE POPUP MODAL */}
+      {isProfileModalOpen && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs" onClick={() => setIsProfileModalOpen(false)}></div>
+          <div className="bg-white rounded-[2rem] w-full max-w-4xl p-6 relative z-10 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="flex justify-between items-center pb-4 border-b border-slate-100 mb-5 shrink-0">
+              <h3 className="font-serif font-semibold text-lg text-blue-950">Luxury Guest Profile</h3>
+              <button onClick={() => setIsProfileModalOpen(false)} className="p-1 hover:bg-slate-50 rounded-lg text-slate-400 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="flex-grow overflow-y-auto pr-1">
+              <ProfileTab
+                profile={profile}
+                setEditProfileForm={setEditProfileForm}
+                setIsEditProfileOpen={setIsEditProfileOpen}
+                setIsChangePasswordOpen={setIsChangePasswordOpen}
+                maskEmail={maskEmail}
+                maskPhone={maskPhone}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* CONSOLIDATED MODALS */}
       <DashboardModals
         isEditProfileOpen={isEditProfileOpen}
@@ -873,6 +927,12 @@ export default function CustomerDashboard() {
         editProfileForm={editProfileForm}
         setEditProfileForm={setEditProfileForm}
         handleSaveProfile={handleSaveProfile}
+
+        isChangePasswordOpen={isChangePasswordOpen}
+        setIsChangePasswordOpen={setIsChangePasswordOpen}
+        changePasswordForm={changePasswordForm}
+        setChangePasswordForm={setChangePasswordForm}
+        handleChangePassword={handleChangePassword}
 
         isAddReviewOpen={isAddReviewOpen}
         setIsAddReviewOpen={setIsAddReviewOpen}

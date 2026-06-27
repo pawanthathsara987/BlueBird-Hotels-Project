@@ -8,6 +8,12 @@ export default function DashboardModals({
   setEditProfileForm,
   handleSaveProfile,
 
+  isChangePasswordOpen,
+  setIsChangePasswordOpen,
+  changePasswordForm,
+  setChangePasswordForm,
+  handleChangePassword,
+
   isAddReviewOpen,
   setIsAddReviewOpen,
   newReviewForm,
@@ -25,7 +31,7 @@ export default function DashboardModals({
       {isEditProfileOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs" onClick={() => setIsEditProfileOpen(false)}></div>
-          <div className="bg-white rounded-3xl w-full max-w-lg p-6 relative z-10 shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-[2rem] w-full max-w-lg p-6 relative z-10 shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center pb-4 border-b border-slate-100 mb-5">
               <h3 className="font-serif font-semibold text-lg text-blue-950">Modify Luxury Profile Details</h3>
               <button onClick={() => setIsEditProfileOpen(false)} className="p-1 hover:bg-slate-50 rounded-lg text-slate-400">
@@ -111,7 +117,7 @@ export default function DashboardModals({
       {isAddReviewOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs" onClick={() => setIsAddReviewOpen(false)}></div>
-          <div className="bg-white rounded-3xl w-full max-w-lg p-6 relative z-10 shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-[2rem] w-full max-w-lg p-6 relative z-10 shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center pb-4 border-b border-slate-100 mb-5">
               <h3 className="font-serif font-semibold text-lg text-blue-950">Publish Property Review</h3>
               <button onClick={() => setIsAddReviewOpen(false)} className="p-1 hover:bg-slate-50 rounded-lg text-slate-400">
@@ -185,7 +191,7 @@ export default function DashboardModals({
       {isCancelConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs" onClick={() => setIsCancelConfirmOpen(false)}></div>
-          <div className="bg-white rounded-3xl w-full max-w-sm p-6 relative z-10 shadow-2xl text-center space-y-4 animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-[2rem] w-full max-w-sm p-6 relative z-10 shadow-2xl text-center space-y-4 animate-in zoom-in-95 duration-200">
             <div className="p-3.5 bg-rose-50 rounded-full text-rose-600 w-14 h-14 flex items-center justify-center mx-auto">
               <AlertCircle size={28} />
             </div>
@@ -211,6 +217,75 @@ export default function DashboardModals({
                 Request Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* E. CHANGE PASSWORD DIALOG */}
+      {isChangePasswordOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs" onClick={() => setIsChangePasswordOpen(false)}></div>
+          <div className="bg-white rounded-[2rem] w-full max-w-md p-6 relative z-10 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center pb-4 border-b border-slate-100 mb-5">
+              <h3 className="font-serif font-semibold text-lg text-blue-950">Change Account Password</h3>
+              <button onClick={() => setIsChangePasswordOpen(false)} className="p-1 hover:bg-slate-50 rounded-lg text-slate-400">
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleChangePassword} className="space-y-4 text-xs font-sans">
+              <div className="space-y-1">
+                <label className="text-[10px] text-slate-400 font-bold uppercase">Current Password</label>
+                <input
+                  type="password"
+                  required
+                  value={changePasswordForm.currentPassword}
+                  onChange={(e) => setChangePasswordForm({ ...changePasswordForm, currentPassword: e.target.value })}
+                  placeholder="Enter current password"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 focus:bg-white focus:border-cyan-600 outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] text-slate-400 font-bold uppercase">New Password</label>
+                <input
+                  type="password"
+                  required
+                  value={changePasswordForm.newPassword}
+                  onChange={(e) => setChangePasswordForm({ ...changePasswordForm, newPassword: e.target.value })}
+                  placeholder="Enter new password (min. 8 characters)"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 focus:bg-white focus:border-cyan-600 outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] text-slate-400 font-bold uppercase">Confirm New Password</label>
+                <input
+                  type="password"
+                  required
+                  value={changePasswordForm.confirmNewPassword}
+                  onChange={(e) => setChangePasswordForm({ ...changePasswordForm, confirmNewPassword: e.target.value })}
+                  placeholder="Confirm new password"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 focus:bg-white focus:border-cyan-600 outline-none"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsChangePasswordOpen(false)}
+                  className="px-4 py-2 bg-slate-50 border border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-gradient-to-r from-blue-950 to-cyan-800 hover:from-blue-900 text-white font-semibold rounded-xl transition-all"
+                >
+                  Update Password
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
