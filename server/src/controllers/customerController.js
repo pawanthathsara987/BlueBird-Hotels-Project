@@ -8,6 +8,10 @@ import axios from "axios";
 import { response } from "express";
 dotenv.config();
 
+import sequelize from "../config/database.js";
+import { Booking, BookedRoom, Room, RoomType, AirPortPickup, VehicleBooking, Vehicle, TourInquiry, Tour, Payment, RoomPayment } from "../models/index.js";
+
+
 
 const transporter = nodemailer.createTransport(
     {
@@ -40,7 +44,7 @@ export async function registerCustomer(req, res) {
             });
         }
 
-        const hashedPassword = await bcrypt.hashSync(data.password, 10);
+        const hashedPassword = await bcrypt.hash(data.password, 10);
 
         const newCustomer = await Customer.create({
             firstName: data.firstName,
@@ -48,16 +52,22 @@ export async function registerCustomer(req, res) {
             email: data.email,
             password: hashedPassword,
             phoneNumber: data.phoneNumber,
-            country: data.country
+            country: data.country,
+            idType: data.idType,
+            idNumber: data.idNumber,
+            address: data.address
         });
 
         const userResponse = {
-            id: newCustomer.customerId,
+            id: newCustomer.id,
             firstName: newCustomer.firstName,
             lastName: newCustomer.lastName,
             email: newCustomer.email,
             phoneNumber: newCustomer.phoneNumber,
-            country: newCustomer.country
+            country: newCustomer.country,
+            idType: newCustomer.idType,
+            idNumber: newCustomer.idNumber,
+            address: newCustomer.address
         };
 
         res.status(201).json({
@@ -104,25 +114,101 @@ export async function loginCustomer(req, res) {
         }
 
         const userResponse = {
-            id: customer.customerId,
+            id: customer.id,
             firstName: customer.firstName,
             lastName: customer.lastName,
             email: customer.email,
             phoneNumber: customer.phoneNumber,
-            country: customer.country
+            country: customer.country,
+            idType: customer.idType,
+            idNumber: customer.idNumber,
+            address: customer.address,
+            googleAuth: customer.googleAuth
         };
 
-        const token = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+        const accessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "15m" });
+        const refreshToken = jwt.sign(userResponse, process.env.JWT_REFRESH_KEY, { expiresIn: "7d" });
 
-        console.log(token);
+        const isProduction = process.env.NODE_ENV === "production";
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? "strict" : "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
         res.status(200).json({
             message: "Customer logged in successfully",
-            token: token,
+            token: accessToken,
             user: userResponse
         });
 
     } catch (error) {
         console.error("Error logging in customer:", error);
+        res.status(500).json({
+            message: "Internal server error"
+        });
+    }
+}
+
+export async function refreshToken(req, res) {
+    const token = req.cookies.refreshToken;
+
+    if (!token) {
+        return res.status(401).json({ message: "Refresh token is missing" });
+    }
+
+    jwt.verify(token, process.env.JWT_REFRESH_KEY, async (err, decoded) => {
+        if (err) {
+            return res.status(403).json({ message: "Invalid or expired refresh token" });
+        }
+
+        try {
+            const customer = await Customer.findByPk(decoded.id);
+            if (!customer) {
+                return res.status(403).json({ message: "Customer not found" });
+            }
+
+            const userResponse = {
+                id: customer.id,
+                firstName: customer.firstName,
+                lastName: customer.lastName,
+                email: customer.email,
+                phoneNumber: customer.phoneNumber,
+                country: customer.country,
+                idType: customer.idType,
+                idNumber: customer.idNumber,
+                address: customer.address,
+                googleAuth: customer.googleAuth
+            };
+
+            const newAccessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "15m" });
+
+            res.status(200).json({
+                token: newAccessToken,
+                accessToken: newAccessToken,
+                user: userResponse
+            });
+        } catch (error) {
+            console.error("Refresh token error:", error);
+            res.status(500).json({ message: "Internal server error" });
+        }
+    });
+}
+
+export async function logoutCustomer(req, res) {
+    try {
+        const isProduction = process.env.NODE_ENV === "production";
+        res.clearCookie("refreshToken", {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? "strict" : "lax"
+        });
+        res.status(200).json({
+            message: "Logged out successfully"
+        });
+    } catch (error) {
+        console.error("Error logging out customer:", error);
         res.status(500).json({
             message: "Internal server error"
         });
@@ -204,9 +290,9 @@ export async function verifyOTPAndResetPassword(req, res) {
 
 export async function googleLogin(req, res) {
 
-    const accessToken = req.body.token;
+    const googleToken = req.body.token;
 
-    if (!accessToken) {
+    if (!googleToken) {
         return res.status(400).json({
             message: "Access token is required"
         });
@@ -218,7 +304,7 @@ export async function googleLogin(req, res) {
             "https://www.googleapis.com/oauth2/v3/userinfo",
             {
                 headers: {
-                    Authorization: `Bearer ${accessToken}`
+                    Authorization: `Bearer ${googleToken}`
                 }
             }
         );
@@ -244,40 +330,387 @@ export async function googleLogin(req, res) {
             });
         }
 
-        if (user == null) {
+        let activeUser = user;
 
-            const newCustomer = await Customer.create({
+        if (activeUser == null) {
+            activeUser = await Customer.create({
                 firstName: response.data.given_name,
                 lastName: response.data.family_name,
                 email: response.data.email,
                 googleAuth: true
             });
-
-            return res.json({
-                message: "Created"
-            });
         }
-        
+
         const userResponse = {
-            id: user.customerId,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            phoneNumber: user.phoneNumber,
-            country: user.country
+            id: activeUser.id,
+            firstName: activeUser.firstName,
+            lastName: activeUser.lastName,
+            email: activeUser.email,
+            phoneNumber: activeUser.phoneNumber,
+            country: activeUser.country,
+            idType: activeUser.idType,
+            idNumber: activeUser.idNumber,
+            address: activeUser.address,
+            googleAuth: activeUser.googleAuth
         };
 
-        const token = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+        const accessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "15m" });
+        const refreshToken = jwt.sign(userResponse, process.env.JWT_REFRESH_KEY, { expiresIn: "7d" });
+
+        const isProduction = process.env.NODE_ENV === "production";
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? "strict" : "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
 
         return res.status(200).json({
             message: "Customer logged in successfully",
-            token: token,
+            token: accessToken,
             user: userResponse
         });
 
     } catch (error) {
+        console.error("Google login error:", error);
         return res.status(500).json({
             message: "Google auth failed"
         });
     }
 }
+
+export async function updateCustomerProfile(req, res) {
+    try {
+        const customerId = req.user.id;
+        const { firstName, lastName, phoneNumber, country, idType, idNumber, address } = req.body;
+
+        const customer = await Customer.findByPk(customerId);
+        if (!customer) {
+            return res.status(404).json({
+                message: "Customer not found"
+            });
+        }
+
+        if (firstName !== undefined) customer.firstName = firstName;
+        if (lastName !== undefined) customer.lastName = lastName;
+        if (phoneNumber !== undefined) customer.phoneNumber = phoneNumber;
+        if (country !== undefined) customer.country = country;
+        if (idType !== undefined) customer.idType = idType;
+        if (idNumber !== undefined) customer.idNumber = idNumber;
+        if (address !== undefined) customer.address = address;
+
+        await customer.save();
+
+        const userResponse = {
+            id: customer.id,
+            firstName: customer.firstName,
+            lastName: customer.lastName,
+            email: customer.email,
+            phoneNumber: customer.phoneNumber,
+            country: customer.country,
+            idType: customer.idType,
+            idNumber: customer.idNumber,
+            address: customer.address,
+            googleAuth: customer.googleAuth
+        };
+
+        const accessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "15m" });
+        const refreshToken = jwt.sign(userResponse, process.env.JWT_REFRESH_KEY, { expiresIn: "7d" });
+
+        const isProduction = process.env.NODE_ENV === "production";
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? "strict" : "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        res.status(200).json({
+            message: "Profile updated successfully",
+            token: accessToken,
+            user: userResponse
+        });
+
+    } catch (error) {
+        console.error("Error updating customer profile:", error);
+        res.status(500).json({
+            message: "Internal server error"
+        });
+    }
+}
+
+export async function getCustomerProfile(req, res) {
+    try {
+        const customerId = req.user.id;
+        const customer = await Customer.findByPk(customerId);
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found" });
+        }
+        res.status(200).json({ success: true, data: customer });
+    } catch (error) {
+        console.error("Error fetching customer profile:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export async function getCustomerBookings(req, res) {
+    try {
+        const customerId = req.user.id;
+        const bookings = await Booking.findAll({
+            where: { customer_id: customerId },
+            include: [
+                {
+                    model: BookedRoom,
+                    as: "bookedRooms",
+                    include: [
+                        {
+                            model: Room,
+                            as: undefined,
+                            attributes: ["id", "room_number", "floor", "status", "room_type_id"],
+                            include: [
+                                {
+                                    model: RoomType,
+                                    as: "roomType",
+                                    attributes: ["id", "type", "image_url"]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    model: RoomPayment,
+                    as: "payments",
+                    attributes: ["id", "amount", "status", "method"],
+                    required: false
+                }
+            ],
+            order: [["createdAt", "DESC"]]
+        });
+
+        const airportPickups = await AirPortPickup.findAll({
+            where: { customer_id: customerId }
+        });
+
+        res.status(200).json({
+            success: true,
+            data: bookings,
+            airportPickups
+        });
+    } catch (error) {
+        console.error("Error fetching customer bookings:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export async function getCustomerRentals(req, res) {
+    try {
+        const customerId = req.user.id;
+        const rentals = await VehicleBooking.findAll({
+            where: { customerId: customerId },
+            include: [
+                {
+                    model: Vehicle,
+                    as: "vehicle"
+                }
+            ],
+            order: [["createdAt", "DESC"]]
+        });
+        res.status(200).json({ success: true, data: rentals });
+    } catch (error) {
+        console.error("Error fetching customer rentals:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export async function getCustomerTours(req, res) {
+    try {
+        const customerId = req.user.id;
+        const customer = await Customer.findByPk(customerId);
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found" });
+        }
+
+        const inquiries = await TourInquiry.findAll({
+            where: { email: customer.email },
+            include: [
+                {
+                    model: Tour,
+                    attributes: ["packageName", "location", "price", "image"]
+                }
+            ],
+            order: [["createdAt", "DESC"]]
+        });
+
+        res.status(200).json({ success: true, data: inquiries });
+    } catch (error) {
+        console.error("Error fetching customer tours:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export async function getCustomerPayments(req, res) {
+    try {
+        const customerId = req.user.id;
+
+        const roomPayments = await RoomPayment.findAll({
+            where: { customer_id: customerId },
+            order: [["createdAt", "DESC"]]
+        });
+
+        const vehiclePayments = await Payment.findAll({
+            include: [
+                {
+                    model: VehicleBooking,
+                    as: "booking",
+                    where: { customerId: customerId },
+                    attributes: ["bookingNo"]
+                }
+            ],
+            order: [["createdAt", "DESC"]]
+        });
+
+        const mappedRoomPayments = roomPayments.map(p => ({
+            id: `PAY-RM-${p.id}`,
+            refNo: p.payment_no || `RM-${p.id}`,
+            date: p.createdAt,
+            category: "Room Booking",
+            description: `Room Booking Payment`,
+            bookingRef: `#${p.booking_id}`,
+            method: p.method || "online",
+            currency: p.currency || "LKR",
+            amount: parseFloat(p.amount),
+            isRefund: false,
+            status: p.status === "success" ? "Succeeded" : p.status === "pending" ? "Pending" : "Failed"
+        }));
+
+        const mappedVehiclePayments = vehiclePayments.map(p => ({
+            id: `PAY-VH-${p.id}`,
+            refNo: p.receiptNo || p.gatewayRef || `VH-${p.id}`,
+            date: p.createdAt,
+            category: "Vehicle Rental",
+            description: `Vehicle Rental – ${p.type.charAt(0).toUpperCase() + p.type.slice(1)}`,
+            bookingRef: `#${p.booking?.bookingNo || p.bookingId}`,
+            method: p.method || "online",
+            currency: "LKR",
+            amount: parseFloat(p.amount),
+            isRefund: p.type === "refund",
+            notes: p.notes || null,
+            status: p.type === "refund" ? "Refunded" : "Succeeded"
+        }));
+
+        const allPayments = [...mappedRoomPayments, ...mappedVehiclePayments].sort(
+            (a, b) => new Date(b.date) - new Date(a.date)
+        );
+
+        // Compute summary totals
+        const totalPaid = allPayments
+            .filter(p => p.status === "Succeeded" && !p.isRefund)
+            .reduce((sum, p) => sum + p.amount, 0);
+        const totalRefunded = allPayments
+            .filter(p => p.status === "Refunded" || p.isRefund)
+            .reduce((sum, p) => sum + p.amount, 0);
+        const totalPending = allPayments
+            .filter(p => p.status === "Pending")
+            .reduce((sum, p) => sum + p.amount, 0);
+
+        res.status(200).json({
+            success: true,
+            data: allPayments,
+            summary: {
+                totalPaid: parseFloat(totalPaid.toFixed(2)),
+                totalRefunded: parseFloat(totalRefunded.toFixed(2)),
+                totalPending: parseFloat(totalPending.toFixed(2)),
+                totalTransactions: allPayments.length
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching customer payments:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+
+export async function cancelCustomerBooking(req, res) {
+    const t = await sequelize.transaction();
+    try {
+        const { id } = req.params;
+        const customerId = req.user.id;
+
+        const booking = await Booking.findOne({
+            where: { id, customer_id: customerId },
+            transaction: t
+        });
+
+        if (!booking) {
+            await t.rollback();
+            return res.status(404).json({ message: "Booking not found or not authorized to cancel" });
+        }
+
+        if (booking.status === "cancelled" || booking.status === "completed") {
+            await t.rollback();
+            return res.status(400).json({ message: `Cannot cancel a booking that is already ${booking.status}` });
+        }
+
+        await booking.update({ status: "cancelled" }, { transaction: t });
+
+        await BookedRoom.update(
+            { status: "cancelled" },
+            {
+                where: { booking_id: id },
+                transaction: t
+            }
+        );
+
+        await RoomPayment.update(
+            { status: "failed" },
+            {
+                where: { booking_id: id, status: "pending" },
+                transaction: t
+            }
+        );
+
+        await t.commit();
+        res.status(200).json({ success: true, message: "Booking cancelled successfully" });
+    } catch (error) {
+        await t.rollback();
+        console.error("Error cancelling booking:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export async function cancelCustomerRental(req, res) {
+    const t = await sequelize.transaction();
+    try {
+        const { id } = req.params;
+        const customerId = req.user.id;
+
+        const rental = await VehicleBooking.findOne({
+            where: { id, customerId: customerId },
+            transaction: t
+        });
+
+        if (!rental) {
+            await t.rollback();
+            return res.status(404).json({ message: "Rental booking not found or not authorized to cancel" });
+        }
+
+        if (rental.status === "cancelled" || rental.status === "completed" || rental.status === "ongoing" || rental.status === "returned") {
+            await t.rollback();
+            return res.status(400).json({ message: `Cannot cancel a rental that is in status ${rental.status}` });
+        }
+
+        await rental.update({
+            status: "cancelled",
+            cancelledBy: customerId,
+            cancelledAt: new Date(),
+            cancellationReason: "Cancelled by customer via dashboard"
+        }, { transaction: t });
+
+        await t.commit();
+        res.status(200).json({ success: true, message: "Rental booking cancelled successfully" });
+    } catch (error) {
+        await t.rollback();
+        console.error("Error cancelling rental booking:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}

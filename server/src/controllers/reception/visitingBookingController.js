@@ -1,6 +1,6 @@
 import { col, fn, Op, QueryTypes } from "sequelize";
 import sequelize from "../../config/database.js";
-import { Customer, Room, BookedRoom, RoomPackage, Reservation } from "../../models/index.js";
+import { Customer, Room, BookedRoom, Reservation, RoomPayment } from "../../models/index.js";
 
 
 // available room list with packages
@@ -314,6 +314,52 @@ const updateBooking = async (req, res) => {
         if (!reservation) throw new Error("Reservation not found");
 
         await reservation.update({ status, total_price }, { transaction: t });
+
+        // Update associated BookedRooms and RoomPayments depending on new status
+        if (status) {
+            let bookedRoomStatus;
+            let roomPaymentStatus;
+
+            if (status === "cancelled") {
+                bookedRoomStatus = "cancelled";
+                roomPaymentStatus = "failed";
+            } else if (status === "confirmed") {
+                bookedRoomStatus = "reserved";
+                roomPaymentStatus = "success";
+            } else if (status === "completed") {
+                bookedRoomStatus = "checked_out";
+                roomPaymentStatus = "success";
+            }
+
+            if (bookedRoomStatus) {
+                await BookedRoom.update(
+                    { status: bookedRoomStatus },
+                    {
+                        where: {
+                            [Op.or]: [
+                                { booking_id: id },
+                                { reservation_id: id }
+                            ]
+                        },
+                        transaction: t
+                    }
+                );
+            }
+
+            if (roomPaymentStatus) {
+                // Update pending payments to the resolved status
+                await RoomPayment.update(
+                    { status: roomPaymentStatus },
+                    {
+                        where: {
+                            booking_id: id,
+                            status: "pending"
+                        },
+                        transaction: t
+                    }
+                );
+            }
+        }
 
         await t.commit();
         return res.status(200).json({ success: true, message: "Updated" });

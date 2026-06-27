@@ -16,13 +16,11 @@ DeletedStaffMember.init(
         },
         userName: {
             type: DataTypes.STRING(50),
-            allowNull: false,
-            unique: true
+            allowNull: false
         },
         email: {
             type: DataTypes.STRING(255),
             allowNull: false,
-            unique: true,
             validate: {
                 isEmail: true
             }

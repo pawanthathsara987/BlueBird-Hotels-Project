@@ -1,6 +1,7 @@
 import { FaFacebookF, FaTiktok, FaInstagram } from "react-icons/fa";
 import { MdLocationOn, MdPhone, MdEmail } from "react-icons/md";
 import { SiViber, SiWhatsapp } from "react-icons/si";
+import { Link } from "react-router-dom";
 
 function Footer() {
     return (
@@ -80,9 +81,14 @@ function Footer() {
 
             
             <div className="border-t border-white/10 mt-4">
-                <p className="text-center text-[12px] text-gray-500 py-5">
-                    &copy; {new Date().getFullYear()} Blue Bird Hotels. All rights reserved.
-                </p>
+                <div className="max-w-7xl mx-auto py-5 px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left text-[12px] text-gray-500 font-sans">
+                    <p>&copy; {new Date().getFullYear()} Blue Bird Hotels. All rights reserved.</p>
+                    <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center font-medium">
+                        <Link to="/terms" className="hover:text-blue-400 transition-colors">Terms &amp; Conditions</Link>
+                        <Link to="/privacy-policy" className="hover:text-blue-400 transition-colors">Privacy Policy</Link>
+                        <Link to="/return-policy" className="hover:text-blue-400 transition-colors">Return Policy</Link>
+                    </div>
+                </div>
             </div>
         </footer>
     );

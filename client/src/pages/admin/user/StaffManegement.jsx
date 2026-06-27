@@ -1,21 +1,21 @@
 import { useState, useEffect } from "react";
-import { FaEdit, FaTrash } from "react-icons/fa";
+import { FaEdit, FaTrash, FaEye, FaPlus, FaHistory, FaUser } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
 import DeleteStaffModal from "../../../components/DeleteStaffModal";
+import StaffDetailsModal from "../../../components/StaffDetailsModal";
 import Loader from "../../../components/Loader";
 
 export default function StaffManagement() {
-
     const [staffMembers, setStaffMembers] = useState([]);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [showDetailsModal, setShowDetailsModal] = useState(false);
     const [selectedMember, setSelectedMember] = useState(null);
     const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const navigate = useNavigate();
-
 
     // Function to load staff members, with search term
     const loadStaffMembers = async () => {
@@ -52,7 +52,6 @@ export default function StaffManagement() {
         if (isDeleting) {
             return;
         }
-
         setShowDeleteModal(false);
         setSelectedMember(null);
     };
@@ -78,132 +77,230 @@ export default function StaffManagement() {
         }
     };
 
+    // Handlers for details popup view
+    const onDetailsClick = (member) => {
+        setSelectedMember(member);
+        setShowDetailsModal(true);
+    };
+
+    const onCloseDetails = () => {
+        setShowDetailsModal(false);
+        setSelectedMember(null);
+    };
+
     return (
         <>
-            <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 lg:px-8">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <h1 className="text-2xl font-bold">Staff Management</h1>
-                    <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+                {/* Header Section */}
+                <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between mb-8">
+                    <div>
+                        <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">Staff Directory</h1>
+                        <p className="text-sm text-slate-500 mt-1">Manage and view details of your system administrators and support staff.</p>
+                    </div>
+                    <div className="flex flex-col gap-3 sm:flex-row">
                         <Link
                             to="/admin/users/viewDeletedStaff"
-                            className="w-full rounded-lg bg-gray-500 p-3 text-center text-white md:w-50"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-5 py-3 transition-all duration-250 shadow-sm"
                         >
-                            View Deleted Staff
+                            <FaHistory className="text-sm" /> View Deleted Staff
                         </Link>
                         <Link
                             to="/admin/users/addStaffMember"
-                            className="w-full rounded-lg bg-blue-500 p-3 text-center text-white md:w-50"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3 transition-all duration-250 shadow-md hover:shadow-lg active:scale-98"
                         >
-                            + Add Staff
+                            <FaPlus className="text-sm" /> Add Staff Member
                         </Link>
                     </div>
-
                 </div>
 
-                <div className="mt-4 rounded-lg bg-white p-4 shadow-2xl">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <h3 className="text-lg font-semibold">Staff Members</h3>
-                        <input
-                            type="search"
-                            placeholder="Search staff..."
-                            className="w-full rounded-lg border p-2 sm:max-w-xs"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+                {/* Table Container Card */}
+                <div className="rounded-3xl bg-white p-6 shadow-xl border border-slate-100/80">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-5 mb-6">
+                        <div>
+                            <h3 className="text-xl font-bold text-slate-800">Active Staff Members</h3>
+                            <p className="text-xs text-slate-400 mt-0.5">Showing {staffMembers.length} records in total</p>
+                        </div>
+                        <div className="relative w-full sm:max-w-xs">
+                            <input
+                                type="search"
+                                placeholder="Search staff by name, email..."
+                                className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-3 pl-4 pr-10 text-sm focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:outline-none transition-all duration-200"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
                     </div>
 
                     <div className="mt-4">
                         {loading ? (
-                            <Loader />
+                            <div className="py-20">
+                                <Loader />
+                            </div>
                         ) : (
                             <>
+                                {/* Desktop Table */}
                                 <div className="hidden overflow-x-auto md:block">
                                     <table className="w-full border-collapse">
-                                        <thead className="border-b bg-gray-100">
-                                            <tr>
-                                                <th className="p-4 text-left text-sm font-semibold text-gray-400">STAFF MEMBER</th>
-                                                <th className="p-4 text-left text-sm font-semibold text-gray-400">USERNAME</th>
-                                                <th className="p-4 text-left text-sm font-semibold text-gray-400">EMAIL</th>
-                                                <th className="p-4 text-left text-sm font-semibold text-gray-400">ROLE</th>
-                                                <th className="p-4 text-left text-sm font-semibold text-gray-400">PHONE</th>
-                                                <th className="p-4 text-left text-sm font-semibold text-gray-400">NIC NUMBER</th>
-                                                <th className="p-4 text-left text-sm font-semibold text-gray-400">ADDRESS</th>
-                                                <th className="p-4 text-left text-sm font-semibold text-gray-400">ACTIONS</th>
+                                        <thead>
+                                            <tr className="border-b border-slate-100">
+                                                <th className="pb-4 pt-2 text-left text-xs font-bold uppercase tracking-wider text-slate-400">STAFF MEMBER</th>
+                                                <th className="pb-4 pt-2 text-left text-xs font-bold uppercase tracking-wider text-slate-400">USERNAME</th>
+                                                <th className="pb-4 pt-2 text-left text-xs font-bold uppercase tracking-wider text-slate-400">ROLE</th>
+                                                <th className="pb-4 pt-2 text-left text-xs font-bold uppercase tracking-wider text-slate-400">PHONE</th>
+                                                <th className="pb-4 pt-2 text-center text-xs font-bold uppercase tracking-wider text-slate-400">ACTIONS</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
-                                            {staffMembers.map((member, index) => (
-                                                <tr key={index}>
-                                                    <td className="border-b p-4">{member.name}</td>
-                                                    <td className="border-b p-4">{member.userName}</td>
-                                                    <td className="border-b p-4">{member.email}</td>
-                                                    <td className="border-b p-4">{member.Role?.roleName}</td>
-                                                    <td className="border-b p-4">{member.phoneNumber}</td>
-                                                    <td className="border-b p-4">{member.nicNumber || "-"}</td>
-                                                    <td className="border-b p-4">{member.address || "-"}</td>
-                                                    <td className="border-b p-4">
-                                                        <div className="flex flex-wrap gap-2">
+                                        <tbody className="divide-y divide-slate-50">
+                                            {staffMembers.length > 0 ? (
+                                                staffMembers.map((member, index) => (
+                                                    <tr key={index} className="hover:bg-slate-50/70 transition-colors duration-150">
+                                                        {/* Avatar and Name */}
+                                                        <td className="py-4.5 pr-4">
+                                                            <div className="flex items-center gap-3">
+                                                                {member.imageUrl ? (
+                                                                    <img
+                                                                        src={member.imageUrl}
+                                                                        alt={member.name}
+                                                                        className="w-10 h-10 rounded-xl object-cover ring-2 ring-slate-100"
+                                                                    />
+                                                                ) : (
+                                                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-slate-100 to-slate-200 flex items-center justify-center text-slate-500 font-semibold ring-2 ring-slate-100">
+                                                                        {member.name ? member.name.charAt(0).toUpperCase() : <FaUser className="text-xs" />}
+                                                                    </div>
+                                                                )}
+                                                                <div>
+                                                                    <p className="text-sm font-semibold text-slate-800 leading-none">{member.name}</p>
+                                                                    <p className="text-xs text-slate-400 mt-1">{member.email}</p>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-4.5 text-sm font-medium text-slate-600">
+                                                            @{member.userName}
+                                                        </td>
+                                                        <td className="py-4.5">
+                                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold tracking-wide capitalize ${
+                                                                member.Role?.roleName === 'admin' 
+                                                                    ? 'bg-red-50 text-red-600' 
+                                                                    : member.Role?.roleName === 'manager' 
+                                                                        ? 'bg-amber-50 text-amber-600' 
+                                                                        : 'bg-blue-50 text-blue-600'
+                                                            }`}>
+                                                                {member.Role?.roleName || "Staff"}
+                                                            </span>
+                                                        </td>
+                                                        <td className="py-4.5 text-sm font-medium text-slate-500">
+                                                            {member.phoneNumber}
+                                                        </td>
+                                                        <td className="py-4.5">
+                                                            <div className="flex items-center justify-center gap-2">
+                                                                <button
+                                                                    onClick={() => onDetailsClick(member)}
+                                                                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3 py-2 text-xs transition-all duration-200 active:scale-95 cursor-pointer"
+                                                                    title="View Details"
+                                                                >
+                                                                    <FaEye className="text-sm" /> Details
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        navigate("/admin/users/updateStaffMember", { state: { member } });
+                                                                    }}
+                                                                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-600 font-semibold px-3 py-2 text-xs transition-all duration-200 active:scale-95 cursor-pointer"
+                                                                    title="Edit Staff Member"
+                                                                >
+                                                                    <FaEdit className="text-sm" /> Edit
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => onDeleteClick(member)}
+                                                                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold px-3 py-2 text-xs transition-all duration-200 active:scale-95 cursor-pointer"
+                                                                    title="Delete Staff Member"
+                                                                >
+                                                                    <FaTrash className="text-sm" /> Delete
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            ) : (
+                                                <tr>
+                                                    <td colSpan="5" className="py-12 text-center text-sm text-slate-400">
+                                                        No staff members found.
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Mobile Layout (Cards) */}
+                                <div className="space-y-4 md:hidden">
+                                    {staffMembers.length > 0 ? (
+                                        staffMembers.map((member, index) => (
+                                            <div key={index} className="rounded-2xl border border-slate-100 bg-slate-50/50 p-5 shadow-sm hover:shadow-md transition-all duration-200">
+                                                <div className="flex flex-col gap-4">
+                                                    <div className="flex items-center gap-3">
+                                                        {member.imageUrl ? (
+                                                            <img
+                                                                src={member.imageUrl}
+                                                                alt={member.name}
+                                                                className="w-12 h-12 rounded-xl object-cover shadow-sm"
+                                                            />
+                                                        ) : (
+                                                            <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-slate-100 to-slate-200 flex items-center justify-center text-slate-500 font-semibold text-lg">
+                                                                {member.name ? member.name.charAt(0).toUpperCase() : <FaUser className="text-sm" />}
+                                                            </div>
+                                                        )}
+                                                        <div>
+                                                            <p className="text-base font-bold text-slate-800 leading-tight">{member.name}</p>
+                                                            <p className="text-xs text-slate-400 mt-0.5">@{member.userName}</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-2 gap-2 text-xs border-t border-b border-slate-100/80 py-3">
+                                                        <div>
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Role</p>
+                                                            <span className={`inline-block font-semibold mt-1 px-2 py-0.5 rounded-full capitalize text-[10px] ${
+                                                                member.Role?.roleName === 'admin' 
+                                                                    ? 'bg-red-50 text-red-600' 
+                                                                    : 'bg-blue-50 text-blue-600'
+                                                            }`}>
+                                                                {member.Role?.roleName || "Staff"}
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phone</p>
+                                                            <p className="font-semibold text-slate-700 mt-1">{member.phoneNumber}</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex flex-col gap-2 sm:flex-row">
+                                                        <button
+                                                            onClick={() => onDetailsClick(member)}
+                                                            className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 text-xs transition-all duration-200 active:scale-98"
+                                                        >
+                                                            <FaEye /> Details
+                                                        </button>
+                                                        <div className="flex gap-2 w-full">
                                                             <button
                                                                 onClick={() => {
                                                                     navigate("/admin/users/updateStaffMember", { state: { member } });
                                                                 }}
-                                                                className="flex items-center gap-1 rounded-lg bg-blue-500 px-3 py-2 text-white"
+                                                                className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-600 font-semibold px-4 py-2.5 text-xs transition-all duration-200 active:scale-98"
                                                             >
                                                                 <FaEdit /> Edit
                                                             </button>
                                                             <button
                                                                 onClick={() => onDeleteClick(member)}
-                                                                className="flex items-center gap-1 rounded-lg bg-red-500 px-3 py-2 text-white"
+                                                                className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold px-4 py-2.5 text-xs transition-all duration-200 active:scale-98"
                                                             >
                                                                 <FaTrash /> Delete
                                                             </button>
                                                         </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                <div className="space-y-3 md:hidden">
-                                    {staffMembers.length > 0 ? (
-                                        staffMembers.map((member, index) => (
-                                            <div key={index} className="rounded-lg border bg-gray-50 p-4 shadow-sm">
-                                                <div className="flex flex-col gap-3">
-                                                    <div>
-                                                        <p className="text-base font-semibold text-gray-900">{member.name}</p>
-                                                        <p className="text-sm text-gray-500">{member.userName}</p>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1 gap-2 text-sm text-gray-700 sm:grid-cols-2">
-                                                        <p><span className="font-semibold">Email:</span> {member.email}</p>
-                                                        <p><span className="font-semibold">Role:</span> {member.Role?.roleName}</p>
-                                                        <p><span className="font-semibold">Phone:</span> {member.phoneNumber}</p>
-                                                        <p><span className="font-semibold">NIC:</span> {member.nicNumber || "-"}</p>
-                                                        <p className="sm:col-span-2"><span className="font-semibold">Address:</span> {member.address || "-"}</p>
-                                                    </div>
-
-                                                    <div className="flex flex-col gap-2 sm:flex-row">
-                                                        <button
-                                                            onClick={() => {
-                                                                navigate("/admin/users/updateStaffMember", { state: { member } });
-                                                            }}
-                                                            className="flex w-full items-center justify-center gap-1 rounded-lg bg-blue-500 px-3 py-2 text-white"
-                                                        >
-                                                            <FaEdit /> Edit
-                                                        </button>
-                                                        <button
-                                                            onClick={() => onDeleteClick(member)}
-                                                            className="flex w-full items-center justify-center gap-1 rounded-lg bg-red-500 px-3 py-2 text-white"
-                                                        >
-                                                            <FaTrash /> Delete
-                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
                                         ))
                                     ) : (
-                                        <p className="rounded-lg border border-dashed p-6 text-center text-sm text-gray-500">
+                                        <p className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-400">
                                             No staff members found.
                                         </p>
                                     )}
@@ -214,12 +311,19 @@ export default function StaffManagement() {
                 </div>
             </div>
 
+            {/* Popups & Modals */}
             <DeleteStaffModal
                 isOpen={showDeleteModal}
                 member={selectedMember}
                 onCancel={onCancelDelete}
                 onConfirm={onConfirmDelete}
                 isDeleting={isDeleting}
+            />
+
+            <StaffDetailsModal
+                isOpen={showDetailsModal}
+                member={selectedMember}
+                onClose={onCloseDetails}
             />
         </>
     );

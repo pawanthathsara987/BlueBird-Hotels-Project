@@ -60,11 +60,7 @@ Vehicle.init(
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
     },
-    // ✅ ADD: driver fee charged on top for "with driver" bookings
-    driverPricePerDay: {
-      type: DataTypes.DECIMAL(10, 2),
-      allowNull: true,       // null = vehicle cannot be hired with driver
-    },
+
 
     // ── Compliance ──────────────────────────────
     // ✅ ADD: needed for Manager expiry alerts (30-day warning)
@@ -82,12 +78,11 @@ Vehicle.init(
     },
 
     // ── Status ──────────────────────────────────
-    // ✅ CHANGE: added 'booked', dropped 'unavailable'
-    //    'booked'      → auto-managed: vehicle has active customer booking
-    //    'maintenance' → Manager manually sets when vehicle is being serviced
+    //    'available'   → auto-managed: vehicle is active in the fleet and ready for booking
+    //    'maintenance' → Manager manually sets when vehicle is being serviced (blocked for all dates)
     //    'retired'     → soft-delete; hidden from all views
     status: {
-      type: DataTypes.ENUM('available', 'booked', 'maintenance', 'retired'),
+      type: DataTypes.ENUM('available', 'maintenance', 'retired'),
       allowNull: false,
       defaultValue: 'available',
     },
