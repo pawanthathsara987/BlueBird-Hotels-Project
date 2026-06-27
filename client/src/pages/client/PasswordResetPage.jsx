@@ -3,7 +3,7 @@ import toast from "react-hot-toast";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Logo from "../../assets/bluebird logo.png";
-import { FaEnvelope, FaLock, FaEye, FaEyeSlash, FaKey } from "react-icons/fa";
+import { FaEnvelope, FaLock, FaEye, FaEyeSlash, FaKey, FaArrowLeft } from "react-icons/fa";
 
 // Import local background assets from slider Images folder
 import bgFront from "../../assets/slider Images/front-2048x1014.jpg";
@@ -103,18 +103,17 @@ function CustomerPasswordResetPage() {
 
     return (
         <div className="w-full min-h-screen relative flex items-center justify-center font-sans overflow-hidden bg-slate-950 p-4">
-            
+
             {/* 1. Cinematic Slideshow Background (Full Screen) */}
             <div className="absolute inset-0 z-0">
                 {sliderImages.map((image, index) => (
                     <div
                         key={index}
                         style={{ backgroundImage: `url(${image})` }}
-                        className={`absolute inset-0 bg-cover bg-center transition-all duration-[2000ms] ease-in-out ${
-                            index === currentImageIndex 
-                                ? "opacity-40 scale-100" 
+                        className={`absolute inset-0 bg-cover bg-center transition-all duration-[2000ms] ease-in-out ${index === currentImageIndex
+                                ? "opacity-40 scale-100"
                                 : "opacity-0 scale-105"
-                        }`}
+                            }`}
                     />
                 ))}
                 {/* Immersive overlay gradients for visual depth */}
@@ -126,16 +125,44 @@ function CustomerPasswordResetPage() {
             <div className="absolute z-10 w-96 h-96 rounded-full bg-gradient-to-tr from-blue-500 to-amber-500 blur-3xl opacity-15 animate-pulse" />
 
             {/* 3. Floating Glassmorphic Reset Card */}
-            <div className="relative z-20 w-full max-w-[460px] bg-slate-900/40 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-[0_30px_70px_rgba(0,0,0,0.6)] p-8 md:p-10 flex flex-col items-center">
-                
+            <div className="relative z-20 w-full max-w-[460px] bg-slate-900/40 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-[0_30px_70px_rgba(0,0,0,0.6)] p-8 md:p-10 pt-16 md:pt-16 flex flex-col items-center">
+
+                {/* Back Button to Previous Page */}
+                <button
+                    type="button"
+                    onClick={() => navigate(-1)}
+                    className="absolute left-6 top-6 flex items-center justify-center gap-2 text-xs font-semibold text-slate-400 hover:text-white bg-white/5 border border-white/10 hover:bg-white/10 px-3.5 py-1.5 rounded-xl transition-all duration-200 cursor-pointer hover:-translate-x-0.5"
+                    title="Go to previous page"
+                >
+                    <FaArrowLeft className="text-[10px]" />
+                    <span>Back</span>
+                </button>
+
                 {/* Elegant Brand Header */}
-                <div className="flex flex-col items-center gap-3.5 mb-8 text-center">
+                <div className="flex flex-col items-center gap-3 mb-6 text-center">
                     <div className="bg-white/10 p-3 rounded-2xl border border-white/10 shadow-inner backdrop-blur-md">
-                        <img src={Logo} alt="BlueBird Logo" className="w-14 h-14 object-contain" />
+                        <img src={Logo} alt="BlueBird Logo" className="w-12 h-12 object-contain" />
                     </div>
                     <div className="space-y-1">
-                        <h1 className="text-2xl font-extrabold text-white tracking-wider uppercase">BlueBird</h1>
-                        <p className="text-[10px] text-amber-400 font-bold uppercase tracking-[0.25em]">Hotels & Resorts</p>
+                        <h1 className="text-xl font-extrabold text-white tracking-wider uppercase">BlueBird</h1>
+                        <p className="text-[9px] text-amber-400 font-bold uppercase tracking-[0.25em]">Hotels & Resorts</p>
+                    </div>
+                </div>
+
+                {/* Visual Step Indicator */}
+                <div className="flex items-center justify-center gap-3 w-full mb-6 border-b border-white/5 pb-5">
+                    <div className="flex items-center gap-2">
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-300 ${!otpSent ? "bg-amber-500 text-slate-950 shadow-[0_0_10px_rgba(245,158,11,0.5)]" : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"}`}>
+                            1
+                        </div>
+                        <span className={`text-[9px] uppercase tracking-wider font-bold ${!otpSent ? "text-amber-400" : "text-emerald-400"}`}>Verify Email</span>
+                    </div>
+                    <div className="w-6 h-[1px] bg-white/10" />
+                    <div className="flex items-center gap-2">
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-300 ${otpSent ? "bg-amber-500 text-slate-950 shadow-[0_0_10px_rgba(245,158,11,0.5)]" : "bg-white/5 text-slate-500 border border-white/5"}`}>
+                            2
+                        </div>
+                        <span className={`text-[9px] uppercase tracking-wider font-bold ${otpSent ? "text-amber-400" : "text-slate-500"}`}>Reset Password</span>
                     </div>
                 </div>
 
@@ -190,23 +217,41 @@ function CustomerPasswordResetPage() {
                         </div>
 
                         {/* Password strength guidelines */}
-                        <div className="w-full bg-white/5 p-3.5 rounded-2xl border border-white/5 text-[10px] tracking-wide mb-6">
-                            <p className="text-slate-400 font-bold uppercase tracking-wider mb-2 text-[9px]">Password Guidelines</p>
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-                                <div className={`flex items-center gap-1.5 ${/[A-Z]/.test(newPassword) ? "text-emerald-400" : "text-slate-400"}`}>
-                                    <span className="text-[20px] leading-none">•</span> One uppercase letter
+                        <div className="w-full bg-white/5 p-4 rounded-2xl border border-white/10 text-[11px] tracking-wide mb-6">
+                            <p className="text-slate-400 font-bold uppercase tracking-wider mb-2.5 text-[9px]">Password Requirements</p>
+                            <div className="space-y-2">
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] font-extrabold ${/[A-Z]/.test(newPassword) ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-slate-500"}`}>
+                                            {/[A-Z]/.test(newPassword) ? "✓" : "○"}
+                                        </div>
+                                        <span className={/[A-Z]/.test(newPassword) ? "text-emerald-400 font-medium text-[10px]" : "text-slate-400 text-[10px]"}>1 Uppercase</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] font-extrabold ${/[a-z]/.test(newPassword) ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-slate-500"}`}>
+                                            {/[a-z]/.test(newPassword) ? "✓" : "○"}
+                                        </div>
+                                        <span className={/[a-z]/.test(newPassword) ? "text-emerald-400 font-medium text-[10px]" : "text-slate-400 text-[10px]"}>1 Lowercase</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] font-extrabold ${/\d/.test(newPassword) ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-slate-500"}`}>
+                                            {/\d/.test(newPassword) ? "✓" : "○"}
+                                        </div>
+                                        <span className={/\d/.test(newPassword) ? "text-emerald-400 font-medium text-[10px]" : "text-slate-400 text-[10px]"}>1 Number</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] font-extrabold ${/[@$!%*?&]/.test(newPassword) ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-slate-500"}`}>
+                                            {/[@$!%*?&]/.test(newPassword) ? "✓" : "○"}
+                                        </div>
+                                        <span className={/[@$!%*?&]/.test(newPassword) ? "text-emerald-400 font-medium text-[10px]" : "text-slate-400 text-[10px]"}>1 Special Char</span>
+                                    </div>
                                 </div>
-                                <div className={`flex items-center gap-1.5 ${/[a-z]/.test(newPassword) ? "text-emerald-400" : "text-slate-400"}`}>
-                                    <span className="text-[20px] leading-none">•</span> One lowercase letter
-                                </div>
-                                <div className={`flex items-center gap-1.5 ${/\d/.test(newPassword) ? "text-emerald-400" : "text-slate-400"}`}>
-                                    <span className="text-[20px] leading-none">•</span> One number
-                                </div>
-                                <div className={`flex items-center gap-1.5 ${/[@$!%*?&]/.test(newPassword) ? "text-emerald-400" : "text-slate-400"}`}>
-                                    <span className="text-[20px] leading-none">•</span> One special character
-                                </div>
-                                <div className={`flex items-center gap-1.5 col-span-2 ${newPassword.length >= 8 ? "text-emerald-400" : "text-slate-400"}`}>
-                                    <span className="text-[20px] leading-none">•</span> At least 8 characters
+                                <div className="h-[1px] bg-white/5 w-full my-1" />
+                                <div className="flex items-center gap-2">
+                                    <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] font-extrabold ${newPassword.length >= 8 ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-slate-500"}`}>
+                                        {newPassword.length >= 8 ? "✓" : "○"}
+                                    </div>
+                                    <span className={newPassword.length >= 8 ? "text-emerald-400 font-medium text-[10px]" : "text-slate-400 text-[10px]"}>At least 8 characters</span>
                                 </div>
                             </div>
                         </div>
@@ -298,9 +343,8 @@ function CustomerPasswordResetPage() {
                     <button
                         key={index}
                         onClick={() => setCurrentImageIndex(index)}
-                        className={`h-1.5 rounded-full transition-all duration-500 ${
-                            index === currentImageIndex ? "w-8 bg-amber-500" : "w-1.5 bg-white/20 hover:bg-white/50"
-                        }`}
+                        className={`h-1.5 rounded-full transition-all duration-500 ${index === currentImageIndex ? "w-8 bg-amber-500" : "w-1.5 bg-white/20 hover:bg-white/50"
+                            }`}
                     />
                 ))}
             </div>
