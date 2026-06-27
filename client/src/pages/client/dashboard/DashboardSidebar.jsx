@@ -62,10 +62,10 @@ export default function DashboardSidebar({
   return (
     <>
       {/* DESKTOP SIDEBAR NAVIGATION */}
-      <aside className="hidden md:flex flex-col w-72 bg-[#0f172a] text-slate-100 border-r border-slate-800/80 shrink-0">
-        
+      <aside className="hidden md:flex flex-col w-72 self-stretch bg-[#0f172a] text-slate-100 border-r border-slate-800/80 shrink-0 overflow-y-auto scrollbar-hide">
+
         {/* Branding Header */}
-        <div className="px-6 py-8 border-b border-slate-800/80 flex items-center gap-4">
+        <div className="px-6 py-5 border-b border-slate-800/80 flex items-center gap-4">
           <div className="relative flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-md shadow-blue-500/20">
             <User className="text-2xl text-white animate-pulse" size={24} />
             <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-[#0f172a] rounded-full" />
@@ -77,7 +77,7 @@ export default function DashboardSidebar({
         </div>
 
         {/* Navigation Menu */}
-        <nav className="flex-grow px-4 py-6 overflow-y-auto space-y-7 scrollbar-hide">
+        <nav className="px-4 py-5 space-y-6">
           {/* Workspace Group */}
           <div>
             <p className="px-4 text-[10px] font-semibold text-slate-500 tracking-widest uppercase mb-3">Workspace</p>
@@ -129,13 +129,13 @@ export default function DashboardSidebar({
 
         {/* Customer Profile & Sign Out section at bottom */}
         <div className="p-4 border-t border-slate-800/80 bg-slate-900/30">
-          <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-800/20 border border-slate-800/40 mb-3 font-sans">
+          <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-800/20 border border-slate-800/40 mb-3 font-sans overflow-hidden">
             <img
               src={profile.avatar}
               alt={profile.name}
-              className="w-9 h-9 rounded-lg object-cover border border-slate-800/80"
+              className="w-9 h-9 rounded-lg object-cover border border-slate-800/80 shrink-0"
             />
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 overflow-hidden">
               <h4 className="text-xs font-semibold text-slate-200 truncate">{profile.name}</h4>
               <p className="text-[10px] text-slate-500 truncate">{profile.email}</p>
             </div>

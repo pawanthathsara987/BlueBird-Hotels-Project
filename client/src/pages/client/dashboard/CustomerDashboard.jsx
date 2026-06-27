@@ -674,7 +674,7 @@ export default function CustomerDashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50/70 text-slate-800 flex flex-col font-sans selection:bg-cyan-500 selection:text-white antialiased">
+    <div className="h-screen overflow-hidden bg-slate-50/70 text-slate-800 flex flex-col font-sans selection:bg-cyan-500 selection:text-white antialiased">
 
       {/* STICKY TOP HEADER */}
       <DashboardHeader
@@ -696,7 +696,7 @@ export default function CustomerDashboard() {
       />
 
       {/* MAIN CONTENT WRAPPER */}
-      <div className="flex-1 flex relative overflow-hidden">
+      <div className="flex-1 flex relative overflow-hidden min-h-0">
 
         {/* SIDEBAR NAVIGATION (Desktop & Mobile drawer inside) */}
         <DashboardSidebar
