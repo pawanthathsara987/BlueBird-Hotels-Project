@@ -9,11 +9,12 @@ import {
   getInquiriesByTour,
   getInquiryStats,
 } from '../controllers/booking/tourInquiryController.js';
+import { requireAuth } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 // Create inquiry (customer submits booking form)
-router.post('/', createTourInquiry);
+router.post('/', requireAuth, createTourInquiry);
 
 // Get all inquiries (manager/admin)
 router.get('/', getAllInquiries);
