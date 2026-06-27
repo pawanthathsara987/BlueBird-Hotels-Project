@@ -4,6 +4,7 @@ import UserRegisterModel from "../models/User/UserRegisterModel.js";
 import Otp from "../models/User/Otp.js";
 import nodemailer from "nodemailer";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import e from "express";
 import sequelize from "../config/database.js";
@@ -29,18 +30,17 @@ export async function userLogin(req, res) {
     try {
         const { email, password, role } = req.body;
 
-        if (role) {
-            const staffMember = await StaffMember.findOne({
-                where: { email: email.trim() },
-                include: [
-                    {
-                        model: Role,
-                        where: { roleName: role }
-                    }
-                ]
-            });
+        const staffMember = await StaffMember.findOne({
+            where: { email: email.trim() },
+            include: [
+                {
+                    model: Role
+                }
+            ]
+        });
 
-            if (!staffMember) {
+        if (role) {
+            if (!staffMember || !staffMember.Role || staffMember.Role.roleName !== role) {
                 return res.status(403).json({
                     message: `You are not authorized to login as a ${role}`
                 });
@@ -61,8 +61,28 @@ export async function userLogin(req, res) {
                 message: "Invalid password"
             });
         }
+
+        const userRole = staffMember && staffMember.Role ? staffMember.Role.roleName : (role || "staff");
+
+        const token = jwt.sign(
+            {
+                id: staffMember ? staffMember.userId : user.id,
+                email: user.email,
+                role: userRole
+            },
+            process.env.JWT_SECRET_KEY,
+            { expiresIn: "1d" }
+        );
+
         res.json({
-            message: "Login successful"
+            message: "Login successful",
+            token: token,
+            user: {
+                id: staffMember ? staffMember.userId : user.id,
+                email: user.email,
+                name: staffMember ? staffMember.name : null,
+                role: userRole
+            }
         });
 
     } catch (error) {

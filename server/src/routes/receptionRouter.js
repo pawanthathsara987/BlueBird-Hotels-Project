@@ -1,8 +1,12 @@
 import express from 'express';
 import { getAvailableRooms, todayCheckIns, todayCheckOuts, getOccupiedRooms, recentCheckins, recentCheckouts, recentBookings } from '../controllers/reception/dashboardController.js';
 import { setCheckIn, setCheckOut, getPendingCheckins, getPendingCheckOuts } from '../controllers/reception/receptionBookingController.js';
+import { requireAuth, requireRole } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
+
+router.use(requireAuth);
+router.use(requireRole('receptionist'));
 
 // receptionDashboardController
 router.get('/available-rooms', getAvailableRooms);

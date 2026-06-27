@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, Routes, Route, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { MdDashboard, MdCheckCircle, MdLogout, MdMenu, MdClose, MdPersonPin } from "react-icons/md";
 import { GiWalk } from "react-icons/gi";
 import { MdOutlineBookOnline } from "react-icons/md";
@@ -7,11 +7,34 @@ import Dashboard from "./dashboard";
 import Booking from "./booking";
 import CheckIn from "./CheckIn";
 import CheckOut from "./CheckOut";
+import { jwtDecode } from "jwt-decode";
+import axios from "axios";
 
 
 export default function ReceptionPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const location = useLocation();
+    const navigate = useNavigate();
+    const [authorized, setAuthorized] = useState(false);
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            navigate("/receptionistLogin");
+            return;
+        }
+        try {
+            const decoded = jwtDecode(token);
+            if (!decoded || decoded.role !== "receptionist") {
+                navigate("/receptionistLogin");
+            } else {
+                setAuthorized(true);
+            }
+        } catch (e) {
+            localStorage.removeItem("token");
+            navigate("/receptionistLogin");
+        }
+    }, [navigate]);
 
     const getLinkClass = (path) => {
         const isActive = location.pathname === path;
@@ -21,6 +44,10 @@ export default function ReceptionPage() {
             : "text-white/70 hover:bg-white/10 hover:text-white hover:shadow-lg hover:-translate-y-0.5"
         }`;
     };
+
+    if (!authorized) {
+        return null;
+    }
 
     return (
         <div className="w-full h-screen flex relative">
@@ -52,7 +79,19 @@ export default function ReceptionPage() {
                     <Link to="/reception/checkout" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/checkout")}><MdCheckCircle className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Check-Out</span></Link>
                     <Link to="/reception/bookings" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/bookings")}><MdOutlineBookOnline className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Bookings</span></Link>
                     <div className="mt-auto pt-6">
-                        <Link to="/logout" onClick={() => setSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 text-sm md:text-base rounded-xl transition-all duration-300 font-medium text-red-300 hover:bg-red-500/20 hover:text-red-200 hover:shadow-lg hover:-translate-y-0.5`}><MdLogout className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Logout</span></Link>
+                        <button 
+                            onClick={() => {
+                                setSidebarOpen(false);
+                                localStorage.removeItem("token");
+                                localStorage.removeItem("user");
+                                delete axios.defaults.headers.common["Authorization"];
+                                navigate("/receptionistLogin");
+                            }}
+                            className={`flex items-center w-full text-left gap-3 px-4 py-3 text-sm md:text-base rounded-xl transition-all duration-300 font-medium text-red-300 hover:bg-red-500/20 hover:text-red-200 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer`}
+                        >
+                            <MdLogout className="text-xl md:text-2xl flex-shrink-0" />
+                            <span className="truncate">Logout</span>
+                        </button>
                     </div>
                 </nav>
             </div>
