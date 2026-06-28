@@ -9,6 +9,29 @@ import VehicleChecklist from '../../models/vehicle/vehicleChecklistModel.js';
 import VehicleFinalBill from '../../models/vehicle/vehicleFinalBillModel.js';
 import sequelize from '../../config/database.js';
 import { Op } from 'sequelize';
+import supabase from '../../config/supabaseClient.js';
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+const PAYMENT_RECEIPT_BUCKET = 'Blue-Bird';
+
+export const uploadReceiptToSupabase = async (file) => {
+  if (!file) return null;
+  const fileName = `payment-receipts/${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+
+  const { error } = await supabase.storage.from(PAYMENT_RECEIPT_BUCKET).upload(
+    fileName,
+    file.buffer,
+    { contentType: file.mimetype, upsert: false }
+  );
+
+  if (error) {
+    throw new Error(`Receipt upload failed: ${error.message}`);
+  }
+
+  const { data } = supabase.storage.from(PAYMENT_RECEIPT_BUCKET).getPublicUrl(fileName);
+  return data.publicUrl;
+};
 
 // ── Valid status transitions (state machine) ──────────────────────────────────
 // Each key maps to the list of statuses it can transition TO.
@@ -16,15 +39,15 @@ import { Op } from 'sequelize';
 // except expired → pending_payment (allow retry).
 const VALID_TRANSITIONS = {
   pending_payment: ['confirmed', 'payment_failed', 'cancelled', 'expired'],
-  confirmed:       ['driver_assigned', 'balance_paid', 'ongoing', 'cancelled'],
-  payment_failed:  ['pending_payment', 'cancelled', 'expired'],
+  confirmed: ['driver_assigned', 'balance_paid', 'ongoing', 'cancelled'],
+  payment_failed: ['pending_payment', 'cancelled', 'expired'],
   driver_assigned: ['confirmed', 'balance_paid', 'ongoing', 'cancelled'],
-  balance_paid:    ['ongoing', 'cancelled'],
-  ongoing:         ['returned', 'cancelled'],
-  returned:        [],             // completed only via generateBill endpoint (which validates return checklist)
-  completed:       [],             // terminal
-  cancelled:       [],             // terminal
-  expired:         ['pending_payment'], // allow retry
+  balance_paid: ['ongoing', 'cancelled'],
+  ongoing: ['returned', 'cancelled'],
+  returned: [],             // completed only via generateBill endpoint (which validates return checklist)
+  completed: [],             // terminal
+  cancelled: [],             // terminal
+  expired: ['pending_payment'], // allow retry
 };
 
 // Get all vehicle bookings
@@ -121,6 +144,7 @@ export const updateBookingStatus = async (req, res) => {
     }
 
     // ── Fix #1: Deposit must be paid before confirming ──────────────────────
+    /* TEMPORARILY DISABLED PENDING GATEWAY INTEGRATION
     if (status === 'confirmed' && !booking.depositPaidAt) {
       await t.rollback();
       return res.status(400).json({
@@ -128,10 +152,12 @@ export const updateBookingStatus = async (req, res) => {
         message: 'Cannot confirm booking — the deposit has not been paid yet. The customer must complete the online deposit payment first.',
       });
     }
+    */
 
     // ── Fix #2 & #4: Deposit + pickup checklist required before vehicle handover ──
     if (status === 'ongoing') {
       // Fix #2: Deposit must be paid
+      /* TEMPORARILY DISABLED PENDING GATEWAY INTEGRATION
       if (!booking.depositPaidAt) {
         await t.rollback();
         return res.status(400).json({
@@ -139,6 +165,7 @@ export const updateBookingStatus = async (req, res) => {
           message: 'Cannot hand over vehicle — the deposit has not been paid yet.',
         });
       }
+      */
 
       // Fix #4: Pickup checklist must exist (vehicle condition documented before handover)
       const pickupChecklist = await VehicleChecklist.findOne({
@@ -210,9 +237,9 @@ export const assignDriver = async (req, res) => {
       // Fix #15: Check driver license expiry
       if (driver.licenseExpiry && new Date(driver.licenseExpiry) < new Date(booking.returnDatetime)) {
         await t.rollback();
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Cannot assign driver: License expires before the booking return date.' 
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot assign driver: License expires before the booking return date.'
         });
       }
 
@@ -284,10 +311,12 @@ export const collectBalance = async (req, res) => {
     }
 
     // Ensure deposit has been paid before collecting balance
+    /* TEMPORARILY DISABLED PENDING GATEWAY INTEGRATION
     if (!booking.depositPaidAt) {
       await t.rollback();
       return res.status(400).json({ success: false, message: 'Cannot collect balance — the deposit has not been paid yet. The customer must complete the online deposit payment first.' });
     }
+    */
 
     if (booking.balancePaidAt) {
       await t.rollback();
@@ -313,6 +342,11 @@ export const collectBalance = async (req, res) => {
       status: newStatus,
     }, { transaction: t });
 
+    let receiptImageUrl = null;
+    if (req.file) {
+      receiptImageUrl = await uploadReceiptToSupabase(req.file);
+    }
+
     // Create payment entry
     const payment = await Payment.create({
       bookingId: booking.id,
@@ -321,6 +355,7 @@ export const collectBalance = async (req, res) => {
       amount: balanceAmountVal,
       method: paymentMethod,
       receiptNo: receiptNo || `REC-${Date.now().toString(36).toUpperCase()}`,
+      receiptImageUrl: receiptImageUrl,
       notes: notes || 'Balance collected manually at hotel',
       receivedAt: new Date(),
     }, { transaction: t });
@@ -349,7 +384,7 @@ export const collectFinalSettlement = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Valid payment method is required (cash, card, bank_transfer)' });
     }
 
-    const booking = await VehicleBooking.findByPk(id, { 
+    const booking = await VehicleBooking.findByPk(id, {
       transaction: t,
       include: [{ association: 'payments' }]
     });
@@ -387,6 +422,11 @@ export const collectFinalSettlement = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No remaining balance to collect.' });
     }
 
+    let receiptImageUrl = null;
+    if (req.file) {
+      receiptImageUrl = await uploadReceiptToSupabase(req.file);
+    }
+
     // Create payment entry for the remaining amount
     const payment = await Payment.create({
       bookingId: booking.id,
@@ -395,6 +435,7 @@ export const collectFinalSettlement = async (req, res) => {
       amount: remainingBalance,
       method: paymentMethod,
       receiptNo: receiptNo || `REC-F-${Date.now().toString(36).toUpperCase()}`,
+      receiptImageUrl: receiptImageUrl,
       notes: notes || 'Final settlement collected',
       receivedAt: new Date(),
     }, { transaction: t });

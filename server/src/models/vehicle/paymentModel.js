@@ -67,6 +67,10 @@ Payment.init(
       type: DataTypes.STRING(100),
       allowNull: true,               // receipt number for cash/card payments
     },
+    receiptImageUrl: {
+      type: DataTypes.STRING(255),
+      allowNull: true,               // uploaded receipt image url
+    },
     notes: {
       type: DataTypes.TEXT,
       allowNull: true,               // manager notes on payment
@@ -79,7 +83,7 @@ Payment.init(
   {
     sequelize,
     modelName: 'Payment',
-    tableName: 'payments',
+    tableName: 'vehicle_payment',
     timestamps: true,
   }
 );
