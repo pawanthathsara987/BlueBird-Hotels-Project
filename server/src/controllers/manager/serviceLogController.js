@@ -65,7 +65,16 @@ const buildValidationErrors = (body) => {
     errors.serviceType = 'Invalid service type.';
   }
   if (!String(body.description || '').trim()) errors.description = 'Description is required.';
-  if (!body.servicedAt) errors.servicedAt = 'Service date is required.';
+  if (!body.servicedAt) {
+    errors.servicedAt = 'Service date is required.';
+  } else {
+    const serviceDate = new Date(body.servicedAt);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (serviceDate > today) {
+      errors.servicedAt = 'Service date cannot be in the future.';
+    }
+  }
 
   if (body.cost !== undefined && body.cost !== null && body.cost !== '') {
     if (Number.isNaN(Number(body.cost)) || Number(body.cost) < 0) {
@@ -176,6 +185,11 @@ export const createServiceLog = async (req, res) => {
       receiptUrl,
     });
 
+    // Update vehicle mileage if this service had higher mileage
+    if (log.mileageAtService && (!vehicle.currentMileage || log.mileageAtService > vehicle.currentMileage)) {
+      await vehicle.update({ currentMileage: log.mileageAtService });
+    }
+
     res.status(201).json({ success: true, data: log });
   } catch (err) {
     console.error('createServiceLog error:', err);
@@ -223,6 +237,14 @@ export const updateServiceLog = async (req, res) => {
       notes: req.body.notes ?? log.notes,
       receiptUrl,
     });
+
+    // Check if we need to update vehicle mileage
+    if (log.mileageAtService) {
+      const vehicle = await Vehicle.findByPk(log.vehicleId);
+      if (vehicle && (!vehicle.currentMileage || log.mileageAtService > vehicle.currentMileage)) {
+        await vehicle.update({ currentMileage: log.mileageAtService });
+      }
+    }
 
     res.json({ success: true, data: log });
   } catch (err) {
