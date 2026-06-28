@@ -10,6 +10,30 @@ export default function Booking() {
     const [allBookings, setAllBookings] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
+    // Theme state
+    const [theme, setTheme] = useState(() => {
+        const saved = localStorage.getItem("saas_dashboard_theme");
+        return saved ? JSON.parse(saved) : {
+            mode: "light",
+            accent: "indigo",
+            cardStyle: "sleek",
+            font: "sans"
+        };
+    });
+
+    useEffect(() => {
+        const updateTheme = () => {
+            const saved = localStorage.getItem("saas_dashboard_theme");
+            if (saved) setTheme(JSON.parse(saved));
+        };
+        window.addEventListener("theme_changed", updateTheme);
+        window.addEventListener("storage", updateTheme);
+        return () => {
+            window.removeEventListener("theme_changed", updateTheme);
+            window.removeEventListener("storage", updateTheme);
+        };
+    }, []);
+
     const fetchBookings = async () => {
         try {
             setIsLoading(true);
@@ -71,15 +95,15 @@ export default function Booking() {
     const getStatusColor = (status) => {
         switch (status) {
             case "Checked In":
-                return "bg-green-100 text-green-800";
+                return "bg-green-500/10 text-green-500 border border-green-500/20";
             case "Confirmed":
-                return "bg-blue-100 text-blue-800";
+                return "bg-blue-500/10 text-blue-500 border border-blue-500/20";
             case "Pending":
-                return "bg-yellow-100 text-yellow-800";
+                return "bg-amber-500/10 text-amber-500 border border-amber-500/20";
             case "Checked Out":
-                return "bg-gray-100 text-gray-800";
+                return theme.mode === "dark" ? "bg-slate-800 text-slate-400 border border-slate-700/50" : "bg-slate-100 text-slate-600 border border-slate-200";
             default:
-                return "bg-gray-100 text-gray-800";
+                return theme.mode === "dark" ? "bg-slate-800 text-slate-400 border border-slate-700/50" : "bg-slate-100 text-slate-600 border border-slate-200";
         }
     };
 
@@ -100,23 +124,59 @@ export default function Booking() {
         return new Date(dateString + "T00:00:00").toLocaleDateString("en-US", options);
     };
 
+    // Accent colors config
+    const accentColors = {
+        indigo: { bg: "bg-indigo-600 hover:bg-indigo-700", text: "text-indigo-600 dark:text-indigo-400" },
+        teal: { bg: "bg-teal-600 hover:bg-teal-700", text: "text-teal-600 dark:text-teal-400" },
+        violet: { bg: "bg-violet-600 hover:bg-violet-700", text: "text-violet-600 dark:text-violet-400" },
+        amber: { bg: "bg-amber-600 hover:bg-amber-700", text: "text-amber-600 dark:text-amber-400" },
+        rose: { bg: "bg-rose-600 hover:bg-rose-700", text: "text-rose-600 dark:text-rose-400" },
+        slate: { bg: "bg-slate-700 hover:bg-slate-800", text: "text-slate-700 dark:text-slate-300" },
+    };
+    const currentAccent = accentColors[theme.accent] || accentColors.indigo;
+
     return (
-        <div className="w-full px-4 md:px-6 lg:px-8 py-4 md:py-6">
+        <div className={`w-full px-4 md:px-6 lg:px-8 py-6 min-h-screen transition-colors duration-300 ${
+            theme.mode === "dark" ? "bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-850"
+        }`}>
+            <style>{`
+                .light-mode-high-contrast .text-slate-400 {
+                    color: #475569 !important;
+                }
+                .light-mode-high-contrast .text-slate-500 {
+                    color: #334155 !important;
+                }
+            `}</style>
+
             <div className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Bookings Management</h1>
-                    <p className="text-gray-600 text-sm md:text-base mt-2">Manage walk-in bookings and view existing reservations</p>
+                    <h1 className={`text-2xl md:text-3xl font-black tracking-tight ${theme.mode === "dark" ? "text-white" : "text-[#0c325e]"}`}>
+                        Bookings Management
+                    </h1>
+                    <p className={`text-xs md:text-sm font-medium mt-1 ${theme.mode === "dark" ? "text-slate-400" : "text-slate-500"}`}>
+                        Manage walk-in bookings and view existing reservations
+                    </p>
                 </div>
-                <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
+                <div className={`p-1 rounded-xl flex items-center gap-2 border ${
+                    theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-slate-100 border-slate-200"
+                }`}>
                     <button
                         onClick={() => setActiveTab("list")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold transition-all ${activeTab === 'list' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            activeTab === 'list'
+                                ? (theme.mode === "dark" ? "bg-slate-800 text-white shadow-sm" : "bg-white text-blue-600 shadow-sm")
+                                : "text-slate-500 hover:text-slate-700"
+                        }`}
                     >
                         <MdList className="text-lg" /> View Bookings
                     </button>
                     <button
                         onClick={() => setActiveTab("new")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold transition-all ${activeTab === 'new' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            activeTab === 'new'
+                                ? (theme.mode === "dark" ? "bg-slate-800 text-white shadow-sm" : "bg-white text-green-600 shadow-sm")
+                                : "text-slate-500 hover:text-slate-700"
+                        }`}
                     >
                         <MdAdd className="text-lg" /> New Booking
                     </button>
@@ -128,120 +188,139 @@ export default function Booking() {
             ) : (
                 <>
                     {/* Filter Section */}
-                    <div className="bg-white rounded-lg shadow-md p-4 md:p-6 mb-6">
+                    <div className={`rounded-2xl border p-4 md:p-6 mb-6 shadow-sm ${
+                        theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-150"
+                    }`}>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
                             {/* Date Navigation */}
                             <div className="flex items-center gap-2 md:gap-4">
                                 <button
                                     onClick={handlePreviousDate}
-                                    className="p-2 hover:bg-gray-100 rounded-lg transition"
+                                    className={`p-2 rounded-xl transition cursor-pointer ${theme.mode === "dark" ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-600"}`}
                                     title="Previous Date"
                                 >
-                                    <MdChevronLeft className="text-xl md:text-2xl text-gray-600" />
+                                    <MdChevronLeft className="text-xl md:text-2xl" />
                                 </button>
                                 <div className="flex-1">
                                     <input
                                         type="date"
                                         value={selectedDate}
                                         onChange={(e) => setSelectedDate(e.target.value)}
-                                        className="w-full px-3 md:px-4 py-2 text-sm md:text-base border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                                        className={`w-full px-3 md:px-4 py-2 text-sm border rounded-xl focus:outline-none ${
+                                            theme.mode === "dark"
+                                                ? "bg-slate-850 border-slate-750 text-white focus:border-slate-600"
+                                                : "bg-white border-slate-200 text-slate-800 focus:border-blue-500"
+                                        }`}
                                     />
                                 </div>
                                 <button
                                     onClick={handleNextDate}
-                                    className="p-2 hover:bg-gray-100 rounded-lg transition"
+                                    className={`p-2 rounded-xl transition cursor-pointer ${theme.mode === "dark" ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-600"}`}
                                     title="Next Date"
                                 >
-                                    <MdChevronRight className="text-xl md:text-2xl text-gray-600" />
+                                    <MdChevronRight className="text-xl md:text-2xl" />
                                 </button>
                             </div>
 
                             {/* Search Box */}
                             <div className="relative">
-                                <MdSearch className="absolute left-3 top-2.5 md:top-3 text-gray-400 text-lg md:text-xl" />
+                                <MdSearch className="absolute left-3 top-2.5 md:top-3 text-slate-400 text-lg md:text-xl" />
                                 <input
                                     type="text"
                                     placeholder="Search by guest name or room..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-9 md:pl-10 pr-3 md:pr-4 py-2 text-sm md:text-base border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                                    className={`w-full pl-9 md:pl-10 pr-3 md:pr-4 py-2 text-sm border rounded-xl focus:outline-none ${
+                                        theme.mode === "dark"
+                                            ? "bg-slate-850 border-slate-750 text-white focus:border-slate-600"
+                                            : "bg-white border-slate-200 text-slate-800 focus:border-blue-500"
+                                    }`}
                                 />
                             </div>
 
                             {/* Date Display */}
-                            <div className="flex items-center gap-2 bg-blue-50 px-3 md:px-4 py-2 rounded-lg">
-                                <MdCalendarToday className="text-blue-600 text-lg md:text-xl flex-shrink-0" />
-                                <span className="text-blue-900 font-semibold text-sm md:text-base">{formatDate(selectedDate)}</span>
+                            <div className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl border ${
+                                theme.mode === "dark"
+                                    ? "bg-teal-950/20 border-teal-900/30 text-teal-400"
+                                    : "bg-blue-50 border-blue-100 text-blue-900"
+                            }`}>
+                                <MdCalendarToday className="text-lg md:text-xl flex-shrink-0" />
+                                <span className="font-extrabold text-sm md:text-base">{formatDate(selectedDate)}</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Bookings Table */}
-                    <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div className={`rounded-2xl border overflow-hidden shadow-sm ${
+                        theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-150"
+                    }`}>
                         {filteredBookings.length > 0 ? (
                             <>
-                                {/* Desktop Table - hidden on mobile */}
+                                {/* Desktop Table */}
                                 <div className="hidden md:block overflow-x-auto">
                                     <table className="w-full">
-                                        <thead className="bg-gray-100 border-b">
+                                        <thead className={theme.mode === "dark" ? "bg-slate-850 border-b border-slate-800" : "bg-slate-50 border-b border-slate-100"}>
                                             <tr>
-                                                <th className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-gray-700">
+                                                <th className={`px-4 lg:px-6 py-4 text-left text-xs font-black uppercase tracking-wider ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
                                                     Guest Name
                                                 </th>
-                                                <th className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-gray-700">
+                                                <th className={`px-4 lg:px-6 py-4 text-left text-xs font-black uppercase tracking-wider ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
                                                     Room
                                                 </th>
-                                                <th className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-gray-700">
+                                                <th className={`px-4 lg:px-6 py-4 text-left text-xs font-black uppercase tracking-wider ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
                                                     Room Type
                                                 </th>
-                                                <th className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-gray-700">
+                                                <th className={`px-4 lg:px-6 py-4 text-left text-xs font-black uppercase tracking-wider ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
                                                     Check-In
                                                 </th>
-                                                <th className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-gray-700">
+                                                <th className={`px-4 lg:px-6 py-4 text-left text-xs font-black uppercase tracking-wider ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
                                                     Check-Out
                                                 </th>
-                                                <th className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-gray-700">
+                                                <th className={`px-4 lg:px-6 py-4 text-left text-xs font-black uppercase tracking-wider ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
                                                     Status
                                                 </th>
-                                                <th className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-gray-700">
+                                                <th className={`px-4 lg:px-6 py-4 text-left text-xs font-black uppercase tracking-wider ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
                                                     Price
                                                 </th>
-                                                <th className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-gray-700">
+                                                <th className={`px-4 lg:px-6 py-4 text-left text-xs font-black uppercase tracking-wider ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
                                                     Phone
                                                 </th>
                                             </tr>
                                         </thead>
-                                        <tbody>
+                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                                             {filteredBookings.map((booking, index) => (
-                                                <tr key={booking.id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                                                    <td className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-xs md:text-sm text-gray-800 font-medium">
+                                                <tr
+                                                    key={booking.id}
+                                                    className={
+                                                        theme.mode === "dark"
+                                                            ? (index % 2 === 0 ? "bg-slate-900" : "bg-slate-850/40")
+                                                            : (index % 2 === 0 ? "bg-white" : "bg-slate-50/40")
+                                                    }
+                                                >
+                                                    <td className={`px-4 lg:px-6 py-4 text-xs md:text-sm font-bold ${theme.mode === "dark" ? "text-white" : "text-slate-800"}`}>
                                                         {booking.guestName}
                                                     </td>
-                                                    <td className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-xs md:text-sm text-gray-600">
-                                                        {booking.roomNumber}
+                                                    <td className={`px-4 lg:px-6 py-4 text-xs md:text-sm font-extrabold ${theme.mode === "dark" ? "text-slate-300" : "text-slate-700"}`}>
+                                                        Room {booking.roomNumber}
                                                     </td>
-                                                    <td className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-xs md:text-sm text-gray-600">
+                                                    <td className={`px-4 lg:px-6 py-4 text-xs md:text-sm ${theme.mode === "dark" ? "text-slate-400" : "text-slate-600"}`}>
                                                         {booking.roomType}
                                                     </td>
-                                                    <td className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-xs md:text-sm text-gray-600">
+                                                    <td className={`px-4 lg:px-6 py-4 text-xs md:text-sm ${theme.mode === "dark" ? "text-slate-400" : "text-slate-600"}`}>
                                                         {formatDate(booking.checkInDate)}
                                                     </td>
-                                                    <td className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-xs md:text-sm text-gray-600">
+                                                    <td className={`px-4 lg:px-6 py-4 text-xs md:text-sm ${theme.mode === "dark" ? "text-slate-400" : "text-slate-600"}`}>
                                                         {formatDate(booking.checkOutDate)}
                                                     </td>
-                                                    <td className="px-3 md:px-4 lg:px-6 py-3 md:py-4">
-                                                        <span
-                                                            className={`inline-block px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
-                                                                booking.status
-                                                            )}`}
-                                                        >
+                                                    <td className="px-4 lg:px-6 py-4">
+                                                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${getStatusColor(booking.status)}`}>
                                                             {booking.status}
                                                         </span>
                                                     </td>
-                                                    <td className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-xs md:text-sm text-gray-800 font-semibold">
+                                                    <td className={`px-4 lg:px-6 py-4 text-xs md:text-sm font-black ${theme.mode === "dark" ? "text-teal-400" : "text-[#0d9488]"}`}>
                                                         {booking.price}
                                                     </td>
-                                                    <td className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-xs md:text-sm text-gray-600">
+                                                    <td className={`px-4 lg:px-6 py-4 text-xs md:text-sm ${theme.mode === "dark" ? "text-slate-400" : "text-slate-600"}`}>
                                                         {booking.phone}
                                                     </td>
                                                 </tr>
@@ -250,43 +329,39 @@ export default function Booking() {
                                     </table>
                                 </div>
 
-                                {/* Mobile Cards - shown on mobile */}
-                                <div className="md:hidden space-y-4 p-4">
+                                {/* Mobile Cards */}
+                                <div className="md:hidden space-y-4 p-4 divide-y divide-slate-100 dark:divide-slate-800/80">
                                     {filteredBookings.map((booking) => (
-                                        <div key={booking.id} className="border border-gray-200 rounded-lg p-4 bg-white">
-                                            <div className="flex justify-between items-start mb-3 pb-3 border-b">
+                                        <div key={booking.id} className="pt-4 first:pt-0">
+                                            <div className="flex justify-between items-start mb-3">
                                                 <div>
-                                                    <p className="font-bold text-gray-800">{booking.guestName}</p>
-                                                    <p className="text-sm text-gray-600">Room {booking.roomNumber}</p>
+                                                    <p className={`font-bold ${theme.mode === "dark" ? "text-white" : "text-slate-800"}`}>{booking.guestName}</p>
+                                                    <p className={`text-xs ${theme.mode === "dark" ? "text-slate-400" : "text-slate-600"}`}>Room {booking.roomNumber}</p>
                                                 </div>
-                                                <span
-                                                    className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(
-                                                        booking.status
-                                                    )}`}
-                                                >
+                                                <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${getStatusColor(booking.status)}`}>
                                                     {booking.status}
                                                 </span>
                                             </div>
-                                            <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+                                            <div className="grid grid-cols-2 gap-3 text-xs mb-3">
                                                 <div>
-                                                    <p className="text-gray-600 text-xs">Type</p>
-                                                    <p className="text-gray-800 font-medium">{booking.roomType}</p>
+                                                    <p className="text-slate-500 text-[10px] uppercase font-bold">Type</p>
+                                                    <p className={`font-semibold ${theme.mode === "dark" ? "text-slate-200" : "text-slate-700"}`}>{booking.roomType}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-gray-600 text-xs">Price</p>
-                                                    <p className="text-gray-800 font-medium">{booking.price}</p>
+                                                    <p className="text-slate-500 text-[10px] uppercase font-bold">Price</p>
+                                                    <p className={`font-semibold ${theme.mode === "dark" ? "text-slate-200" : "text-slate-700"}`}>{booking.price}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-gray-600 text-xs">Check-In</p>
-                                                    <p className="text-gray-800 font-medium text-xs">{formatDate(booking.checkInDate)}</p>
+                                                    <p className="text-slate-500 text-[10px] uppercase font-bold">Check-In</p>
+                                                    <p className={`text-[10px] ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>{formatDate(booking.checkInDate)}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-gray-600 text-xs">Check-Out</p>
-                                                    <p className="text-gray-800 font-medium text-xs">{formatDate(booking.checkOutDate)}</p>
+                                                    <p className="text-slate-500 text-[10px] uppercase font-bold">Check-Out</p>
+                                                    <p className={`text-[10px] ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>{formatDate(booking.checkOutDate)}</p>
                                                 </div>
                                             </div>
-                                            <div className="border-t pt-2">
-                                                <p className="text-xs text-gray-600">Phone: <span className="font-medium">{booking.phone}</span></p>
+                                            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500">
+                                                Phone: <span className="font-semibold">{booking.phone}</span>
                                             </div>
                                         </div>
                                     ))}
@@ -294,37 +369,39 @@ export default function Booking() {
                             </>
                         ) : (
                             <div className="p-6 md:p-8 text-center">
-                                <p className="text-gray-600 text-base md:text-lg">
+                                <p className={`text-base md:text-lg font-bold ${theme.mode === "dark" ? "text-slate-400" : "text-slate-600"}`}>
                                     No bookings found for {formatDate(selectedDate)}
                                 </p>
-                                <p className="text-gray-500 text-xs md:text-sm mt-2">Try selecting a different date or adjusting your search</p>
+                                <p className="text-slate-500 text-xs md:text-sm mt-2">Try selecting a different date or adjusting your search</p>
                             </div>
                         )}
                     </div>
 
-                    {/* Summary */}
+                    {/* Summary statistics */}
                     {filteredBookings.length > 0 && (
-                        <div className="mt-6 bg-white rounded-lg shadow-md p-4 md:p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+                        <div className={`mt-6 rounded-2xl border p-4 md:p-6 shadow-sm ${
+                            theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-150"
+                        }`}>
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                                 <div className="border-l-4 border-blue-500 pl-3 md:pl-4">
-                                    <p className="text-gray-600 text-xs md:text-sm">Total Bookings</p>
-                                    <p className="text-2xl md:text-3xl font-bold text-gray-800 mt-1">{filteredBookings.length}</p>
+                                    <p className="text-slate-500 text-xs md:text-sm font-bold uppercase tracking-wider">Total Bookings</p>
+                                    <p className={`text-2xl md:text-3xl font-black mt-1 ${theme.mode === "dark" ? "text-white" : "text-slate-800"}`}>{filteredBookings.length}</p>
                                 </div>
-                                <div className="border-l-4 border-green-500 pl-3 md:pl-4">
-                                    <p className="text-gray-600 text-xs md:text-sm">Checked In</p>
-                                    <p className="text-2xl md:text-3xl font-bold text-green-600 mt-1">
+                                <div className="border-l-4 border-emerald-500 pl-3 md:pl-4">
+                                    <p className="text-slate-500 text-xs md:text-sm font-bold uppercase tracking-wider">Checked In</p>
+                                    <p className="text-2xl md:text-3xl font-black text-emerald-500 mt-1">
                                         {filteredBookings.filter((b) => b.status === "Checked In").length}
                                     </p>
                                 </div>
-                                <div className="border-l-4 border-yellow-500 pl-3 md:pl-4">
-                                    <p className="text-gray-600 text-xs md:text-sm">Pending</p>
-                                    <p className="text-2xl md:text-3xl font-bold text-yellow-600 mt-1">
+                                <div className="border-l-4 border-amber-500 pl-3 md:pl-4">
+                                    <p className="text-slate-500 text-xs md:text-sm font-bold uppercase tracking-wider">Pending</p>
+                                    <p className="text-2xl md:text-3xl font-black text-amber-500 mt-1">
                                         {filteredBookings.filter((b) => b.status === "Pending").length}
                                     </p>
                                 </div>
                                 <div className="border-l-4 border-blue-600 pl-3 md:pl-4">
-                                    <p className="text-gray-600 text-xs md:text-sm">Confirmed</p>
-                                    <p className="text-2xl md:text-3xl font-bold text-blue-600 mt-1">
+                                    <p className="text-slate-500 text-xs md:text-sm font-bold uppercase tracking-wider">Confirmed</p>
+                                    <p className="text-2xl md:text-3xl font-black text-blue-500 mt-1">
                                         {filteredBookings.filter((b) => b.status === "Confirmed").length}
                                     </p>
                                 </div>

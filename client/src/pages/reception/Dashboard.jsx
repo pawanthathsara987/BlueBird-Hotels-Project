@@ -37,6 +37,12 @@ export default function Dashboard() {
     const [occupiedRooms, setOccupiedRooms] = useState(0);
     const [recentCheckIns, setRecentCheckIns] = useState([]);
     const [recentBookings, setRecentBookings] = useState([]);
+    const [analyticsSummary, setAnalyticsSummary] = useState({
+        totalBookings: 0,
+        totalRevenue: 0,
+        roomsStats: { total: 0, available: 0, occupied: 0, maintenance: 0 },
+        weeklyTrend: []
+    });
 
     // RoomStatusGrid states
     const [rooms, setRooms] = useState([]);
@@ -67,6 +73,7 @@ export default function Dashboard() {
 
     useEffect(() => {
         localStorage.setItem("saas_dashboard_theme", JSON.stringify(theme));
+        window.dispatchEvent(new Event("theme_changed"));
     }, [theme]);
 
     // Accent mappings for tailwind classes
@@ -83,7 +90,7 @@ export default function Dashboard() {
 
     const getCardStyle = () => {
         let style = "p-6 transition-all duration-300 relative overflow-hidden ";
-        
+
         // Mode background colors
         if (theme.mode === "dark") {
             style += "bg-slate-900 text-slate-100 ";
@@ -124,7 +131,8 @@ export default function Dashboard() {
                 recentCheckInsRes,
                 recentBookingsRes,
                 roomsRes,
-                typesRes
+                typesRes,
+                analyticsRes
             ] = await Promise.all([
                 axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/available-rooms`),
                 axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/today-checkins`),
@@ -133,7 +141,8 @@ export default function Dashboard() {
                 axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/recent-checkins`),
                 axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/recent-bookings`),
                 axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/rooms`),
-                axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/room-types`)
+                axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/room-types`),
+                axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/analytics-summary`)
             ]);
 
             setAvailableRooms(availableRes.data?.data?.availableRoom || availableRes.data?.data?.count || 0);
@@ -143,6 +152,9 @@ export default function Dashboard() {
             setRecentCheckIns(recentCheckInsRes.data?.data || recentCheckInsRes.data || []);
             setRecentBookings(recentBookingsRes.data?.data || recentBookingsRes.data || []);
 
+            if (analyticsRes.data && analyticsRes.data.success) {
+                setAnalyticsSummary(analyticsRes.data.data || {});
+            }
             if (roomsRes.data && roomsRes.data.success) {
                 setRooms(roomsRes.data.data || []);
             }
@@ -179,6 +191,7 @@ export default function Dashboard() {
         ];
     });
     const [newTaskText, setNewTaskText] = useState("");
+    const [confirmDeleteTaskId, setConfirmDeleteTaskId] = useState(null);
 
     useEffect(() => {
         localStorage.setItem("dashboard_tasks", JSON.stringify(tasks));
@@ -198,41 +211,52 @@ export default function Dashboard() {
 
     const handleDeleteTask = (id) => {
         setTasks(tasks.filter(t => t.id !== id));
+        setConfirmDeleteTaskId(null);
+        toast.success("Task removed from checklist.");
     };
 
     // ----------------------------------------------------
     // 5. Dynamic Analytics Computations
     // ----------------------------------------------------
+    const roomsStats = useMemo(() => {
+        if (analyticsSummary.roomsStats && typeof analyticsSummary.roomsStats.total === "number") {
+            return analyticsSummary.roomsStats;
+        }
+        const total = rooms.length;
+        const occupied = rooms.filter(r => r.status?.toLowerCase() === "occupied").length;
+        const maintenance = rooms.filter(r => r.status?.toLowerCase() === "maintenance").length;
+        const available = Math.max(0, total - occupied - maintenance);
+        return { total, occupied, maintenance, available };
+    }, [rooms, analyticsSummary]);
+
     const totalRoomsCount = useMemo(() => {
-        return availableRooms + occupiedRooms || rooms.length || 24;
-    }, [availableRooms, occupiedRooms, rooms]);
+        return roomsStats.total;
+    }, [roomsStats]);
 
     const occupancyRate = useMemo(() => {
         if (totalRoomsCount === 0) return 0;
         return Math.round((occupiedRooms / totalRoomsCount) * 100);
     }, [occupiedRooms, totalRoomsCount]);
 
-    // Average room rate placeholder for simulated SaaS financial analytics
+    // Total bookings count from analytics
+    const totalBookingsCount = useMemo(() => {
+        return analyticsSummary.totalBookings || 0;
+    }, [analyticsSummary]);
+
+    // Average room rate / total revenue from database room payments
     const dynamicRevenue = useMemo(() => {
-        return occupiedRooms * 145; // average price $145
-    }, [occupiedRooms]);
+        return analyticsSummary.totalRevenue || (occupiedRooms * 145);
+    }, [analyticsSummary, occupiedRooms]);
 
     // ----------------------------------------------------
     // 6. Interactive Custom SVG Donut Chart Setup
     // ----------------------------------------------------
     const [hoveredDonutSegment, setHoveredDonutSegment] = useState(null);
-    const roomsStats = useMemo(() => {
-        const total = rooms.length || 24;
-        const occupied = rooms.filter(r => r.status?.toLowerCase() === "occupied").length || occupiedRooms || 10;
-        const maintenance = rooms.filter(r => r.status?.toLowerCase() === "maintenance").length || 2;
-        const available = Math.max(0, total - occupied - maintenance);
-        return { total, occupied, maintenance, available };
-    }, [rooms, occupiedRooms]);
 
     const donutSegments = useMemo(() => {
         const total = roomsStats.available + roomsStats.occupied + roomsStats.maintenance || 1;
         const circ = 2 * Math.PI * 36; // R = 36, circ = 226.19
-        
+
         let cumulativePercent = 0;
         return [
             { id: "available", label: "Available", value: roomsStats.available, color: "#10b981", percent: (roomsStats.available / total) * 100 },
@@ -251,6 +275,9 @@ export default function Dashboard() {
     // ----------------------------------------------------
     const [hoveredTrendPoint, setHoveredTrendPoint] = useState(null);
     const trendData = useMemo(() => {
+        if (analyticsSummary.weeklyTrend && analyticsSummary.weeklyTrend.length > 0) {
+            return analyticsSummary.weeklyTrend;
+        }
         return [
             { day: "Mon", occupancy: Math.max(10, Math.round(occupancyRate * 0.8)), bookings: Math.max(2, recentBookings.length - 2) },
             { day: "Tue", occupancy: Math.max(15, Math.round(occupancyRate * 0.85)), bookings: Math.max(3, recentBookings.length - 1) },
@@ -260,14 +287,14 @@ export default function Dashboard() {
             { day: "Sat", occupancy: Math.min(100, Math.round(occupancyRate * 1.15)), bookings: Math.max(6, recentBookings.length + 4) },
             { day: "Sun", occupancy: Math.max(12, Math.round(occupancyRate * 0.75)), bookings: Math.max(3, recentBookings.length - 2) }
         ];
-    }, [occupancyRate, recentBookings]);
+    }, [occupancyRate, recentBookings, analyticsSummary]);
 
     const trendPoints = useMemo(() => {
         const width = 500;
         const height = 180;
         const xOffset = 30;
         const yOffset = 20;
-        
+
         return trendData.map((d, i) => {
             const x = ((width - xOffset - 10) / 6) * i + xOffset;
             const y = height - ((d.occupancy / 100) * (height - yOffset - 10)) - yOffset;
@@ -308,7 +335,7 @@ export default function Dashboard() {
         return recentBookings.filter(b => {
             const matchName = `${b.firstName} ${b.lastName}`.toLowerCase().includes(bookingSearch.toLowerCase());
             const matchRoom = b.rooms?.toLowerCase().includes(bookingSearch.toLowerCase());
-            
+
             let status = "pending";
             if (b.roomStatuses?.includes('checked_in')) status = "checked_in";
             else if (b.roomStatuses?.includes('reserved')) status = "reserved";
@@ -332,19 +359,52 @@ export default function Dashboard() {
     }, [bookingSearch, bookingStatusFilter]);
 
     // ----------------------------------------------------
-    // 9. Simulated SaaS Activity Feed
+    // 9. Live Activity Feed (from real database data)
     // ----------------------------------------------------
-    const activities = [
-        { id: 1, type: "checkin", text: "Walk-in check-in processed at Room 104", time: "3 mins ago" },
-        { id: 2, type: "checkout", text: "Guest checkout completed for Room 209", time: "12 mins ago" },
-        { id: 3, type: "booking", text: "Online reservation created for John Doe", time: "42 mins ago" },
-        { id: 4, type: "task", text: "Night audit procedure initialized", time: "2 hours ago" },
-    ];
+    const activities = useMemo(() => {
+        const items = [];
+        recentCheckIns.slice(0, 3).forEach((ci, i) => {
+            items.push({
+                id: `ci-${i}`,
+                type: "checkin",
+                text: `${ci.firstName} ${ci.lastName} checked in — Room${ci.rooms ? ' ' + ci.rooms : ''}`,
+                time: ci.checkIn ? new Date(ci.checkIn).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "Today"
+            });
+        });
+        recentBookings.slice(0, 3).forEach((b, i) => {
+            const isCheckedOut = b.roomStatuses?.includes('checked_out');
+            const isCheckedIn = b.roomStatuses?.includes('checked_in');
+            items.push({
+                id: `bk-${i}`,
+                type: isCheckedOut ? "checkout" : isCheckedIn ? "checkin" : "booking",
+                text: `${b.firstName} ${b.lastName} — ${isCheckedOut ? 'Checked Out' : isCheckedIn ? 'Currently In' : 'Reservation confirmed'}${b.rooms ? ' · Room ' + b.rooms : ''}`,
+                time: b.bookedAt ? new Date(b.bookedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "Recent"
+            });
+        });
+        if (items.length === 0) {
+            items.push({ id: 'empty', type: 'task', text: 'No recent activity recorded.', time: 'Now' });
+        }
+        return items.slice(0, 5);
+    }, [recentCheckIns, recentBookings]);
 
     // Render Component
     return (
-        <div className={`w-full min-h-screen ${getFontFamily()} ${theme.mode === "dark" ? "bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-900"} transition-colors duration-300 p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8`}>
-            
+        <div className={`w-full min-h-screen ${getFontFamily()} ${theme.mode === "dark" ? "bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-900"} ${theme.mode === "light" ? "light-mode-high-contrast" : ""} transition-colors duration-300 p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8`}>
+            <style>{`
+                .light-mode-high-contrast .text-slate-400 {
+                    color: #475569 !important; /* slate-600 */
+                }
+                .light-mode-high-contrast .text-slate-500 {
+                    color: #334155 !important; /* slate-700 */
+                }
+                .light-mode-high-contrast .text-gray-400 {
+                    color: #4b5563 !important; /* gray-600 */
+                }
+                .light-mode-high-contrast .text-gray-500 {
+                    color: #374151 !important; /* gray-700 */
+                }
+            `}</style>
+
             {/* ----------------------------------------------------
                 Header Section & Theme Selection panel
                ---------------------------------------------------- */}
@@ -354,7 +414,7 @@ export default function Dashboard() {
                     <div className="flex items-center gap-2">
                         <span className={`text-[10px] font-extrabold tracking-widest uppercase px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit ${theme.mode === "dark" ? "bg-slate-800 text-slate-300" : "bg-slate-100 text-slate-600"}`}>
                             <Sparkles size={12} className="animate-pulse" />
-                            Hotel SaaS Dashboard
+                            BLUEBIRD Hotel
                         </span>
                         {refreshing && (
                             <span className="text-[10px] text-slate-400 animate-pulse flex items-center gap-1">
@@ -362,10 +422,10 @@ export default function Dashboard() {
                             </span>
                         )}
                     </div>
-                    <h1 className="text-2xl md:text-3xl font-black tracking-tight">
+                    <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-800 dark:text-white">
                         Welcome, <span className={currentAccent.text}>{receptionistName}</span>
                     </h1>
-                    <p className="text-xs md:text-sm text-slate-400 font-medium dark:text-slate-500">
+                    <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 font-medium">
                         Operational summary, live matrix configurations, and theme-level customizations.
                     </p>
                 </div>
@@ -374,11 +434,10 @@ export default function Dashboard() {
                 <div className="flex flex-wrap items-center gap-3 w-full md:w-auto z-10">
                     <button
                         onClick={() => setShowThemePanel(!showThemePanel)}
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition duration-200 border cursor-pointer ${
-                            showThemePanel
-                                ? `${currentAccent.bg} text-white border-transparent`
-                                : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
-                        }`}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition duration-200 border cursor-pointer ${showThemePanel
+                            ? `${currentAccent.bg} text-white border-transparent`
+                            : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
+                            }`}
                     >
                         <Settings size={14} className={showThemePanel ? "animate-spin-slow" : ""} />
                         Customizer
@@ -411,32 +470,29 @@ export default function Dashboard() {
 
             {/* Customizer Dropdown Panel */}
             {showThemePanel && (
-                <div className={`p-6 rounded-2xl border transition-all duration-300 animate-fadeIn ${
-                    theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-100 text-slate-800"
-                }`}>
+                <div className={`p-6 rounded-2xl border transition-all duration-300 animate-fadeIn ${theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-100 text-slate-800"
+                    }`}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        
+
                         {/* Mode Select */}
                         <div className="space-y-2">
                             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Dashboard Theme</h4>
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => setTheme({ ...theme, mode: "light" })}
-                                    className={`flex-1 flex items-center justify-center gap-2 p-2 rounded-xl text-xs font-bold border transition cursor-pointer ${
-                                        theme.mode === "light"
-                                            ? `${currentAccent.bg} text-white border-transparent`
-                                            : "bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
-                                    }`}
+                                    className={`flex-1 flex items-center justify-center gap-2 p-2 rounded-xl text-xs font-bold border transition cursor-pointer ${theme.mode === "light"
+                                        ? `${currentAccent.bg} text-white border-transparent`
+                                        : "bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
+                                        }`}
                                 >
                                     <Sun size={14} /> Light
                                 </button>
                                 <button
                                     onClick={() => setTheme({ ...theme, mode: "dark" })}
-                                    className={`flex-1 flex items-center justify-center gap-2 p-2 rounded-xl text-xs font-bold border transition cursor-pointer ${
-                                        theme.mode === "dark"
-                                            ? `${currentAccent.bg} text-white border-transparent`
-                                            : "bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
-                                    }`}
+                                    className={`flex-1 flex items-center justify-center gap-2 p-2 rounded-xl text-xs font-bold border transition cursor-pointer ${theme.mode === "dark"
+                                        ? `${currentAccent.bg} text-white border-transparent`
+                                        : "bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
+                                        }`}
                                 >
                                     <Moon size={14} /> Dark
                                 </button>
@@ -452,11 +508,10 @@ export default function Dashboard() {
                                         key={color}
                                         onClick={() => setTheme({ ...theme, accent: color })}
                                         style={{ backgroundColor: accentColors[color].raw }}
-                                        className={`w-8 h-8 rounded-full border-2 transition hover:scale-110 relative cursor-pointer ${
-                                            theme.accent === color
-                                                ? "border-slate-800 dark:border-white scale-110 shadow-md"
-                                                : "border-transparent"
-                                        }`}
+                                        className={`w-8 h-8 rounded-full border-2 transition hover:scale-110 relative cursor-pointer ${theme.accent === color
+                                            ? "border-slate-800 dark:border-white scale-110 shadow-md"
+                                            : "border-transparent"
+                                            }`}
                                         title={color}
                                     >
                                         {theme.accent === color && (
@@ -475,11 +530,10 @@ export default function Dashboard() {
                                     <button
                                         key={style}
                                         onClick={() => setTheme({ ...theme, cardStyle: style })}
-                                        className={`flex-1 p-2 rounded-xl text-xs font-bold border capitalize transition cursor-pointer ${
-                                            theme.cardStyle === style
-                                                ? `${currentAccent.bg} text-white border-transparent`
-                                                : "bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
-                                        }`}
+                                        className={`flex-1 p-2 rounded-xl text-xs font-bold border capitalize transition cursor-pointer ${theme.cardStyle === style
+                                            ? `${currentAccent.bg} text-white border-transparent`
+                                            : "bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
+                                            }`}
                                     >
                                         {style}
                                     </button>
@@ -495,11 +549,10 @@ export default function Dashboard() {
                                     <button
                                         key={font}
                                         onClick={() => setTheme({ ...theme, font: font })}
-                                        className={`flex-1 p-2 rounded-xl text-xs font-bold border capitalize transition cursor-pointer ${
-                                            theme.font === font
-                                                ? `${currentAccent.bg} text-white border-transparent`
-                                                : "bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
-                                        }`}
+                                        className={`flex-1 p-2 rounded-xl text-xs font-bold border capitalize transition cursor-pointer ${theme.font === font
+                                            ? `${currentAccent.bg} text-white border-transparent`
+                                            : "bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
+                                            }`}
                                     >
                                         {font}
                                     </button>
@@ -515,7 +568,7 @@ export default function Dashboard() {
                 KPI Cards Section (Bookings, Revenue, Occupancy, Check-ins, Check-outs)
                ---------------------------------------------------- */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                
+
                 {/* 1. Bookings Card */}
                 <div className={getCardStyle()}>
                     <div className="flex justify-between items-start">
@@ -527,9 +580,9 @@ export default function Dashboard() {
                         </span>
                     </div>
                     <div className="mt-4 space-y-1">
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Bookings Quantity</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Bookings Quantity</p>
                         <h3 className="text-2xl font-black">{loading ? "..." : recentBookings.length}</h3>
-                        <p className="text-[9px] text-slate-400">Total processed reservations</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Total processed reservations</p>
                     </div>
                     <div className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${currentAccent.bg} animate-ping opacity-75`} />
                 </div>
@@ -545,9 +598,9 @@ export default function Dashboard() {
                         </span>
                     </div>
                     <div className="mt-4 space-y-1">
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Projected Revenue</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Projected Revenue</p>
                         <h3 className="text-2xl font-black">{loading ? "..." : `$${dynamicRevenue.toLocaleString()}`}</h3>
-                        <p className="text-[9px] text-slate-400">Occupied rooms calculation</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Occupied rooms calculation</p>
                     </div>
                 </div>
 
@@ -562,9 +615,9 @@ export default function Dashboard() {
                         </span>
                     </div>
                     <div className="mt-4 space-y-1">
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Occupancy Rate</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Occupancy Rate</p>
                         <h3 className="text-2xl font-black">{loading ? "..." : `${occupancyRate}%`}</h3>
-                        <p className="text-[9px] text-slate-400">{occupiedRooms} Rooms currently occupied</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">{occupiedRooms} Rooms currently occupied</p>
                     </div>
                 </div>
 
@@ -579,9 +632,9 @@ export default function Dashboard() {
                         </span>
                     </div>
                     <div className="mt-4 space-y-1">
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Live Check-Ins</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Live Check-Ins</p>
                         <h3 className="text-2xl font-black">{loading ? "..." : todayCheckIns}</h3>
-                        <p className="text-[9px] text-slate-400">Expected arrivals today</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Expected arrivals today</p>
                     </div>
                 </div>
 
@@ -596,9 +649,9 @@ export default function Dashboard() {
                         </span>
                     </div>
                     <div className="mt-4 space-y-1">
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Live Check-Outs</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Live Check-Outs</p>
                         <h3 className="text-2xl font-black">{loading ? "..." : todayCheckOuts}</h3>
-                        <p className="text-[9px] text-slate-400">Expected departures today</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Expected departures today</p>
                     </div>
                 </div>
 
@@ -608,7 +661,7 @@ export default function Dashboard() {
                 Interactive SVG Charts & Status Donuts
                ---------------------------------------------------- */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
+
                 {/* Custom SVG Area Trend Chart */}
                 <div className={`${getCardStyle()} lg:col-span-2 flex flex-col justify-between`}>
                     <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
@@ -617,7 +670,7 @@ export default function Dashboard() {
                                 <TrendingUp size={16} className={currentAccent.text} />
                                 Occupancy & Booking Analytics
                             </h3>
-                            <p className="text-[10px] text-slate-400">7-Day trend projection dashboard</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">7-Day trend projection dashboard</p>
                         </div>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${currentAccent.bgLight} ${currentAccent.text}`}>
                             Live Tracker
@@ -633,7 +686,7 @@ export default function Dashboard() {
                                     <stop offset="100%" stopColor={currentAccent.raw} stopOpacity="0.0" />
                                 </linearGradient>
                             </defs>
-                            
+
                             {/* Horizontal guide lines */}
                             <line x1="30" y1="20" x2="490" y2="20" stroke="#f1f5f9" strokeDasharray="3 3" className="dark:stroke-slate-800" />
                             <line x1="30" y1="65" x2="490" y2="65" stroke="#f1f5f9" strokeDasharray="3 3" className="dark:stroke-slate-800" />
@@ -722,7 +775,7 @@ export default function Dashboard() {
                                 <PieChart size={16} className={currentAccent.text} />
                                 Allocation status
                             </h3>
-                            <p className="text-[10px] text-slate-400">Total room matrix breakdown</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Total room matrix breakdown</p>
                         </div>
                     </div>
 
@@ -731,7 +784,7 @@ export default function Dashboard() {
                             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 90 90">
                                 {/* Base Circle */}
                                 <circle cx="45" cy="45" r="36" fill="transparent" stroke="#f1f5f9" strokeWidth="8" className="dark:stroke-slate-800" />
-                                
+
                                 {/* Segment circles */}
                                 {!loading && donutSegments.map((seg, i) => (
                                     <circle
@@ -756,7 +809,7 @@ export default function Dashboard() {
                                 <h4 className="text-xl font-black">
                                     {loading ? "..." : (hoveredDonutSegment ? roomsStats[hoveredDonutSegment === "available" ? "available" : hoveredDonutSegment === "occupied" ? "occupied" : "maintenance"] : totalRoomsCount)}
                                 </h4>
-                                <p className="text-[9px] text-slate-400 uppercase tracking-widest leading-none">
+                                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider leading-none">
                                     {hoveredDonutSegment ? hoveredDonutSegment : "Total Rooms"}
                                 </p>
                             </div>
@@ -769,16 +822,15 @@ export default function Dashboard() {
                                     key={i}
                                     onMouseEnter={() => setHoveredDonutSegment(seg.id)}
                                     onMouseLeave={() => setHoveredDonutSegment(null)}
-                                    className={`p-1.5 rounded-lg border border-transparent transition cursor-pointer ${
-                                        hoveredDonutSegment === seg.id ? "bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700" : ""
-                                    }`}
+                                    className={`p-1.5 rounded-lg border border-transparent transition cursor-pointer ${hoveredDonutSegment === seg.id ? "bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700" : ""
+                                        }`}
                                 >
                                     <div className="flex items-center justify-center gap-1">
                                         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: seg.color }} />
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase">{seg.label}</span>
+                                        <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">{seg.label}</span>
                                     </div>
                                     <h5 className="text-xs font-black text-slate-700 dark:text-slate-200 mt-0.5">
-                                        {loading ? "..." : seg.value} <span className="text-[9px] font-normal text-slate-400">({Math.round(seg.percent)}%)</span>
+                                        {loading ? "..." : seg.value} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">({Math.round(seg.percent)}%)</span>
                                     </h5>
                                 </div>
                             ))}
@@ -801,7 +853,7 @@ export default function Dashboard() {
                 SaaS Tasks Manager, Recent Bookings, Live Activities
                ---------------------------------------------------- */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
+
                 {/* 1. Tasks Management Checklist */}
                 <div className={getCardStyle()}>
                     <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
@@ -810,7 +862,7 @@ export default function Dashboard() {
                                 <ClipboardList size={16} className={currentAccent.text} />
                                 Front Desk Checklist
                             </h3>
-                            <p className="text-[10px] text-slate-400">Daily checklist & routine logs</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Daily checklist & routine logs</p>
                         </div>
                         <span className="text-[10px] font-bold bg-amber-50 text-amber-600 dark:bg-amber-950/40 px-2.5 py-0.5 rounded-full">
                             Shift Tasks
@@ -839,19 +891,17 @@ export default function Dashboard() {
                         {tasks.map(task => (
                             <div
                                 key={task.id}
-                                className={`flex items-center justify-between p-2.5 rounded-xl border border-slate-50 dark:border-slate-800 transition duration-150 ${
-                                    task.completed ? "bg-slate-50/50 dark:bg-slate-900/40 opacity-70" : "bg-white dark:bg-slate-900"
-                                }`}
+                                className={`flex items-center justify-between p-2.5 rounded-xl border border-slate-50 dark:border-slate-800 transition duration-150 ${task.completed ? "bg-slate-50/50 dark:bg-slate-900/40 opacity-70" : "bg-white dark:bg-slate-900"
+                                    }`}
                             >
                                 <div className="flex items-center gap-2.5 flex-1 min-w-0">
                                     <button
                                         type="button"
                                         onClick={() => handleToggleTask(task.id)}
-                                        className={`p-0.5 rounded-md border transition-all cursor-pointer ${
-                                            task.completed
-                                                ? `${currentAccent.bg} text-white border-transparent`
-                                                : "border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
-                                        }`}
+                                        className={`p-0.5 rounded-md border transition-all cursor-pointer ${task.completed
+                                            ? `${currentAccent.bg} text-white border-transparent`
+                                            : "border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                            }`}
                                     >
                                         <CheckSquare size={12} className={task.completed ? "opacity-100" : "opacity-0"} />
                                     </button>
@@ -859,12 +909,33 @@ export default function Dashboard() {
                                         {task.text}
                                     </span>
                                 </div>
-                                <button
-                                    onClick={() => handleDeleteTask(task.id)}
-                                    className="text-slate-300 hover:text-red-500 transition ml-2 cursor-pointer"
-                                >
-                                    <Trash2 size={12} />
-                                </button>
+                                {confirmDeleteTaskId === task.id ? (
+                                    <div className="flex items-center gap-1 ml-2 animate-fade-in">
+                                        <span className="text-[10px] font-bold text-red-500 whitespace-nowrap">Delete?</span>
+                                        <button
+                                            onClick={() => handleDeleteTask(task.id)}
+                                            title="Confirm delete"
+                                            className="px-1.5 py-0.5 text-[9px] font-extrabold bg-red-500 text-white rounded-md hover:bg-red-600 transition cursor-pointer"
+                                        >
+                                            ✓
+                                        </button>
+                                        <button
+                                            onClick={() => setConfirmDeleteTaskId(null)}
+                                            title="Cancel"
+                                            className="px-1.5 py-0.5 text-[9px] font-extrabold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-md hover:bg-slate-300 dark:hover:bg-slate-600 transition cursor-pointer"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => setConfirmDeleteTaskId(task.id)}
+                                        className="text-slate-300 hover:text-red-500 transition ml-2 cursor-pointer"
+                                        title="Delete task"
+                                    >
+                                        <Trash2 size={12} />
+                                    </button>
+                                )}
                             </div>
                         ))}
                         {tasks.length === 0 && (
@@ -882,9 +953,9 @@ export default function Dashboard() {
                                     <Layers size={16} className={currentAccent.text} />
                                     Recent Reservation Bookings
                                 </h3>
-                                <p className="text-[10px] text-slate-400">Search, filter, and review bookings</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">Search, filter, and review bookings</p>
                             </div>
-                            
+
                             {/* Filters & search */}
                             <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                                 <div className="relative flex-grow sm:flex-grow-0">
@@ -943,7 +1014,7 @@ export default function Dashboard() {
                                                 <h4 className="font-bold text-xs">
                                                     {booking.firstName} {booking.lastName}
                                                 </h4>
-                                                <p className="text-[10px] text-slate-400 mt-0.5">
+                                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                                                     Expected Check-in: <span className="font-semibold text-slate-500">{new Date(booking.checkIn).toLocaleDateString()}</span>
                                                 </p>
                                             </div>
@@ -979,17 +1050,17 @@ export default function Dashboard() {
                         </span>
                         <div className="flex gap-1">
                             <button
-                                    disabled={bookingPage === 1}
-                                    onClick={() => setBookingPage(bookingPage - 1)}
-                                    className="p-1 rounded bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 transition cursor-pointer"
-                                >
-                                    <ChevronLeft size={12} />
-                                </button>
-                                <button
-                                    disabled={bookingPage === totalBookingPages}
-                                    onClick={() => setBookingPage(bookingPage + 1)}
-                                    className="p-1 rounded bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 transition cursor-pointer"
-                                >
+                                disabled={bookingPage === 1}
+                                onClick={() => setBookingPage(bookingPage - 1)}
+                                className="p-1 rounded bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 transition cursor-pointer"
+                            >
+                                <ChevronLeft size={12} />
+                            </button>
+                            <button
+                                disabled={bookingPage === totalBookingPages}
+                                onClick={() => setBookingPage(bookingPage + 1)}
+                                className="p-1 rounded bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 transition cursor-pointer"
+                            >
                                 <ChevronRight size={12} />
                             </button>
                         </div>
@@ -1002,7 +1073,7 @@ export default function Dashboard() {
                 Analytics & Live Shift activity Feed
                ---------------------------------------------------- */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
+
                 {/* 1. Live Activity Feed */}
                 <div className={getCardStyle()}>
                     <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
@@ -1011,7 +1082,7 @@ export default function Dashboard() {
                                 <Bell size={16} className={currentAccent.text} />
                                 Live Shift Activity Feed
                             </h3>
-                            <p className="text-[10px] text-slate-400">Real-time terminal event log</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Real-time terminal event log</p>
                         </div>
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
                     </div>
@@ -1020,17 +1091,16 @@ export default function Dashboard() {
                         {activities.map((act) => (
                             <div key={act.id} className="flex gap-3 text-xs">
                                 <div className="mt-0.5 flex flex-col items-center">
-                                    <div className={`w-2.5 h-2.5 rounded-full border-2 ${
-                                        act.type === "checkin" ? "bg-emerald-500 border-emerald-200" :
+                                    <div className={`w-2.5 h-2.5 rounded-full border-2 ${act.type === "checkin" ? "bg-emerald-500 border-emerald-200" :
                                         act.type === "checkout" ? "bg-red-500 border-red-200" :
-                                        act.type === "booking" ? "bg-blue-500 border-blue-200" :
-                                        "bg-slate-500 border-slate-200"
-                                    }`} />
+                                            act.type === "booking" ? "bg-blue-500 border-blue-200" :
+                                                "bg-slate-500 border-slate-200"
+                                        }`} />
                                     <div className="w-0.5 h-10 bg-slate-100 dark:bg-slate-800 mt-1" />
                                 </div>
                                 <div className="flex-1 space-y-0.5">
                                     <p className="text-slate-600 dark:text-slate-300 font-medium">{act.text}</p>
-                                    <span className="text-[9px] text-slate-400 font-bold uppercase">{act.time}</span>
+                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase">{act.time}</span>
                                 </div>
                             </div>
                         ))}
@@ -1045,7 +1115,7 @@ export default function Dashboard() {
                                 <Layers size={16} className={currentAccent.text} />
                                 Hotel SaaS Analytics Summary
                             </h3>
-                            <p className="text-[10px] text-slate-400">ADR, RevPAR, and occupancy indexes</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">ADR, RevPAR, and occupancy indexes</p>
                         </div>
                         <span className="text-[10px] font-bold bg-blue-50 text-blue-600 dark:bg-blue-950/40 px-2.5 py-0.5 rounded-full">
                             Q3 Overview
@@ -1054,44 +1124,45 @@ export default function Dashboard() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-2">
                         <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800/50">
-                            <h5 className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Average Daily Rate (ADR)</h5>
-                            <h3 className="text-xl font-black mt-1">$145.00</h3>
-                            <p className="text-[9px] text-slate-400 mt-1 flex items-center gap-1">
-                                <span className="text-emerald-500 font-bold">↑ +2.5%</span> vs last month
-                            </p>
-                        </div>
-                        
-                        <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800/50">
-                            <h5 className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Revenue Per Available Room (RevPAR)</h5>
+                            <h5 className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Average Daily Rate (ADR)</h5>
                             <h3 className="text-xl font-black mt-1">
-                                ${loading ? "..." : Math.round((dynamicRevenue / (totalRoomsCount || 1))).toFixed(2)}
+                                {loading ? "..." : (occupiedRooms > 0 ? `Rs. ${Math.round(dynamicRevenue / occupiedRooms).toLocaleString()}` : "N/A")}
                             </h3>
-                            <p className="text-[9px] text-slate-400 mt-1 flex items-center gap-1">
-                                <span className="text-emerald-500 font-bold">↑ +4.8%</span> vs target index
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+                                Revenue ÷ occupied rooms
                             </p>
                         </div>
 
                         <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800/50">
-                            <h5 className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Weekly Arrival Distribution</h5>
+                            <h5 className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Revenue Per Available Room (RevPAR)</h5>
+                            <h3 className="text-xl font-black mt-1">
+                                {loading ? "..." : (totalRoomsCount > 0 ? `Rs. ${Math.round(dynamicRevenue / totalRoomsCount).toLocaleString()}` : "N/A")}
+                            </h3>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+                                Total revenue ÷ total rooms
+                            </p>
+                        </div>
+
+                        <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800/50">
+                            <h5 className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Today's Traffic</h5>
                             <h3 className="text-xl font-black mt-1">
                                 {loading ? "..." : (todayCheckIns + todayCheckOuts)} guests
                             </h3>
-                            <p className="text-[9px] text-slate-400 mt-1 flex items-center gap-1">
-                                <span className="text-amber-500 font-bold">→ Constant</span> checkout ratios
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+                                <span className="text-blue-500 font-bold">{loading ? "..." : todayCheckIns} in</span> &nbsp;·&nbsp; <span className="text-orange-500 font-bold">{loading ? "..." : todayCheckOuts} out</span>
                             </p>
                         </div>
                     </div>
 
                     {/* Operational Tips Banner */}
-                    <div className={`mt-4 p-4 rounded-xl border flex items-center gap-3 ${
-                        theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-slate-50 border-slate-100"
-                    }`}>
+                    <div className={`mt-4 p-4 rounded-xl border flex items-center gap-3 ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-slate-50 border-slate-100"
+                        }`}>
                         <div className={`p-2 rounded-lg ${currentAccent.bg} text-white hidden sm:block`}>
                             <Sparkles size={16} />
                         </div>
                         <div className="space-y-0.5">
                             <h5 className="text-xs font-bold">Linear Smart Suggestion</h5>
-                            <p className="text-[10px] text-slate-400">
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
                                 Current occupancy is at <strong className="text-slate-600 dark:text-slate-350">{occupancyRate}%</strong>. Consider launching package loyalty upgrades to raise ADR averages for expected walk-in requests.
                             </p>
                         </div>
