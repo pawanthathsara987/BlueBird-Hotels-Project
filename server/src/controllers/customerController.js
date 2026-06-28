@@ -128,7 +128,7 @@ export async function loginCustomer(req, res) {
             googleAuth: customer.googleAuth
         };
 
-        const accessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "1m" });
+        const accessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "30m" });
         const refreshToken = jwt.sign(userResponse, process.env.JWT_REFRESH_KEY, { expiresIn: "7d" });
 
         const isProduction = process.env.NODE_ENV === "production";
