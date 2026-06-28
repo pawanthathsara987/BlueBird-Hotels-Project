@@ -3,6 +3,7 @@ import { CreditCard, Lock, AlertCircle, Check, ArrowLeft, Loader } from 'lucide-
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
+import { toast } from 'react-hot-toast';
 
 const RoomPayment = () => {
   const location = useLocation();
@@ -39,7 +40,12 @@ const RoomPayment = () => {
       saved = {};
     }
 
-    const token = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
+    let token = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
+    if (token === "undefined" || token === "null") {
+      localStorage.removeItem("customerToken");
+      sessionStorage.removeItem("customerToken");
+      token = null;
+    }
     let guest = {};
     if (token) {
       try {
@@ -81,8 +87,13 @@ const RoomPayment = () => {
     setError('');
     setProcessing(true);
 
-    const token = localStorage.getItem("customerToken") ||
+    let token = localStorage.getItem("customerToken") ||
                   sessionStorage.getItem("customerToken");
+    if (token === "undefined" || token === "null") {
+      localStorage.removeItem("customerToken");
+      sessionStorage.removeItem("customerToken");
+      token = null;
+    }
 
     let savedBookingDetails = {};
     let airportPickup = null;
@@ -200,45 +211,59 @@ const RoomPayment = () => {
         bookingConfirmation: { bookingId: reservationId }
       }));
 
-      setSuccessMessage("Booking registered. Redirecting to PayHere Secure Portal...");
+      setSuccessMessage("Opening Secure Payment Window...");
 
-      // 4. Dynamically construct and submit the HTML checkout form
+      // 4. Trigger PayHere Inline Checkout Popup Overlay
       setTimeout(() => {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = 'https://sandbox.payhere.lk/pay/checkout';
+        if (!window.payhere) {
+          setError("Payment portal failed to initialize. Please refresh the page and try again.");
+          setProcessing(false);
+          return;
+        }
 
-        const addField = (name, val) => {
-          const input = document.createElement('input');
-          input.type = 'hidden';
-          input.name = name;
-          input.value = val;
-          form.appendChild(input);
+        // Configure callback event listeners
+        window.payhere.onCompleted = function onCompleted(orderId) {
+          console.log("Payment completed. OrderID:" + orderId);
+          toast.success("Payment completed successfully!");
+          navigate(`/booking-confirm?order_id=${reservationId}`);
         };
 
-        addField('merchant_id', merchantId);
-        addField('return_url', `${window.location.origin}/booking-confirm?order_id=${reservationId}`);
-        addField('cancel_url', `${window.location.origin}/payment`);
-        addField('notify_url', `${import.meta.env.NOTIFY_URL}/api/payment/notify`);
+        window.payhere.onDismissed = function onDismissed() {
+          console.log("Payment dismissed");
+          setError("Payment window was closed. You can retry payment.");
+          setProcessing(false);
+        };
 
-        // Customer details
-        addField('first_name', billingDetails.firstName);
-        addField('last_name', billingDetails.lastName);
-        addField('email', billingDetails.email);
-        addField('phone', billingDetails.phone);
-        addField('address', billingDetails.address);
-        addField('city', billingDetails.city);
-        addField('country', billingDetails.country);
+        window.payhere.onError = function onError(error) {
+          console.error("PayHere Error:", error);
+          setError("Payment transaction failed. Please try again.");
+          setProcessing(false);
+        };
 
-        // Order details
-        addField('order_id', reservationId);
-        addField('items', `BlueBird Room Booking #${reservationId}`);
-        addField('currency', 'LKR');
-        addField('amount', advanceAmount.toFixed(2));
-        addField('hash', hash);
+        // Construct inline payment request object
+        const payment = {
+          sandbox: true,
+          merchant_id: merchantId,
+          return_url: `${window.location.origin}/booking-confirm?order_id=${reservationId}`,
+          cancel_url: `${window.location.origin}/payment`,
+          notify_url: import.meta.env.NOTIFY_URL
+            ? `${import.meta.env.NOTIFY_URL}/api/payment/notify`
+            : `${import.meta.env.VITE_BACKEND_URL}/payment/notify`,
+          order_id: String(reservationId),
+          items: `BlueBird Room Booking #${reservationId}`,
+          amount: parseFloat(advanceAmount).toFixed(2),
+          currency: "LKR",
+          hash: hash,
+          first_name: billingDetails.firstName,
+          last_name: billingDetails.lastName,
+          email: billingDetails.email,
+          phone: billingDetails.phone,
+          address: billingDetails.address,
+          city: billingDetails.city,
+          country: billingDetails.country
+        };
 
-        document.body.appendChild(form);
-        form.submit();
+        window.payhere.startPayment(payment);
       }, 1000);
 
     } catch (err) {

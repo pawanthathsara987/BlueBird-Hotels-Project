@@ -6,6 +6,8 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import axios from "axios";
 import { response } from "express";
+import { Op } from "sequelize";
+
 dotenv.config();
 
 import sequelize from "../config/database.js";
@@ -126,7 +128,7 @@ export async function loginCustomer(req, res) {
             googleAuth: customer.googleAuth
         };
 
-        const accessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "15m" });
+        const accessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "1m" });
         const refreshToken = jwt.sign(userResponse, process.env.JWT_REFRESH_KEY, { expiresIn: "7d" });
 
         const isProduction = process.env.NODE_ENV === "production";
@@ -439,6 +441,65 @@ export async function updateCustomerProfile(req, res) {
     }
 }
 
+export async function changePassword(req, res) {
+    try {
+        const customerId = req.user.id;
+        const { currentPassword, newPassword, confirmNewPassword } = req.body;
+
+        if (!currentPassword || !newPassword || !confirmNewPassword) {
+            return res.status(400).json({
+                message: "All fields are required"
+            });
+        }
+
+        if (newPassword !== confirmNewPassword) {
+            return res.status(400).json({
+                message: "New passwords do not match"
+            });
+        }
+
+        if (newPassword.length < 8) {
+            return res.status(400).json({
+                message: "New password must be at least 8 characters long"
+            });
+        }
+
+        const customer = await Customer.findByPk(customerId);
+        if (!customer) {
+            return res.status(404).json({
+                message: "Customer not found"
+            });
+        }
+
+        if (customer.googleAuth) {
+            return res.status(400).json({
+                message: "Accounts registered with Google Authentication cannot change their password"
+            });
+        }
+
+        const isPasswordValid = await bcrypt.compare(currentPassword, customer.password);
+        if (!isPasswordValid) {
+            return res.status(400).json({
+                message: "Incorrect current password"
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        customer.password = hashedPassword;
+        await customer.save();
+
+        res.status(200).json({
+            message: "Password updated successfully"
+        });
+
+    } catch (error) {
+        console.error("Error changing password:", error);
+        res.status(500).json({
+            message: "Internal server error"
+        });
+    }
+}
+
 export async function getCustomerProfile(req, res) {
     try {
         const customerId = req.user.id;
@@ -531,7 +592,12 @@ export async function getCustomerTours(req, res) {
         }
 
         const inquiries = await TourInquiry.findAll({
-            where: { email: customer.email },
+            where: {
+                [Op.or]: [
+                    { customerId: customer.id },
+                    { email: customer.email }
+                ]
+            },
             include: [
                 {
                     model: Tour,
@@ -713,4 +779,4 @@ export async function cancelCustomerRental(req, res) {
         console.error("Error cancelling rental booking:", error);
         res.status(500).json({ message: "Internal server error" });
     }
-}
+}
