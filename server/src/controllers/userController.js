@@ -61,8 +61,11 @@ export async function userLogin(req, res) {
                 message: "Invalid password"
             });
         }
+        const staff = await StaffMember.findOne({ where: { email: email.trim() } });
         res.json({
-            message: "Login successful"
+            message: "Login successful",
+            name: staff?.name || "Staff Member",
+            email: email.trim()
         });
 
     } catch (error) {
@@ -460,8 +463,16 @@ export async function verifyOtpAndResetPassword(req, res) {
             { where: { email: email } }
         );
 
+        // Retrieve the staff member's role to inform the frontend redirect destination
+        const staffMember = await StaffMember.findOne({
+            where: { email: email.trim() },
+            include: [{ model: Role }]
+        });
+        const roleName = staffMember?.Role?.roleName || "receptionist";
+
         res.json({
-            message: "Password reset successfully"
+            message: "Password reset successfully",
+            role: roleName
         });
 
     } catch (error) {

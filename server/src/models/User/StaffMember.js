@@ -10,6 +10,11 @@ StaffMember.init(
             primaryKey: true,
             autoIncrement: true
         },
+        staffId: {
+            type: DataTypes.STRING(20),
+            allowNull: true,
+            unique: true
+        },
         name: {
             type: DataTypes.STRING(100),
             allowNull: false

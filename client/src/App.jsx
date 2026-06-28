@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import HomePage from "./pages/homePage";
 import ReceptionistLogin from "./pages/admin/ReceptionistLogin";
 import ManagerLogin from "./pages/admin/ManagerLogin";
+import AdminLogin from "./pages/admin/AdminLogin";
 import CustomerLoginPage from "./pages/auth/CustomerLoginPage";
 import CustomerRegister from "./pages/auth/CustomerRegister";
 import AdminPage from "./pages/admin/AdminPage";
@@ -42,6 +43,7 @@ export default function App() {
                         <Route path="/payment" element={<RoomPaymentPage />} />
                         <Route path="/receptionistLogin" element={<ReceptionistLogin />} />
                         <Route path="/managerLogin" element={<ManagerLogin />} />
+                        <Route path="/adminLogin" element={<AdminLogin />} />
                         <Route path="/registerCustomer" element={<CustomerRegister />} />
                         <Route path="/customerLogin" element={<CustomerLoginPage />} />
                         <Route path="/customer-reset-password" element={<CustomerPasswordResetPage />} />

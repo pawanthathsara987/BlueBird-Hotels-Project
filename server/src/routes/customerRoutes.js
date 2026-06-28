@@ -8,6 +8,7 @@ import {
     refreshToken, 
     logoutCustomer, 
     updateCustomerProfile,
+    changePassword,
     getCustomerProfile,
     getCustomerBookings,
     getCustomerRentals,
@@ -28,6 +29,7 @@ customerRouter.post("/google-login", googleLogin);
 customerRouter.post("/refresh", refreshToken);
 customerRouter.post("/logout", logoutCustomer);
 customerRouter.put("/update-profile", requireAuth, updateCustomerProfile);
+customerRouter.put("/change-password", requireAuth, changePassword);
 
 customerRouter.get("/profile", requireAuth, getCustomerProfile);
 customerRouter.get("/bookings", requireAuth, getCustomerBookings);

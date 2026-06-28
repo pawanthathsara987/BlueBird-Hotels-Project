@@ -131,6 +131,56 @@ const RoomSelector = () => {
     }
   });
 
+  const getPickupTimeConstraints = () => {
+    if (!dateRange || !dateRange[0]?.startDate) return { disabled: false, min: "", error: "" };
+    
+    const startDate = new Date(dateRange[0].startDate);
+    const today = new Date();
+    
+    const isTodayDate = startDate.getDate() === today.getDate() &&
+                        startDate.getMonth() === today.getMonth() &&
+                        startDate.getFullYear() === today.getFullYear();
+                        
+    if (!isTodayDate) {
+      return { disabled: false, min: "", error: "" };
+    }
+    
+    const minTime = new Date();
+    minTime.setHours(minTime.getHours() + 3);
+    
+    // Check if 3 hours from now rolls over to tomorrow
+    if (minTime.getDate() !== today.getDate()) {
+      return {
+        disabled: true,
+        min: "",
+        error: "Same-day shuttle transfers are no longer requestable. Requires at least 3 hours advance notice."
+      };
+    }
+    
+    const hours = minTime.getHours();
+    const minutes = minTime.getMinutes();
+    const minTimeString = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    
+    return {
+      disabled: false,
+      min: minTimeString,
+      error: ""
+    };
+  };
+
+  // Keep pickup status and time compliant with the 3-hour constraint
+  useEffect(() => {
+    const constraints = getPickupTimeConstraints();
+    if (constraints.disabled && airportPickupEnabled) {
+      setAirportPickupEnabled(false);
+    }
+    if (airportPickupEnabled && !constraints.disabled && constraints.min) {
+      if (!pickupTime || pickupTime < constraints.min) {
+        setPickupTime(constraints.min);
+      }
+    }
+  }, [dateRange, airportPickupEnabled, pickupTime]);
+
   // Dynamic Board Types state
   const [boardTypes, setBoardTypes] = useState([]);
 
@@ -706,6 +756,19 @@ const RoomSelector = () => {
       }
       navigate("/customerLogin", { state: { from: "/booking" } });
       return;
+    }
+
+    // 1.5 Validate same-day airport pickup constraints
+    if (airportPickupEnabled) {
+      const constraints = getPickupTimeConstraints();
+      if (constraints.disabled) {
+        toast.error("Same-day airport pickup requests must be made at least 3 hours in advance. Shuttle service is unavailable for today.");
+        return;
+      }
+      if (constraints.min && (!pickupTime || pickupTime < constraints.min)) {
+        toast.error(`For same-day arrivals, pickup time must be at least 3 hours in the future (after ${constraints.min}).`);
+        return;
+      }
     }
 
     // 2. Validate nationality
@@ -1657,11 +1720,27 @@ const RoomSelector = () => {
                         <input
                           type="time"
                           value={pickupTime}
-                          onChange={(e) => setPickupTime(e.target.value)}
-                          className="border text-xs rounded-lg px-3 py-2 bg-white text-stone-700 font-bold border-stone-200 hover:border-stone-300 focus:ring-1 focus:ring-emerald-500/20 focus:border-emerald-600 transition cursor-pointer"
+                          disabled={getPickupTimeConstraints().disabled}
+                          min={getPickupTimeConstraints().min}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const curConstraints = getPickupTimeConstraints();
+                            if (curConstraints.min && val < curConstraints.min) {
+                              toast.error(`For same-day arrivals, pickup time must be at least 3 hours in the future (after ${curConstraints.min}).`);
+                              setPickupTime(curConstraints.min);
+                            } else {
+                              setPickupTime(val);
+                            }
+                          }}
+                          className="border text-xs rounded-lg px-3 py-2 bg-white text-stone-700 font-bold border-stone-200 hover:border-stone-300 focus:ring-1 focus:ring-emerald-500/20 focus:border-emerald-600 transition cursor-pointer disabled:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed"
                         />
                       </div>
                     </div>
+                    {getPickupTimeConstraints().error && (
+                      <p className="text-[10px] text-rose-600 font-bold mt-1 animate-pulse">
+                        ⚠️ {getPickupTimeConstraints().error}
+                      </p>
+                    )}
                     <p className="text-[10px] text-emerald-800 font-semibold italic">
                       * The pickup date matches your check-in date. Please update check-in date above if needed.
                     </p>
@@ -1674,7 +1753,14 @@ const RoomSelector = () => {
                 <span className="text-xs font-extrabold text-stone-600">Request Airport Pickup</span>
                 <button
                   type="button"
-                  onClick={() => setAirportPickupEnabled(!airportPickupEnabled)}
+                  onClick={() => {
+                    const c = getPickupTimeConstraints();
+                    if (c.disabled && !airportPickupEnabled) {
+                      toast.error("Same-day pickup requests must be made at least 3 hours in advance. Shuttle service is unavailable for today.");
+                      return;
+                    }
+                    setAirportPickupEnabled(!airportPickupEnabled);
+                  }}
                   className={`w-12 h-6.5 rounded-full p-1 transition-colors duration-300 focus:outline-none shadow-inner cursor-pointer relative ${airportPickupEnabled ? "bg-emerald-800" : "bg-stone-200"
                     }`}
                 >

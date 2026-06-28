@@ -5,8 +5,7 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
-export default function ManagerLogin() {
-
+export default function AdminLogin() {
     const [emailVerified, setEmailVerified] = useState(false);
     const [shouldRegister, setShouldRegister] = useState(false);
     const [email, setEmail] = useState("");
@@ -20,20 +19,18 @@ export default function ManagerLogin() {
     const navigate = useNavigate();
 
     async function handleVerifyEmail() {
-
         if (!email.trim()) {
             toast.error("Please enter your email first.");
             return;
         }
 
         try {
-
             setIsVerifying(true);
             setVerifyMessage("");
 
             const res = await axios.post(
                 import.meta.env.VITE_BACKEND_URL + "/users/verify-email",
-                { email: email.trim(), role: "manager" }
+                { email: email.trim(), role: "admin" }
             );
 
             const showLogin = res?.data?.showLogin;
@@ -44,14 +41,11 @@ export default function ManagerLogin() {
 
             if (showLogin) {
                 toast.success("Email verified. Please enter your password.");
-            }
-            else if (showRegister) {
+            } else if (showRegister) {
                 toast.success("Staff email detected. Please complete registration.");
+            } else {
+                toast.error(res?.data?.message || "Email is not authorized.");
             }
-            else {
-                toast.error("Email is not authorized.");
-            }
-
         } catch (error) {
             setVerifyMessage(
                 error?.response?.data?.message || "Failed to verify email"
@@ -62,7 +56,6 @@ export default function ManagerLogin() {
     }
 
     async function handleLogin() {
-
         if (!email || !password) {
             toast.error("Please enter both email and password.");
             return;
@@ -73,11 +66,13 @@ export default function ManagerLogin() {
             const res = await axios.post(import.meta.env.VITE_BACKEND_URL + "/users/login", {
                 email: email,
                 password: password,
-                role: "manager"
+                role: "admin"
             });
 
             toast.success(res?.data?.message || "Login successful.");
-            navigate("/manager");
+            localStorage.setItem("adminName", res?.data?.name || "Administrator");
+            localStorage.setItem("adminEmail", res?.data?.email || email.trim());
+            navigate("/admin");
         } catch (error) {
             toast.error(error?.response?.data?.message || "Login failed.");
         } finally {
@@ -86,15 +81,13 @@ export default function ManagerLogin() {
     }
 
     async function register() {
-
         try {
-
             if (!email.trim() || !password || !confirmPassword) {
                 toast.error("Please fill in all fields.");
                 return;
             }
 
-            if (password !== confirmPassword){
+            if (password !== confirmPassword) {
                 toast.error("Passwords do not match.");
                 return;
             }
@@ -108,7 +101,6 @@ export default function ManagerLogin() {
             toast.success(res?.data?.message || "Registration successful. You can now log in.");
             setShouldRegister(false);
             setEmailVerified(true);
-
         } catch (err) {
             toast.error(err?.response?.data?.message || "Registration failed");
         }
@@ -123,14 +115,14 @@ export default function ManagerLogin() {
                     <img src={Logo} alt="Logo" className="w-28 mx-auto object-contain transition hover:scale-105 duration-300" />
                     
                     <div className="space-y-1">
-                        <span className="inline-block px-3 py-1 text-[10px] font-bold text-violet-600 bg-violet-50 border border-violet-100 rounded-full tracking-wider uppercase">
-                            Management Portal
+                        <span className="inline-block px-3 py-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full tracking-wider uppercase">
+                            Admin Portal
                         </span>
                         <h2 className="text-xl font-bold text-slate-800 tracking-tight pt-1">
-                            Manager Login
+                            Admin Login
                         </h2>
                         <p className="text-slate-400 text-xs font-medium">
-                            Verify your credentials to access the manager console
+                            Verify your credentials to access the admin console
                         </p>
                     </div>
                 </div>
@@ -147,7 +139,7 @@ export default function ManagerLogin() {
                             disabled={emailVerified}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="username@bluebird.com"
-                            className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200 disabled:opacity-75 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                            className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200 disabled:opacity-75 disabled:bg-slate-100 disabled:cursor-not-allowed"
                         />
                     </div>
 
@@ -156,7 +148,7 @@ export default function ManagerLogin() {
                         <button
                             onClick={handleVerifyEmail}
                             disabled={isVerifying}
-                            className="w-full h-11 bg-violet-600 hover:bg-violet-700 text-white font-bold text-sm rounded-xl transition duration-200 shadow-md shadow-violet-500/10 hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer mt-2"
+                            className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition duration-200 shadow-md shadow-indigo-500/10 hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer mt-2"
                         >
                             {isVerifying ? (
                                 <div className="flex items-center gap-2">
@@ -191,7 +183,7 @@ export default function ManagerLogin() {
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         placeholder="Create password"
-                                        className="w-full border border-slate-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200"
+                                        className="w-full border border-slate-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200"
                                     />
                                     <button
                                         type="button"
@@ -210,7 +202,7 @@ export default function ManagerLogin() {
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
                                         placeholder="Confirm password"
-                                        className="w-full border border-slate-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200"
+                                        className="w-full border border-slate-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200"
                                     />
                                     <button
                                         type="button"
@@ -236,7 +228,7 @@ export default function ManagerLogin() {
                             <div className="space-y-1.5">
                                 <div className="flex justify-between items-center">
                                     <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide">Password</label>
-                                    <Link to="/reset-password" className="text-xs font-bold text-violet-600 hover:text-violet-800 transition">
+                                    <Link to="/reset-password" className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition">
                                         Forgot Password?
                                     </Link>
                                 </div>
@@ -246,7 +238,7 @@ export default function ManagerLogin() {
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         placeholder="Enter your password"
-                                        className="w-full border border-slate-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200"
+                                        className="w-full border border-slate-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200"
                                     />
                                     <button
                                         type="button"
@@ -261,7 +253,7 @@ export default function ManagerLogin() {
                             <button
                                 onClick={handleLogin}
                                 disabled={isLoggingIn}
-                                className="w-full h-11 bg-violet-600 hover:bg-violet-700 text-white font-bold text-sm rounded-xl transition duration-200 shadow-md shadow-violet-500/10 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer mt-2"
+                                className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition duration-200 shadow-md shadow-indigo-500/10 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer mt-2"
                             >
                                 {isLoggingIn ? (
                                     <div className="flex items-center gap-2">

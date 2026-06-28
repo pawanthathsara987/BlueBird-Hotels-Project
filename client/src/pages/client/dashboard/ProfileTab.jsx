@@ -6,8 +6,7 @@ export default function ProfileTab({
   profile,
   setEditProfileForm,
   setIsEditProfileOpen,
-  showRealPII,
-  setShowRealPII,
+  setIsChangePasswordOpen,
   maskEmail,
   maskPhone
 }) {
@@ -16,7 +15,7 @@ export default function ProfileTab({
       <div className="flex justify-between items-center pb-4 border-b border-slate-200/60">
         <div>
           <h2 className="font-serif font-semibold text-xl md:text-2xl text-blue-950">Luxury Profile Management</h2>
-          <p className="text-slate-500 text-xs mt-0.5">Control details, emergency preferences, and toggle secure PII data masking overlays.</p>
+          <p className="text-slate-500 text-xs mt-0.5">Control details, emergency preferences, and account security credentials.</p>
         </div>
       </div>
 
@@ -36,20 +35,6 @@ export default function ProfileTab({
             <p className="text-slate-400 text-[10px] font-semibold mt-1">Verified Guest</p>
           </div>
 
-          {/* Security masking state controller */}
-          <div className="w-full pt-4 border-t border-slate-100 text-xs flex justify-between items-center">
-            <span className="text-slate-500 font-medium">PII Privacy Shield</span>
-            <button
-              onClick={() => {
-                setShowRealPII(!showRealPII);
-                toast.success(showRealPII ? "Private data masked securely" : "Private data revealed");
-              }}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${showRealPII ? 'bg-amber-400 border-amber-400 text-blue-950' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
-            >
-              {showRealPII ? "Mask Private Info" : "Reveal Private Info"}
-            </button>
-          </div>
-
           <button
             onClick={() => {
               setEditProfileForm({ ...profile });
@@ -59,6 +44,17 @@ export default function ProfileTab({
           >
             Edit Luxury Credentials
           </button>
+
+          {!profile.googleAuth && (
+            <button
+              onClick={() => {
+                setIsChangePasswordOpen(true);
+              }}
+              className="w-full py-2.5 bg-slate-100 hover:bg-slate-250/80 hover:text-cyan-800 text-blue-950 font-semibold text-xs rounded-xl border border-slate-200/60 transition-all"
+            >
+              Change Password
+            </button>
+          )}
         </div>
 
         {/* Profile Detailed Form Inputs */}
