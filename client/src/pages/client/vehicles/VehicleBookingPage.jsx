@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { ArrowLeft, CalendarDays, ShieldAlert, ShieldCheck, Star } from "lucide-react";
 
@@ -23,10 +23,18 @@ const calculateDeposit = (totalPrice) => {
 
 export default function VehicleBookingPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const location = useLocation();
   const [vehicle, setVehicle] = useState(location.state?.vehicle || null);
   const [vehicleLoading, setVehicleLoading] = useState(!location.state?.vehicle);
   const [vehicleError, setVehicleError] = useState("");
+
+  useEffect(() => {
+    const token = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
+    if (!token) {
+      navigate("/customerLogin", { state: { from: `/vehicles/${id}/book` } });
+    }
+  }, [navigate, id]);
   const [pickupDate, setPickupDate] = useState(location.state?.pickupDate || "");
   const [returnDate, setReturnDate] = useState(location.state?.returnDate || "");
   const [driverOption, setDriverOption] = useState(location.state?.driverOption || "without");
@@ -198,8 +206,10 @@ export default function VehicleBookingPage() {
         returnDatetime: returnDate,
         withDriver: driverOption === "with"
       };
-      
-      const res = await axios.post(`${backendBaseUrl}/vehicles/${id}/book`, payload);
+      const token = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
+      const res = await axios.post(`${backendBaseUrl}/vehicles/${id}/book`, payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setBookingSuccess(res.data.data);
     } catch (err) {
       setBookingError(err.response?.data?.message || "Failed to create booking. Please try again.");
