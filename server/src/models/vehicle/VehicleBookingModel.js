@@ -113,7 +113,7 @@ VehicleBooking.init(
     depositPercentage: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      defaultValue: 30,         // locked at booking time
+      defaultValue: 50,         // locked at booking time
     },
     depositAmount: {
       type: DataTypes.DECIMAL(10, 2),

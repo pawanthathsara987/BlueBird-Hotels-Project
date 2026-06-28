@@ -306,13 +306,13 @@ export const sendVehicleBookingConfirmationEmail = async (options) => {
               </div>
 
               <div class="deposit-card">
-                <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: #3b82f6; font-weight: 700;">Advance Deposit Required (30%)</div>
+                <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: #3b82f6; font-weight: 700;">Advance Deposit Required (50%)</div>
                 <div class="deposit-amount">$${Number(depositAmount || 0).toLocaleString()}</div>
                 <div class="balance-note">Remaining balance of <strong>$${Number(balanceAmount || 0).toLocaleString()}</strong> is payable at vehicle pickup.</div>
               </div>
 
               <div class="section" style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 16px; font-size: 13px;">
-                <strong>⚠️ Important:</strong> Please pay the 30% deposit to confirm your reservation. Unpaid bookings will be automatically released after 24 hours.
+                <strong>⚠️ Important:</strong> Please pay the 50% deposit to confirm your reservation. Unpaid bookings will be automatically released after 2 hours.
               </div>
             </div>
 

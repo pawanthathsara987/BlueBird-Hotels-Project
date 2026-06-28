@@ -42,10 +42,6 @@ export const getVehicleRentalPolicy = async (req, res) => {
 export const updateVehicleRentalPolicy = async (req, res) => {
   try {
     const payload = {
-      depositNonRefundable: toBoolean(req.body.depositNonRefundable),
-      sameConditionRequired: toBoolean(req.body.sameConditionRequired),
-      sameFuelLevelRequired: toBoolean(req.body.sameFuelLevelRequired),
-      thirdPartyLendingAllowed: toBoolean(req.body.thirdPartyLendingAllowed),
       lateReturnGraceHours: toInteger(req.body.lateReturnGraceHours),
       lateReturnFeePerHour: toNumber(req.body.lateReturnFeePerHour),
       lateReturnFullDayAfterHours: toInteger(req.body.lateReturnFullDayAfterHours),
@@ -53,7 +49,7 @@ export const updateVehicleRentalPolicy = async (req, res) => {
       damageLiabilityCap: toNumber(req.body.damageLiabilityCap),
       includedKilometersPerDay: toInteger(req.body.includedKilometersPerDay),
       extraMileageFee: toNumber(req.body.extraMileageFee),
-      extraMileageCurrency: normalizeText(req.body.extraMileageCurrency) || 'LKR',
+      extraMileageCurrency: normalizeText(req.body.extraMileageCurrency) || 'USD',
       termsAndConditions: normalizeText(req.body.termsAndConditions),
     };
 

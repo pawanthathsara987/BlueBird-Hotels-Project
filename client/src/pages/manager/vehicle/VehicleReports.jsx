@@ -21,7 +21,7 @@ const Card = ({ children, className = "" }) => (
 
 const formatMoney = (value) => {
   const amount = Number(value);
-  return Number.isFinite(amount) ? `LKR ${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "LKR 0.00";
+  return Number.isFinite(amount) ? `$${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "$0.00";
 };
 
 export default function VehicleReports() {

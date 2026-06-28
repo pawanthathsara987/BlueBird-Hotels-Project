@@ -178,6 +178,16 @@ export function initModels() {
         foreignKey: "tourId",
     });
 
+    // Customer -> TourInquiry (One-to-Many)
+    Customer.hasMany(TourInquiry, {
+        foreignKey: "customerId",
+        onDelete: "SET NULL",
+        onUpdate: "CASCADE",
+    });
+    TourInquiry.belongsTo(Customer, {
+        foreignKey: "customerId",
+    });
+
 
     //StaffMember -> Role (Many-to-One)
     StaffMember.belongsTo(Role, {

@@ -191,6 +191,7 @@ export const createTourInquiry = async (req, res) => {
     const inquiry = await TourInquiry.create({
       inquiryRef,
       tourId,
+      customerId: req.user?.id,
       fullName,
       email,
       phone,
