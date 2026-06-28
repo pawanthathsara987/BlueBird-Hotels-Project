@@ -1,7 +1,7 @@
 import { Model, DataTypes } from 'sequelize';
 import sequelize from '../../config/database.js';
 
-class VehicleRentalPolicy extends Model {}
+class VehicleRentalPolicy extends Model { }
 
 VehicleRentalPolicy.init(
   {

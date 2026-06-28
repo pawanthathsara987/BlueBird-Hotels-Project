@@ -713,4 +713,4 @@ export async function cancelCustomerRental(req, res) {
         console.error("Error cancelling rental booking:", error);
         res.status(500).json({ message: "Internal server error" });
     }
-}
+}
