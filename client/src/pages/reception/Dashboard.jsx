@@ -332,17 +332,23 @@ export default function Dashboard() {
     const bookingsPerPage = 5;
 
     const filteredBookings = useMemo(() => {
+        const q = bookingSearch.toLowerCase().trim();
         return recentBookings.filter(b => {
-            const matchName = `${b.firstName} ${b.lastName}`.toLowerCase().includes(bookingSearch.toLowerCase());
-            const matchRoom = b.rooms?.toLowerCase().includes(bookingSearch.toLowerCase());
+            // Search: guest name, room number, or booking ID
+            const matchName = `${b.firstName} ${b.lastName}`.toLowerCase().includes(q);
+            const matchRoom = b.rooms?.toLowerCase().includes(q);
+            const matchId = String(b.reservation_id).includes(q);
+            const matchSearch = !q || matchName || matchRoom || matchId;
 
-            let status = "pending";
+            // Determine effective status: room-level statuses take priority over booking-level
+            let status = b.bookingStatus || "confirmed"; // booking-level: confirmed / cancelled / no_show
             if (b.roomStatuses?.includes('checked_in')) status = "checked_in";
-            else if (b.roomStatuses?.includes('reserved')) status = "reserved";
             else if (b.roomStatuses?.includes('checked_out')) status = "checked_out";
+            else if (b.roomStatuses?.includes('cancelled')) status = "cancelled";
+            else if (b.bookingStatus === 'no_show' || b.bookingStatus === 'no-show') status = "no_show";
 
             const matchStatus = bookingStatusFilter === "all" || status === bookingStatusFilter;
-            return (matchName || matchRoom) && matchStatus;
+            return matchSearch && matchStatus;
         });
     }, [recentBookings, bookingSearch, bookingStatusFilter]);
 
@@ -953,7 +959,7 @@ export default function Dashboard() {
                                     <Layers size={16} className={currentAccent.text} />
                                     Recent Reservation Bookings
                                 </h3>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">Search, filter, and review bookings</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">Search by guest name, booking ID, or filter by status</p>
                             </div>
 
                             {/* Filters & search */}
@@ -961,76 +967,119 @@ export default function Dashboard() {
                                 <div className="relative flex-grow sm:flex-grow-0">
                                     <input
                                         type="text"
-                                        placeholder="Search guest or room..."
+                                        placeholder="Name, room or ID..."
                                         value={bookingSearch}
                                         onChange={(e) => setBookingSearch(e.target.value)}
-                                        className="w-full sm:w-44 pl-7 pr-3 py-1 text-[11px] bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg focus:outline-none focus:ring-1"
+                                        className="w-full sm:w-44 pl-7 pr-3 py-1 text-[11px] bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-1"
                                     />
                                     <Search size={10} className="absolute left-2.5 top-2.5 text-slate-400" />
+                                    {bookingSearch && (
+                                        <button
+                                            onClick={() => setBookingSearch("")}
+                                            className="absolute right-2 top-1.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                                        >
+                                            ✕
+                                        </button>
+                                    )}
                                 </div>
 
                                 <select
                                     value={bookingStatusFilter}
                                     onChange={(e) => setBookingStatusFilter(e.target.value)}
-                                    className="px-2 py-1 text-[11px] bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg focus:outline-none"
+                                    className="px-2 py-1 text-[11px] bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-lg focus:outline-none cursor-pointer"
                                 >
                                     <option value="all">All statuses</option>
-                                    <option value="checked_in">Checked In</option>
-                                    <option value="reserved">Reserved</option>
-                                    <option value="checked_out">Checked Out</option>
-                                    <option value="pending">Pending</option>
+                                    <option value="confirmed">Confirmed</option>
+                                    <option value="checked_in">Checked-in</option>
+                                    <option value="checked_out">Checked-out</option>
+                                    <option value="cancelled">Cancelled</option>
+                                    <option value="no_show">No-show</option>
                                 </select>
                             </div>
                         </div>
 
-                        {/* Notion-style Bookings Lists */}
+                        {/* Bookings List */}
                         <div className="space-y-2 min-h-[220px]">
-                            {paginatedBookings.length > 0 ? (
+                            {loading ? (
+                                <div className="flex items-center justify-center py-12">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="w-6 h-6 border-2 border-slate-300 dark:border-slate-600 border-t-blue-500 rounded-full animate-spin" />
+                                        <p className="text-slate-400 text-xs">Loading bookings...</p>
+                                    </div>
+                                </div>
+                            ) : paginatedBookings.length > 0 ? (
                                 paginatedBookings.map((booking) => {
+                                    // Determine status
                                     const isCheckedIn = booking.roomStatuses?.includes('checked_in');
-                                    const isReserved = booking.roomStatuses?.includes('reserved');
                                     const isCheckedOut = booking.roomStatuses?.includes('checked_out');
+                                    const isCancelled = booking.roomStatuses?.includes('cancelled') || booking.bookingStatus === 'cancelled';
+                                    const isNoShow = booking.bookingStatus === 'no_show' || booking.bookingStatus === 'no-show';
 
-                                    let badgeBg = "bg-amber-50 dark:bg-amber-950/20 border-amber-100 dark:border-amber-950/30 text-amber-600 dark:text-amber-400";
-                                    let badgeText = "Pending";
-
+                                    let badgeBg, badgeText, badgeDot;
                                     if (isCheckedIn) {
                                         badgeBg = "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-950/30 text-emerald-600 dark:text-emerald-400";
-                                        badgeText = "Checked In";
-                                    } else if (isReserved) {
-                                        badgeBg = "bg-blue-50 dark:bg-blue-950/20 border-blue-100 dark:border-blue-950/30 text-blue-600 dark:text-blue-400";
-                                        badgeText = "Reserved";
+                                        badgeText = "Checked-in"; badgeDot = "bg-emerald-500";
                                     } else if (isCheckedOut) {
                                         badgeBg = "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400";
-                                        badgeText = "Checked Out";
+                                        badgeText = "Checked-out"; badgeDot = "bg-slate-400";
+                                    } else if (isCancelled) {
+                                        badgeBg = "bg-red-50 dark:bg-red-950/20 border-red-100 dark:border-red-950/30 text-red-600 dark:text-red-400";
+                                        badgeText = "Cancelled"; badgeDot = "bg-red-500";
+                                    } else if (isNoShow) {
+                                        badgeBg = "bg-orange-50 dark:bg-orange-950/20 border-orange-100 dark:border-orange-950/30 text-orange-600 dark:text-orange-400";
+                                        badgeText = "No-show"; badgeDot = "bg-orange-500";
+                                    } else {
+                                        badgeBg = "bg-blue-50 dark:bg-blue-950/20 border-blue-100 dark:border-blue-950/30 text-blue-600 dark:text-blue-400";
+                                        badgeText = "Confirmed"; badgeDot = "bg-blue-500";
                                     }
 
                                     return (
                                         <div
                                             key={booking.reservation_id}
-                                            className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 p-3 bg-slate-50/50 dark:bg-slate-900/30 rounded-xl border border-slate-50 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition duration-150"
+                                            className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 p-3 bg-slate-50/50 dark:bg-slate-900/30 rounded-xl border border-slate-50 dark:border-slate-800 hover:bg-slate-100/60 dark:hover:bg-slate-800/60 transition duration-150"
                                         >
-                                            <div>
-                                                <h4 className="font-bold text-xs">
-                                                    {booking.firstName} {booking.lastName}
-                                                </h4>
-                                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                                    Expected Check-in: <span className="font-semibold text-slate-500">{new Date(booking.checkIn).toLocaleDateString()}</span>
-                                                </p>
+                                            {/* Left: Guest info */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <h4 className="font-bold text-xs">{booking.firstName} {booking.lastName}</h4>
+                                                    <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                                                        #{booking.reservation_id}
+                                                    </span>
+                                                </div>
+                                                <div className="flex flex-wrap gap-3 mt-1">
+                                                    <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                                                        Check-in: <span className="font-semibold">{booking.checkIn ? new Date(booking.checkIn).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "—"}</span>
+                                                    </p>
+                                                    <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                                                        Check-out: <span className="font-semibold">{booking.checkOut ? new Date(booking.checkOut).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "—"}</span>
+                                                    </p>
+                                                    {booking.total_price && (
+                                                        <p className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                                                            Rs. {Number(booking.total_price).toLocaleString()}
+                                                        </p>
+                                                    )}
+                                                </div>
                                             </div>
 
-                                            <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-end">
-                                                <div className="flex gap-1.5">
-                                                    {booking.rooms?.split(",").map((room, i) => (
+                                            {/* Right: Room chips + status badge */}
+                                            <div className="flex items-center gap-2 flex-shrink-0">
+                                                <div className="flex gap-1 flex-wrap">
+                                                    {booking.rooms?.split(",").slice(0, 3).map((room, i) => (
                                                         <span
                                                             key={i}
-                                                            className="bg-blue-50/50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 border border-blue-100/50 dark:border-blue-900/40 text-[9px] font-bold px-2 py-0.5 rounded"
+                                                            className="bg-blue-50/50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 border border-blue-100/50 dark:border-blue-900/40 text-[9px] font-bold px-1.5 py-0.5 rounded"
                                                         >
                                                             R-{room.trim()}
                                                         </span>
                                                     ))}
+                                                    {booking.rooms?.split(",").length > 3 && (
+                                                        <span className="text-[9px] text-slate-400 font-bold px-1">
+                                                            +{booking.rooms.split(",").length - 3}
+                                                        </span>
+                                                    )}
                                                 </div>
-                                                <span className={`${badgeBg} border text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider`}>
+                                                <span className={`${badgeBg} border text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${badgeDot} inline-block`} />
                                                     {badgeText}
                                                 </span>
                                             </div>
@@ -1038,7 +1087,24 @@ export default function Dashboard() {
                                     );
                                 })
                             ) : (
-                                <p className="text-slate-400 text-xs py-12 text-center">No matching bookings recorded.</p>
+                                <div className="flex flex-col items-center justify-center py-12 gap-2">
+                                    <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                                        <Layers size={14} className="text-slate-400" />
+                                    </div>
+                                    <p className="text-slate-400 text-xs text-center">
+                                        {bookingSearch || bookingStatusFilter !== "all"
+                                            ? "No bookings match your search or filter."
+                                            : "No bookings recorded yet."}
+                                    </p>
+                                    {(bookingSearch || bookingStatusFilter !== "all") && (
+                                        <button
+                                            onClick={() => { setBookingSearch(""); setBookingStatusFilter("all"); }}
+                                            className="text-[10px] font-bold text-blue-500 hover:text-blue-600 underline cursor-pointer"
+                                        >
+                                            Clear filters
+                                        </button>
+                                    )}
+                                </div>
                             )}
                         </div>
                     </div>
