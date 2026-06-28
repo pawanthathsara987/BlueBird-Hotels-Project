@@ -120,6 +120,7 @@ export default function BookingManagement() {
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [paymentReceiptNo, setPaymentReceiptNo] = useState("");
+  const [paymentReceiptImage, setPaymentReceiptImage] = useState(null);
   const [paymentNotes, setPaymentNotes] = useState("");
   const [cancellationReason, setCancellationReason] = useState("");
   const [targetStatus, setTargetStatus] = useState("");
@@ -221,13 +222,15 @@ export default function BookingManagement() {
       const isFinal = selectedBooking.status === "completed";
       const endpoint = isFinal ? "collect-final-settlement" : "collect-balance";
       
+      const formData = new FormData();
+      formData.append("paymentMethod", paymentMethod);
+      if (paymentNotes) formData.append("notes", paymentNotes);
+      if (paymentReceiptNo) formData.append("receiptNo", paymentReceiptNo);
+      if (paymentReceiptImage) formData.append("receiptImage", paymentReceiptImage);
+
       await axios.put(
         `${backendBaseUrl}/manager/vehicle-bookings/${selectedBooking.id}/${endpoint}`,
-        {
-          paymentMethod,
-          notes: paymentNotes,
-          receiptNo: paymentReceiptNo
-        },
+        formData,
         config
       );
       toast.success(isFinal ? "Final settlement payment recorded!" : "Balance payment recorded!");
@@ -986,6 +989,16 @@ export default function BookingManagement() {
                   placeholder="e.g. REC-93821"
                   value={paymentReceiptNo}
                   onChange={(e) => setPaymentReceiptNo(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Payment Receipt Image</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setPaymentReceiptImage(e.target.files?.[0] || null)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500"
                 />
               </div>

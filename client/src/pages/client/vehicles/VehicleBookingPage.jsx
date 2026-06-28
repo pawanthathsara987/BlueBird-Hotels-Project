@@ -51,7 +51,7 @@ export default function VehicleBookingPage() {
     customerLicenseNo: "",
     customerLicenseExpiry: ""
   });
-  
+
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState("");
   const [bookingSuccess, setBookingSuccess] = useState(null);
@@ -60,7 +60,7 @@ export default function VehicleBookingPage() {
     if (vehicle) {
       return;
     }
-    
+
     let cancelled = false;
 
     const loadVehicle = async () => {
@@ -170,11 +170,11 @@ export default function VehicleBookingPage() {
 
   const canSubmit = Boolean(
     vehicle &&
-      pickupDate &&
-      returnDate &&
-      availability?.available &&
-      !availabilityLoading &&
-      !bookingLoading
+    pickupDate &&
+    returnDate &&
+    availability?.available &&
+    !availabilityLoading &&
+    !bookingLoading
   );
 
   const handleBookSubmit = async (e) => {
@@ -195,10 +195,10 @@ export default function VehicleBookingPage() {
         return;
       }
     }
-    
+
     setBookingLoading(true);
     setBookingError("");
-    
+
     try {
       const payload = {
         ...bookingForm,
@@ -258,7 +258,7 @@ export default function VehicleBookingPage() {
             </p>
           </div>
 
-          <button className="mt-6 w-full rounded-2xl bg-sky-600 px-4 py-4 font-semibold text-white transition hover:bg-sky-700 shadow-md shadow-sky-600/20" onClick={() => alert("PayHere Gateway Integration Pending") }>
+          <button className="mt-6 w-full rounded-2xl bg-sky-600 px-4 py-4 font-semibold text-white transition hover:bg-sky-700 shadow-md shadow-sky-600/20" onClick={() => alert("PayHere Gateway Integration Pending")}>
             Pay Deposit Now
           </button>
           <Link to="/vehicles" className="mt-4 inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 px-4 py-4 font-semibold text-slate-700 transition hover:bg-slate-50">
