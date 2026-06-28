@@ -106,6 +106,10 @@ export default function DriverForm({ driver, onCancel, onSaved }) {
     const { name, value, type, files } = e.target;
     if (type === "file") {
       const f = files?.[0] || null;
+      // Revoke previous blob URL to prevent memory leak
+      if (form.driverImagePreview && form.driverImagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(form.driverImagePreview);
+      }
       const preview = f ? URL.createObjectURL(f) : null;
       setForm((p) => ({ ...p, driverImage: f, driverImagePreview: preview }));
     } else {
