@@ -109,7 +109,6 @@ export default function VehicleDetailsPage() {
                 <ul className="text-xs text-slate-600 space-y-2">
                   {vehicle.year && <li className="flex items-start gap-2"><span className="text-slate-400 mt-0.5 font-bold">Year</span> {vehicle.year}</li>}
                   {vehicle.color && <li className="flex items-start gap-2"><span className="text-slate-400 mt-0.5 font-bold">Color</span> <span className="capitalize">{vehicle.color}</span></li>}
-                  {vehicle.plateNumber && <li className="flex items-start gap-2"><span className="text-slate-400 mt-0.5 font-bold">Plate</span> {vehicle.plateNumber}</li>}
                   {vehicle.insuranceExpiry && <li className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5">✓</span> Insured until {vehicle.insuranceExpiry}</li>}
                   <li className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5">✓</span> Optional driver available</li>
                 </ul>
