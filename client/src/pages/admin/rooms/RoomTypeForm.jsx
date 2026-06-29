@@ -12,6 +12,8 @@ function RoomTypeForm() {
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [occupancyTypeId, setOccupancyTypeId] = useState("");
+    const [occupancyTypes, setOccupancyTypes] = useState([]);
     const isEditMode = Boolean(selectedRoomType?.id);
 
     const goBackToPackages = () => {
@@ -23,11 +25,27 @@ function RoomTypeForm() {
         if (isEditMode) {
             setTypeName(selectedRoomType.type || "");
             setImagePreview(selectedRoomType.image_url || "");
+            setOccupancyTypeId(String(selectedRoomType.occupancy_type_id ?? selectedRoomType.occupancyType?.id ?? ""));
         } else {
             setTypeName("");
             setImagePreview("");
+            setOccupancyTypeId("");
         }
     }, [isEditMode, selectedRoomType]);
+
+    // Fetch occupancy types on mount
+    useEffect(() => {
+        async function fetchOccupancyTypes() {
+            try {
+                const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/occupancy-types`);
+                setOccupancyTypes(response.data?.data || []);
+            } catch (error) {
+                console.error("Error fetching occupancy types:", error);
+                toast.error("Failed to load occupancy types");
+            }
+        }
+        fetchOccupancyTypes();
+    }, []);
 
     const handleImageChange = (e) => {
         const file = e.target.files[0];
@@ -53,6 +71,7 @@ function RoomTypeForm() {
 
             const formData = new FormData();
             formData.append("type", typeName.trim());
+            formData.append("occupancy_type_id", occupancyTypeId);
             if (imageFile) {
                 formData.append("image", imageFile);
             }
@@ -77,6 +96,7 @@ function RoomTypeForm() {
             setTypeName("");
             setImageFile(null);
             setImagePreview("");
+            setOccupancyTypeId("");
 
         } catch (error) {
             toast.error(error?.response?.data?.message || (isEditMode ? "Failed to update room type" : "Failed to add room type"));
@@ -124,6 +144,24 @@ function RoomTypeForm() {
                                 className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 font-medium transition disabled:opacity-50"
                             />
                             <p className="text-[11px] text-slate-400">Please provide a unique, descriptive name for the room category.</p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="block text-sm font-bold text-slate-700">Occupancy Type</label>
+                            <select
+                                value={occupancyTypeId}
+                                onChange={(e) => setOccupancyTypeId(e.target.value)}
+                                disabled={isLoading}
+                                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 text-slate-600 font-semibold transition disabled:opacity-50 cursor-pointer"
+                            >
+                                <option value="">Select Occupancy Type</option>
+                                {occupancyTypes.map((type) => (
+                                    <option key={type.id} value={type.id}>
+                                        {type.type} {type.capacity ? `(${type.capacity} guests)` : ""}
+                                    </option>
+                                ))}
+                            </select>
+                            <p className="text-[11px] text-slate-400">Select the occupancy configuration associated with this room type.</p>
                         </div>
 
                         <div className="space-y-2">
