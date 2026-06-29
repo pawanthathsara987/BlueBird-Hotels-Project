@@ -10,6 +10,7 @@ import sequelize from "../config/database.js";
 import Role from "../models/User/Role.js";
 import DeletedStaffMember from "../models/User/DeletedStaffMember.js";
 import supabase from "../config/supabaseClient.js";
+import { generateQRCode } from "../utils/qrCodeGenerator.js";
 dotenv.config();
 
 const transporter = nodemailer.createTransport(
@@ -119,6 +120,14 @@ export async function registerUser(req, res) {
                 imageUrl: imageUrl
             }
         );
+
+        // Reload to get trigger-generated staffId
+        await staffMember.reload();
+
+        // Generate and save QR code
+        const qrCodeUrl = await generateQRCode(staffMember.staffId);
+        staffMember.qrCodeUrl = qrCodeUrl;
+        await staffMember.save();
 
         res.json({
             message: "User registered successfully",
