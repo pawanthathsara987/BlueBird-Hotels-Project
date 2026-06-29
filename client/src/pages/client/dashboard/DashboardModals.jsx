@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { X, Star, AlertCircle } from "lucide-react";
+import { toast } from "react-hot-toast";
+import { getCountries, getCountryCallingCode, parsePhoneNumberFromString, isValidPhoneNumber } from "libphonenumber-js";
 
 export default function DashboardModals({
   isEditProfileOpen,
@@ -25,6 +27,120 @@ export default function DashboardModals({
   selectedBookingForCancel,
   handleConfirmCancel
 }) {
+  const [phoneCountry, setPhoneCountry] = useState("LK");
+  const [localPhone, setLocalPhone] = useState("");
+
+  // Address subfields
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
+  const [city, setCity] = useState("");
+  const [zipCode, setZipCode] = useState("");
+
+  const countryCodeOptions = useMemo(() => {
+    const displayNames = new Intl.DisplayNames(["en"], { type: "region" });
+
+    return getCountries()
+      .map((countryCode) => {
+        const dialingCode = `+${getCountryCallingCode(countryCode)}`;
+        const countryName = displayNames.of(countryCode) || countryCode;
+
+        return {
+          value: countryCode,
+          countryName,
+          dialingCode
+        };
+      })
+      .sort((a, b) => a.countryName.localeCompare(b.countryName));
+  }, []);
+
+  // Parse existing phone number and address when modal opens
+  useEffect(() => {
+    if (isEditProfileOpen) {
+      if (editProfileForm.phone) {
+        const parsed = parsePhoneNumberFromString(editProfileForm.phone);
+        if (parsed) {
+          setPhoneCountry(parsed.country || "LK");
+          setLocalPhone(parsed.nationalNumber || "");
+        } else {
+          // Fallback matching
+          const cleanPhone = editProfileForm.phone.replace(/\s+/g, "");
+          const matched = countryCodeOptions.find(c => cleanPhone.startsWith(c.dialingCode));
+          if (matched) {
+            setPhoneCountry(matched.value);
+            setLocalPhone(cleanPhone.slice(matched.dialingCode.length));
+          } else {
+            setPhoneCountry("LK");
+            setLocalPhone(editProfileForm.phone);
+          }
+        }
+      }
+
+      if (editProfileForm.address && editProfileForm.address !== "Not Provided") {
+        const parts = editProfileForm.address.split(",").map(p => p.trim());
+        if (parts.length >= 4) {
+          setAddressLine1(parts[0]);
+          setAddressLine2(parts[1]);
+          setCity(parts[2]);
+          setZipCode(parts[parts.length - 1]);
+        } else if (parts.length === 3) {
+          setAddressLine1(parts[0]);
+          setAddressLine2("");
+          setCity(parts[1]);
+          setZipCode(parts[2]);
+        } else if (parts.length === 2) {
+          setAddressLine1(parts[0]);
+          setAddressLine2("");
+          setCity(parts[1]);
+          setZipCode("");
+        } else {
+          setAddressLine1(editProfileForm.address);
+          setAddressLine2("");
+          setCity("");
+          setZipCode("");
+        }
+      } else {
+        setAddressLine1("");
+        setAddressLine2("");
+        setCity("");
+        setZipCode("");
+      }
+    }
+  }, [isEditProfileOpen]);
+
+  // Sync state values to editProfileForm (phone and address)
+  useEffect(() => {
+    const dialingCode = countryCodeOptions.find(c => c.value === phoneCountry)?.dialingCode || "";
+    const combinedPhone = `${dialingCode}${localPhone.trim()}`;
+
+    const streetPart = addressLine2.trim() 
+      ? `${addressLine1.trim()}, ${addressLine2.trim()}` 
+      : addressLine1.trim();
+        
+    const combinedAddress = [
+      streetPart,
+      city.trim(),
+      zipCode.trim() ? zipCode.trim() : null
+    ].filter(Boolean).join(", ");
+
+    setEditProfileForm(prev => {
+      const updates = {};
+      if (prev.phone !== combinedPhone) updates.phone = combinedPhone;
+      if (prev.address !== combinedAddress) updates.address = combinedAddress || "Not Provided";
+      if (Object.keys(updates).length > 0) {
+        return { ...prev, ...updates };
+      }
+      return prev;
+    });
+  }, [phoneCountry, localPhone, addressLine1, addressLine2, city, zipCode, setEditProfileForm]);
+
+  const handleSubmitProfile = (e) => {
+    e.preventDefault();
+    if (localPhone.trim() !== "" && !isValidPhoneNumber(localPhone.trim(), phoneCountry)) {
+      toast.error(`Invalid phone number for ${countryCodeOptions.find(c => c.value === phoneCountry)?.countryName || "selected country"}. Please check the number.`);
+      return;
+    }
+    handleSaveProfile(e);
+  };
   return (
     <>
       {/* A. EDIT PROFILE DIALOG */}
@@ -39,7 +155,7 @@ export default function DashboardModals({
               </button>
             </div>
 
-            <form onSubmit={handleSaveProfile} className="space-y-4 text-xs font-sans">
+            <form onSubmit={handleSubmitProfile} className="space-y-4 text-xs font-sans">
               <div className="space-y-1">
                 <label className="text-[10px] text-slate-400 font-bold uppercase">Full Legal Name</label>
                 <input
@@ -63,34 +179,118 @@ export default function DashboardModals({
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] text-slate-400 font-bold uppercase">Telephone Number</label>
+                  <div className="flex gap-2">
+                    <div className="relative w-24 shrink-0">
+                      <select
+                        value={phoneCountry}
+                        onChange={(e) => setPhoneCountry(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-2.5 pr-6 focus:bg-white focus:border-cyan-600 outline-none cursor-pointer appearance-none text-xs"
+                      >
+                        {countryCodeOptions.map((item) => (
+                          <option key={item.value} value={item.value}>
+                            {item.value} ({item.dialingCode})
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[9px] pointer-events-none">▼</div>
+                    </div>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="Phone Number"
+                      value={localPhone}
+                      onChange={(e) => setLocalPhone(e.target.value)}
+                      className="flex-1 min-w-0 bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 focus:bg-white focus:border-cyan-600 outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] text-slate-400 font-bold uppercase">Address Line 1</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Street Address, P.O. Box, Company"
+                  value={addressLine1}
+                  onChange={(e) => setAddressLine1(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 focus:bg-white focus:border-cyan-600 outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] text-slate-400 font-bold uppercase">Address Line 2 (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="Apartment, Suite, Unit, Building, Floor"
+                  value={addressLine2}
+                  onChange={(e) => setAddressLine2(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 focus:bg-white focus:border-cyan-600 outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-slate-400 font-bold uppercase">City</label>
                   <input
-                    type="tel"
+                    type="text"
                     required
-                    value={editProfileForm.phone}
-                    onChange={(e) => setEditProfileForm({ ...editProfileForm, phone: e.target.value })}
+                    placeholder="City Name"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 focus:bg-white focus:border-cyan-600 outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-slate-400 font-bold uppercase">ZIP / Postal Code (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="ZIP / Postal Code"
+                    value={zipCode}
+                    onChange={(e) => setZipCode(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 focus:bg-white focus:border-cyan-600 outline-none"
                   />
                 </div>
               </div>
+
               <div className="space-y-1">
-                <label className="text-[10px] text-slate-400 font-bold uppercase">Delivery Address</label>
-                <input
-                  type="text"
+                <label className="text-[10px] text-slate-400 font-bold uppercase">Country / Region</label>
+                <select
                   required
-                  value={editProfileForm.address}
-                  onChange={(e) => setEditProfileForm({ ...editProfileForm, address: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 focus:bg-white focus:border-cyan-600 outline-none"
-                />
+                  value={editProfileForm.country}
+                  onChange={(e) => setEditProfileForm({ ...editProfileForm, country: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 focus:bg-white focus:border-cyan-600 outline-none cursor-pointer"
+                >
+                  <option value="">Select Country</option>
+                  {countryCodeOptions.map((item) => (
+                    <option key={item.value} value={item.countryName}>
+                      {item.countryName}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-400 font-bold uppercase">Concierge Emergency contact</label>
-                <input
-                  type="text"
-                  required
-                  value={editProfileForm.emergencyContact}
-                  onChange={(e) => setEditProfileForm({ ...editProfileForm, emergencyContact: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 focus:bg-white focus:border-cyan-600 outline-none"
-                />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-slate-400 font-bold uppercase">ID Document Type</label>
+                  <select
+                    value={editProfileForm.idType}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, idType: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 focus:bg-white focus:border-cyan-600 outline-none animate-none"
+                  >
+                    <option value="NIC">NIC</option>
+                    <option value="PASSPORT">PASSPORT</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-slate-400 font-bold uppercase">ID Document Number</label>
+                  <input
+                    type="text"
+                    required
+                    value={editProfileForm.idNumber}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, idNumber: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 focus:bg-white focus:border-cyan-600 outline-none"
+                  />
+                </div>
               </div>
 
               <div className="flex gap-3 pt-4 justify-end">

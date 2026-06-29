@@ -1,7 +1,7 @@
 import { Model, DataTypes } from "sequelize";
 import sequelize from "../../config/database.js";
 
-class BookedRoom extends Model {}
+class BookedRoom extends Model { }
 
 BookedRoom.init(
     {

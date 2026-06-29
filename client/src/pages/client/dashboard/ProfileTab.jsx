@@ -78,16 +78,16 @@ export default function ProfileTab({
               <span className="font-semibold text-blue-950 text-sm block">{maskPhone(profile.phone)}</span>
             </div>
             <div className="bg-slate-50/60 p-4 rounded-2xl border border-slate-100/50 space-y-1">
-              <span className="text-[10px] text-slate-400 font-bold block">PREFERRED BILLING VALUE</span>
-              <span className="font-semibold text-blue-950 text-sm block">{profile.currency} - {profile.language}</span>
+              <span className="text-[10px] text-slate-400 font-bold block">COUNTRY / REGION</span>
+              <span className="font-semibold text-blue-950 text-sm block">{profile.country}</span>
+            </div>
+            <div className="bg-slate-50/60 p-4 rounded-2xl border border-slate-100/50 space-y-1">
+              <span className="text-[10px] text-slate-400 font-bold block">VERIFIED ID DOCUMENT ({profile.idType})</span>
+              <span className="font-semibold text-blue-950 text-sm block">{profile.idNumber || "Not Provided"}</span>
             </div>
             <div className="md:col-span-2 bg-slate-50/60 p-4 rounded-2xl border border-slate-100/50 space-y-1">
               <span className="text-[10px] text-slate-400 font-bold block">DELIVERY ADDRESS</span>
               <span className="font-semibold text-blue-950 text-sm block">{profile.address}</span>
-            </div>
-            <div className="md:col-span-2 bg-slate-50/60 p-4 rounded-2xl border border-slate-100/50 space-y-1">
-              <span className="text-[10px] text-slate-400 font-bold block">CONCIERGE EMERGENCY DESK CONTACT</span>
-              <span className="font-semibold text-blue-950 text-sm block">{profile.emergencyContact}</span>
             </div>
           </div>
         </div>

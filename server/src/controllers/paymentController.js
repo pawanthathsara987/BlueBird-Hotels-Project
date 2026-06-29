@@ -101,6 +101,20 @@ export const handlePayHereNotification = async (req, res) => {
                 return res.status(404).send("Booking not found");
             }
 
+            // Verify payment currency matches LKR
+            if (payhere_currency !== "LKR") {
+                console.warn(`[PAYHERE WARNING] Currency mismatch for Booking #${order_id}. Expected: LKR, Received: ${payhere_currency}`);
+                return res.status(400).send("Currency verification failed");
+            }
+
+            // Verify payment amount matches 50% of booking total price (advance payment)
+            const expectedAmount = Number((Number(booking.total_price) * 0.5).toFixed(2));
+            const receivedAmount = Number(parseFloat(payhere_amount).toFixed(2));
+            if (Math.abs(receivedAmount - expectedAmount) > 0.05) {
+                console.warn(`[PAYHERE WARNING] Payment amount mismatch for Booking #${order_id}. Expected: ${expectedAmount}, Received: ${receivedAmount}`);
+                return res.status(400).send("Payment amount verification failed");
+            }
+
             // Log successful payment details in RoomPayment model
             try {
                 const existingPayment = await RoomPayment.findOne({ where: { payment_no: payment_id } });

@@ -4,7 +4,7 @@ import Logo from "../../assets/bluebird logo.png";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import { FaUser, FaEnvelope, FaGlobe, FaPhone, FaLock, FaEye, FaEyeSlash, FaIdCard, FaMapMarkerAlt } from "react-icons/fa";
+import { FaUser, FaEnvelope, FaGlobe, FaPhone, FaLock, FaEye, FaEyeSlash, FaIdCard, FaMapMarkerAlt, FaArrowLeft } from "react-icons/fa";
 import { validateSriLankanNIC, validatePassport } from "../../utils/validation";
 
 // Import local background assets from slider Images folder
@@ -575,6 +575,19 @@ export default function CustomerRegister() {
                         className="font-bold text-amber-400 hover:text-amber-300 hover:underline transition-colors cursor-pointer"
                     >
                         Login
+                    </button>
+                </div>
+
+                {/* Back to Home Link */}
+                <div className="mt-6 text-xs border-t border-white/5 pt-4 w-full flex justify-center">
+                    <button
+                        type="button"
+                        onClick={() => navigate("/")}
+                        disabled={loading}
+                        className="flex items-center gap-2 font-bold text-slate-400 hover:text-white transition-colors cursor-pointer group"
+                    >
+                        <FaArrowLeft className="text-[10px] text-amber-400 group-hover:-translate-x-0.5 transition-transform" />
+                        <span>Back to Home</span>
                     </button>
                 </div>
             </div>

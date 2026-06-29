@@ -2,7 +2,7 @@ import Customer from "../models/User/Customer.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import CustomerOTP from "../models/User/CustomerOTP.js";
-import nodemailer from "nodemailer";
+import { sendEmail } from "../services/emailService.js";
 import dotenv from "dotenv";
 import axios from "axios";
 import { response } from "express";
@@ -12,21 +12,6 @@ dotenv.config();
 
 import sequelize from "../config/database.js";
 import { Booking, BookedRoom, Room, RoomType, AirPortPickup, VehicleBooking, Vehicle, TourInquiry, Tour, Payment, RoomPayment } from "../models/index.js";
-
-
-
-const transporter = nodemailer.createTransport(
-    {
-        service: "gmail",
-        host: "smtp.gmail.com",
-        port: 587,
-        secure: false,
-        auth: {
-            user: process.env.GMAIL_USER,
-            pass: process.env.GMAIL_APP_PASSWORD
-        }
-    }
-);
 
 export async function registerCustomer(req, res) {
 
@@ -128,7 +113,7 @@ export async function loginCustomer(req, res) {
             googleAuth: customer.googleAuth
         };
 
-        const accessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "1m" });
+        const accessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "30m" });
         const refreshToken = jwt.sign(userResponse, process.env.JWT_REFRESH_KEY, { expiresIn: "7d" });
 
         const isProduction = process.env.NODE_ENV === "production";
@@ -239,14 +224,11 @@ export async function sendOTP(req, res) {
             expiresAt
         });
 
-        const message = {
-            from: process.env.GMAIL_USER,
+        await sendEmail({
             to: email,
             subject: "Password Reset OTP",
             text: `Your OTP for password reset is: ${otp}`
-        };
-
-        await transporter.sendMail(message);
+        });
         res.status(200).json({
             message: "OTP sent successfully"
         });

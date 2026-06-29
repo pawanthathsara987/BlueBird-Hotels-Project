@@ -4,8 +4,16 @@ import ReceptionistLogin from "./pages/admin/ReceptionistLogin";
 import ManagerLogin from "./pages/admin/ManagerLogin";
 import AdminLogin from "./pages/admin/AdminLogin";
 import CustomerLoginPage from "./pages/auth/CustomerLoginPage";
+import axios from "axios";
+
+// Automatically attach stored token to requests on app startup
+const token = localStorage.getItem("token");
+if (token) {
+    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+}
 import CustomerRegister from "./pages/auth/CustomerRegister";
 import AdminPage from "./pages/admin/AdminPage";
+import AttendanceScanner from "./pages/admin/Attendance/AttendanceScanner";
 import PasswordResetPage from "./pages/reception/PasswordResetPage";
 import CustomerPasswordResetPage from "./pages/client/PasswordResetPage";
 import { Toaster } from "react-hot-toast";
@@ -48,6 +56,7 @@ export default function App() {
                         <Route path="/customerLogin" element={<CustomerLoginPage />} />
                         <Route path="/customer-reset-password" element={<CustomerPasswordResetPage />} />
                         <Route path="/reset-password" element={< PasswordResetPage />} />
+                        <Route path="/attendance" element={<AttendanceScanner />} />
                         <Route path="/admin/*" element={< AdminPage />} />
                         <Route path="/manager/*" element={< ManagerPage />} />
                         <Route path="/reception/*" element={< ReceptionPage />} />

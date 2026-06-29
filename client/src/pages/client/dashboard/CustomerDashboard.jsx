@@ -29,138 +29,6 @@ import DashboardModals from "./DashboardModals";
 // DUMMY DATA DEFINITIONS
 // ==========================================
 
-const INITIAL_PROFILE = {
-  name: "Pawanthathsara Thathsara",
-  email: "pawanthathsara987@gmail.com",
-  phone: "+1 (555) 019-4829",
-  address: "742 Evergreen Terrace, Beverly Hills, CA 90210",
-  currency: "USD ($)",
-  language: "English (US)",
-  emergencyContact: "Anjana Thathsara (+1 555-019-9031)",
-  avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80"
-};
-
-const INITIAL_BOOKINGS = [
-  {
-    id: "BB-2026-8942",
-    hotelName: "The Azure Velvet Sands Resort & Spa",
-    location: "Grand Baie, Mauritius",
-    image: "https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=600&q=80",
-    checkIn: "2026-10-14",
-    checkOut: "2026-10-20",
-    nights: 6,
-    rooms: [
-      { type: "Royal Ocean Overwater Suite", guests: "2 Adults" },
-      { type: "Deluxe Beachfront Twin Room", guests: "1 Adult, 1 Child" }
-    ],
-    guestsSummary: "3 Adults, 1 Child",
-    status: "Confirmed",
-    paymentStatus: "Paid",
-    amount: 3850.00,
-    airportTransfer: "Requested - Flight EK 701 (14:30)",
-    amenities: ["Private Infinity Pool Access", "24/7 Butler Service", "Complimentary Spa Ritual"]
-  },
-  {
-    id: "BB-2026-1104",
-    hotelName: "Grand blue Alpine Chalet",
-    location: "Zermatt, Switzerland",
-    image: "https://images.unsplash.com/photo-1518019382147-37c065706598?auto=format&fit=crop&w=600&q=80",
-    checkIn: "2026-12-22",
-    checkOut: "2026-12-28",
-    nights: 6,
-    rooms: [
-      { type: "Matterhorn Panoramic Penthouse", guests: "2 Adults" }
-    ],
-    guestsSummary: "2 Adults",
-    status: "Confirmed",
-    paymentStatus: "Deposit Paid",
-    amount: 7200.00,
-    airportTransfer: "Not Requested",
-    amenities: ["Ski-in/Ski-out Access", "Private Sauna & Hot Tub", "Heated Ski Gear Locker"]
-  }
-];
-
-const INITIAL_TOURS = [
-  {
-    id: "BB-TOUR-4029",
-    destination: "Helicopter Vineyard Tour & Gourmet Tasting",
-    location: "Stellenbosch Valley & Coastal Range, South Africa",
-    requestedDate: "2026-10-16",
-    groupSize: "4 Adults",
-    status: "Approved",
-    price: 1850.00,
-    conciergeNotes: "Dear Mr. Thathsara, we have secured a private Airbus H125 helicopter for your group on October 16th. The estate sommelier at Delaire Graff has confirmed your vintage pairings and reserve library access. We await your final payment signature.",
-    lastUpdated: "2026-05-20"
-  },
-  {
-    id: "BB-TOUR-8032",
-    destination: "Private Sunset Yacht Charter & Deep Sea Angling",
-    location: "Maldivian Atoll Coastline, Maldives",
-    requestedDate: "2026-11-08",
-    groupSize: "2 Adults",
-    status: "Pending Review",
-    price: 3400.00,
-    conciergeNotes: "We are currently negotiating exclusive slip clearance at the private marina for the 78ft Benetti Yacht. We will notify you immediately once the Captain provides the marine path clearance.",
-    lastUpdated: "2026-05-22"
-  }
-];
-
-const INITIAL_VEHICLES = [
-  {
-    id: "BB-CAR-0492",
-    model: "Porsche 911 Carrera 4S Cabriolet",
-    type: "Sports Convertible",
-    image: "https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?auto=format&fit=crop&w=600&q=80",
-    pickupLocation: "Munich Airport Terminal 2",
-    dropoffLocation: "Zurich International Airport",
-    startDate: "2026-09-04",
-    endDate: "2026-09-11",
-    status: "Ready for Pickup",
-    price: 1820.00,
-    unlimitedMileage: true
-  },
-  {
-    id: "BB-CAR-9031",
-    model: "Range Rover Autobiography LWB",
-    type: "Luxury SUV",
-    image: "https://images.unsplash.com/photo-1606016159991-dfe4f974be5c?auto=format&fit=crop&w=600&q=80",
-    pickupLocation: "Zurich International Airport",
-    dropoffLocation: "Zurich International Airport",
-    startDate: "2026-12-22",
-    endDate: "2026-12-28",
-    status: "Confirmed",
-    price: 2450.00,
-    unlimitedMileage: true
-  }
-];
-
-const INITIAL_PAYMENTS = [
-  {
-    id: "BB-PAY-8842",
-    date: "2026-05-18",
-    description: "Azure Velvet Sands Resort Deposit",
-    method: "Visa ending in 4829",
-    amount: 3850.00,
-    status: "Succeeded"
-  },
-  {
-    id: "BB-PAY-0492",
-    date: "2026-04-12",
-    description: "Porsche 911 Rental Full Prep",
-    method: "Apple Pay (Gold Card)",
-    amount: 1820.00,
-    status: "Succeeded"
-  },
-  {
-    id: "BB-PAY-1002",
-    date: "2026-03-01",
-    description: "Refund - Grand Tokyo Suite cancellation",
-    method: "Visa ending in 4829",
-    amount: -1200.00,
-    status: "Refunded"
-  }
-];
-
 const INITIAL_REVIEWS = [
   {
     id: "REV-101",
@@ -220,7 +88,6 @@ export default function CustomerDashboard() {
     idNumber: "",
     currency: "USD ($)",
     language: "English (US)",
-    emergencyContact: "Desk Agent (+1 555-019-9031)",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80",
     googleAuth: false
   });
@@ -256,7 +123,6 @@ export default function CustomerDashboard() {
     idNumber: "",
     currency: "USD ($)",
     language: "English (US)",
-    emergencyContact: "Desk Agent (+1 555-019-9031)",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80",
     googleAuth: false
   });
@@ -313,7 +179,6 @@ export default function CustomerDashboard() {
           idNumber: pData.idNumber || "",
           currency: "USD ($)",
           language: "English (US)",
-          emergencyContact: "Desk Agent (+1 555-019-9031)",
           avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80",
           googleAuth: pData.googleAuth || false
         };
@@ -595,7 +460,6 @@ export default function CustomerDashboard() {
         idNumber: p.idNumber || "",
         currency: profile.currency,
         language: profile.language,
-        emergencyContact: profile.emergencyContact,
         avatar: profile.avatar,
         googleAuth: profile.googleAuth
       };
