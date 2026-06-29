@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, Routes, Route } from "react-router-dom";
-import { MdAdminPanelSettings, MdDashboard, MdBedroomParent, MdBookOnline, MdPeople, MdSettings, MdLogout, MdMenu, MdClose, MdShoppingBag } from "react-icons/md";
+import { MdAdminPanelSettings, MdDashboard, MdBedroomParent, MdBookOnline, MdPeople, MdSettings, MdLogout, MdMenu, MdClose, MdShoppingBag, MdCoPresent } from "react-icons/md";
 import RoomManagement from "./rooms/roomManagement";
 import AmenitiesForm from "./rooms/AmenitiesForm";
 import RoomForm from "./rooms/RoomForm";
@@ -13,6 +13,7 @@ import ViewDeletedStaff from "./user/ViewDeletedStaff";
 import AdminDashboard from "./AdminDashboard";
 import OtherItemPriceView from "./rooms/OtherItemPriceView";
 import ShopManagement from "./shop/ShopManagement";
+import AttendanceRecords from "./Attendance/AttendanceRecords";
 
 
 export default function AdminPage() {
@@ -90,6 +91,10 @@ export default function AdminPage() {
                                 <MdPeople className="text-xl" />
                                 <span>Users</span>
                             </NavLink>
+                            <NavLink to="/admin/attendance-records" onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}>
+                                <MdCoPresent className="text-xl" />
+                                <span>Attendance Logs</span>
+                            </NavLink>
                             <NavLink to="/admin/extra-charges" onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}>
                                 <MdBookOnline className="text-xl" />
                                 <span>Extra Charges</span>
@@ -152,6 +157,7 @@ export default function AdminPage() {
                     <Route path="/users/addStaffMember" element={<AddNewStaffMember />} />
                     <Route path="/users/updateStaffMember" element={<UpdateStaffMember />} />
                     <Route path="/users/viewDeletedStaff" element={<ViewDeletedStaff />} />
+                    <Route path="/attendance-records" element={<AttendanceRecords />} />
                     <Route path="/extra-charges" element={<OtherItemPriceView />} />
                     <Route path="/shop-items" element={<ShopManagement />} />
                     <Route path="/settings" element={<h1 className="p-5">Settings</h1>} />

@@ -56,6 +56,10 @@ StaffMember.init(
         imageUrl: {
             type: DataTypes.STRING(500),
             allowNull: true
+        },
+        qrCodeUrl: {
+            type: DataTypes.STRING,
+            allowNull: true
         }
     },
     {

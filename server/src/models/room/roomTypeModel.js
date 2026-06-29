@@ -18,6 +18,14 @@ RoomType.init({
     image_url: {
         type: DataTypes.STRING,
         allowNull: true
+    },
+    occupancy_type_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'occupancy_type',
+            key: 'id'
+        }
     }
 }, {
     sequelize,

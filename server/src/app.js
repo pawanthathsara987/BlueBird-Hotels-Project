@@ -12,6 +12,8 @@ import customerRouter from './routes/customerRoutes.js';
 import vehicleRouter from './routes/vehicleRouter.js';
 import vehicleTypeRouter from './routes/vehicleTypeRouter.js';
 import paymentRouter from './routes/paymentRouter.js';
+import path from "path";
+import attendanceRoutes from './routes/attendanceRoutes.js';
 
 const app = express();
 
@@ -23,6 +25,11 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use(
+    "/uploads",
+    express.static(path.join(process.cwd(), "uploads"))
+);
+
 app.use('/api/roombook', bookingRouter);
 app.use('/api/tour-inquiry', tourInquiryRouter);
 app.use('/api/users', userRouter);
@@ -33,6 +40,7 @@ app.use('/api/customers', customerRouter);
 app.use('/api/vehicles', vehicleRouter);
 app.use('/api/vehicle-types', vehicleTypeRouter);
 app.use('/api/payment', paymentRouter);
+app.use('/api/attendance', attendanceRoutes);
 // Vehicle service logs: nested under vehicles and standalone for log operations
 // Vehicle service logs removed
 app.post('/api/chat', chatBot);
