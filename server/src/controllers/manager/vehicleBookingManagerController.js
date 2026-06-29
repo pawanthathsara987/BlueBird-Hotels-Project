@@ -345,7 +345,12 @@ export const collectBalance = async (req, res) => {
       staffId = firstStaff ? firstStaff.userId : null;
     }
 
+    // Get the security deposit amount from policy
+    const [policy] = await VehicleRentalPolicy.findOrCreate({ where: { id: 1 }, defaults: { id: 1 }, transaction: t });
+    const securityDepositAmount = parseFloat(policy.securityDepositAmount || 200);
+
     const balanceAmountVal = parseFloat(booking.balanceAmount || 0);
+    const totalCollected = balanceAmountVal + securityDepositAmount;
 
     const newStatus = ['ongoing', 'returned', 'completed'].includes(booking.status) ? booking.status : 'balance_paid';
 
@@ -354,6 +359,8 @@ export const collectBalance = async (req, res) => {
       balancePaidAt: new Date(),
       balancePaymentMethod: paymentMethod,
       balanceCollectedBy: staffId,
+      securityDepositCollected: securityDepositAmount,
+      securityDepositPaidAt: new Date(),
       status: newStatus,
     }, { transaction: t });
 
@@ -362,19 +369,18 @@ export const collectBalance = async (req, res) => {
       receiptImageUrl = await uploadReceiptToSupabase(req.file);
     }
 
-    // Create payment entry
+    // Create payment entry for the total collected amount (Balance + Security Deposit)
     const payment = await Payment.create({
       bookingId: booking.id,
       receivedBy: staffId,
       type: 'balance',
-      amount: balanceAmountVal,
+      amount: totalCollected,
       method: paymentMethod,
       receiptNo: receiptNo || `REC-${Date.now().toString(36).toUpperCase()}`,
       receiptImageUrl: receiptImageUrl,
-      notes: notes || 'Balance collected manually at hotel',
+      notes: (notes ? notes + ' | ' : '') + `Includes $${securityDepositAmount} Security Deposit`,
       receivedAt: new Date(),
     }, { transaction: t });
-
 
 
     await t.commit();
@@ -576,8 +582,8 @@ export const previewBill = async (req, res) => {
       data: {
         lateFee,
         extraMileageFee,
-        cleaningFeePolicy: Number(policy.cleaningFee),
-        damageLiabilityCap: Number(policy.damageLiabilityCap),
+        securityDepositAmount: Number(policy.securityDepositAmount),
+        securityDepositCollected: parseFloat(booking.securityDepositCollected || 0),
       }
     });
   } catch (err) {
@@ -590,7 +596,7 @@ export const generateBill = async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const { id } = req.params;
-    const { applyCleaningFee, manualDamageFee, extraNotes } = req.body;
+    const { manualDamageFee, manualFuelFee, extraNotes } = req.body;
 
     const booking = await VehicleBooking.findByPk(id, { transaction: t, include: [{ association: 'finalBill' }] });
     if (!booking) {
@@ -618,30 +624,56 @@ export const generateBill = async (req, res) => {
 
     const { lateFee, extraMileageFee } = await calculateExtraFees(booking, policy, returnChecklist, pickupChecklist);
 
-    const cleaningFee = applyCleaningFee ? Number(policy.cleaningFee) : 0;
     let damageFee = Number(manualDamageFee) || 0;
+    const fuelFee = Number(manualFuelFee) || 0;
 
-    // Fix #8: Enforce damage liability cap
-    if (policy.damageLiabilityCap > 0 && damageFee > policy.damageLiabilityCap) {
-      damageFee = Number(policy.damageLiabilityCap);
+    // Enforce damage liability cap (damage fee cannot exceed security deposit amount)
+    const depositCap = parseFloat(policy.securityDepositAmount || 200);
+    if (damageFee > depositCap) {
+      damageFee = depositCap;
     }
 
-    const totalExtra = lateFee + extraMileageFee + cleaningFee + damageFee;
-    const newBalanceAmount = parseFloat(booking.balanceAmount) + totalExtra;
+    const totalExtraCharges = lateFee + extraMileageFee + damageFee + fuelFee;
+    
+    const securityDepositCollected = parseFloat(booking.securityDepositCollected || 0);
+    
+    // Math: subtract all extra charges from the deposit
+    const remainingAfterDeductions = securityDepositCollected - totalExtraCharges;
+    
+    let securityDepositRefund = 0;
+    let finalAmountOwed = 0;
+
+    if (remainingAfterDeductions > 0) {
+      // Customer gets a refund
+      securityDepositRefund = remainingAfterDeductions;
+      finalAmountOwed = 0;
+    } else if (remainingAfterDeductions < 0) {
+      // Deposit didn't cover everything, customer owes money
+      securityDepositRefund = 0;
+      finalAmountOwed = Math.abs(remainingAfterDeductions);
+    } else {
+      // Exactly zero
+      securityDepositRefund = 0;
+      finalAmountOwed = 0;
+    }
 
     // Create the final bill record
     const finalBill = await VehicleFinalBill.create({
       bookingId: booking.id,
       lateFee,
       extraMileageFee,
-      cleaningFee,
       damageFee,
-      totalExtraCharges: totalExtra,
+      fuelFee,
+      totalExtraCharges,
+      securityDepositCollected,
+      securityDepositRefund,
+      finalAmountOwed,
       notes: extraNotes || null,
     }, { transaction: t });
 
     await booking.update({
-      balanceAmount: newBalanceAmount,
+      balanceAmount: finalAmountOwed,
+      securityDepositRefund,
       status: 'completed'
     }, { transaction: t });
 
