@@ -72,6 +72,13 @@ export default function ReceptionistLogin() {
             });
 
             toast.success(res?.data?.message || "Login successful.");
+            if (res.data && res.data.token) {
+                localStorage.setItem("token", res.data.token);
+                axios.defaults.headers.common["Authorization"] = `Bearer ${res.data.token}`;
+                if (res.data.user) {
+                    localStorage.setItem("user", JSON.stringify(res.data.user));
+                }
+            }
             navigate("/reception");
         } catch (error) {
             toast.error(error?.response?.data?.message || "Login failed.");

@@ -39,6 +39,67 @@ const availableRooms = async (req, res) => {
     }
 };
 
+// Add customer specifically for reception before booking
+const createReceptionCustomer = async (req, res) => {
+    try {
+        const { firstName, lastName, email, phoneNumber, idPassport, country, idType, idNumber } = req.body;
+
+        if (!firstName || !lastName || !phoneNumber) {
+            return res.status(400).json({
+                success: false,
+                message: "Guest details (firstName, lastName, phoneNumber) are required"
+            });
+        }
+
+        const customerEmail = email || `guest-${phoneNumber.replace(/[^0-9]/g, '')}@bluebird.com`;
+
+        let existingCustomer = await Customer.findOne({
+            where: {
+                [Op.or]: [
+                    { email: customerEmail },
+                    { phoneNumber: phoneNumber }
+                ]
+            }
+        });
+
+        if (existingCustomer) {
+            return res.status(200).json({
+                success: true,
+                message: "Existing customer found",
+                data: { customerId: existingCustomer.id }
+            });
+        }
+
+        const isNIC = idType === 'NIC' || (idPassport && (/^[0-9]{9}[vVxX]$/.test(idPassport.trim()) || /^[0-9]{12}$/.test(idPassport.trim())));
+        const finalIdType = idType || (idPassport ? (isNIC ? 'NIC' : 'PASSPORT') : null);
+
+        const newCustomer = await Customer.create({
+            firstName,
+            lastName,
+            email: customerEmail,
+            phoneNumber,
+            country: country || (isNIC ? 'Sri Lanka' : 'Unknown'),
+            idType: finalIdType,
+            idNumber: idNumber || idPassport,
+            password: null,
+            googleAuth: false
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: "Customer created successfully",
+            data: { customerId: newCustomer.id }
+        });
+
+    } catch (error) {
+        console.error("CREATE RECEPTION CUSTOMER ERROR:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
 // Add booking
 const createVisitorBooking = async (req, res) => {
     const t = await sequelize.transaction();
@@ -78,18 +139,21 @@ const createVisitorBooking = async (req, res) => {
             });
 
             if (existingCustomer) {
-                finalGuestId = existingCustomer.customerId;
+                finalGuestId = existingCustomer.id;
             } else {
+                const isNIC = guestDetails.idPassport ? (/^[0-9]{9}[vVxX]$/.test(guestDetails.idPassport.trim()) || /^[0-9]{12}$/.test(guestDetails.idPassport.trim())) : false;
                 const newCustomer = await Customer.create({
                     firstName: guestDetails.firstName,
                     lastName: guestDetails.lastName,
                     email: email,
                     phoneNumber: guestDetails.phoneNumber,
-                    country: guestDetails.idPassport || guestDetails.country || 'Unknown',
+                    country: guestDetails.country || (isNIC ? 'Sri Lanka' : 'Unknown'),
+                    idType: isNIC ? 'NIC' : (guestDetails.idPassport ? 'PASSPORT' : null),
+                    idNumber: guestDetails.idPassport,
                     password: null,
                     googleAuth: false
                 }, { transaction: t });
-                finalGuestId = newCustomer.customerId;
+                finalGuestId = newCustomer.id;
             }
         }
 
@@ -460,6 +524,7 @@ const getAvailablePackagesByDate = async (req, res) => {
 };
 
 export {
+    createReceptionCustomer,
     createVisitorBooking,
     getAllBookings,
     getBookingById,

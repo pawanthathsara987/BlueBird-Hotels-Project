@@ -4,6 +4,13 @@ import ReceptionistLogin from "./pages/admin/ReceptionistLogin";
 import ManagerLogin from "./pages/admin/ManagerLogin";
 import AdminLogin from "./pages/admin/AdminLogin";
 import CustomerLoginPage from "./pages/auth/CustomerLoginPage";
+import axios from "axios";
+
+// Automatically attach stored token to requests on app startup
+const token = localStorage.getItem("token");
+if (token) {
+    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+}
 import CustomerRegister from "./pages/auth/CustomerRegister";
 import AdminPage from "./pages/admin/AdminPage";
 import PasswordResetPage from "./pages/reception/PasswordResetPage";

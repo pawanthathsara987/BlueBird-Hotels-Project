@@ -4,6 +4,7 @@ import UserRegisterModel from "../models/User/UserRegisterModel.js";
 import Otp from "../models/User/Otp.js";
 import nodemailer from "nodemailer";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import e from "express";
 import sequelize from "../config/database.js";

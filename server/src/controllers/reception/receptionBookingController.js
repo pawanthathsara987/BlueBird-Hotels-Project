@@ -7,7 +7,7 @@ async function setCheckIn(req, res) {
         const { reservation_id } = req.params;
 
         const bookings = await BookedRoom.findAll({
-            where: { reservation_id }
+            where: { booking_id: reservation_id }
         });
 
         if (!bookings.length) {
@@ -102,21 +102,21 @@ async function getPendingCheckins(req, res) {
 
         const query = `
             SELECT
-                r.id AS reservation_id,
+                b.id AS reservation_id,
                 c.firstName,
                 c.lastName,
                 MIN(br.checkIn) AS checkIn,
                 COUNT(br.room_id) AS totalRooms,
-                GROUP_CONCAT(room.roomNumber ORDER BY room.roomNumber) AS rooms
-            FROM reservations r
-            JOIN booked_rooms br ON r.id = br.reservation_id
+                GROUP_CONCAT(room.room_number ORDER BY room.room_number) AS rooms
+            FROM booking b
+            JOIN booked_rooms br ON b.id = br.booking_id
             JOIN room ON br.room_id = room.id
-            JOIN customer c ON r.guest_id = c.customerId
-            WHERE r.status = 'confirmed'
+            JOIN customer c ON b.customer_id = c.id
+            WHERE b.status = 'confirmed'
             AND br.status = 'reserved'
             AND br.checkIn = :date
-            GROUP BY r.id, c.firstName, c.lastName
-            ORDER BY r.createdAt ASC
+            GROUP BY b.id, c.firstName, c.lastName
+            ORDER BY b.createdAt ASC
         `;
 
         const result = await sequelize.query(query, {
@@ -149,13 +149,13 @@ async function getPendingCheckOuts(req, res) {
                 c.firstName,
                 c.lastName,
                 br.room_id,
-                r.roomNumber,
+                r.room_number,
                 br.checkOut,
                 br.status,
                 DATEDIFF(br.checkOut, br.checkIn) AS nights
             FROM booked_rooms br
-            JOIN reservations res ON br.reservation_id = res.id
-            JOIN customer c ON res.guest_id = c.customerId
+            JOIN booking b ON br.booking_id = b.id
+            JOIN customer c ON b.customer_id = c.id
             JOIN room r ON br.room_id = r.id
             WHERE br.status = 'checked_in'
             AND br.checkOut >= :date

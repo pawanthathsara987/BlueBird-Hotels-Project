@@ -1,11 +1,35 @@
 import React, { useState, useEffect } from "react";
-import { MdSearch, MdCheckCircle, MdClose } from "react-icons/md";
+import { MdSearch as MdSearchIcon, MdCheckCircle as MdCheckCircleIcon, MdClose as MdCloseIcon } from "react-icons/md";
 import axios from "axios";
 
 export default function CheckIn() {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedGuest, setSelectedGuest] = useState(null);
     const [pendingCheckIns, setPendingCheckIns] = useState([]);
+
+    // Theme state
+    const [theme, setTheme] = useState(() => {
+        const saved = localStorage.getItem("saas_dashboard_theme");
+        return saved ? JSON.parse(saved) : {
+            mode: "light",
+            accent: "indigo",
+            cardStyle: "sleek",
+            font: "sans"
+        };
+    });
+
+    useEffect(() => {
+        const updateTheme = () => {
+            const saved = localStorage.getItem("saas_dashboard_theme");
+            if (saved) setTheme(JSON.parse(saved));
+        };
+        window.addEventListener("theme_changed", updateTheme);
+        window.addEventListener("storage", updateTheme);
+        return () => {
+            window.removeEventListener("theme_changed", updateTheme);
+            window.removeEventListener("storage", updateTheme);
+        };
+    }, []);
 
     const fetchPendingCheckIns = async () => {
         try {
@@ -22,7 +46,6 @@ export default function CheckIn() {
         fetchPendingCheckIns();
     }, []);
 
-    
     const filteredGuests = pendingCheckIns.filter((guest) => {
         const name = `${guest.firstName || ""} ${guest.lastName || ""}`.toLowerCase();
         return name.includes(searchTerm.toLowerCase());
@@ -33,7 +56,6 @@ export default function CheckIn() {
             await axios.post(
                 `${import.meta.env.VITE_BACKEND_URL}/reception/check-in/${guest.reservation_id}`
             );
-
             setSelectedGuest(null);
             fetchPendingCheckIns();
         } catch (err) {
@@ -41,24 +63,48 @@ export default function CheckIn() {
         }
     };
 
+    // Accent colors config
+    const accentColors = {
+        indigo: { bg: "bg-indigo-600 hover:bg-indigo-700", text: "text-indigo-600 dark:text-indigo-400" },
+        teal: { bg: "bg-teal-600 hover:bg-teal-700", text: "text-teal-600 dark:text-teal-400" },
+        violet: { bg: "bg-violet-600 hover:bg-violet-700", text: "text-violet-600 dark:text-violet-400" },
+        amber: { bg: "bg-amber-600 hover:bg-amber-700", text: "text-amber-600 dark:text-amber-400" },
+        rose: { bg: "bg-rose-600 hover:bg-rose-700", text: "text-rose-600 dark:text-rose-400" },
+        slate: { bg: "bg-slate-700 hover:bg-slate-800", text: "text-slate-700 dark:text-slate-300" },
+    };
+    const currentAccent = accentColors[theme.accent] || accentColors.indigo;
+
     return (
-        <div className="w-full px-6 py-6 bg-gray-50 min-h-screen">
+        <div className={`w-full px-6 py-6 min-h-screen transition-colors duration-300 ${
+            theme.mode === "dark" ? "bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-800"
+        }`}>
+            {/* Customizer style overrides */}
+            <style>{`
+                .light-mode-high-contrast .text-slate-400 {
+                    color: #475569 !important;
+                }
+                .light-mode-high-contrast .text-slate-500 {
+                    color: #334155 !important;
+                }
+            `}</style>
 
             {/* HEADER */}
             <div className="mb-6">
-                <h1 className="text-3xl font-bold text-gray-800">
+                <h1 className={`text-3xl font-black tracking-tight ${theme.mode === "dark" ? "text-white" : "text-[#0c325e]"}`}>
                     Check-In Dashboard
                 </h1>
-                <p className="text-gray-500 mt-1">
+                <p className={`text-xs md:text-sm font-medium mt-1 ${theme.mode === "dark" ? "text-slate-400" : "text-slate-500"}`}>
                     Manage today’s guest arrivals
                 </p>
             </div>
 
             {/* SEARCH */}
-            <div className="bg-white p-4 rounded-xl shadow-sm mb-6 flex items-center gap-3">
-                <MdSearch className="text-gray-400 text-2xl" />
+            <div className={`p-4 rounded-2xl shadow-sm mb-6 flex items-center gap-3 border ${
+                theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-150 text-slate-800"
+            }`}>
+                <MdSearchIcon className="text-slate-400 text-2xl" />
                 <input
-                    className="w-full outline-none"
+                    className="w-full outline-none bg-transparent"
                     placeholder="Search guest name..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -70,16 +116,17 @@ export default function CheckIn() {
                 {filteredGuests.map((guest) => (
                     <div
                         key={guest.firstName + guest.lastName}
-                        className="bg-white rounded-2xl shadow-md hover:shadow-xl transition p-5 border border-gray-100"
+                        className={`rounded-2xl shadow-sm hover:shadow-md transition p-5 border ${
+                            theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-150 text-slate-800"
+                        }`}
                     >
-
                         {/* HEADER */}
                         <div className="flex justify-between items-start">
                             <div>
-                                <h2 className="text-lg font-bold text-gray-800">
+                                <h2 className={`text-lg font-bold ${theme.mode === "dark" ? "text-white" : "text-slate-800"}`}>
                                     {guest.firstName} {guest.lastName}
                                 </h2>
-                                <p className="text-sm text-gray-500 mt-1">
+                                <p className={`text-xs font-semibold uppercase tracking-wider ${theme.mode === "dark" ? "text-slate-400" : "text-slate-500"}`}>
                                     Pending Check-in
                                 </p>
                             </div>
@@ -87,13 +134,12 @@ export default function CheckIn() {
 
                         {/* ROOMS */}
                         <div className="mt-4">
-                            <p className="text-sm text-gray-600">Rooms</p>
-
-                            <div className="flex flex-wrap gap-2 mt-1">
+                            <p className={`text-xs font-bold uppercase tracking-wider ${theme.mode === "dark" ? "text-slate-400" : "text-slate-500"}`}>Rooms</p>
+                            <div className="flex flex-wrap gap-2 mt-1.5">
                                 {guest.rooms?.split(",").map((room, i) => (
                                     <span
                                         key={i}
-                                        className="bg-blue-100 text-blue-700 px-3 py-1 rounded-lg text-xs"
+                                        className="bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 border border-blue-100/50 dark:border-blue-900/40 px-3 py-1 rounded-lg text-xs font-extrabold"
                                     >
                                         Room {room}
                                     </span>
@@ -102,24 +148,32 @@ export default function CheckIn() {
                         </div>
 
                         {/* DETAILS */}
-                        <div className="mt-4 text-sm text-gray-600 space-y-1">
-                            <p>Check-in: <b>{guest.checkIn}</b></p>
-                            <p>Total Rooms: <b>{guest.totalRooms}</b></p>
+                        <div className="mt-4 text-xs space-y-1">
+                            <p className={`${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
+                                Check-in: <b className={`${theme.mode === "dark" ? "text-white" : "text-slate-800"}`}>{guest.checkIn}</b>
+                            </p>
+                            <p className={`${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
+                                Total Rooms: <b className={`${theme.mode === "dark" ? "text-white" : "text-slate-800"}`}>{guest.totalRooms}</b>
+                            </p>
                         </div>
 
                         {/* BUTTONS */}
                         <div className="flex gap-2 mt-5">
                             <button
                                 onClick={() => handleCheckIn(guest)}
-                                className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-xl flex items-center justify-center gap-2"
+                                className={`flex-1 text-white py-2.5 rounded-xl flex items-center justify-center gap-2 font-bold cursor-pointer transition ${currentAccent.bg}`}
                             >
-                                <MdCheckCircle />
+                                <MdCheckCircleIcon />
                                 Check In
                             </button>
 
                             <button
                                 onClick={() => setSelectedGuest(guest)}
-                                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 rounded-xl"
+                                className={`flex-1 py-2.5 rounded-xl font-bold cursor-pointer transition ${
+                                    theme.mode === "dark"
+                                    ? "bg-slate-800 hover:bg-slate-700 text-slate-200"
+                                    : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200"
+                                }`}
                             >
                                 View
                             </button>
@@ -130,35 +184,44 @@ export default function CheckIn() {
 
             {/* EMPTY STATE */}
             {filteredGuests.length === 0 && (
-                <div className="text-center text-gray-500 mt-10">
+                <div className={`text-center mt-10 font-bold ${theme.mode === "dark" ? "text-slate-500" : "text-slate-400"}`}>
                     No pending check-ins found
                 </div>
             )}
 
             {/* MODAL */}
             {selectedGuest && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-                    <div className="bg-white w-full max-w-md rounded-2xl p-6">
-
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-lg font-bold">Guest Details</h2>
-                            <button onClick={() => setSelectedGuest(null)}>
-                                <MdClose size={22} />
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+                    <div className={`w-full max-w-md rounded-2xl p-6 shadow-2xl border ${
+                        theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
+                    }`}>
+                        <div className="flex justify-between items-center mb-4 border-b pb-3 dark:border-slate-800 border-slate-100">
+                            <h2 className="text-lg font-black uppercase tracking-wide">Guest Details</h2>
+                            <button onClick={() => setSelectedGuest(null)} className="cursor-pointer">
+                                <MdCloseIcon size={22} className={theme.mode === "dark" ? "text-white" : "text-slate-600"} />
                             </button>
                         </div>
 
-                        <div className="space-y-2 text-gray-700">
-                            <p><b>Name:</b> {selectedGuest.firstName} {selectedGuest.lastName}</p>
-                            <p><b>Rooms:</b> {selectedGuest.rooms}</p>
-                            <p><b>Total:</b> {selectedGuest.totalRooms}</p>
-                            <p><b>Check-In:</b> {selectedGuest.checkIn}</p>
+                        <div className="space-y-3 text-sm">
+                            <p className={`${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
+                                <b>Name:</b> <span className={theme.mode === "dark" ? "text-white" : "text-slate-800"}>{selectedGuest.firstName} {selectedGuest.lastName}</span>
+                            </p>
+                            <p className={`${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
+                                <b>Rooms:</b> <span className={theme.mode === "dark" ? "text-white" : "text-slate-800"}>{selectedGuest.rooms}</span>
+                            </p>
+                            <p className={`${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
+                                <b>Total:</b> <span className={theme.mode === "dark" ? "text-white" : "text-slate-800"}>{selectedGuest.totalRooms}</span>
+                            </p>
+                            <p className={`${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
+                                <b>Check-In:</b> <span className={theme.mode === "dark" ? "text-white" : "text-slate-800"}>{selectedGuest.checkIn}</span>
+                            </p>
                         </div>
 
                         <button
                             onClick={() => handleCheckIn(selectedGuest)}
-                            className="w-full mt-5 bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl flex items-center justify-center gap-2"
+                            className={`w-full mt-5 text-white py-3 rounded-xl flex items-center justify-center gap-2 font-black cursor-pointer transition ${currentAccent.bg}`}
                         >
-                            <MdCheckCircle />
+                            <MdCheckCircleIcon />
                             Confirm Check-In
                         </button>
                     </div>
