@@ -11,7 +11,7 @@ import AddNewStaffMember from "./user/AddNewStaffMember";
 import UpdateStaffMember from "./user/UpdateStaffMember";
 import ViewDeletedStaff from "./user/ViewDeletedStaff";
 import AdminDashboard from "./AdminDashboard";
-import OtherItemPriceView from "./rooms/OtherItemPriceView";
+import ServiceChargeView from "./rooms/ServiceChargeView";
 import ShopManagement from "./shop/ShopManagement";
 import AttendanceRecords from "./Attendance/AttendanceRecords";
 
@@ -158,7 +158,7 @@ export default function AdminPage() {
                     <Route path="/users/updateStaffMember" element={<UpdateStaffMember />} />
                     <Route path="/users/viewDeletedStaff" element={<ViewDeletedStaff />} />
                     <Route path="/attendance-records" element={<AttendanceRecords />} />
-                    <Route path="/extra-charges" element={<OtherItemPriceView />} />
+                    <Route path="/extra-charges" element={<ServiceChargeView />} />
                     <Route path="/shop-items" element={<ShopManagement />} />
                     <Route path="/settings" element={<h1 className="p-5">Settings</h1>} />
                 </Routes>

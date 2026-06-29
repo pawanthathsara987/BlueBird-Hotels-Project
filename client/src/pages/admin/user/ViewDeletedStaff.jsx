@@ -2,12 +2,25 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Loader from "../../../components/Loader";
 import axios from "axios";
-import { FaArrowLeft, FaSearch, FaUserMinus } from "react-icons/fa";
+import { FaArrowLeft, FaSearch, FaUserMinus, FaEye } from "react-icons/fa";
+import StaffDetailsModal from "../../../components/StaffDetailsModal";
 
 export default function ViewDeletedStaff() {
     const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(false);
     const [deletedStaffMembers, setDeletedStaffMembers] = useState([]);
+    const [showDetailsModal, setShowDetailsModal] = useState(false);
+    const [selectedMember, setSelectedMember] = useState(null);
+
+    const onDetailsClick = (member) => {
+        setSelectedMember(member);
+        setShowDetailsModal(true);
+    };
+
+    const onCloseDetails = () => {
+        setShowDetailsModal(false);
+        setSelectedMember(null);
+    };
 
     async function fetchDeletedStaff() {
         try {
@@ -106,6 +119,7 @@ export default function ViewDeletedStaff() {
                                                 <th className="p-4 text-left text-xs font-bold uppercase tracking-wider">Email Address</th>
                                                 <th className="p-4 text-left text-xs font-bold uppercase tracking-wider">Role</th>
                                                 <th className="p-4 text-left text-xs font-bold uppercase tracking-wider">Phone Number</th>
+                                                <th className="p-4 text-center text-xs font-bold uppercase tracking-wider">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -114,9 +128,17 @@ export default function ViewDeletedStaff() {
                                                     <tr key={index} className="hover:bg-slate-50/50 transition-colors border-b border-slate-100 last:border-b-0">
                                                         <td className="p-4 text-sm font-semibold text-slate-800">
                                                             <div className="flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-500 font-bold text-xs border border-rose-100">
-                                                                    {member.name ? member.name.charAt(0).toUpperCase() : "?"}
-                                                                </div>
+                                                                {member.imageUrl ? (
+                                                                    <img
+                                                                        src={member.imageUrl}
+                                                                        alt={member.name}
+                                                                        className="w-8 h-8 rounded-full object-cover ring-2 ring-slate-100"
+                                                                    />
+                                                                ) : (
+                                                                    <div className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-500 font-bold text-xs border border-rose-100">
+                                                                        {member.name ? member.name.charAt(0).toUpperCase() : "?"}
+                                                                    </div>
+                                                                )}
                                                                 {member.name}
                                                             </div>
                                                         </td>
@@ -128,6 +150,17 @@ export default function ViewDeletedStaff() {
                                                             </span>
                                                         </td>
                                                         <td className="p-4 text-sm text-slate-500 font-medium">{member.phoneNumber}</td>
+                                                        <td className="p-4">
+                                                            <div className="flex items-center justify-center gap-2">
+                                                                <button
+                                                                    onClick={() => onDetailsClick(member)}
+                                                                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3 py-2 text-xs transition-all duration-200 active:scale-95 cursor-pointer"
+                                                                    title="View Details"
+                                                                >
+                                                                    <FaEye className="text-sm" /> Details
+                                                                </button>
+                                                            </div>
+                                                        </td>
                                                     </tr>
                                                 ))
                                             ) : (
@@ -153,9 +186,17 @@ export default function ViewDeletedStaff() {
                                         deletedStaffMembers.map((member, index) => (
                                             <div key={index} className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm space-y-4 hover:border-slate-200 transition-colors">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center text-rose-500 font-bold text-sm border border-rose-100">
-                                                        {member.name ? member.name.charAt(0).toUpperCase() : "?"}
-                                                    </div>
+                                                    {member.imageUrl ? (
+                                                        <img
+                                                            src={member.imageUrl}
+                                                            alt={member.name}
+                                                            className="w-10 h-10 rounded-full object-cover shadow-sm border border-rose-100"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center text-rose-500 font-bold text-sm border border-rose-100">
+                                                            {member.name ? member.name.charAt(0).toUpperCase() : "?"}
+                                                        </div>
+                                                    )}
                                                     <div>
                                                         <p className="text-sm font-bold text-slate-800">{member.name}</p>
                                                         <p className="text-xs text-slate-400 font-medium">@{member.userName}</p>
@@ -178,6 +219,15 @@ export default function ViewDeletedStaff() {
                                                         <span>{member.phoneNumber}</span>
                                                     </div>
                                                 </div>
+
+                                                <div className="flex gap-2 w-full pt-2">
+                                                    <button
+                                                        onClick={() => onDetailsClick(member)}
+                                                        className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 text-xs transition-all duration-200 active:scale-98"
+                                                    >
+                                                        <FaEye /> Details
+                                                    </button>
+                                                </div>
                                             </div>
                                         ))
                                     ) : (
@@ -192,6 +242,13 @@ export default function ViewDeletedStaff() {
                     </div>
                 </div>
             </div>
+
+            <StaffDetailsModal
+                isOpen={showDetailsModal}
+                member={selectedMember}
+                onClose={onCloseDetails}
+                status="Archived"
+            />
         </div>
     );
 }
