@@ -1,6 +1,6 @@
 import { col, fn, Op, QueryTypes } from "sequelize";
 import sequelize from "../../config/database.js";
-import { sendEmail, sendBookingConfirmationEmail } from "../../services/emailService.js";
+import { sendEmail, sendBookingConfirmationEmail, sendPersonalRequestEmail } from "../../services/emailService.js";
 import { Customer, Room, BookedRoom, Reservation, AirPortPickup, OtherItemPrice, RoomType, Amenities, Policy, BoardType, OccupancyType, RoomPrice, SeasonalDiscount, RoomPayment } from "../../models/index.js";
 
 /**
@@ -497,65 +497,7 @@ const createBooking = async (req, res) => {
         if (personalRequest && personalRequest != null) {
             try {
                 const customer = await Customer.findByPk(guestId);
-                const customerName = customer ? `${customer.firstName} ${customer.lastName}` : "Unknown Guest";
-                const customerEmail = customer ? customer.email : "N/A";
-                const customerPhone = customer ? customer.phoneNumber : "N/A";
-                
-                const emailHtml = `
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 12px; padding: 24px; background-color: #ffffff;">
-    <div style="text-align: center; margin-bottom: 24px;">
-        <h2 style="color: #064e3b; margin: 0;">Special Personal Request</h2>
-        <p style="color: #6b7280; font-size: 14px; margin-top: 4px;">BlueBird Hotels Reservation System</p>
-    </div>
-    
-    <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
-        <h3 style="color: #374151; margin-top: 0; margin-bottom: 12px; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px;">Customer Information</h3>
-        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-            <tr>
-                <td style="color: #6b7280; padding: 4px 0; width: 30%;"><strong>Name:</strong></td>
-                <td style="color: #1f2937; padding: 4px 0;">${customerName}</td>
-            </tr>
-            <tr>
-                <td style="color: #6b7280; padding: 4px 0;"><strong>Email:</strong></td>
-                <td style="color: #1f2937; padding: 4px 0;"><a href="mailto:${customerEmail}" style="color: #064e3b; text-decoration: none;">${customerEmail}</a></td>
-            </tr>
-            <tr>
-                <td style="color: #6b7280; padding: 4px 0;"><strong>Phone:</strong></td>
-                <td style="color: #1f2937; padding: 4px 0;">${customerPhone}</td>
-            </tr>
-        </table>
-    </div>
-
-    <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
-        <h3 style="color: #374151; margin-top: 0; margin-bottom: 12px; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px;">Booking Information</h3>
-        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-            <tr>
-                <td style="color: #6b7280; padding: 4px 0; width: 30%;"><strong>Booking ID:</strong></td>
-                <td style="color: #1f2937; padding: 4px 0;">#${reservation.id}</td>
-            </tr>
-            <tr>
-                <td style="color: #6b7280; padding: 4px 0;"><strong>Total Price:</strong></td>
-                <td style="color: #1f2937; padding: 4px 0;">${parseFloat(reservation.total_price).toFixed(2)}</td>
-            </tr>
-            <tr>
-                <td style="color: #6b7280; padding: 4px 0;"><strong>Check-in Date:</strong></td>
-                <td style="color: #1f2937; padding: 4px 0;">${new Date(checkInDate).toLocaleDateString()}</td>
-            </tr>
-        </table>
-    </div>
-
-    <div style="border-left: 4px solid #064e3b; padding-left: 16px; margin-bottom: 24px;">
-        <h4 style="color: #064e3b; margin-top: 0; margin-bottom: 8px;">Customer Request:</h4>
-        <p style="color: #1f2937; line-height: 1.6; margin: 0; font-style: italic;">"${personalRequest}"</p>
-    </div>
-</div>`;
-
-                await sendEmail({
-                    to: process.env.PERSONAL_REQUEST_MAIL,
-                    subject: `Personal Request from ${customerName} (Booking #${reservation.id})`,
-                    html: emailHtml,
-                    text: `Personal Request from ${customerName} (Booking #${reservation.id}): ${personalRequest}`,
-                });
+                await sendPersonalRequestEmail(customer, reservation, personalRequest, checkInDate);
             } catch (emailError) {
                 console.error("PERSONAL REQUEST EMAIL ERROR:", emailError.message);
             }

@@ -593,3 +593,119 @@ export const sendCancellationEmail = async (inquiry, booking, reason) => {
     throw error;
   }
 };
+
+/**
+ * Send customer special personal request to management
+ * @param {Object} customer - Customer/guest object
+ * @param {Object} booking - Reservation/Booking object
+ * @param {string} personalRequest - Request text
+ * @param {string} checkInDate - Check-in Date
+ */
+export const sendPersonalRequestEmail = async (customer, booking, personalRequest, checkInDate) => {
+  try {
+    const customerName = customer ? `${customer.firstName} ${customer.lastName}` : "Unknown Guest";
+    const customerEmail = customer ? customer.email : "N/A";
+    const customerPhone = customer ? customer.phoneNumber : "N/A";
+
+    const subject = `Special Personal Request from ${customerName} (Booking #${booking.id})`;
+
+    const emailBody = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; background: #f8fafc; color: #1f2937; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 20px auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+            .header { background: linear-gradient(135deg, #064e3b, #0f766e); color: #ffffff; padding: 28px 24px; text-align: center; }
+            .header h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+            .header p { margin: 6px 0 0; opacity: 0.85; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; }
+            .body { padding: 24px; }
+            .section { margin-bottom: 20px; }
+            .section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #0f766e; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; margin-bottom: 12px; }
+            .card { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; }
+            .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+            .row:last-child { border-bottom: none; }
+            .label { color: #6b7280; font-weight: 550; }
+            .value { font-weight: 600; color: #1e293b; }
+            .request-box { border-left: 4px solid #064e3b; background: #f0fdf4; border-radius: 0 8px 8px 0; padding: 16px; margin-top: 12px; }
+            .request-text { color: #064e3b; line-height: 1.6; font-style: italic; margin: 0; font-size: 14px; }
+            .footer { padding: 20px 24px; background: #f8fafc; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; text-align: center; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Special Personal Request</h1>
+              <p>BlueBird Hotels Reservation System</p>
+            </div>
+
+            <div class="body">
+              <div class="section">
+                <div class="section-title">Customer Information</div>
+                <div class="card" style="padding: 8px 16px;">
+                  <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 10px 0; color: #6b7280; font-weight: 550; text-align: left; width: 40%;">Name</td>
+                      <td style="padding: 10px 0; font-weight: 600; color: #1e293b; text-align: right;">${customerName}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 10px 0; color: #6b7280; font-weight: 550; text-align: left;">Email Address</td>
+                      <td style="padding: 10px 0; font-weight: 600; color: #1e293b; text-align: right;"><a href="mailto:${customerEmail}" style="color: #0f766e; text-decoration: none;">${customerEmail}</a></td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 10px 0; color: #6b7280; font-weight: 550; text-align: left;">Phone Number</td>
+                      <td style="padding: 10px 0; font-weight: 600; color: #1e293b; text-align: right;">${customerPhone}</td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+
+              <div class="section">
+                <div class="section-title">Booking Details</div>
+                <div class="card" style="padding: 8px 16px;">
+                  <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 10px 0; color: #6b7280; font-weight: 550; text-align: left; width: 45%;">Booking Reference ID</td>
+                      <td style="padding: 10px 0; font-weight: 600; color: #1e293b; text-align: right;">#${booking.id}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 10px 0; color: #6b7280; font-weight: 550; text-align: left;">Total Amount Price</td>
+                      <td style="padding: 10px 0; font-weight: 600; color: #1e293b; text-align: right;">$${parseFloat(booking.total_price || 0).toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 10px 0; color: #6b7280; font-weight: 550; text-align: left;">Check-in Date</td>
+                      <td style="padding: 10px 0; font-weight: 600; color: #1e293b; text-align: right;">${new Date(checkInDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+
+              <div class="section">
+                <div class="section-title">Customer Request Message</div>
+                <div class="request-box">
+                  <p class="request-text">"${personalRequest}"</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="footer">
+              <p>This is an automated request notification sent from your hotel reservation platform.</p>
+              <p>&copy; ${new Date().getFullYear()} BlueBird Hotels. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    await sendEmail({
+      to: process.env.PERSONAL_REQUEST_MAIL,
+      subject,
+      html: emailBody,
+      text: `Personal Request from ${customerName} (Booking #${booking.id}): ${personalRequest}`,
+    });
+    return true;
+  } catch (error) {
+    console.error("[EMAIL ERROR] Failed to send personal request email:", error.message);
+    return false;
+  }
+};
