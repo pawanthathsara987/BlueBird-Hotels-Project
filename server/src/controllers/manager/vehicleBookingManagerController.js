@@ -181,6 +181,21 @@ export const updateBookingStatus = async (req, res) => {
       }
     }
 
+    // Require return checklist before marking as returned
+    if (status === 'returned') {
+      const returnChecklist = await VehicleChecklist.findOne({
+        where: { bookingId: booking.id, type: 'return' },
+        transaction: t,
+      });
+      if (!returnChecklist) {
+        await t.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot mark vehicle as returned — a return checklist has not been filed yet. Please complete the return inspection first.',
+        });
+      }
+    }
+
     await booking.update({ status }, { transaction: t });
 
     // Auto-status logic for Vehicle
