@@ -82,6 +82,7 @@ Driver.init(
     modelName: 'Driver',
     tableName: 'drivers',
     timestamps: true,
+    paranoid: true,   // soft-delete: sets deletedAt instead of removing the row
   }
 );
 

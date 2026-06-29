@@ -89,7 +89,7 @@ const parseFeatures = (features) => {
 
 const ALLOWED_FUEL_TYPES = ['petrol', 'diesel', 'electric', 'hybrid'];
 const ALLOWED_TRANSMISSIONS = ['automatic', 'manual'];
-const ALLOWED_STATUSES = ['available', 'maintenance', 'retired'];
+const ALLOWED_STATUSES = ['available', 'booked', 'pending_inspection', 'maintenance', 'retired'];
 
 const getVehicleTableColumns = async () => {
   try {
@@ -114,7 +114,18 @@ const buildVehicleValidationErrors = (body, { requireImage = false, imageFile = 
   const errors = {};
   const features = parseFeatures(body.features);
 
-  if (!String(body.plateNumber || '').trim()) errors.plateNumber = 'Plate number is required.';
+  if (!String(body.plateNumber || '').trim()) {
+    errors.plateNumber = 'Plate number is required.';
+  } else {
+    // Sri Lanka Plate Formats:
+    // 1. WP CAA-1234 or CP KV-5432 (Province + 2/3 letters + 4 digits)
+    // 2. CAA-1234 (2/3 letters + 4 digits)
+    // 3. 15-1234 or 301-1234 (2/3 digits + 4 digits)
+    const slPlateRegex = /^([a-zA-Z]{2}\s)?([a-zA-Z]{2,3}|\d{2,3})-\d{4}$/;
+    if (!slPlateRegex.test(body.plateNumber.trim())) {
+      errors.plateNumber = 'Invalid Sri Lankan plate number. (e.g. WP CAA-1234, KV-5432, 15-1234)';
+    }
+  }
   if (!String(body.brand || '').trim()) errors.brand = 'Brand is required.';
   if (!String(body.vehicleTypeId || '').trim()) errors.vehicleTypeId = 'Vehicle type is required.';
   if (!String(body.model || '').trim()) errors.model = 'Model is required.';
@@ -142,6 +153,15 @@ const buildVehicleValidationErrors = (body, { requireImage = false, imageFile = 
   } else if (Number(body.pricePerDay) <= 0) {
     errors.pricePerDay = 'Price per day must be greater than zero.';
   }
+
+  if (body.currentMileage !== undefined && body.currentMileage !== null) {
+    if (Number.isNaN(Number(body.currentMileage))) {
+      errors.currentMileage = 'Mileage must be a number.';
+    } else if (Number(body.currentMileage) < 0) {
+      errors.currentMileage = 'Mileage cannot be negative.';
+    }
+  }
+
 
   if (!String(body.fuelType || '').trim()) {
     errors.fuelType = 'Fuel type is required.';
@@ -198,11 +218,11 @@ export const getVehicles = async (req, res) => {
 
     const where = {};
 
-    if (status)        where.status       = status;
-    if (vehicleType)   where.vehicleTypeId = vehicleType;
-    if (fuelType)      where.fuelType     = fuelType;
-    if (transmission)  where.transmission = transmission;
-    if (capacity)      where.capacity     = { [Op.gte]: Number(capacity) };
+    if (status) where.status = status;
+    if (vehicleType) where.vehicleTypeId = vehicleType;
+    if (fuelType) where.fuelType = fuelType;
+    if (transmission) where.transmission = transmission;
+    if (capacity) where.capacity = { [Op.gte]: Number(capacity) };
 
     if (minPrice || maxPrice) {
       where.pricePerDay = {};
@@ -273,7 +293,9 @@ export const checkAvailability = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Vehicle not found' });
     }
 
-    if (vehicle.status !== 'available') {
+    // maintenance, retired, pending_inspection = truly unavailable
+    // booked = may still be available for different dates (overlap query checks)
+    if (!['available', 'booked'].includes(vehicle.status)) {
       return res.json({
         success: true,
         data: {
@@ -287,12 +309,39 @@ export const checkAvailability = async (req, res) => {
 
 
 
+    if (vehicle.insuranceExpiry && returnDateObj > new Date(vehicle.insuranceExpiry)) {
+      return res.json({
+        success: true,
+        data: {
+          available: false,
+          reason: 'Vehicle insurance expires before the requested return date',
+          days,
+          totalPrice: null,
+        },
+      });
+    }
+
+    if (vehicle.revenueLicenseExpiry && returnDateObj > new Date(vehicle.revenueLicenseExpiry)) {
+      return res.json({
+        success: true,
+        data: {
+          available: false,
+          reason: 'Vehicle revenue license expires before the requested return date',
+          days,
+          totalPrice: null,
+        },
+      });
+    }
+
+    // 1-Day Post-Return Buffer: existing booking's returnDatetime must not be within 24hrs before requested pickup
+    const pickupDateWithBuffer = new Date(pickupDate.getTime() - 24 * 60 * 60 * 1000);
+
     const overlappingBooking = await VehicleBooking.findOne({
       where: {
         vehicleId: Number(req.params.id),
         status: { [Op.in]: BLOCKING_BOOKING_STATUSES },
         pickupDatetime: { [Op.lt]: returnDateObj },
-        returnDatetime: { [Op.gt]: pickupDate },
+        returnDatetime: { [Op.gt]: pickupDateWithBuffer },
       },
       attributes: ['bookingNo'],
     });
@@ -320,7 +369,7 @@ export const checkAvailability = async (req, res) => {
     const subtotal = (vehicleRate + driverFee) * days;
     const totalPrice = parseFloat(subtotal.toFixed(2));
 
-    const depositPercentage = 30;
+    const depositPercentage = 50;
     const depositAmount = parseFloat(((totalPrice * depositPercentage) / 100).toFixed(2));
     const balanceAmount = parseFloat((totalPrice - depositAmount).toFixed(2));
 

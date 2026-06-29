@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AlertCircle, Check, Loader, MapPin, X } from 'lucide-react';
 import axios from 'axios';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
 import Header from '../../../../components/header';
 import Footer from '../../../../components/footer';
 
@@ -43,6 +44,37 @@ function Field({ label, error, children }) {
 const inputCls = (err) =>
   `w-full px-3.5 py-2.5 rounded-xl border text-sm text-gray-800 bg-gray-50 outline-none transition focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${err ? 'border-red-400 bg-red-50' : 'border-gray-200'}`;
 
+const getValidCustomerToken = () => {
+  let token = sessionStorage.getItem('customerToken') || localStorage.getItem('customerToken');
+
+  if (token === 'undefined' || token === 'null') {
+    sessionStorage.removeItem('customerToken');
+    localStorage.removeItem('customerToken');
+    return null;
+  }
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const decoded = jwtDecode(token);
+    const currentTime = Date.now() / 1000;
+
+    if (decoded?.exp && decoded.exp < currentTime) {
+      sessionStorage.removeItem('customerToken');
+      localStorage.removeItem('customerToken');
+      return null;
+    }
+
+    return token;
+  } catch {
+    sessionStorage.removeItem('customerToken');
+    localStorage.removeItem('customerToken');
+    return null;
+  }
+};
+
 export default function TourInquiryPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -55,6 +87,7 @@ export default function TourInquiryPage() {
   const [pageError, setPageError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   const [form, setForm] = useState({
     fullName: '',
@@ -67,11 +100,26 @@ export default function TourInquiryPage() {
     pickupLocation: '',
     specialRequests: '',
   });
+
   const [errors, setErrors] = useState({});
 
   const minStartDate = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000)
     .toISOString()
     .split('T')[0];
+
+  useEffect(() => {
+    const token = getValidCustomerToken();
+
+    if (!token) {
+      navigate('/customerLogin', {
+        replace: true,
+        state: { from: `${location.pathname}${location.search}` },
+      });
+      return;
+    }
+
+    setAuthChecked(true);
+  }, [location.pathname, location.search, navigate]);
 
   useEffect(() => {
     if (selectedTour) {
@@ -147,6 +195,16 @@ export default function TourInquiryPage() {
     e.preventDefault();
     setPageError(null);
 
+    const token = getValidCustomerToken();
+    if (!token) {
+      setPageError('Please login to your customer account before submitting a tour inquiry.');
+      navigate('/customerLogin', {
+        replace: true,
+        state: { from: `${location.pathname}${location.search}` },
+      });
+      return;
+    }
+
     if (!tour?.id) {
       setPageError('Tour not found. Please return to tour details and try again.');
       return;
@@ -156,10 +214,16 @@ export default function TourInquiryPage() {
 
     setIsSubmitting(true);
     try {
-      const res = await axios.post(`${backendBaseUrl}/tour-inquiry`, {
-        tourId: tour.id,
-        ...form,
-      });
+      const res = await axios.post(
+        `${backendBaseUrl}/tour-inquiry`,
+        {
+          tourId: tour.id,
+          ...form,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       if (res.data.success) {
         const inquiryRef = res.data?.data?.inquiryRef;
@@ -169,6 +233,20 @@ export default function TourInquiryPage() {
         setPageError(res.data.message || 'Submission failed');
       }
     } catch (e) {
+      if (e.response?.status === 401) {
+        setPageError('Your session expired. Please login again to submit the inquiry.');
+        navigate('/customerLogin', {
+          replace: true,
+          state: { from: `${location.pathname}${location.search}` },
+        });
+        return;
+      }
+
+      if (e.response?.status === 500) {
+        setPageError('Internal server error. Please try again later.');
+        return;
+      }
+
       const backendErrors = e.response?.data?.errors || {};
       const hasFieldErrors = Object.keys(backendErrors).length > 0;
 
@@ -193,6 +271,21 @@ export default function TourInquiryPage() {
           <div className="text-center">
             <div className="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mx-auto" />
             <p className="mt-4 text-sm text-gray-400">Loading inquiry page...</p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <Header />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mx-auto" />
+            <p className="mt-4 text-sm text-gray-400">Checking login status...</p>
           </div>
         </div>
         <Footer />

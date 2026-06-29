@@ -15,7 +15,9 @@ const BLOCKING_BOOKING_STATUSES = [
 ];
 
 const generateBookingNo = () => {
-  return `VB-${Date.now().toString(36).toUpperCase().slice(-6)}`;
+  const timePart = Date.now().toString(36).toUpperCase().slice(-6);
+  const randPart = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `VB-${timePart}-${randPart}`;
 };
 
 const calcDays = (pickup, ret) => {
@@ -32,6 +34,16 @@ export const createVehicleBooking = async (req, res) => {
     if (!name || !email || !phone) return res.status(400).json({ success: false, message: 'customer name, email and phone are required' });
     if (!pickupDatetime || !returnDatetime) return res.status(400).json({ success: false, message: 'pickup and return datetimes are required' });
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid email address' });
+    }
+
+    const phoneDigits = phone.replace(/[\s\-()+ ]/g, '');
+    if (phoneDigits.length < 7 || phoneDigits.length > 15 || !/^\d+$/.test(phoneDigits)) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid phone number (7–15 digits)' });
+    }
+
     const pickupDate = new Date(pickupDatetime);
     const returnDate = new Date(returnDatetime);
 
@@ -39,13 +51,34 @@ export const createVehicleBooking = async (req, res) => {
       return res.status(400).json({ success: false, message: 'pickup and return datetimes must be valid dates' });
     }
 
+    if (pickupDate <= new Date()) {
+      return res.status(400).json({ success: false, message: 'pickup datetime must be in the future' });
+    }
+
     if (returnDate <= pickupDate) {
       return res.status(400).json({ success: false, message: 'return datetime must be after pickup datetime' });
+    }
+
+    const MAX_BOOKING_DAYS = 30;
+    const bookingDays = Math.ceil((returnDate - pickupDate) / (1000 * 60 * 60 * 24));
+    if (bookingDays > MAX_BOOKING_DAYS) {
+      return res.status(400).json({ success: false, message: `Booking duration cannot exceed ${MAX_BOOKING_DAYS} days` });
     }
 
     if (!withDriver) {
       if (!customerLicenseNo || !customerLicenseExpiry) {
         return res.status(400).json({ success: false, message: 'License details are required for self-drive bookings' });
+      }
+
+      const licenseExpiry = new Date(customerLicenseExpiry);
+      if (Number.isNaN(licenseExpiry.getTime())) {
+        return res.status(400).json({ success: false, message: 'Customer license expiry must be a valid date' });
+      }
+      if (licenseExpiry < new Date()) {
+        return res.status(400).json({ success: false, message: 'Customer driving license has already expired' });
+      }
+      if (licenseExpiry < returnDate) {
+        return res.status(400).json({ success: false, message: 'Customer driving license expires before the return date' });
       }
     }
 
@@ -57,19 +90,34 @@ export const createVehicleBooking = async (req, res) => {
         return res.status(404).json({ success: false, message: 'Vehicle not found' });
       }
 
-      if (vehicle.status !== 'available') {
+      // Allow booking if vehicle is available or already booked (for future dates)
+      // The date-overlap query below handles actual conflicts
+      if (!['available', 'booked'].includes(vehicle.status)) {
         await t.rollback();
         return res.status(400).json({ success: false, message: `Vehicle is ${vehicle.status}` });
       }
 
 
 
+      if (vehicle.insuranceExpiry && returnDate > new Date(vehicle.insuranceExpiry)) {
+        await t.rollback();
+        return res.status(400).json({ success: false, message: 'Vehicle insurance expires before the requested return date' });
+      }
+
+      if (vehicle.revenueLicenseExpiry && returnDate > new Date(vehicle.revenueLicenseExpiry)) {
+        await t.rollback();
+        return res.status(400).json({ success: false, message: 'Vehicle revenue license expires before the requested return date' });
+      }
+
+      // 1-Day Post-Return Buffer: existing booking's returnDatetime must not be within 24hrs before requested pickup
+      const pickupDateWithBuffer = new Date(pickupDate.getTime() - 24 * 60 * 60 * 1000);
+
       const overlappingBooking = await VehicleBooking.findOne({
         where: {
           vehicleId,
           status: { [Op.in]: BLOCKING_BOOKING_STATUSES },
           pickupDatetime: { [Op.lt]: returnDate },
-          returnDatetime: { [Op.gt]: pickupDate },
+          returnDatetime: { [Op.gt]: pickupDateWithBuffer },
         },
         attributes: ['id', 'bookingNo', 'pickupDatetime', 'returnDatetime'],
         transaction: t,
@@ -97,7 +145,7 @@ export const createVehicleBooking = async (req, res) => {
       const subtotal = (vehicleRatePerDay + (driverRatePerDay || 0)) * numDays;
       const discount = 0.0;
       const totalPayable = subtotal - discount;
-      const depositPercentage = 30;
+      const depositPercentage = 50;
       const depositAmount = parseFloat(((totalPayable * depositPercentage) / 100).toFixed(2));
       const balanceAmount = parseFloat((totalPayable - depositAmount).toFixed(2));
 

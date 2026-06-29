@@ -64,7 +64,7 @@ const formatStatusText = (status) => {
 
 const formatMoney = (value) => {
   const amount = Number(value);
-  return Number.isFinite(amount) ? `LKR ${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "LKR 0.00";
+  return Number.isFinite(amount) ? `$${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "$0.00";
 };
 
 // Valid status transitions — must match the backend state machine
@@ -352,7 +352,7 @@ export default function BookingManagement() {
             <thead>
               <tr>
                 <th>Charge Description</th>
-                <th class="val-col">Amount (LKR)</th>
+                <th class="val-col">Amount ($)</th>
               </tr>
             </thead>
             <tbody>

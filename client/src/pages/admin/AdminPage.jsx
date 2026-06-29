@@ -18,6 +18,15 @@ import ShopManagement from "./shop/ShopManagement";
 export default function AdminPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
+    const adminName = localStorage.getItem("adminName") || "Admin Portal";
+    const adminEmail = localStorage.getItem("adminEmail") || "admin@bluebird.com";
+    const adminInitials = adminName
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2) || "AD";
+
     const sidebarLinkClass = ({ isActive }) =>
         `flex items-center gap-3 py-3 px-4 text-base font-medium rounded-xl transition-all duration-300 focus:outline-none border-l-4 ${isActive
             ? "bg-blue-600/10 text-blue-400 border-blue-500 shadow-sm shadow-blue-500/5"
@@ -52,7 +61,7 @@ export default function AdminPage() {
                     </div>
                     <div>
                         <div className="text-[10px] font-semibold text-blue-400 tracking-widest uppercase">BlueBird Hotels</div>
-                        <h1 className="text-lg font-bold text-slate-100 leading-tight">Admin Portal</h1>
+                        <h1 className="text-lg font-bold text-slate-100 leading-tight">{adminName}</h1>
                     </div>
                 </div>
 
@@ -107,12 +116,12 @@ export default function AdminPage() {
                 {/* Admin Profile & Logout section at bottom */}
                 <div className="p-4 border-t border-slate-800/80 bg-slate-900/30">
                     <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-800/20 border border-slate-800/40 mb-3">
-                        <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-sm shadow-inner">
-                            AD
+                        <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-sm shadow-inner uppercase">
+                            {adminInitials}
                         </div>
                         <div className="flex-1 min-w-0">
                             <h4 className="text-xs font-semibold text-slate-200 truncate">Administrator</h4>
-                            <p className="text-[10px] text-slate-500 truncate">admin@bluebird.com</p>
+                            <p className="text-[10px] text-slate-500 truncate">{adminEmail}</p>
                         </div>
                     </div>
                     <NavLink

@@ -1,4 +1,5 @@
 import React from "react";
+import axios from "axios";
 import { Link } from "react-router-dom";
 import logo from "../../../assets/bluebird logo.png";
 import {
@@ -9,8 +10,6 @@ import {
   ChevronDown,
   User,
   CreditCard,
-  EyeOff,
-  Eye,
   LogOut
 } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -21,13 +20,9 @@ export default function DashboardHeader({
   setSearchQuery,
   notifications,
   setNotifications,
-  isProfileDropdownOpen,
-  setIsProfileDropdownOpen,
   isNotifDropdownOpen,
   setIsNotifDropdownOpen,
   setIsMobileSidebarOpen,
-  showRealPII,
-  setShowRealPII,
   setActiveTab,
   handleMarkAllRead,
   maskEmail
@@ -79,7 +74,6 @@ export default function DashboardHeader({
           <button
             onClick={() => {
               setIsNotifDropdownOpen(!isNotifDropdownOpen);
-              setIsProfileDropdownOpen(false);
             }}
             className="p-2.5 hover:bg-slate-50 rounded-full text-slate-600 relative transition-colors focus:outline-none"
             aria-label="View notifications"
@@ -134,82 +128,6 @@ export default function DashboardHeader({
                   Open Full Notification Center
                 </button>
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* User Profile Dropdown Trigger */}
-        <div className="relative">
-          <button
-            onClick={() => {
-              setIsProfileDropdownOpen(!isProfileDropdownOpen);
-              setIsNotifDropdownOpen(false);
-            }}
-            className="flex items-center space-x-2.5 p-1.5 hover:bg-slate-50 rounded-full transition-colors focus:outline-none"
-            aria-label="User profile settings menu"
-          >
-            <img
-              src={profile.avatar}
-              alt={profile.name}
-              className="w-8 h-8 rounded-full object-cover border border-slate-800/10"
-            />
-            <div className="hidden lg:block text-left">
-              <p className="text-xs font-semibold text-blue-950 leading-tight">{profile.name}</p>
-            </div>
-            <ChevronDown size={14} className="text-slate-400 hidden lg:block" />
-          </button>
-
-          {/* Profile Dropdown Popover */}
-          {isProfileDropdownOpen && (
-            <div className="absolute right-0 mt-3 w-56 bg-white border border-slate-200/80 rounded-2xl shadow-xl z-50 py-2.5 animate-in fade-in slide-in-from-top-3 duration-250">
-              <div className="px-4 py-2 border-b border-slate-100">
-                <p className="text-xs font-semibold text-blue-950">{profile.name}</p>
-                <p className="text-[10px] text-slate-400 truncate mt-0.5">{maskEmail(profile.email)}</p>
-              </div>
-              <button
-                onClick={() => {
-                  setActiveTab("profile");
-                  setIsProfileDropdownOpen(false);
-                }}
-                className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-blue-50/60 hover:text-blue-900 transition-colors flex items-center space-x-2"
-              >
-                <User size={14} />
-                <span>My Luxury Profile</span>
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab("payments");
-                  setIsProfileDropdownOpen(false);
-                }}
-                className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-blue-50/60 hover:text-blue-900 transition-colors flex items-center space-x-2"
-              >
-                <CreditCard size={14} />
-                <span>Payments &amp; Receipts</span>
-              </button>
-              <button
-                onClick={() => {
-                  setShowRealPII(!showRealPII);
-                  setIsProfileDropdownOpen(false);
-                  toast.success(showRealPII ? "Private data masked securely" : "Private data revealed");
-                }}
-                className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-blue-50/60 hover:text-blue-900 transition-colors flex items-center space-x-2 border-b border-slate-100"
-              >
-                {showRealPII ? <EyeOff size={14} /> : <Eye size={14} />}
-                <span>{showRealPII ? "Mask Private Data" : "Reveal Private Data"}</span>
-              </button>
-              <button
-                onClick={() => {
-                  toast.error("Logout simulation triggered");
-                  setIsProfileDropdownOpen(false);
-                  setTimeout(() => {
-                    window.location.reload();
-                  }, 1000);
-                }}
-                className="w-full text-left px-4 py-2 text-xs text-rose-600 hover:bg-rose-50/60 transition-colors flex items-center space-x-2"
-              >
-                <LogOut size={14} />
-                <span>Sign Out</span>
-              </button>
             </div>
           )}
         </div>

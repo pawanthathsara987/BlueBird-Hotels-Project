@@ -2,7 +2,7 @@
 import { Model, DataTypes } from 'sequelize';
 import sequelize from '../../config/database.js';
 
-class Vehicle extends Model {}
+class Vehicle extends Model { }
 
 Vehicle.init(
   {
@@ -61,6 +61,13 @@ Vehicle.init(
       allowNull: false,
     },
 
+    // ── Real World Fleet Tracking ───────────────
+    currentMileage: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+
 
     // ── Compliance ──────────────────────────────
     // ✅ ADD: needed for Manager expiry alerts (30-day warning)
@@ -82,7 +89,7 @@ Vehicle.init(
     //    'maintenance' → Manager manually sets when vehicle is being serviced (blocked for all dates)
     //    'retired'     → soft-delete; hidden from all views
     status: {
-      type: DataTypes.ENUM('available', 'maintenance', 'retired'),
+      type: DataTypes.ENUM('available', 'pending_inspection', 'maintenance', 'retired'),
       allowNull: false,
       defaultValue: 'available',
     },

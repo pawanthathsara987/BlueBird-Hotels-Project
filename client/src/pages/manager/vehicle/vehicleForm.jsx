@@ -43,6 +43,7 @@ const defaultVehicle = {
 	model: "",
 	year: "",
 	capacity: "",
+	currentMileage: "0",
 	fuelType: "",
 	transmission: "",
 	color: "",
@@ -59,8 +60,24 @@ const defaultVehicle = {
 
 const ALLOWED_FUEL_TYPES = ["petrol", "diesel", "electric", "hybrid"];
 const ALLOWED_TRANSMISSIONS = ["automatic", "manual"];
-const ALLOWED_STATUSES = ["available", "maintenance", "retired"];
+const ALLOWED_STATUSES = ["available", "booked", "pending_inspection", "maintenance", "retired"];
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
+const currentYear = new Date().getFullYear();
+const VALID_YEARS = Array.from({ length: currentYear - 1990 + 2 }, (_, i) => currentYear + 1 - i);
+
+const getExpiryStatus = (dateString) => {
+	if (!dateString) return null;
+	const expiry = new Date(dateString);
+	// normalize now to midnight
+	const now = new Date();
+	now.setHours(0, 0, 0, 0);
+	const diffDays = (expiry - now) / (1000 * 60 * 60 * 24);
+	
+	if (diffDays < 0) return { status: 'expired', message: 'Expired!' };
+	if (diffDays <= 30) return { status: 'expiring', message: `Expiring in ${Math.ceil(diffDays)} days` };
+	return null;
+};
 
 const normalizeFeaturesForInput = (features) => {
 	if (Array.isArray(features)) {
@@ -105,6 +122,7 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 			model: vehicle.model || "",
 			year: vehicle.year ? String(vehicle.year) : "",
 			capacity: vehicle.capacity ? String(vehicle.capacity) : "",
+			currentMileage: vehicle.currentMileage !== undefined ? String(vehicle.currentMileage) : "0",
 			fuelType: vehicle.fuelType || "",
 			transmission: vehicle.transmission || "",
 			color: vehicle.color || "",
@@ -132,6 +150,13 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 	const handleChange = (event) => {
 		const { name, value, type, files } = event.target;
 
+		if (name === "status" && isEditMode) {
+			if (["booked", "pending_inspection"].includes(vehicle.status) && value !== vehicle.status) {
+				const confirmed = window.confirm(`This vehicle is currently in a system-managed state (${vehicle.status}). Are you sure you want to manually change it to ${value}? This could affect active bookings.`);
+				if (!confirmed) return;
+			}
+		}
+
 		if (type === "file") {
 			const file = files?.[0] || null;
 			const preview = file ? URL.createObjectURL(file) : null;
@@ -149,12 +174,20 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 			.map((feature) => feature.trim())
 			.filter(Boolean);
 
-		if (!form.plateNumber.trim()) nextErrors.plateNumber = "Plate number is required.";
+		if (!form.plateNumber.trim()) {
+			nextErrors.plateNumber = "Plate number is required.";
+		} else {
+			const slPlateRegex = /^([a-zA-Z]{2}\s)?([a-zA-Z]{2,3}|\d{2,3})-\d{4}$/;
+			if (!slPlateRegex.test(form.plateNumber.trim())) {
+				nextErrors.plateNumber = "Invalid Sri Lankan plate format. (e.g. WP CAA-1234, KV-5432, 15-1234)";
+			}
+		}
 		if (!form.brand.trim()) nextErrors.brand = "Brand is required.";
 		if (!form.vehicleTypeId) nextErrors.vehicleTypeId = "Vehicle type is required.";
 		if (!form.model.trim()) nextErrors.model = "Model is required.";
 		if (!String(form.year).trim()) nextErrors.year = "Year is required.";
 		if (!String(form.capacity).trim()) nextErrors.capacity = "Capacity is required.";
+		if (!String(form.currentMileage).trim()) nextErrors.currentMileage = "Mileage is required.";
 		if (!String(form.pricePerDay).trim()) nextErrors.pricePerDay = "Price per day is required.";
 		if (!form.fuelType) nextErrors.fuelType = "Fuel type is required.";
 		if (!form.transmission) nextErrors.transmission = "Transmission is required.";
@@ -185,6 +218,12 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 			nextErrors.capacity = "Capacity must be a number.";
 		} else if (form.capacity && Number(form.capacity) <= 0) {
 			nextErrors.capacity = "Capacity must be greater than zero.";
+		}
+
+		if (form.currentMileage && Number.isNaN(Number(form.currentMileage))) {
+			nextErrors.currentMileage = "Mileage must be a number.";
+		} else if (form.currentMileage && Number(form.currentMileage) < 0) {
+			nextErrors.currentMileage = "Mileage cannot be negative.";
 		}
 
 		if (form.pricePerDay && Number.isNaN(Number(form.pricePerDay))) {
@@ -235,6 +274,7 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 		formData.append("model", form.model.trim());
 		formData.append("year", form.year ? Number(form.year) : null);
 		formData.append("capacity", Number(form.capacity));
+		formData.append("currentMileage", Number(form.currentMileage));
 		formData.append("fuelType", form.fuelType || null);
 		formData.append("transmission", form.transmission || null);
 		formData.append("color", form.color.trim() || null);
@@ -339,6 +379,7 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 						/>
 					</div>
 
+
 					<div>
 						<FieldLabel text="Brand" error={errors.brand} />
 						<input
@@ -375,18 +416,21 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 
 					<div>
 						<FieldLabel text="Year" error={errors.year} />
-						<input
-							type="number"
+						<select
 							name="year"
 							value={form.year}
 							onChange={handleChange}
 							className={inputClassName(!!errors.year)}
-							placeholder="2024"
-						/>
+						>
+							<option value="">Select year</option>
+							{VALID_YEARS.map(year => (
+								<option key={year} value={year}>{year}</option>
+							))}
+						</select>
 					</div>
 
 					<div>
-						<FieldLabel text="Capacity" required error={errors.capacity} />
+						<FieldLabel text="Capacity (Seats)" required error={errors.capacity} />
 						<input
 							type="number"
 							name="capacity"
@@ -394,6 +438,20 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 							onChange={handleChange}
 							className={inputClassName(!!errors.capacity)}
 							placeholder="4"
+							min="1"
+						/>
+					</div>
+
+					<div>
+						<FieldLabel text="Initial / Current Mileage (km)" required error={errors.currentMileage} />
+						<input
+							type="number"
+							name="currentMileage"
+							value={form.currentMileage}
+							onChange={handleChange}
+							className={inputClassName(!!errors.currentMileage)}
+							placeholder="0"
+							min="0"
 						/>
 					</div>
 
@@ -439,6 +497,7 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 							className={inputClassName(!!errors.pricePerDay)}
 							placeholder="120.00"
 							step="0.01"
+							min="1"
 						/>
 					</div>
 
@@ -446,6 +505,7 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 						<FieldLabel text="Status" error={errors.status} />
 						<select name="status" value={form.status} onChange={handleChange} className={inputClassName(!!errors.status)}>
 							<option value="available">Available</option>
+							<option value="pending_inspection">Pending Inspection (Auto)</option>
 							<option value="maintenance">Maintenance</option>
 							<option value="retired">Retired</option>
 						</select>
@@ -471,7 +531,13 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 							value={form.insuranceExpiry}
 							onChange={handleChange}
 							className={inputClassName(!!errors.insuranceExpiry)}
+							min={new Date().toISOString().split('T')[0]}
 						/>
+						{getExpiryStatus(form.insuranceExpiry) && (
+							<p className={`text-xs mt-1.5 font-bold ${getExpiryStatus(form.insuranceExpiry).status === 'expired' ? 'text-red-600' : 'text-amber-600'}`}>
+								{getExpiryStatus(form.insuranceExpiry).status === 'expired' ? '⚠️ ' : '⏳ '}{getExpiryStatus(form.insuranceExpiry).message}
+							</p>
+						)}
 					</div>
 
 					<div>
@@ -482,7 +548,13 @@ export default function VehicleForm({ vehicle, onCancel, onSaved }) {
 							value={form.revenueLicenseExpiry}
 							onChange={handleChange}
 							className={inputClassName(!!errors.revenueLicenseExpiry)}
+							min={new Date().toISOString().split('T')[0]}
 						/>
+						{getExpiryStatus(form.revenueLicenseExpiry) && (
+							<p className={`text-xs mt-1.5 font-bold ${getExpiryStatus(form.revenueLicenseExpiry).status === 'expired' ? 'text-red-600' : 'text-amber-600'}`}>
+								{getExpiryStatus(form.revenueLicenseExpiry).status === 'expired' ? '⚠️ ' : '⏳ '}{getExpiryStatus(form.revenueLicenseExpiry).message}
+							</p>
+						)}
 					</div>
 				</div>
 
