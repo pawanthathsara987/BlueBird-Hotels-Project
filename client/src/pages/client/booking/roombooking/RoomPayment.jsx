@@ -246,8 +246,8 @@ const RoomPayment = () => {
           merchant_id: merchantId,
           return_url: `${window.location.origin}/booking-confirm?order_id=${reservationId}`,
           cancel_url: `${window.location.origin}/payment`,
-          notify_url: import.meta.env.NOTIFY_URL
-            ? `${import.meta.env.NOTIFY_URL}/api/payment/notify`
+          notify_url: import.meta.env.VITE_NOTIFY_URL
+            ? `${import.meta.env.VITE_NOTIFY_URL}/api/payment/notify`
             : `${import.meta.env.VITE_BACKEND_URL}/payment/notify`,
           order_id: String(reservationId),
           items: `BlueBird Room Booking #${reservationId}`,
