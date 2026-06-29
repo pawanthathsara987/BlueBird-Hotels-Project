@@ -2,7 +2,7 @@ import { Op } from "sequelize";
 import StaffMember from "../models/User/StaffMember.js";
 import UserRegisterModel from "../models/User/UserRegisterModel.js";
 import Otp from "../models/User/Otp.js";
-import nodemailer from "nodemailer";
+import { sendEmail } from "../services/emailService.js";
 import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 import e from "express";
@@ -11,19 +11,6 @@ import Role from "../models/User/Role.js";
 import DeletedStaffMember from "../models/User/DeletedStaffMember.js";
 import supabase from "../config/supabaseClient.js";
 dotenv.config();
-
-const transporter = nodemailer.createTransport(
-    {
-        service: "gmail",
-        host: "smtp.gmail.com",
-        port: 587,
-        secure: false,
-        auth: {
-            user: process.env.GMAIL_USER,
-            pass: process.env.GMAIL_APP_PASSWORD
-        }
-    }
-);
 
 export async function userLogin(req, res) {
     try {
@@ -408,26 +395,22 @@ export async function sendOtp(req, res) {
             expiresAt
         });
 
-        const message = {
-            from: process.env.GMAIL_USER,
-            to: email,
-            subject: "Password Reset OTP",
-            text: `Your OTP for password reset is: ${otpCode}`
+        try {
+            await sendEmail({
+                to: email,
+                subject: "Password Reset OTP",
+                text: `Your OTP for password reset is: ${otpCode}`
+            });
+            res.json({
+                message: "OTP sent successfully"
+            });
+        } catch (err) {
+            console.error("Failed to send OTP email:", err);
+            return res.status(500).json({
+                message: "Failed to send OTP email",
+                error: err.message
+            });
         }
-
-        transporter.sendMail(message, (err, info) => {
-            if (err) {
-                console.error("Failed to send OTP email:", err);
-                return res.status(500).json({
-                    message: "Failed to send OTP email",
-                    error: err.message
-                });
-            } else {
-                res.json({
-                    message: "OTP sent successfully"
-                });
-            }
-        });
 
     } catch (error) {
         res.status(500).json({
