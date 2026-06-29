@@ -229,7 +229,7 @@ const expireOldPendingBookings = async () => {
                 const t = await sequelize.transaction();
                 try {
                     await resv.update({ status: "cancelled" }, { transaction: t });
-                    await BookedRoom.update({ status: "cancelled" }, { where: { reservation_id: resv.id }, transaction: t });
+                    await BookedRoom.update({ status: "cancelled" }, { where: { booking_id: resv.id }, transaction: t });
                     
                     // Mark pending payment logs as failed
                     await RoomPayment.update(
@@ -468,7 +468,7 @@ const createBooking = async (req, res) => {
         if (personalRequest && personalRequest != null) {
             try {
                 await sendEmail({
-                    to: "sandeepal513@gmail.com",
+                    to: process.env.PERSONAL_REQUEST_MAIL,
                     subject: "Personal Request",
                     html: "<h1>Personal Request</h1>" +
                         "<p>Personal Request: " + personalRequest + "</p>",
@@ -508,7 +508,10 @@ const getAllBookings = async (req, res) => {
                 {
                     model: BookedRoom,
                     as: 'bookedRooms',
-                    include: [Room]
+                    include: [{
+                        model: Room,
+                        include: [{ model: RoomType, as: "roomType" }]
+                    }]
                 }
             ]
         });
@@ -525,7 +528,14 @@ const getBookingById = async (req, res) => {
         const booking = await Reservation.findByPk(id, {
             include: [
                 { model: Customer },
-                { model: BookedRoom, as: 'bookedRooms', include: [Room] }
+                {
+                    model: BookedRoom,
+                    as: 'bookedRooms',
+                    include: [{
+                        model: Room,
+                        include: [{ model: RoomType, as: "roomType" }]
+                    }]
+                }
             ]
         });
         if (!booking) return res.status(404).json({ message: "Not found" });
@@ -665,7 +675,7 @@ const getAvailableRoomAssignForPackage = async (req, res) => {
         const rooms = await sequelize.query(`
             SELECT r.*
             FROM room r
-            WHERE r.packageId = :packageId
+            WHERE r.room_type_id = :packageId
             AND r.status = 'available'
             AND r.id NOT IN (
                 SELECT br.room_id

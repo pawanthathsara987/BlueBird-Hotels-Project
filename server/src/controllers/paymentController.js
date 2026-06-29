@@ -180,7 +180,7 @@ export const handlePayHereNotification = async (req, res) => {
                 const t = await sequelize.transaction();
                 try {
                     await booking.update({ status: "cancelled" }, { transaction: t });
-                    await BookedRoom.update({ status: "cancelled" }, { where: { reservation_id: order_id }, transaction: t });
+                    await BookedRoom.update({ status: "cancelled" }, { where: { booking_id: order_id }, transaction: t });
                     
                     // Mark any pending RoomPayment records as failed
                     await RoomPayment.update(

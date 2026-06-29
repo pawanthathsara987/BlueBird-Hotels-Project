@@ -1,17 +1,17 @@
 import { col, fn, Op, QueryTypes } from "sequelize";
 import sequelize from "../../config/database.js";
-import { Customer, Room, BookedRoom, Reservation, RoomPayment } from "../../models/index.js";
+import { Customer, Room, BookedRoom, Reservation, RoomPayment, RoomType } from "../../models/index.js";
 
 
 // available room list with packages
 const availableRooms = async (req, res) => {
     try {
         const avlRooms = await Room.findAll({
-            where: { roomstatus: "available" },
+            where: { status: "available" },
             include: [
                 {
-                    model: RoomPackage,
-                    attributes: ["id", "pname", "maxAdults", "maxKids", "pprice", "pimage"],
+                    model: RoomType,
+                    as: "roomType"
                 }
             ]
         });
@@ -184,6 +184,7 @@ const createVisitorBooking = async (req, res) => {
         const reservation = await Reservation.create(
             {
                 guest_id: finalGuestId,
+                customer_id: finalGuestId,
                 total_price,
                 status: "confirmed"
             },
@@ -212,7 +213,7 @@ const createVisitorBooking = async (req, res) => {
             const room = await Room.findOne({
                 where: {
                     id: roomId,
-                    roomStatus: "available"
+                    status: "available"
                 },
                 transaction: t,
                 lock: t.LOCK.UPDATE
@@ -238,12 +239,12 @@ const createVisitorBooking = async (req, res) => {
             }
 
             bookedRoomEntries.push({
-                reservation_id: reservation.id,
+                booking_id: reservation.id,
                 room_id: roomId,
                 checkIn,
                 checkOut,
-                actualAdults,
-                actualKids,
+                adults: actualAdults,
+                kids: actualKids,
                 status: "reserved"
             });
         }
@@ -438,8 +439,8 @@ const getAvailableRoomAssignForPackage = async (req, res) => {
         const rooms = await sequelize.query(`
             SELECT r.*
             FROM room r
-            WHERE r.packageId = :packageId
-            AND r.roomStatus = 'available'
+            WHERE r.room_type_id = :packageId
+            AND r.status = 'available'
             AND r.id NOT IN (
                 SELECT br.room_id
                 FROM booked_rooms br
@@ -479,17 +480,19 @@ const getAvailablePackagesByDate = async (req, res) => {
 
         const query = `
             SELECT 
-                p.id,
-                p.pname,
-                p.pprice,
-                p.pimage,
-                p.maxAdults,
-                p.maxKids,
-                p.description,
+                rt.id,
+                rt.type AS pname,
+                rp.price AS pprice,
+                rt.image_url AS pimage,
+                MAX(ot.capacity) AS maxAdults,
+                MAX(r.kids) AS maxKids,
+                '' AS description,
                 COUNT(DISTINCT r.id) AS available_room
-            FROM room_package p
-            JOIN room r ON p.id = r.packageId
-            WHERE r.roomStatus = 'available'
+            FROM room_type rt
+            JOIN room r ON rt.id = r.room_type_id
+            JOIN occupancy_type ot ON r.occupancy_type_id = ot.id
+            JOIN room_price rp ON rt.id = rp.roomTypeId
+            WHERE r.status = 'available'
             AND r.id NOT IN (
                 SELECT br.room_id
                 FROM booked_rooms br
@@ -497,7 +500,7 @@ const getAvailablePackagesByDate = async (req, res) => {
                 AND br.checkIn < :checkOut
                 AND br.checkOut > :checkIn
             )
-            GROUP BY p.id
+            GROUP BY rt.id, rt.type, rp.price, rt.image_url
         `;
 
         const packagesList = await sequelize.query(query, {
