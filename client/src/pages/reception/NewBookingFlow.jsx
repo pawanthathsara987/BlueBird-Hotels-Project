@@ -3,6 +3,7 @@ import axios from "axios";
 import { format } from "date-fns";
 import toast from "react-hot-toast";
 import { MdCalendarToday, MdPerson, MdEmail, MdPhone, MdBadge, MdHotel } from "react-icons/md";
+import { validateSriLankanNIC, validatePassport } from "../../utils/validation";
 
 export default function NewBookingFlow({ onBookingSuccess }) {
     const today = new Date();
@@ -165,6 +166,18 @@ export default function NewBookingFlow({ onBookingSuccess }) {
             return;
         }
 
+        if (isLocal) {
+            if (guestDetails.idPassport && !validateSriLankanNIC(guestDetails.idPassport)) {
+                toast.error("Invalid Sri Lankan NIC number format. Must be 9 digits followed by V/X or 12 digits.");
+                return;
+            }
+        } else {
+            if (guestDetails.idPassport && !validatePassport(guestDetails.idPassport)) {
+                toast.error("Invalid Passport format. Must be 6 to 15 alphanumeric characters.");
+                return;
+            }
+        }
+
         if (selectedRooms.length === 0) {
             toast.error("Please select at least one room");
             return;
@@ -174,7 +187,17 @@ export default function NewBookingFlow({ onBookingSuccess }) {
 
         try {
             toast.loading("Adding customer details...", { id: 'booking-progress' });
-            const customerResponse = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/roombook/reception-customer`, guestDetails);
+            const payload = {
+                firstName: guestDetails.firstName,
+                lastName: guestDetails.lastName,
+                email: guestDetails.email,
+                phoneNumber: guestDetails.phoneNumber,
+                idType: isLocal ? "NIC" : "PASSPORT",
+                idNumber: guestDetails.idPassport,
+                country: isLocal ? "Sri Lanka" : guestDetails.country,
+                idPassport: guestDetails.idPassport
+            };
+            const customerResponse = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/roombook/reception-customer`, payload);
 
             if (!customerResponse.data.success) {
                 toast.dismiss('booking-progress');
@@ -228,10 +251,10 @@ export default function NewBookingFlow({ onBookingSuccess }) {
 
     return (
         <div className={`rounded-2xl border p-6 shadow-sm transition-colors duration-300 ${
-            theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-150 text-slate-850"
+            theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-800"
         }`}>
             <h2 className={`text-xl font-black mb-6 border-b pb-3 tracking-wide uppercase ${
-                theme.mode === "dark" ? "text-white border-slate-800" : "text-slate-850 border-slate-100"
+                theme.mode === "dark" ? "text-white border-slate-800" : "text-slate-800 border-slate-100"
             }`}>
                 Create New Walk-in Booking
             </h2>
@@ -241,7 +264,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                 <div className="lg:col-span-2 space-y-6">
                     {/* Dates */}
                     <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl border ${
-                        theme.mode === "dark" ? "bg-slate-950/40 border-slate-850" : "bg-gray-50 border-gray-100"
+                        theme.mode === "dark" ? "bg-slate-950/40 border-slate-800" : "bg-gray-50 border-gray-100"
                     }`}>
                         <div>
                             <label className={`block text-xs font-black uppercase mb-2 ${theme.mode === "dark" ? "text-slate-400" : "text-slate-500"}`}>Check-in Date</label>
@@ -254,8 +277,8 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                                     onChange={(e) => setCheckInDate(e.target.value)}
                                     className={`w-full pl-10 pr-4 py-2 text-sm border rounded-xl focus:outline-none ${
                                         theme.mode === "dark"
-                                            ? "bg-slate-900 border-slate-800 text-white focus:border-slate-650"
-                                            : "bg-white border-slate-205 text-slate-800 focus:border-blue-500"
+                                            ? "bg-slate-900 border-slate-800 text-white focus:border-slate-600"
+                                            : "bg-white border-slate-200 text-slate-800 focus:border-blue-500"
                                     }`}
                                 />
                             </div>
@@ -271,8 +294,8 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                                     onChange={(e) => setCheckOutDate(e.target.value)}
                                     className={`w-full pl-10 pr-4 py-2 text-sm border rounded-xl focus:outline-none ${
                                         theme.mode === "dark"
-                                            ? "bg-slate-900 border-slate-800 text-white focus:border-slate-650"
-                                            : "bg-white border-slate-205 text-slate-800 focus:border-blue-500"
+                                            ? "bg-slate-900 border-slate-800 text-white focus:border-slate-600"
+                                            : "bg-white border-slate-200 text-slate-800 focus:border-blue-500"
                                     }`}
                                 />
                             </div>
@@ -285,7 +308,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                             ? "bg-indigo-950/10 border-indigo-900/30"
                             : "bg-blue-50/50 border-blue-100"
                     }`}>
-                        <label className={`block text-xs font-black uppercase mb-2 ${theme.mode === "dark" ? "text-slate-305" : "text-slate-600"}`}>
+                        <label className={`block text-xs font-black uppercase mb-2 ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
                             Select Package to view available rooms
                         </label>
                         <select
@@ -294,12 +317,12 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                             className={`w-full p-3 border rounded-xl shadow-inner focus:outline-none transition-all font-bold text-xs ${
                                 theme.mode === "dark"
                                     ? "bg-slate-950 border-slate-800 text-slate-200 focus:border-slate-700"
-                                    : "bg-white border-blue-150 text-slate-700 focus:border-blue-400"
+                                    : "bg-white border-blue-200 text-slate-700 focus:border-blue-400"
                             }`}
                         >
-                            <option value="">-- Choose a Package --</option>
+                            <option value="" className="bg-slate-900 text-white">-- Choose a Package --</option>
                             {packages.map(pkg => (
-                                <option key={pkg.id} value={pkg.id} disabled={pkg.available_room === 0}>
+                                <option key={pkg.id} value={pkg.id} disabled={pkg.available_room === 0} className="bg-slate-900 text-white">
                                     {pkg.pname} - ${pkg.pprice}/night ({pkg.available_room} rooms available)
                                 </option>
                             ))}
@@ -348,12 +371,12 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                     {/* Selected Rooms Configuration */}
                     {selectedRooms.length > 0 && (
                         <div className="space-y-3">
-                            <h3 className={`text-xs font-black uppercase border-b pb-2 ${theme.mode === "dark" ? "text-slate-400 border-slate-850" : "text-slate-500 border-slate-100"}`}>
+                            <h3 className={`text-xs font-black uppercase border-b pb-2 ${theme.mode === "dark" ? "text-slate-400 border-slate-800" : "text-slate-500 border-slate-100"}`}>
                                 Selected Rooms Configuration
                             </h3>
                             {selectedRooms.map((room) => (
                                 <div key={room.roomId} className={`flex flex-col sm:flex-row items-center gap-4 border p-4 rounded-2xl shadow-inner ${
-                                    theme.mode === "dark" ? "bg-slate-950/50 border-slate-850" : "bg-white border-slate-200"
+                                    theme.mode === "dark" ? "bg-slate-950/50 border-slate-800" : "bg-white border-slate-200"
                                 }`}>
                                     <div className="flex-1">
                                         <p className={`font-black text-sm ${theme.mode === "dark" ? "text-white" : "text-slate-800"}`}>Room {room.roomNumber || room.roomId}</p>
@@ -405,7 +428,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                 <div className="space-y-6">
                     {/* Guest Form */}
                     <div className={`p-5 rounded-2xl border ${
-                        theme.mode === "dark" ? "bg-slate-950/40 border-slate-850" : "bg-gray-50 border-gray-100"
+                        theme.mode === "dark" ? "bg-slate-950/40 border-slate-800" : "bg-gray-50 border-gray-100"
                     }`}>
                         <h3 className={`text-xs font-black uppercase mb-4 flex items-center gap-2 ${theme.mode === "dark" ? "text-slate-400" : "text-slate-500"}`}>
                             <MdPerson className="text-lg" /> Guest Details
@@ -413,7 +436,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className={`text-xs font-bold block mb-1 ${theme.mode === "dark" ? "text-slate-305" : "text-slate-600"}`}>First Name *</label>
+                                    <label className={`text-xs font-bold block mb-1 ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>First Name *</label>
                                     <input
                                         type="text"
                                         name="firstName"
@@ -426,7 +449,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                                     />
                                 </div>
                                 <div>
-                                    <label className={`text-xs font-bold block mb-1 ${theme.mode === "dark" ? "text-slate-305" : "text-slate-600"}`}>Last Name *</label>
+                                    <label className={`text-xs font-bold block mb-1 ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>Last Name *</label>
                                     <input
                                         type="text"
                                         name="lastName"
@@ -440,7 +463,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                                 </div>
                             </div>
                             <div>
-                                <label className={`text-xs font-bold block mb-1 flex items-center gap-1 ${theme.mode === "dark" ? "text-slate-305" : "text-slate-600"}`}>
+                                <label className={`text-xs font-bold block mb-1 flex items-center gap-1 ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
                                     <MdPhone /> Phone Number *
                                 </label>
                                 <input
@@ -455,7 +478,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                                 />
                             </div>
                             <div>
-                                <label className={`text-xs font-bold block mb-1 flex items-center gap-1 ${theme.mode === "dark" ? "text-slate-305" : "text-slate-600"}`}>
+                                <label className={`text-xs font-bold block mb-1 flex items-center gap-1 ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
                                     <MdEmail /> Email Address
                                 </label>
                                 <input
@@ -469,7 +492,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                                     }`}
                                 />
                             </div>
-                            <div className="flex items-center gap-2 mb-2 mt-4 border-t pt-4 dark:border-slate-850 border-slate-100">
+                            <div className="flex items-center gap-2 mb-2 mt-4 border-t pt-4 dark:border-slate-800 border-slate-100">
                                 <input
                                     type="checkbox"
                                     id="isLocal"
@@ -484,7 +507,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
 
                             {isLocal ? (
                                 <div>
-                                    <label className={`text-xs font-bold block mb-1 flex items-center gap-1 ${theme.mode === "dark" ? "text-slate-305" : "text-slate-600"}`}>
+                                    <label className={`text-xs font-bold block mb-1 flex items-center gap-1 ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
                                         <MdBadge /> National Identity Card (NIC)
                                     </label>
                                     <input
@@ -501,7 +524,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                             ) : (
                                 <>
                                     <div>
-                                        <label className={`text-xs font-bold block mb-1 flex items-center gap-1 ${theme.mode === "dark" ? "text-slate-350" : "text-slate-600"}`}>
+                                        <label className={`text-xs font-bold block mb-1 flex items-center gap-1 ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
                                             <MdBadge /> Country
                                         </label>
                                         <input
@@ -516,7 +539,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                                         />
                                     </div>
                                     <div>
-                                        <label className={`text-xs font-bold block mb-1 flex items-center gap-1 ${theme.mode === "dark" ? "text-slate-305" : "text-slate-600"}`}>
+                                        <label className={`text-xs font-bold block mb-1 flex items-center gap-1 ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
                                             <MdBadge /> Passport ID
                                         </label>
                                         <input
@@ -537,7 +560,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
 
                     {/* Summary Card */}
                     <div className="bg-slate-950 text-white p-5 rounded-2xl border border-slate-800 shadow-xl">
-                        <h3 className="text-xs font-black uppercase text-slate-400 mb-4 border-b border-slate-850 pb-2">Booking Summary</h3>
+                        <h3 className="text-xs font-black uppercase text-slate-400 mb-4 border-b border-slate-800 pb-2">Booking Summary</h3>
 
                         <div className="flex justify-between text-xs mb-2">
                             <span className="text-slate-400">Nights</span>
@@ -550,14 +573,14 @@ export default function NewBookingFlow({ onBookingSuccess }) {
 
                         <div className="space-y-2 mb-4 max-h-32 overflow-y-auto">
                             {selectedRooms.map(r => (
-                                <div key={r.roomId} className="flex justify-between text-[11px] items-center bg-slate-900 p-2.5 rounded-xl border border-slate-850">
+                                <div key={r.roomId} className="flex justify-between text-[11px] items-center bg-slate-900 p-2.5 rounded-xl border border-slate-800">
                                     <span className="truncate pr-2 font-bold text-slate-200">Room {r.roomNumber || r.roomId} ({r.packageName})</span>
                                     <span className="font-black text-green-400">${r.price}</span>
                                 </div>
                             ))}
                         </div>
 
-                        <div className="flex justify-between items-end border-t border-slate-850 pt-4 mb-6">
+                        <div className="flex justify-between items-end border-t border-slate-800 pt-4 mb-6">
                             <span className="text-slate-400 font-bold">Total Amount</span>
                             <span className="text-3xl font-black text-green-400">${totalPrice.toLocaleString()}</span>
                         </div>

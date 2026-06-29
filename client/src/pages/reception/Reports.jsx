@@ -108,7 +108,7 @@ export default function Reports() {
         if (theme.cardStyle === "sleek") {
             style += "shadow-sm border border-slate-100 dark:border-slate-800/50 hover:shadow-md hover:border-slate-200/60 dark:hover:border-slate-700/80 rounded-2xl ";
         } else if (theme.cardStyle === "bordered") {
-            style += "border border-slate-200/80 dark:border-slate-850 shadow-none rounded-xl ";
+            style += "border border-slate-200/80 dark:border-slate-800 shadow-none rounded-xl ";
         } else if (theme.cardStyle === "glass") {
             style += "backdrop-blur-md bg-white/70 dark:bg-slate-950/70 border border-white/20 dark:border-slate-800/40 shadow-lg rounded-3xl ";
         }
@@ -188,7 +188,7 @@ export default function Reports() {
                         className={`px-4 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer ${
                             reportType === "daily"
                                 ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm"
-                                : "text-slate-550 dark:text-slate-450 hover:text-slate-800 dark:hover:text-slate-200"
+                                : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
                         }`}
                     >
                         Daily Report
@@ -198,7 +198,7 @@ export default function Reports() {
                         className={`px-4 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer ${
                             reportType === "monthly"
                                 ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm"
-                                : "text-slate-550 dark:text-slate-455 hover:text-slate-800 dark:hover:text-slate-200"
+                                : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
                         }`}
                     >
                         Monthly Report
@@ -419,10 +419,10 @@ export default function Reports() {
                                                             ))}
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-3 text-slate-600 dark:text-slate-450 font-medium">
+                                                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400 font-medium">
                                                         {booking.checkIn ? new Date(booking.checkIn).toLocaleDateString() : "—"}
                                                     </td>
-                                                    <td className="px-4 py-3 text-slate-600 dark:text-slate-450 font-medium">
+                                                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400 font-medium">
                                                         {booking.checkOut ? new Date(booking.checkOut).toLocaleDateString() : "—"}
                                                     </td>
                                                     <td className="px-4 py-3">

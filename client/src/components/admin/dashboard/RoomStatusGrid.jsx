@@ -66,7 +66,7 @@ export default function RoomStatusGrid({ loading, rooms = [], roomTypes = [] }) 
         }`}>
             
             {/* Widget Header Area */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-850 pb-5">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-5">
                 <div>
                     <h2 className="text-lg font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
                         <Activity size={18} className="text-blue-500" />
@@ -84,7 +84,7 @@ export default function RoomStatusGrid({ loading, rooms = [], roomTypes = [] }) 
                             className={`flex items-center justify-center gap-2 px-4 py-2 border rounded-xl text-xs font-extrabold transition-all duration-200 cursor-pointer ${
                                 showFiltersDropdown || selectedFloor !== "all" || selectedType !== "all" || selectedStatus !== "all"
                                     ? "bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-950/20 dark:border-blue-900/30"
-                                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 dark:bg-slate-850 dark:text-slate-305 dark:border-slate-750 dark:hover:bg-slate-800"
+                                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-800 dark:hover:bg-slate-800"
                             }`}
                         >
                             <Filter size={14} />
@@ -98,8 +98,8 @@ export default function RoomStatusGrid({ loading, rooms = [], roomTypes = [] }) 
                         {showFiltersDropdown && (
                             <>
                                 <div className="fixed inset-0 z-10" onClick={() => setShowFiltersDropdown(false)} />
-                                <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-850 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-xl p-4 z-20 space-y-3.5 animate-fadeIn">
-                                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-750 pb-2">
+                                <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-xl p-4 z-20 space-y-3.5 animate-fadeIn">
+                                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
                                         <span className="text-xs font-black text-slate-700 dark:text-slate-200">Filter Grid</span>
                                         <button 
                                             onClick={() => {
@@ -165,12 +165,12 @@ export default function RoomStatusGrid({ loading, rooms = [], roomTypes = [] }) 
                     </div>
 
                     {/* Date Dropdown */}
-                    <div className="relative flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 dark:bg-slate-850 dark:border-slate-750 dark:hover:bg-slate-800">
+                    <div className="relative flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:hover:bg-slate-800">
                         <Calendar size={14} className="text-slate-400 dark:text-slate-500" />
                         <select
                             value={timeRange}
                             onChange={(e) => setTimeRange(e.target.value)}
-                            className="bg-transparent text-xs font-extrabold text-slate-755 dark:text-slate-300 outline-none pr-3 cursor-pointer"
+                            className="bg-transparent text-xs font-extrabold text-slate-700 dark:text-slate-300 outline-none pr-3 cursor-pointer"
                         >
                             <option value="Today">Today</option>
                             <option value="Week">This Week</option>
@@ -181,7 +181,7 @@ export default function RoomStatusGrid({ loading, rooms = [], roomTypes = [] }) 
                     {/* Resize Button */}
                     <button
                         onClick={() => setIsMaximized(!isMaximized)}
-                        className="p-2 border border-slate-200 text-slate-450 hover:text-slate-700 rounded-xl transition cursor-pointer hover:bg-slate-50 dark:border-slate-750 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-800"
+                        className="p-2 border border-slate-200 text-slate-400 hover:text-slate-700 rounded-xl transition cursor-pointer hover:bg-slate-50 dark:border-slate-800 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-800"
                         title={isMaximized ? "Minimize Widget" : "Maximize Widget"}
                     >
                         <Maximize2 size={14} />
@@ -196,24 +196,24 @@ export default function RoomStatusGrid({ loading, rooms = [], roomTypes = [] }) 
                     <div className="flex justify-center items-center mb-3">
                         <span className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></span>
                     </div>
-                    <p className="text-slate-500 dark:text-slate-450 text-sm font-semibold">Retrieving rooms matrix...</p>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm font-semibold">Retrieving rooms matrix...</p>
                 </div>
             ) : filteredRooms.length === 0 ? (
-                <div className="py-20 text-center border border-dashed border-slate-150 dark:border-slate-800 rounded-2xl bg-slate-50/20 dark:bg-slate-900/10">
-                    <p className="text-slate-500 dark:text-slate-450 text-sm font-semibold">No configured rooms match the selected filters.</p>
+                <div className="py-20 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/20 dark:bg-slate-900/10">
+                    <p className="text-slate-500 dark:text-slate-400 text-sm font-semibold">No configured rooms match the selected filters.</p>
                 </div>
             ) : (
                 /* Dynamic Room Grid matching the 11-column aesthetic layout exactly */
                 <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-11 gap-3 md:gap-4 p-1">
                     {filteredRooms.map((room) => {
-                        let blockStyle = "bg-slate-50 text-slate-700 hover:bg-slate-100 hover:scale-105 border border-slate-200/50 shadow-inner dark:bg-slate-800 dark:text-slate-200 dark:border-slate-750"; // Not Booked
+                        let blockStyle = "bg-slate-50 text-slate-700 hover:bg-slate-100 hover:scale-105 border border-slate-200/50 shadow-inner dark:bg-slate-800 dark:text-slate-200 dark:border-slate-800"; // Not Booked
                         
                         if (room.dashboardStatus === "booked") {
                             blockStyle = "bg-emerald-500 text-white font-bold hover:bg-emerald-600 hover:scale-105 shadow-md shadow-emerald-500/10 border border-transparent";
                         } else if (room.dashboardStatus === "canceled") {
                             blockStyle = "bg-rose-500 text-white font-bold hover:bg-rose-600 hover:scale-105 shadow-md shadow-rose-500/10 border border-transparent";
                         } else if (room.dashboardStatus === "pending") {
-                            blockStyle = "bg-emerald-55 bg-emerald-50/80 text-emerald-705 font-bold border border-emerald-200/70 hover:bg-emerald-100/70 hover:scale-105 shadow-sm dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/40";
+                            blockStyle = "bg-emerald-55 bg-emerald-50/80 text-emerald-700 font-bold border border-emerald-200/70 hover:bg-emerald-100/70 hover:scale-105 shadow-sm dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/40";
                         }
 
                         const displayNum = String(room.room_number ?? room.roomNumber ?? "00").padStart(2, "0");
@@ -233,13 +233,13 @@ export default function RoomStatusGrid({ loading, rooms = [], roomTypes = [] }) 
                                         <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900/95" />
                                         
                                         <div className="space-y-3 text-left">
-                                            <div className="flex items-center justify-between border-b border-slate-850 pb-2">
+                                            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                                                 <span className="text-xs font-black text-white">Room {displayNum}</span>
                                                 <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
                                                     room.dashboardStatus === "booked" ? "bg-emerald-500/10 text-emerald-400 border-emerald-400/20" :
                                                     room.dashboardStatus === "canceled" ? "bg-rose-500/10 text-rose-400 border-rose-400/20" :
                                                     room.dashboardStatus === "pending" ? "bg-amber-500/10 text-amber-400 border-amber-400/20" :
-                                                    "bg-slate-500/10 text-slate-450 border-slate-400/20"
+                                                    "bg-slate-500/10 text-slate-400 border-slate-400/20"
                                                 }`}>
                                                     {room.dashboardStatus === "booked" ? "Booked" :
                                                      room.dashboardStatus === "canceled" ? "Offline" :

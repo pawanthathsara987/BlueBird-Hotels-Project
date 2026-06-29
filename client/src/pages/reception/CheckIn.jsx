@@ -76,7 +76,7 @@ export default function CheckIn() {
 
     return (
         <div className={`w-full px-6 py-6 min-h-screen transition-colors duration-300 ${
-            theme.mode === "dark" ? "bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-850"
+            theme.mode === "dark" ? "bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-800"
         }`}>
             {/* Customizer style overrides */}
             <style>{`
@@ -198,7 +198,7 @@ export default function CheckIn() {
                         <div className="flex justify-between items-center mb-4 border-b pb-3 dark:border-slate-800 border-slate-100">
                             <h2 className="text-lg font-black uppercase tracking-wide">Guest Details</h2>
                             <button onClick={() => setSelectedGuest(null)} className="cursor-pointer">
-                                <MdCloseIcon size={22} className={theme.mode === "dark" ? "text-white" : "text-slate-650"} />
+                                <MdCloseIcon size={22} className={theme.mode === "dark" ? "text-white" : "text-slate-600"} />
                             </button>
                         </div>
 

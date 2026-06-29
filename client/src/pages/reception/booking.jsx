@@ -137,7 +137,7 @@ export default function Booking() {
 
     return (
         <div className={`w-full px-4 md:px-6 lg:px-8 py-6 min-h-screen transition-colors duration-300 ${
-            theme.mode === "dark" ? "bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-850"
+            theme.mode === "dark" ? "bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-800"
         }`}>
             <style>{`
                 .light-mode-high-contrast .text-slate-400 {
@@ -189,7 +189,7 @@ export default function Booking() {
                 <>
                     {/* Filter Section */}
                     <div className={`rounded-2xl border p-4 md:p-6 mb-6 shadow-sm ${
-                        theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-150"
+                        theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
                     }`}>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
                             {/* Date Navigation */}
@@ -208,7 +208,7 @@ export default function Booking() {
                                         onChange={(e) => setSelectedDate(e.target.value)}
                                         className={`w-full px-3 md:px-4 py-2 text-sm border rounded-xl focus:outline-none ${
                                             theme.mode === "dark"
-                                                ? "bg-slate-850 border-slate-750 text-white focus:border-slate-600"
+                                                ? "bg-slate-900 border-slate-800 text-white focus:border-slate-600"
                                                 : "bg-white border-slate-200 text-slate-800 focus:border-blue-500"
                                         }`}
                                     />
@@ -232,7 +232,7 @@ export default function Booking() {
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className={`w-full pl-9 md:pl-10 pr-3 md:pr-4 py-2 text-sm border rounded-xl focus:outline-none ${
                                         theme.mode === "dark"
-                                            ? "bg-slate-850 border-slate-750 text-white focus:border-slate-600"
+                                            ? "bg-slate-900 border-slate-800 text-white focus:border-slate-600"
                                             : "bg-white border-slate-200 text-slate-800 focus:border-blue-500"
                                     }`}
                                 />
@@ -252,14 +252,14 @@ export default function Booking() {
 
                     {/* Bookings Table */}
                     <div className={`rounded-2xl border overflow-hidden shadow-sm ${
-                        theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-150"
+                        theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
                     }`}>
                         {filteredBookings.length > 0 ? (
                             <>
                                 {/* Desktop Table */}
                                 <div className="hidden md:block overflow-x-auto">
                                     <table className="w-full">
-                                        <thead className={theme.mode === "dark" ? "bg-slate-850 border-b border-slate-800" : "bg-slate-50 border-b border-slate-100"}>
+                                        <thead className={theme.mode === "dark" ? "bg-slate-900 border-b border-slate-800" : "bg-slate-50 border-b border-slate-100"}>
                                             <tr>
                                                 <th className={`px-4 lg:px-6 py-4 text-left text-xs font-black uppercase tracking-wider ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
                                                     Guest Name
@@ -293,7 +293,7 @@ export default function Booking() {
                                                     key={booking.id}
                                                     className={
                                                         theme.mode === "dark"
-                                                            ? (index % 2 === 0 ? "bg-slate-900" : "bg-slate-850/40")
+                                                            ? (index % 2 === 0 ? "bg-slate-900" : "bg-slate-800/40")
                                                             : (index % 2 === 0 ? "bg-white" : "bg-slate-50/40")
                                                     }
                                                 >
@@ -380,7 +380,7 @@ export default function Booking() {
                     {/* Summary statistics */}
                     {filteredBookings.length > 0 && (
                         <div className={`mt-6 rounded-2xl border p-4 md:p-6 shadow-sm ${
-                            theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-150"
+                            theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
                         }`}>
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                                 <div className="border-l-4 border-blue-500 pl-3 md:pl-4">

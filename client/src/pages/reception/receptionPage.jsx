@@ -166,8 +166,8 @@ export default function ReceptionPage() {
                     {/* Role & Name underneath */}
                     <div className="text-center mt-3.5 space-y-1">
                         <span className={`inline-block px-2.5 py-0.5 text-[10px] font-bold rounded-full tracking-wider uppercase ${theme.mode === "dark"
-                            ? "text-slate-350 bg-slate-800/60 border border-slate-700/50"
-                            : "text-slate-650 bg-slate-100 border border-slate-200"
+                            ? "text-slate-300 bg-slate-800/60 border border-slate-700/50"
+                            : "text-slate-600 bg-slate-100 border border-slate-200"
                             }`}>
                             {receptionistRole}
                         </span>
@@ -243,7 +243,7 @@ export default function ReceptionPage() {
                     <div className="flex items-center justify-end relative">
                         <button 
                             onClick={() => setShowNotifications(!showNotifications)}
-                            className="p-2 text-slate-450 hover:text-slate-650 dark:text-slate-450 dark:hover:text-slate-255 relative cursor-pointer"
+                            className="p-2 text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200 relative cursor-pointer"
                         >
                             <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full" />
                             <MdNotifications className="text-xl" />
@@ -254,7 +254,7 @@ export default function ReceptionPage() {
                             <div className={`absolute right-0 top-12 w-80 rounded-2xl border p-4 shadow-xl z-50 transition-colors duration-350 ${
                                 theme.mode === "dark" 
                                 ? "bg-slate-900 border-slate-800 text-slate-100" 
-                                : "bg-white border-slate-250 text-slate-850"
+                                : "bg-white border-slate-200 text-slate-800"
                             }`}>
                                 <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-2 mb-3">
                                     <h4 className="text-xs font-black tracking-wide text-[#0c325e] dark:text-teal-400 uppercase">BLUEBIRD Hotel</h4>
@@ -262,7 +262,7 @@ export default function ReceptionPage() {
                                 </div>
                                 <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
                                     {/* Item 1 */}
-                                    <div className="p-3 rounded-xl bg-teal-50/60 dark:bg-teal-950/20 border border-teal-150/40 dark:border-teal-900/40 border-l-4 border-l-teal-600 text-xs space-y-1 text-left">
+                                    <div className="p-3 rounded-xl bg-teal-50/60 dark:bg-teal-950/20 border border-teal-200/40 dark:border-teal-900/40 border-l-4 border-l-teal-600 text-xs space-y-1 text-left">
                                         <div className="flex justify-between font-black">
                                             <span className="text-teal-700 dark:text-teal-350 text-[10px] tracking-wide font-black">BLUEBIRD RESERVATION</span>
                                             <span className="text-[9px] text-slate-500 dark:text-slate-400">Just Now</span>
@@ -270,7 +270,7 @@ export default function ReceptionPage() {
                                         <p className="text-slate-900 dark:text-slate-200 text-[11px] font-bold leading-normal">New walk-in booking created successfully for Room 104.</p>
                                     </div>
                                     {/* Item 2 */}
-                                    <div className="p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-150/45 dark:border-blue-900/40 border-l-4 border-l-blue-600 text-xs space-y-1 text-left">
+                                    <div className="p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/45 dark:border-blue-900/40 border-l-4 border-l-blue-600 text-xs space-y-1 text-left">
                                         <div className="flex justify-between font-black">
                                             <span className="text-blue-700 dark:text-blue-350 text-[10px] tracking-wide font-black">CHECK-IN COMPLETE</span>
                                             <span className="text-[9px] text-slate-500 dark:text-slate-400">10m ago</span>

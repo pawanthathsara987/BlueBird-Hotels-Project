@@ -12,13 +12,14 @@ import {
    checkBookingPrice
 } from '../controllers/booking/roomBookingController.js';
 
-import { createVisitorBooking } from '../controllers/reception/visitingBookingController.js';
+import { createVisitorBooking, createReceptionCustomer } from '../controllers/reception/visitingBookingController.js';
 import { requireAuth } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 router.post('/booking', requireAuth, createBooking);
 router.post('/visitor-booking', createVisitorBooking);
+router.post('/reception-customer', createReceptionCustomer);
 router.get('/bookings', getAllBookings);
 router.get('/booking/:id', getBookingById);
 router.delete('/booking/:id', deleteBookingById);
