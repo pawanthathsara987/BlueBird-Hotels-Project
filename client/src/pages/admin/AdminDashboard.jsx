@@ -7,6 +7,7 @@ import DashboardHeader from "../../components/admin/dashboard/DashboardHeader";
 import DashboardStats from "../../components/admin/dashboard/DashboardStats";
 import RoomStatusGrid from "../../components/admin/dashboard/RoomStatusGrid";
 import DashboardQuickActions from "../../components/admin/dashboard/DashboardQuickActions";
+import DailyAttendanceStats from "../../components/admin/dashboard/DailyAttendanceStats";
 
 export default function AdminDashboard() {
     const [rooms, setRooms] = useState([]);
@@ -98,6 +99,8 @@ export default function AdminDashboard() {
                 loading={loading} 
                 stats={stats} 
             />
+
+            
             
             <RoomStatusGrid 
                 loading={loading} 
@@ -109,6 +112,8 @@ export default function AdminDashboard() {
                 stats={stats} 
                 loading={loading} 
             />
+
+            <DailyAttendanceStats />    
         </div>
     );
 }
