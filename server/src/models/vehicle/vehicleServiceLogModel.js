@@ -93,6 +93,7 @@ VehicleServiceLog.init(
     tableName: 'vehicle_service_logs',
     underscored: true,
     timestamps: true,
+    paranoid: true, // soft delete support
   }
 );
 

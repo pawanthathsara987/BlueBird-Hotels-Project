@@ -7,10 +7,10 @@ export default function FinalBillModal({
   selectedBooking,
   billPreview,
   previewLoading,
-  applyCleaningFee,
-  setApplyCleaningFee,
   manualDamageFee,
   setManualDamageFee,
+  manualFuelFee,
+  setManualFuelFee,
   billExtraNotes,
   setBillExtraNotes,
   submitting,
@@ -61,18 +61,6 @@ export default function FinalBillModal({
               {/* Manual Inputs */}
               <div className="space-y-4">
                 <h3 className="text-sm font-bold text-gray-700">Manager Adjustments</h3>
-                <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition">
-                  <input
-                    type="checkbox"
-                    checked={applyCleaningFee}
-                    onChange={(e) => setApplyCleaningFee(e.target.checked)}
-                    className="w-4 h-4 text-indigo-600 rounded border-gray-300"
-                  />
-                  <div className="flex-1 flex justify-between text-sm">
-                    <span className="text-gray-700 font-medium">Apply Cleaning Fee</span>
-                    <span className="font-semibold text-gray-900">{formatMoney(billPreview.cleaningFeePolicy)}</span>
-                  </div>
-                </label>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Damage Fee (Manual Entry)</label>
@@ -88,11 +76,27 @@ export default function FinalBillModal({
                       className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none"
                     />
                   </div>
-                  {billPreview.damageLiabilityCap > 0 && (
+                  {billPreview.securityDepositAmount > 0 && (
                     <p className="text-xs text-amber-600 mt-1">
-                      Note: Policy damage liability cap is {formatMoney(billPreview.damageLiabilityCap)}.
+                      Note: Damage fee will be capped at the security deposit amount ({formatMoney(billPreview.securityDepositAmount)}).
                     </p>
                   )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Fuel Refill Charge (Manual Entry)</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={manualFuelFee}
+                      onChange={(e) => setManualFuelFee(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none"
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -108,22 +112,51 @@ export default function FinalBillModal({
               </div>
 
               {/* Summary */}
-              <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
-                <div className="flex justify-between items-center text-sm font-medium text-indigo-900 mb-1">
-                  <span>Total Additional Charges:</span>
-                  <span>
-                    {formatMoney(
-                      billPreview.lateFee +
-                      billPreview.extraMileageFee +
-                      (applyCleaningFee ? billPreview.cleaningFeePolicy : 0) +
-                      (Number(manualDamageFee) || 0)
-                    )}
-                  </span>
-                </div>
-                <p className="text-xs text-indigo-600 mt-2">
-                  Generating the bill will finalize these charges, update the customer's balance, and mark the booking as completed.
-                </p>
-              </div>
+              {(() => {
+                let damage = Number(manualDamageFee) || 0;
+                if (damage > billPreview.securityDepositAmount) damage = billPreview.securityDepositAmount;
+                const fuel = Number(manualFuelFee) || 0;
+                const totalExtra = billPreview.lateFee + billPreview.extraMileageFee + damage + fuel;
+                
+                const depositCollected = billPreview.securityDepositCollected || 0;
+                const remaining = depositCollected - totalExtra;
+
+                return (
+                  <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                    <div className="flex justify-between text-sm text-indigo-900 mb-2">
+                      <span>Total Additional Charges:</span>
+                      <span className="font-semibold">{formatMoney(totalExtra)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-indigo-900 mb-2 border-b border-indigo-200 pb-2">
+                      <span>Security Deposit Collected:</span>
+                      <span className="font-semibold">{formatMoney(depositCollected)}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center text-sm font-bold text-indigo-900 mt-2">
+                      {remaining > 0 ? (
+                        <>
+                          <span className="text-emerald-700">Amount to Refund:</span>
+                          <span className="text-emerald-700 text-lg">{formatMoney(remaining)}</span>
+                        </>
+                      ) : remaining < 0 ? (
+                        <>
+                          <span className="text-rose-700">Amount Owed by Customer:</span>
+                          <span className="text-rose-700 text-lg">{formatMoney(Math.abs(remaining))}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-indigo-700">Balance Settled:</span>
+                          <span className="text-indigo-700 text-lg">$0.00</span>
+                        </>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-indigo-600 mt-3 text-center">
+                      Generating the bill will finalize these charges and mark the booking as completed.
+                    </p>
+                  </div>
+                );
+              })()}
             </form>
           ) : null}
         </div>

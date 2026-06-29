@@ -9,6 +9,29 @@ import VehicleChecklist from '../../models/vehicle/vehicleChecklistModel.js';
 import VehicleFinalBill from '../../models/vehicle/vehicleFinalBillModel.js';
 import sequelize from '../../config/database.js';
 import { Op } from 'sequelize';
+import supabase from '../../config/supabaseClient.js';
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+const PAYMENT_RECEIPT_BUCKET = 'Blue-Bird';
+
+export const uploadReceiptToSupabase = async (file) => {
+  if (!file) return null;
+  const fileName = `payment-receipts/${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+
+  const { error } = await supabase.storage.from(PAYMENT_RECEIPT_BUCKET).upload(
+    fileName,
+    file.buffer,
+    { contentType: file.mimetype, upsert: false }
+  );
+
+  if (error) {
+    throw new Error(`Receipt upload failed: ${error.message}`);
+  }
+
+  const { data } = supabase.storage.from(PAYMENT_RECEIPT_BUCKET).getPublicUrl(fileName);
+  return data.publicUrl;
+};
 
 // ── Valid status transitions (state machine) ──────────────────────────────────
 // Each key maps to the list of statuses it can transition TO.
@@ -16,15 +39,15 @@ import { Op } from 'sequelize';
 // except expired → pending_payment (allow retry).
 const VALID_TRANSITIONS = {
   pending_payment: ['confirmed', 'payment_failed', 'cancelled', 'expired'],
-  confirmed:       ['driver_assigned', 'balance_paid', 'ongoing', 'cancelled'],
-  payment_failed:  ['pending_payment', 'cancelled', 'expired'],
+  confirmed: ['driver_assigned', 'balance_paid', 'ongoing', 'cancelled'],
+  payment_failed: ['pending_payment', 'cancelled', 'expired'],
   driver_assigned: ['confirmed', 'balance_paid', 'ongoing', 'cancelled'],
-  balance_paid:    ['ongoing', 'cancelled'],
-  ongoing:         ['returned', 'cancelled'],
-  returned:        [],             // completed only via generateBill endpoint (which validates return checklist)
-  completed:       [],             // terminal
-  cancelled:       [],             // terminal
-  expired:         ['pending_payment'], // allow retry
+  balance_paid: ['ongoing', 'cancelled'],
+  ongoing: ['returned', 'cancelled'],
+  returned: [],             // completed only via generateBill endpoint (which validates return checklist)
+  completed: [],             // terminal
+  cancelled: [],             // terminal
+  expired: ['pending_payment'], // allow retry
 };
 
 // Get all vehicle bookings
@@ -121,6 +144,7 @@ export const updateBookingStatus = async (req, res) => {
     }
 
     // ── Fix #1: Deposit must be paid before confirming ──────────────────────
+    /* TEMPORARILY DISABLED PENDING GATEWAY INTEGRATION
     if (status === 'confirmed' && !booking.depositPaidAt) {
       await t.rollback();
       return res.status(400).json({
@@ -128,10 +152,12 @@ export const updateBookingStatus = async (req, res) => {
         message: 'Cannot confirm booking — the deposit has not been paid yet. The customer must complete the online deposit payment first.',
       });
     }
+    */
 
     // ── Fix #2 & #4: Deposit + pickup checklist required before vehicle handover ──
     if (status === 'ongoing') {
       // Fix #2: Deposit must be paid
+      /* TEMPORARILY DISABLED PENDING GATEWAY INTEGRATION
       if (!booking.depositPaidAt) {
         await t.rollback();
         return res.status(400).json({
@@ -139,6 +165,7 @@ export const updateBookingStatus = async (req, res) => {
           message: 'Cannot hand over vehicle — the deposit has not been paid yet.',
         });
       }
+      */
 
       // Fix #4: Pickup checklist must exist (vehicle condition documented before handover)
       const pickupChecklist = await VehicleChecklist.findOne({
@@ -150,6 +177,21 @@ export const updateBookingStatus = async (req, res) => {
         return res.status(400).json({
           success: false,
           message: 'Cannot hand over vehicle — a pickup checklist has not been filed yet. Please complete the pickup inspection first.',
+        });
+      }
+    }
+
+    // Require return checklist before marking as returned
+    if (status === 'returned') {
+      const returnChecklist = await VehicleChecklist.findOne({
+        where: { bookingId: booking.id, type: 'return' },
+        transaction: t,
+      });
+      if (!returnChecklist) {
+        await t.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot mark vehicle as returned — a return checklist has not been filed yet. Please complete the return inspection first.',
         });
       }
     }
@@ -210,9 +252,9 @@ export const assignDriver = async (req, res) => {
       // Fix #15: Check driver license expiry
       if (driver.licenseExpiry && new Date(driver.licenseExpiry) < new Date(booking.returnDatetime)) {
         await t.rollback();
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Cannot assign driver: License expires before the booking return date.' 
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot assign driver: License expires before the booking return date.'
         });
       }
 
@@ -284,10 +326,12 @@ export const collectBalance = async (req, res) => {
     }
 
     // Ensure deposit has been paid before collecting balance
+    /* TEMPORARILY DISABLED PENDING GATEWAY INTEGRATION
     if (!booking.depositPaidAt) {
       await t.rollback();
       return res.status(400).json({ success: false, message: 'Cannot collect balance — the deposit has not been paid yet. The customer must complete the online deposit payment first.' });
     }
+    */
 
     if (booking.balancePaidAt) {
       await t.rollback();
@@ -301,7 +345,12 @@ export const collectBalance = async (req, res) => {
       staffId = firstStaff ? firstStaff.userId : null;
     }
 
+    // Get the security deposit amount from policy
+    const [policy] = await VehicleRentalPolicy.findOrCreate({ where: { id: 1 }, defaults: { id: 1 }, transaction: t });
+    const securityDepositAmount = parseFloat(policy.securityDepositAmount || 200);
+
     const balanceAmountVal = parseFloat(booking.balanceAmount || 0);
+    const totalCollected = balanceAmountVal + securityDepositAmount;
 
     const newStatus = ['ongoing', 'returned', 'completed'].includes(booking.status) ? booking.status : 'balance_paid';
 
@@ -310,21 +359,28 @@ export const collectBalance = async (req, res) => {
       balancePaidAt: new Date(),
       balancePaymentMethod: paymentMethod,
       balanceCollectedBy: staffId,
+      securityDepositCollected: securityDepositAmount,
+      securityDepositPaidAt: new Date(),
       status: newStatus,
     }, { transaction: t });
 
-    // Create payment entry
+    let receiptImageUrl = null;
+    if (req.file) {
+      receiptImageUrl = await uploadReceiptToSupabase(req.file);
+    }
+
+    // Create payment entry for the total collected amount (Balance + Security Deposit)
     const payment = await Payment.create({
       bookingId: booking.id,
       receivedBy: staffId,
       type: 'balance',
-      amount: balanceAmountVal,
+      amount: totalCollected,
       method: paymentMethod,
       receiptNo: receiptNo || `REC-${Date.now().toString(36).toUpperCase()}`,
-      notes: notes || 'Balance collected manually at hotel',
+      receiptImageUrl: receiptImageUrl,
+      notes: (notes ? notes + ' | ' : '') + `Includes $${securityDepositAmount} Security Deposit`,
       receivedAt: new Date(),
     }, { transaction: t });
-
 
 
     await t.commit();
@@ -349,7 +405,7 @@ export const collectFinalSettlement = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Valid payment method is required (cash, card, bank_transfer)' });
     }
 
-    const booking = await VehicleBooking.findByPk(id, { 
+    const booking = await VehicleBooking.findByPk(id, {
       transaction: t,
       include: [{ association: 'payments' }]
     });
@@ -387,6 +443,11 @@ export const collectFinalSettlement = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No remaining balance to collect.' });
     }
 
+    let receiptImageUrl = null;
+    if (req.file) {
+      receiptImageUrl = await uploadReceiptToSupabase(req.file);
+    }
+
     // Create payment entry for the remaining amount
     const payment = await Payment.create({
       bookingId: booking.id,
@@ -395,6 +456,7 @@ export const collectFinalSettlement = async (req, res) => {
       amount: remainingBalance,
       method: paymentMethod,
       receiptNo: receiptNo || `REC-F-${Date.now().toString(36).toUpperCase()}`,
+      receiptImageUrl: receiptImageUrl,
       notes: notes || 'Final settlement collected',
       receivedAt: new Date(),
     }, { transaction: t });
@@ -520,8 +582,8 @@ export const previewBill = async (req, res) => {
       data: {
         lateFee,
         extraMileageFee,
-        cleaningFeePolicy: Number(policy.cleaningFee),
-        damageLiabilityCap: Number(policy.damageLiabilityCap),
+        securityDepositAmount: Number(policy.securityDepositAmount),
+        securityDepositCollected: parseFloat(booking.securityDepositCollected || 0),
       }
     });
   } catch (err) {
@@ -534,7 +596,7 @@ export const generateBill = async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const { id } = req.params;
-    const { applyCleaningFee, manualDamageFee, extraNotes } = req.body;
+    const { manualDamageFee, manualFuelFee, extraNotes } = req.body;
 
     const booking = await VehicleBooking.findByPk(id, { transaction: t, include: [{ association: 'finalBill' }] });
     if (!booking) {
@@ -562,30 +624,56 @@ export const generateBill = async (req, res) => {
 
     const { lateFee, extraMileageFee } = await calculateExtraFees(booking, policy, returnChecklist, pickupChecklist);
 
-    const cleaningFee = applyCleaningFee ? Number(policy.cleaningFee) : 0;
     let damageFee = Number(manualDamageFee) || 0;
+    const fuelFee = Number(manualFuelFee) || 0;
 
-    // Fix #8: Enforce damage liability cap
-    if (policy.damageLiabilityCap > 0 && damageFee > policy.damageLiabilityCap) {
-      damageFee = Number(policy.damageLiabilityCap);
+    // Enforce damage liability cap (damage fee cannot exceed security deposit amount)
+    const depositCap = parseFloat(policy.securityDepositAmount || 200);
+    if (damageFee > depositCap) {
+      damageFee = depositCap;
     }
 
-    const totalExtra = lateFee + extraMileageFee + cleaningFee + damageFee;
-    const newBalanceAmount = parseFloat(booking.balanceAmount) + totalExtra;
+    const totalExtraCharges = lateFee + extraMileageFee + damageFee + fuelFee;
+    
+    const securityDepositCollected = parseFloat(booking.securityDepositCollected || 0);
+    
+    // Math: subtract all extra charges from the deposit
+    const remainingAfterDeductions = securityDepositCollected - totalExtraCharges;
+    
+    let securityDepositRefund = 0;
+    let finalAmountOwed = 0;
+
+    if (remainingAfterDeductions > 0) {
+      // Customer gets a refund
+      securityDepositRefund = remainingAfterDeductions;
+      finalAmountOwed = 0;
+    } else if (remainingAfterDeductions < 0) {
+      // Deposit didn't cover everything, customer owes money
+      securityDepositRefund = 0;
+      finalAmountOwed = Math.abs(remainingAfterDeductions);
+    } else {
+      // Exactly zero
+      securityDepositRefund = 0;
+      finalAmountOwed = 0;
+    }
 
     // Create the final bill record
     const finalBill = await VehicleFinalBill.create({
       bookingId: booking.id,
       lateFee,
       extraMileageFee,
-      cleaningFee,
       damageFee,
-      totalExtraCharges: totalExtra,
+      fuelFee,
+      totalExtraCharges,
+      securityDepositCollected,
+      securityDepositRefund,
+      finalAmountOwed,
       notes: extraNotes || null,
     }, { transaction: t });
 
     await booking.update({
-      balanceAmount: newBalanceAmount,
+      balanceAmount: finalAmountOwed,
+      securityDepositRefund,
       status: 'completed'
     }, { transaction: t });
 

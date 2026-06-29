@@ -91,16 +91,18 @@ router.post('/drivers', driverUpload.single('driverImage'), createDriver);
 router.put('/drivers/:id', driverUpload.single('driverImage'), updateDriver);
 router.delete('/drivers/:id', deleteDriver);
 
+import { upload } from '../middleware/uploadMiddleware.js';
+
 // Vehicle bookings (manager)
 router.get('/vehicle-bookings', getVehicleBookings);
 router.get('/vehicle-bookings/:id', getVehicleBooking);
 router.put('/vehicle-bookings/:id/status', updateBookingStatus);
 router.put('/vehicle-bookings/:id/assign-driver', assignDriver);
-router.put('/vehicle-bookings/:id/collect-balance', collectBalance);
+router.put('/vehicle-bookings/:id/collect-balance', upload.single('receiptImage'), collectBalance);
 router.put('/vehicle-bookings/:id/cancel', cancelBooking);
 router.get('/vehicle-bookings/:id/bill-preview', previewBill);
 router.post('/vehicle-bookings/:id/generate-bill', generateBill);
-router.put('/vehicle-bookings/:id/collect-final-settlement', collectFinalSettlement);
+router.put('/vehicle-bookings/:id/collect-final-settlement', upload.single('receiptImage'), collectFinalSettlement);
 router.get('/vehicle-reports', getVehicleReportDashboard);
 
 // Vehicle service logs CRUD
