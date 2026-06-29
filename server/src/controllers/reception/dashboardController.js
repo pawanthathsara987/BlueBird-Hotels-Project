@@ -536,6 +536,144 @@ async function getAnalyticsSummary(req, res) {
     }
 }
 
+async function getDailyReport(req, res) {
+    try {
+        const date = req.query.date || new Date().toISOString().split('T')[0];
+
+        const bookingsQuery = `
+            SELECT
+                bk.id AS reservation_id,
+                c.firstName,
+                c.lastName,
+                bk.status AS bookingStatus,
+                bk.total_price,
+                MIN(br.checkIn) AS checkIn,
+                MAX(br.checkOut) AS checkOut,
+                GROUP_CONCAT(room.room_number ORDER BY room.room_number) AS rooms,
+                GROUP_CONCAT(DISTINCT br.status) AS roomStatuses,
+                bk.createdAt AS bookedAt
+            FROM booking bk
+            JOIN booked_rooms br ON bk.id = br.booking_id
+            JOIN room ON room.id = br.room_id
+            JOIN customer c ON bk.customer_id = c.id
+            WHERE DATE(bk.createdAt) = :date
+            GROUP BY bk.id, c.firstName, c.lastName, bk.status, bk.total_price, bk.createdAt
+            ORDER BY bk.createdAt DESC
+        `;
+
+        const summaryQuery = `
+            SELECT
+                COUNT(*) AS totalBookings,
+                COALESCE(SUM(total_price), 0) AS totalRevenue,
+                COALESCE(AVG(total_price), 0) AS avgRevenue
+            FROM booking
+            WHERE DATE(createdAt) = :date
+        `;
+
+        const checkInsQuery = `SELECT COUNT(*) AS count FROM booked_rooms WHERE checkIn = :date AND status != 'cancelled'`;
+        const checkOutsQuery = `SELECT COUNT(*) AS count FROM booked_rooms WHERE checkOut = :date AND status != 'cancelled'`;
+
+        const [bookings, summary, checkIns, checkOuts] = await Promise.all([
+            sequelize.query(bookingsQuery, { replacements: { date }, type: QueryTypes.SELECT }),
+            sequelize.query(summaryQuery, { replacements: { date }, type: QueryTypes.SELECT }),
+            sequelize.query(checkInsQuery, { replacements: { date }, type: QueryTypes.SELECT }),
+            sequelize.query(checkOutsQuery, { replacements: { date }, type: QueryTypes.SELECT }),
+        ]);
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                date,
+                bookings,
+                totalBookings: Number(summary[0]?.totalBookings) || 0,
+                totalRevenue: Number(summary[0]?.totalRevenue) || 0,
+                avgRevenue: Number(summary[0]?.avgRevenue) || 0,
+                todayCheckIns: Number(checkIns[0]?.count) || 0,
+                todayCheckOuts: Number(checkOuts[0]?.count) || 0,
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching daily report:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+}
+
+async function getMonthlyReport(req, res) {
+    try {
+        const year = req.query.year || new Date().getFullYear();
+        const month = req.query.month || (new Date().getMonth() + 1);
+        const monthStr = String(month).padStart(2, '0');
+        const monthPrefix = `${year}-${monthStr}`;
+
+        const dailyBreakdownQuery = `
+            SELECT
+                DATE(createdAt) AS date,
+                COUNT(*) AS bookings,
+                COALESCE(SUM(total_price), 0) AS revenue
+            FROM booking
+            WHERE DATE_FORMAT(createdAt, '%Y-%m') = :monthPrefix
+            GROUP BY DATE(createdAt)
+            ORDER BY DATE(createdAt) ASC
+        `;
+
+        const summaryQuery = `
+            SELECT
+                COUNT(*) AS totalBookings,
+                COALESCE(SUM(total_price), 0) AS totalRevenue,
+                COALESCE(AVG(total_price), 0) AS avgRevenue,
+                SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) AS confirmed,
+                SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled
+            FROM booking
+            WHERE DATE_FORMAT(createdAt, '%Y-%m') = :monthPrefix
+        `;
+
+        const bookingsListQuery = `
+            SELECT
+                bk.id AS reservation_id,
+                c.firstName,
+                c.lastName,
+                bk.status AS bookingStatus,
+                bk.total_price,
+                MIN(br.checkIn) AS checkIn,
+                MAX(br.checkOut) AS checkOut,
+                GROUP_CONCAT(room.room_number ORDER BY room.room_number) AS rooms,
+                GROUP_CONCAT(DISTINCT br.status) AS roomStatuses,
+                bk.createdAt AS bookedAt
+            FROM booking bk
+            JOIN booked_rooms br ON bk.id = br.booking_id
+            JOIN room ON room.id = br.room_id
+            JOIN customer c ON bk.customer_id = c.id
+            WHERE DATE_FORMAT(bk.createdAt, '%Y-%m') = :monthPrefix
+            GROUP BY bk.id, c.firstName, c.lastName, bk.status, bk.total_price, bk.createdAt
+            ORDER BY bk.createdAt DESC
+        `;
+
+        const [dailyBreakdown, summary, bookings] = await Promise.all([
+            sequelize.query(dailyBreakdownQuery, { replacements: { monthPrefix }, type: QueryTypes.SELECT }),
+            sequelize.query(summaryQuery, { replacements: { monthPrefix }, type: QueryTypes.SELECT }),
+            sequelize.query(bookingsListQuery, { replacements: { monthPrefix }, type: QueryTypes.SELECT }),
+        ]);
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                year: Number(year),
+                month: Number(month),
+                dailyBreakdown,
+                bookings,
+                totalBookings: Number(summary[0]?.totalBookings) || 0,
+                totalRevenue: Number(summary[0]?.totalRevenue) || 0,
+                avgRevenue: Number(summary[0]?.avgRevenue) || 0,
+                confirmed: Number(summary[0]?.confirmed) || 0,
+                cancelled: Number(summary[0]?.cancelled) || 0,
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching monthly report:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+}
+
 export {
     getAvailableRooms,
     todayCheckIns,
@@ -546,5 +684,7 @@ export {
     recentBookings,
     checkInGuest,
     getDashboardDetails,
-    getAnalyticsSummary
+    getAnalyticsSummary,
+    getDailyReport,
+    getMonthlyReport
 };

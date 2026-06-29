@@ -431,7 +431,7 @@ export default function Dashboard() {
                     <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-800 dark:text-white">
                         Welcome, <span className={currentAccent.text}>{receptionistName}</span>
                     </h1>
-                    <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 font-medium">
+                    <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 font-medium">
                         Operational summary, live matrix configurations, and theme-level customizations.
                     </p>
                 </div>
@@ -482,13 +482,13 @@ export default function Dashboard() {
 
                         {/* Mode Select */}
                         <div className="space-y-2">
-                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Dashboard Theme</h4>
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Dashboard Theme</h4>
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => setTheme({ ...theme, mode: "light" })}
                                     className={`flex-1 flex items-center justify-center gap-2 p-2 rounded-xl text-xs font-bold border transition cursor-pointer ${theme.mode === "light"
                                         ? `${currentAccent.bg} text-white border-transparent`
-                                        : "bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
+                                        : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
                                         }`}
                                 >
                                     <Sun size={14} /> Light
@@ -497,7 +497,7 @@ export default function Dashboard() {
                                     onClick={() => setTheme({ ...theme, mode: "dark" })}
                                     className={`flex-1 flex items-center justify-center gap-2 p-2 rounded-xl text-xs font-bold border transition cursor-pointer ${theme.mode === "dark"
                                         ? `${currentAccent.bg} text-white border-transparent`
-                                        : "bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
+                                        : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
                                         }`}
                                 >
                                     <Moon size={14} /> Dark
@@ -507,7 +507,7 @@ export default function Dashboard() {
 
                         {/* Accent Color Select */}
                         <div className="space-y-2">
-                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Accent Colors</h4>
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Accent Colors</h4>
                             <div className="grid grid-cols-6 gap-2">
                                 {Object.keys(accentColors).map(color => (
                                     <button
@@ -515,8 +515,8 @@ export default function Dashboard() {
                                         onClick={() => setTheme({ ...theme, accent: color })}
                                         style={{ backgroundColor: accentColors[color].raw }}
                                         className={`w-8 h-8 rounded-full border-2 transition hover:scale-110 relative cursor-pointer ${theme.accent === color
-                                            ? "border-slate-800 dark:border-white scale-110 shadow-md"
-                                            : "border-transparent"
+                                            ? "border-slate-700 dark:border-white scale-110 shadow-md"
+                                            : "border-transparent hover:border-slate-300"
                                             }`}
                                         title={color}
                                     >
@@ -530,7 +530,7 @@ export default function Dashboard() {
 
                         {/* Card Styling Selector */}
                         <div className="space-y-2">
-                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Card Layouts</h4>
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Card Layouts</h4>
                             <div className="flex gap-2">
                                 {["sleek", "bordered", "glass"].map(style => (
                                     <button
@@ -538,7 +538,7 @@ export default function Dashboard() {
                                         onClick={() => setTheme({ ...theme, cardStyle: style })}
                                         className={`flex-1 p-2 rounded-xl text-xs font-bold border capitalize transition cursor-pointer ${theme.cardStyle === style
                                             ? `${currentAccent.bg} text-white border-transparent`
-                                            : "bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
+                                            : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
                                             }`}
                                     >
                                         {style}
@@ -549,7 +549,7 @@ export default function Dashboard() {
 
                         {/* Fonts Selector */}
                         <div className="space-y-2">
-                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Interface Font</h4>
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Interface Font</h4>
                             <div className="flex gap-2">
                                 {["sans", "mono", "serif"].map(font => (
                                     <button
@@ -557,7 +557,7 @@ export default function Dashboard() {
                                         onClick={() => setTheme({ ...theme, font: font })}
                                         className={`flex-1 p-2 rounded-xl text-xs font-bold border capitalize transition cursor-pointer ${theme.font === font
                                             ? `${currentAccent.bg} text-white border-transparent`
-                                            : "bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
+                                            : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
                                             }`}
                                     >
                                         {font}
@@ -1148,7 +1148,7 @@ export default function Dashboard() {
                                 <Bell size={16} className={currentAccent.text} />
                                 Live Shift Activity Feed
                             </h3>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">Real-time terminal event log</p>
+                            <p className="text-xs text-slate-600 dark:text-slate-400">Real-time terminal event log</p>
                         </div>
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
                     </div>
@@ -1165,7 +1165,7 @@ export default function Dashboard() {
                                     <div className="w-0.5 h-10 bg-slate-100 dark:bg-slate-800 mt-1" />
                                 </div>
                                 <div className="flex-1 space-y-0.5">
-                                    <p className="text-slate-600 dark:text-slate-300 font-medium">{act.text}</p>
+                                    <p className="text-slate-700 dark:text-slate-300 font-medium">{act.text}</p>
                                     <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase">{act.time}</span>
                                 </div>
                             </div>
@@ -1181,7 +1181,7 @@ export default function Dashboard() {
                                 <Layers size={16} className={currentAccent.text} />
                                 Hotel SaaS Analytics Summary
                             </h3>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">ADR, RevPAR, and occupancy indexes</p>
+                            <p className="text-xs text-slate-600 dark:text-slate-400">ADR, RevPAR, and occupancy indexes</p>
                         </div>
                         <span className="text-[10px] font-bold bg-blue-50 text-blue-600 dark:bg-blue-950/40 px-2.5 py-0.5 rounded-full">
                             Q3 Overview
@@ -1189,33 +1189,33 @@ export default function Dashboard() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-2">
-                        <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800/50">
-                            <h5 className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Average Daily Rate (ADR)</h5>
-                            <h3 className="text-xl font-black mt-1">
+                        <div className="p-4 bg-slate-100/70 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800/50">
+                            <h5 className="text-xs text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider">Average Daily Rate (ADR)</h5>
+                            <h3 className="text-xl font-black mt-1 text-slate-800 dark:text-white">
                                 {loading ? "..." : (occupiedRooms > 0 ? `Rs. ${Math.round(dynamicRevenue / occupiedRooms).toLocaleString()}` : "N/A")}
                             </h3>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+                            <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 flex items-center gap-1">
                                 Revenue ÷ occupied rooms
                             </p>
                         </div>
 
-                        <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800/50">
-                            <h5 className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Revenue Per Available Room (RevPAR)</h5>
-                            <h3 className="text-xl font-black mt-1">
+                        <div className="p-4 bg-slate-100/70 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800/50">
+                            <h5 className="text-xs text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider">Revenue Per Available Room (RevPAR)</h5>
+                            <h3 className="text-xl font-black mt-1 text-slate-800 dark:text-white">
                                 {loading ? "..." : (totalRoomsCount > 0 ? `Rs. ${Math.round(dynamicRevenue / totalRoomsCount).toLocaleString()}` : "N/A")}
                             </h3>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+                            <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 flex items-center gap-1">
                                 Total revenue ÷ total rooms
                             </p>
                         </div>
 
-                        <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800/50">
-                            <h5 className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Today's Traffic</h5>
-                            <h3 className="text-xl font-black mt-1">
+                        <div className="p-4 bg-slate-100/70 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800/50">
+                            <h5 className="text-xs text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider">Today's Traffic</h5>
+                            <h3 className="text-xl font-black mt-1 text-slate-800 dark:text-white">
                                 {loading ? "..." : (todayCheckIns + todayCheckOuts)} guests
                             </h3>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
-                                <span className="text-blue-500 font-bold">{loading ? "..." : todayCheckIns} in</span> &nbsp;·&nbsp; <span className="text-orange-500 font-bold">{loading ? "..." : todayCheckOuts} out</span>
+                            <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 flex items-center gap-1">
+                                <span className="text-blue-600 dark:text-blue-500 font-bold">{loading ? "..." : todayCheckIns} in</span> &nbsp;·&nbsp; <span className="text-orange-600 dark:text-orange-500 font-bold">{loading ? "..." : todayCheckOuts} out</span>
                             </p>
                         </div>
                     </div>
@@ -1227,9 +1227,9 @@ export default function Dashboard() {
                             <Sparkles size={16} />
                         </div>
                         <div className="space-y-0.5">
-                            <h5 className="text-xs font-bold">Linear Smart Suggestion</h5>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                                Current occupancy is at <strong className="text-slate-600 dark:text-slate-350">{occupancyRate}%</strong>. Consider launching package loyalty upgrades to raise ADR averages for expected walk-in requests.
+                            <h5 className="text-xs font-bold text-slate-800 dark:text-white">Linear Smart Suggestion</h5>
+                            <p className="text-xs text-slate-600 dark:text-slate-400">
+                                Current occupancy is at <strong className="text-slate-700 dark:text-slate-200">{occupancyRate}%</strong>. Consider launching package loyalty upgrades to raise ADR averages for expected walk-in requests.
                             </p>
                         </div>
                     </div>

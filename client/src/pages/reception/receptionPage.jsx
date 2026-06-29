@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link, Routes, Route, useLocation, useNavigate } from "react-router-dom";
-import { MdDashboard, MdCheckCircle, MdLogout, MdMenu, MdClose, MdNotifications, MdOutlineBookOnline } from "react-icons/md";
+import { MdDashboard, MdCheckCircle, MdLogout, MdMenu, MdClose, MdNotifications, MdOutlineBookOnline, MdBarChart } from "react-icons/md";
 import { jwtDecode } from "jwt-decode";
 import axios from "axios";
 import Dashboard from "./Dashboard";
 import Booking from "./booking";
 import CheckIn from "./CheckIn";
 import CheckOut from "./CheckOut";
+import Reports from "./Reports";
 
 export default function ReceptionPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -182,6 +183,7 @@ export default function ReceptionPage() {
                     <Link to="/reception/checkin" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/checkin")}><MdCheckCircle className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Check-In</span></Link>
                     <Link to="/reception/checkout" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/checkout")}><MdCheckCircle className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Check-Out</span></Link>
                     <Link to="/reception/bookings" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/bookings")}><MdOutlineBookOnline className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Bookings</span></Link>
+                    <Link to="/reception/reports" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/reports")}><MdBarChart className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Reports</span></Link>
 
                     <div className="mt-auto pt-6">
                         <button
@@ -298,6 +300,7 @@ export default function ReceptionPage() {
                         <Route path="/checkin" element={<CheckIn />} />
                         <Route path="/checkout" element={<CheckOut />} />
                         <Route path="/bookings" element={<Booking />} />
+                        <Route path="/reports" element={<Reports />} />
                     </Routes>
                 </div>
             </div>
