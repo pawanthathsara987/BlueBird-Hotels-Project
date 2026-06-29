@@ -5,7 +5,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { useGoogleLogin } from "@react-oauth/google";
 import { FcGoogle } from "react-icons/fc";
-import { FaEnvelope, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaEnvelope, FaLock, FaEye, FaEyeSlash, FaArrowLeft } from "react-icons/fa";
 
 // Import local background assets from slider Images folder
 import bgFront from "../../assets/slider Images/front-2048x1014.jpg";
@@ -241,6 +241,19 @@ export default function CustomerLoginPage() {
                         className="font-bold text-amber-400 hover:text-amber-300 hover:underline transition-colors cursor-pointer"
                     >
                         Register Now
+                    </button>
+                </div>
+
+                {/* Back to Home Link */}
+                <div className="mt-6 text-xs border-t border-white/5 pt-4 w-full flex justify-center">
+                    <button
+                        type="button"
+                        onClick={() => navigate("/")}
+                        disabled={loading}
+                        className="flex items-center gap-2 font-bold text-slate-400 hover:text-white transition-colors cursor-pointer group"
+                    >
+                        <FaArrowLeft className="text-[10px] text-amber-400 group-hover:-translate-x-0.5 transition-transform" />
+                        <span>Back to Home</span>
                     </button>
                 </div>
             </div>
