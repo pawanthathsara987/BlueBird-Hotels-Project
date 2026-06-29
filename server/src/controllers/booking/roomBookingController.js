@@ -466,13 +466,17 @@ const createBooking = async (req, res) => {
         }
 
         if (personalRequest && personalRequest != null) {
-            await sendEmail({
-                to: "sandeepal513@gmail.com",
-                subject: "Personal Request",
-                html: "<h1>Personal Request</h1>" +
-                    "<p>Personal Request: " + personalRequest + "</p>",
-                text: personalRequest,
-            });
+            try {
+                await sendEmail({
+                    to: "sandeepal513@gmail.com",
+                    subject: "Personal Request",
+                    html: "<h1>Personal Request</h1>" +
+                        "<p>Personal Request: " + personalRequest + "</p>",
+                    text: personalRequest,
+                });
+            } catch (emailError) {
+                console.error("PERSONAL REQUEST EMAIL ERROR:", emailError.message);
+            }
         }
 
         return res.status(201).json({
