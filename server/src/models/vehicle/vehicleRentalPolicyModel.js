@@ -26,15 +26,10 @@ VehicleRentalPolicy.init(
       allowNull: false,
       defaultValue: 4,
     },
-    cleaningFee: {
+    securityDepositAmount: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
-      defaultValue: 12.0,
-    },
-    damageLiabilityCap: {
-      type: DataTypes.DECIMAL(10, 2),
-      allowNull: false,
-      defaultValue: 1000.0,
+      defaultValue: 200.0,
     },
     includedKilometersPerDay: {
       type: DataTypes.INTEGER,

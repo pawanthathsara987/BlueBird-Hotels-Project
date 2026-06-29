@@ -142,6 +142,14 @@ VehicleBooking.init(
       allowNull: true,          // Manager who collected — FK → staff_members.userId
       references: { model: 'staff_members', key: 'userId' },
     },
+    securityDepositCollected: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+    },
+    securityDepositPaidAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
 
     // ── Booking status ────────────────────────────
     status: {
