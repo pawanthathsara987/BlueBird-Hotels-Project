@@ -11,21 +11,36 @@ AirPortPickup.init(
             allowNull: false,
             autoIncrement: true,
         },
-        customer_id: {
+        booking_id: {
             type: DataTypes.INTEGER,
             allowNull: false,
             references: {
-                model: "customer",
+                model: "booking",
                 key: "id",
             },
         },
         pickup_date: {
-            type: DataTypes.DATE,
+            type: DataTypes.DATEONLY,
             allowNull: false,
         },
         pickup_time: {
             type: DataTypes.TIME,
             allowNull: false,
+        },
+        passenger_count: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 1,
+        },
+        pickup_location: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            defaultValue: "Katunayake Airport",
+        },
+        status: {
+            type: DataTypes.ENUM("CONFIRMED", "COMPLETED", "CANCELLED"),
+            allowNull: false,
+            defaultValue: "CONFIRMED",
         },
     },
     {

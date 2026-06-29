@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import sequelize from '../config/database.js';
-import { Reservation, Customer, BookedRoom, Room, RoomType, RoomPayment } from "../models/index.js";
+import { Reservation, Customer, BookedRoom, Room, RoomType, RoomPayment, AirPortPickup } from "../models/index.js";
 import { sendBookingConfirmationEmail } from "../services/emailService.js";
 
 // Helper to generate MD5 hash
@@ -186,6 +186,12 @@ export const handlePayHereNotification = async (req, res) => {
                     await RoomPayment.update(
                         { status: "failed" },
                         { where: { booking_id: Number(order_id), status: "pending" }, transaction: t }
+                    );
+
+                    // Cancel associated airport pickup
+                    await AirPortPickup.update(
+                        { status: "CANCELLED" },
+                        { where: { booking_id: Number(order_id) }, transaction: t }
                     );
                     
                     await t.commit();

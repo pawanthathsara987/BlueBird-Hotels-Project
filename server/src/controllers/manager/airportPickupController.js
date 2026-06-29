@@ -1,12 +1,18 @@
-import { AirPortPickup, Customer } from "../../models/index.js";
+import { AirPortPickup, Customer, Booking } from "../../models/index.js";
 
 const getAirportPickupRequests = async (req, res) => {
   try {
     const requests = await AirPortPickup.findAll({
       include: [
         {
-          model: Customer,
-          attributes: ["customerId", "firstName", "lastName", "email", "phoneNumber"],
+          model: Booking,
+          as: 'booking',
+          include: [
+            {
+              model: Customer,
+              attributes: ["id", "firstName", "lastName", "email", "phoneNumber"],
+            }
+          ]
         },
       ],
       order: [
