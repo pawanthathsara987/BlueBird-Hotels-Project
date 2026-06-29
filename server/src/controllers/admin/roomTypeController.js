@@ -1,4 +1,4 @@
-import { Amenities, RoomType } from "../../models/index.js";
+import { Amenities, RoomType, OccupancyType } from "../../models/index.js";
 import supabase from "../../config/supabaseClient.js";
 
 const SUPABASE_BUCKET = "room_type";
@@ -12,6 +12,11 @@ const getAllRoomTypes = async (req, res) => {
                     model: Amenities,
                     attributes: ["id", "name"],
                     through: { attributes: [] },
+                },
+                {
+                    model: OccupancyType,
+                    as: "occupancyType",
+                    attributes: ["id", "type", "capacity"],
                 },
             ],
         });
@@ -34,7 +39,8 @@ const getAllRoomTypes = async (req, res) => {
 // create room type
 const createRoomType = async (req, res) => {
     try {
-        const { type } = req.body;
+        const { type, occupancy_type_id, occupancyTypeId } = req.body;
+        const resolvedOccupancyTypeId = occupancy_type_id ?? occupancyTypeId;
 
         if (!type) {
             return res.status(400).json({
@@ -71,6 +77,7 @@ const createRoomType = async (req, res) => {
         const roomType = await RoomType.create({
             type: type.trim(),
             image_url: imageUrl,
+            occupancy_type_id: resolvedOccupancyTypeId ? Number(resolvedOccupancyTypeId) : null,
         });
 
         return res.status(201).json({
@@ -91,7 +98,8 @@ const createRoomType = async (req, res) => {
 const updateRoomType = async (req, res) => {
     try {
         const { id } = req.params;
-        const { type } = req.body;
+        const { type, occupancy_type_id, occupancyTypeId } = req.body;
+        const resolvedOccupancyTypeId = occupancy_type_id ?? occupancyTypeId;
 
         const roomType = await RoomType.findByPk(id);
 
@@ -105,6 +113,9 @@ const updateRoomType = async (req, res) => {
         const updateData = {};
         if (type) {
             updateData.type = type.trim();
+        }
+        if (resolvedOccupancyTypeId !== undefined) {
+            updateData.occupancy_type_id = resolvedOccupancyTypeId ? Number(resolvedOccupancyTypeId) : null;
         }
 
         if (req.file) {
