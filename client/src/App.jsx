@@ -32,6 +32,7 @@ import VehicleCatalogPage from "./pages/client/vehicles/VehicleCatalogPage";
 import VehicleDetailsPage from "./pages/client/vehicles/VehicleDetailsPage";
 import VehicleBookingPage from "./pages/client/vehicles/VehicleBookingPage";
 import CustomerDetailsPage from "./pages/client/booking/roombooking/CustomerDetailsPage";
+import FaqPage from "./pages/Faq";
 
 export default function App() {
     return (
@@ -59,6 +60,7 @@ export default function App() {
                         <Route path="/manager/*" element={< ManagerPage />} />
                         <Route path="/reception/*" element={< ReceptionPage />} />
                         <Route path="/contact" element={<ContactPage />} />
+                        <Route path="/faq" element={<FaqPage />} />
                         <Route path="/customer/dashboard" element={<CustomerDashboard />} />
                         <Route path="/vehicles" element={<VehicleCatalogPage />} />
                         <Route path="/vehicles/:id" element={<VehicleDetailsPage />} />
