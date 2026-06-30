@@ -80,15 +80,17 @@ export function initModels() {
     });
 
 
-    // Customer -> AirPortPickup
-    Customer.hasMany(AirPortPickup, {
-        foreignKey: "customer_id",
+    // Booking -> AirPortPickup
+    Booking.hasOne(AirPortPickup, {
+        foreignKey: "booking_id",
+        as: "airportPickup",
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
     });
 
-    AirPortPickup.belongsTo(Customer, {
-        foreignKey: "customer_id",
+    AirPortPickup.belongsTo(Booking, {
+        foreignKey: "booking_id",
+        as: "booking",
     });
 
     // Room -> RoomAmenities

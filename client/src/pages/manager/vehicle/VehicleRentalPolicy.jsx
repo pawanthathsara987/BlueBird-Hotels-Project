@@ -40,8 +40,7 @@ export default function VehicleRentalPolicy() {
         lateReturnGraceHours: policy.lateReturnGraceHours,
         lateReturnFeePerHour: policy.lateReturnFeePerHour,
         lateReturnFullDayAfterHours: policy.lateReturnFullDayAfterHours,
-        cleaningFee: policy.cleaningFee,
-        damageLiabilityCap: policy.damageLiabilityCap,
+        securityDepositAmount: policy.securityDepositAmount,
         includedKilometersPerDay: policy.includedKilometersPerDay,
         extraMileageFee: policy.extraMileageFee,
         extraMileageCurrency: policy.extraMileageCurrency,
@@ -87,17 +86,11 @@ export default function VehicleRentalPolicy() {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium">Cleaning fee</label>
-            <input type="number" step="0.01" min="0" value={policy.cleaningFee ?? 0} onChange={(e) => handleChange('cleaningFee', e.target.value)} className="mt-1 w-full border rounded px-2 py-1" />
-            {errors.cleaningFee && <p className="text-xs text-red-500">{errors.cleaningFee}</p>}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium">Damage liability cap</label>
-            <input type="number" step="0.01" min="0" value={policy.damageLiabilityCap ?? 0} onChange={(e) => handleChange('damageLiabilityCap', e.target.value)} className="mt-1 w-full border rounded px-2 py-1" />
-            {errors.damageLiabilityCap && <p className="text-xs text-red-500">{errors.damageLiabilityCap}</p>}
+            <label className="block text-sm font-medium">Security deposit amount</label>
+            <input type="number" step="0.01" min="0" value={policy.securityDepositAmount ?? 0} onChange={(e) => handleChange('securityDepositAmount', e.target.value)} className="mt-1 w-full border rounded px-2 py-1" />
+            {errors.securityDepositAmount && <p className="text-xs text-red-500">{errors.securityDepositAmount}</p>}
           </div>
 
           <div>

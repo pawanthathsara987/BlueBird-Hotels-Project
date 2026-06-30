@@ -113,7 +113,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
     };
 
     const handleAddRoom = (room) => {
-        const pkg = packages.find(p => p.id === parseInt(selectedPackageId));
+        const pkg = packages.find(p => p.room_type_id === parseInt(selectedPackageId));
         if (!pkg) return;
 
         // Check if already added
@@ -125,13 +125,13 @@ export default function NewBookingFlow({ onBookingSuccess }) {
         setSelectedRooms(prev => [...prev, {
             roomId: room.id,
             roomNumber: room.roomNumber || `Room ${room.id}`,
-            packageId: pkg.id,
-            packageName: pkg.pname,
-            price: pkg.pprice,
+            packageId: pkg.room_type_id,
+            packageName: pkg.room_type_name,
+            price: pkg.price,
             actualAdults: 1,
             actualKids: 0,
-            maxAdults: pkg.maxAdults,
-            maxKids: pkg.maxKids
+            maxAdults: pkg.max_adults,
+            maxKids: pkg.max_kids
         }]);
     };
 
@@ -322,8 +322,8 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                         >
                             <option value="" className="bg-slate-900 text-white">-- Choose a Package --</option>
                             {packages.map(pkg => (
-                                <option key={pkg.id} value={pkg.id} disabled={pkg.available_room === 0} className="bg-slate-900 text-white">
-                                    {pkg.pname} - ${pkg.pprice}/night ({pkg.available_room} rooms available)
+                                <option key={pkg.room_type_id} value={pkg.room_type_id} disabled={pkg.available_rooms_count === 0} className="bg-slate-900 text-white">
+                                    {pkg.room_type_name} - ${pkg.price}/night ({pkg.available_rooms_count} rooms available)
                                 </option>
                             ))}
                         </select>

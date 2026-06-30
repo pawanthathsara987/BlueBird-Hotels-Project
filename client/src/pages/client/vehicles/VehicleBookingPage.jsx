@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { ArrowLeft, CalendarDays, ShieldAlert, ShieldCheck, Star } from "lucide-react";
 
@@ -23,10 +23,18 @@ const calculateDeposit = (totalPrice) => {
 
 export default function VehicleBookingPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const location = useLocation();
   const [vehicle, setVehicle] = useState(location.state?.vehicle || null);
   const [vehicleLoading, setVehicleLoading] = useState(!location.state?.vehicle);
   const [vehicleError, setVehicleError] = useState("");
+
+  useEffect(() => {
+    const token = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
+    if (!token) {
+      navigate("/customerLogin", { state: { from: `/vehicles/${id}/book` } });
+    }
+  }, [navigate, id]);
   const [pickupDate, setPickupDate] = useState(location.state?.pickupDate || "");
   const [returnDate, setReturnDate] = useState(location.state?.returnDate || "");
   const [driverOption, setDriverOption] = useState(location.state?.driverOption || "without");
@@ -43,7 +51,7 @@ export default function VehicleBookingPage() {
     customerLicenseNo: "",
     customerLicenseExpiry: ""
   });
-  
+
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState("");
   const [bookingSuccess, setBookingSuccess] = useState(null);
@@ -52,7 +60,7 @@ export default function VehicleBookingPage() {
     if (vehicle) {
       return;
     }
-    
+
     let cancelled = false;
 
     const loadVehicle = async () => {
@@ -162,11 +170,11 @@ export default function VehicleBookingPage() {
 
   const canSubmit = Boolean(
     vehicle &&
-      pickupDate &&
-      returnDate &&
-      availability?.available &&
-      !availabilityLoading &&
-      !bookingLoading
+    pickupDate &&
+    returnDate &&
+    availability?.available &&
+    !availabilityLoading &&
+    !bookingLoading
   );
 
   const handleBookSubmit = async (e) => {
@@ -187,10 +195,10 @@ export default function VehicleBookingPage() {
         return;
       }
     }
-    
+
     setBookingLoading(true);
     setBookingError("");
-    
+
     try {
       const payload = {
         ...bookingForm,
@@ -198,8 +206,10 @@ export default function VehicleBookingPage() {
         returnDatetime: returnDate,
         withDriver: driverOption === "with"
       };
-      
-      const res = await axios.post(`${backendBaseUrl}/vehicles/${id}/book`, payload);
+      const token = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
+      const res = await axios.post(`${backendBaseUrl}/vehicles/${id}/book`, payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setBookingSuccess(res.data.data);
     } catch (err) {
       setBookingError(err.response?.data?.message || "Failed to create booking. Please try again.");
@@ -248,7 +258,7 @@ export default function VehicleBookingPage() {
             </p>
           </div>
 
-          <button className="mt-6 w-full rounded-2xl bg-sky-600 px-4 py-4 font-semibold text-white transition hover:bg-sky-700 shadow-md shadow-sky-600/20" onClick={() => alert("PayHere Gateway Integration Pending") }>
+          <button className="mt-6 w-full rounded-2xl bg-sky-600 px-4 py-4 font-semibold text-white transition hover:bg-sky-700 shadow-md shadow-sky-600/20" onClick={() => alert("PayHere Gateway Integration Pending")}>
             Pay Deposit Now
           </button>
           <Link to="/vehicles" className="mt-4 inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 px-4 py-4 font-semibold text-slate-700 transition hover:bg-slate-50">

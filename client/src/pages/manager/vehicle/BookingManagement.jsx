@@ -70,28 +70,28 @@ const formatMoney = (value) => {
 // Valid status transitions — must match the backend state machine
 const VALID_TRANSITIONS = {
   pending_payment: ['confirmed', 'payment_failed', 'cancelled', 'expired'],
-  confirmed:       ['driver_assigned', 'balance_paid', 'ongoing', 'cancelled'],
-  payment_failed:  ['pending_payment', 'cancelled', 'expired'],
+  confirmed: ['driver_assigned', 'balance_paid', 'ongoing', 'cancelled'],
+  payment_failed: ['pending_payment', 'cancelled', 'expired'],
   driver_assigned: ['confirmed', 'balance_paid', 'ongoing', 'cancelled'],
-  balance_paid:    ['ongoing', 'cancelled'],
-  ongoing:         ['returned', 'cancelled'],
-  returned:        ['completed'],
-  completed:       [],
-  cancelled:       [],
-  expired:         ['pending_payment'],
+  balance_paid: ['ongoing', 'cancelled'],
+  ongoing: ['returned', 'cancelled'],
+  returned: ['completed'],
+  completed: [],
+  cancelled: [],
+  expired: ['pending_payment'],
 };
 
 const STATUS_LABELS = {
   pending_payment: 'Pending Payment',
-  confirmed:       'Confirmed',
-  payment_failed:  'Payment Failed',
+  confirmed: 'Confirmed',
+  payment_failed: 'Payment Failed',
   driver_assigned: 'Driver Assigned',
-  balance_paid:    'Balance Paid',
-  ongoing:         'Ongoing (Vehicle Hired Out)',
-  returned:        'Returned (Pending Inspection)',
-  completed:       'Completed',
-  cancelled:       'Cancelled',
-  expired:         'Expired',
+  balance_paid: 'Balance Paid',
+  ongoing: 'Ongoing (Vehicle Hired Out)',
+  returned: 'Returned (Pending Inspection)',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+  expired: 'Expired',
 };
 
 export default function BookingManagement() {
@@ -120,14 +120,15 @@ export default function BookingManagement() {
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [paymentReceiptNo, setPaymentReceiptNo] = useState("");
+  const [paymentReceiptImage, setPaymentReceiptImage] = useState(null);
   const [paymentNotes, setPaymentNotes] = useState("");
   const [cancellationReason, setCancellationReason] = useState("");
   const [targetStatus, setTargetStatus] = useState("");
 
   // Bill generation state
   const [billPreview, setBillPreview] = useState(null);
-  const [applyCleaningFee, setApplyCleaningFee] = useState(false);
   const [manualDamageFee, setManualDamageFee] = useState("");
+  const [manualFuelFee, setManualFuelFee] = useState("");
   const [billExtraNotes, setBillExtraNotes] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -220,14 +221,16 @@ export default function BookingManagement() {
       setSubmitting(true);
       const isFinal = selectedBooking.status === "completed";
       const endpoint = isFinal ? "collect-final-settlement" : "collect-balance";
-      
+
+      const formData = new FormData();
+      formData.append("paymentMethod", paymentMethod);
+      if (paymentNotes) formData.append("notes", paymentNotes);
+      if (paymentReceiptNo) formData.append("receiptNo", paymentReceiptNo);
+      if (paymentReceiptImage) formData.append("receiptImage", paymentReceiptImage);
+
       await axios.put(
         `${backendBaseUrl}/manager/vehicle-bookings/${selectedBooking.id}/${endpoint}`,
-        {
-          paymentMethod,
-          notes: paymentNotes,
-          receiptNo: paymentReceiptNo
-        },
+        formData,
         config
       );
       toast.success(isFinal ? "Final settlement payment recorded!" : "Balance payment recorded!");
@@ -299,7 +302,6 @@ export default function BookingManagement() {
     const totalExtras =
       Number(booking.finalBill?.lateFee || 0) +
       Number(booking.finalBill?.extraMileageFee || 0) +
-      Number(booking.finalBill?.cleaningFee || 0) +
       Number(booking.finalBill?.damageFee || 0);
 
     const content = `
@@ -369,10 +371,6 @@ export default function BookingManagement() {
                 <td class="val-col">${formatMoney(booking.finalBill?.extraMileageFee)}</td>
               </tr>
               <tr>
-                <td>Cleaning Fee</td>
-                <td class="val-col">${formatMoney(booking.finalBill?.cleaningFee)}</td>
-              </tr>
-              <tr>
                 <td>Damage Fee</td>
                 <td class="val-col">${formatMoney(booking.finalBill?.damageFee)}</td>
               </tr>
@@ -429,8 +427,8 @@ export default function BookingManagement() {
       const res = await axios.post(
         `${backendBaseUrl}/manager/vehicle-bookings/${selectedBooking.id}/generate-bill`,
         {
-          applyCleaningFee,
           manualDamageFee: manualDamageFee ? parseFloat(manualDamageFee) : 0,
+          manualFuelFee: manualFuelFee ? parseFloat(manualFuelFee) : 0,
           extraNotes: billExtraNotes,
         },
         config
@@ -448,8 +446,8 @@ export default function BookingManagement() {
   const openBillModal = async (booking) => {
     setSelectedBooking(booking);
     setBillPreview(null);
-    setApplyCleaningFee(false);
     setManualDamageFee("");
+    setManualFuelFee("");
     setBillExtraNotes("");
     setShowBillModal(true);
     setPreviewLoading(true);
@@ -635,9 +633,9 @@ export default function BookingManagement() {
       ) : (
         <div className="grid grid-cols-1 gap-6">
           {filteredBookings.map((booking) => {
-            const totalPaidAtHotel = (booking.payments || []).reduce((sum, p) => 
+            const totalPaidAtHotel = (booking.payments || []).reduce((sum, p) =>
               (p.type === 'balance' || p.type === 'extra') ? sum + parseFloat(p.amount) : sum
-            , 0);
+              , 0);
             const remainingBalance = parseFloat(booking.balanceAmount || 0) - totalPaidAtHotel;
             const hasRemainingBalance = remainingBalance > 0.01;
             const isWithDriver = booking.hireType === "with_driver";
@@ -954,15 +952,34 @@ export default function BookingManagement() {
             </div>
             <form onSubmit={handleCollectBalance} className="p-6 space-y-4">
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-1">
-                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Balance Due</p>
-                <h3 className="text-2xl font-black text-rose-600">
-                  {formatMoney(
-                    selectedBooking.status === "completed"
-                      ? parseFloat(selectedBooking.balanceAmount || 0) - (selectedBooking.payments || []).reduce((sum, p) => (p.type === 'balance' || p.type === 'extra') ? sum + parseFloat(p.amount) : sum, 0)
-                      : selectedBooking.balanceAmount
-                  )}
-                </h3>
-                <p className="text-[11px] text-slate-500 font-medium">For Booking {selectedBooking.bookingNo}</p>
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Total to Collect</p>
+
+                {selectedBooking.status === "completed" ? (
+                  <h3 className="text-2xl font-black text-rose-600">
+                    {formatMoney(
+                      parseFloat(selectedBooking.balanceAmount || 0) - (selectedBooking.payments || []).reduce((sum, p) => (p.type === 'balance' || p.type === 'extra') ? sum + parseFloat(p.amount) : sum, 0)
+                    )}
+                  </h3>
+                ) : (
+                  <>
+                    <div className="flex justify-between items-center text-sm font-medium text-slate-600 border-b border-slate-200 pb-2 mb-2">
+                      <span>Rental Balance</span>
+                      <span>{formatMoney(selectedBooking.balanceAmount)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm font-medium text-slate-600 border-b border-slate-200 pb-2 mb-2">
+                      <span>Security Deposit (Refundable)</span>
+                      <span>{formatMoney(200)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-bold text-slate-800">Total</span>
+                      <h3 className="text-2xl font-black text-rose-600">
+                        {formatMoney(parseFloat(selectedBooking.balanceAmount || 0) + 200)}
+                      </h3>
+                    </div>
+                  </>
+                )}
+
+                <p className="text-[11px] text-slate-500 font-medium mt-2">For Booking {selectedBooking.bookingNo}</p>
               </div>
 
               <div className="space-y-1">
@@ -986,6 +1003,16 @@ export default function BookingManagement() {
                   placeholder="e.g. REC-93821"
                   value={paymentReceiptNo}
                   onChange={(e) => setPaymentReceiptNo(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Payment Receipt Image</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setPaymentReceiptImage(e.target.files?.[0] || null)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500"
                 />
               </div>
@@ -1145,10 +1172,10 @@ export default function BookingManagement() {
         selectedBooking={selectedBooking}
         billPreview={billPreview}
         previewLoading={previewLoading}
-        applyCleaningFee={applyCleaningFee}
-        setApplyCleaningFee={setApplyCleaningFee}
         manualDamageFee={manualDamageFee}
         setManualDamageFee={setManualDamageFee}
+        manualFuelFee={manualFuelFee}
+        setManualFuelFee={setManualFuelFee}
         billExtraNotes={billExtraNotes}
         setBillExtraNotes={setBillExtraNotes}
         submitting={submitting}
