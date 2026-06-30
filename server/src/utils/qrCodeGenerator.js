@@ -1,6 +1,7 @@
 import QRCode from "qrcode";
 import fs from "fs";
 import path from "path";
+import supabase from "../config/supabaseClient.js";
 
 const qrFolder = path.join(process.cwd(), "uploads", "qrcodes");
 
@@ -20,12 +21,31 @@ export const generateQRCode = async (staffId) => {
             version: 1
         });
 
-        await QRCode.toFile(qrPath, qrData, {
+        // Generate QR code as buffer
+        const qrBuffer = await QRCode.toBuffer(qrData, {
             width: 400,
             margin: 2
         });
 
-        return `/uploads/qrcodes/${staffId}.png`;
+        // Write to local disk as fallback/reference
+        await fs.promises.writeFile(qrPath, qrBuffer);
+
+        // Upload to Supabase bucket 'staffQR'
+        const fileName = `${staffId}.png`;
+        const { error } = await supabase.storage.from("staffQR").upload(
+            fileName,
+            qrBuffer,
+            { contentType: "image/png", upsert: true }
+        );
+
+        if (error) {
+            console.error(`❌ Supabase QR upload failed: ${error.message}`);
+            // Fallback to local path if upload fails
+            return `/uploads/qrcodes/${staffId}.png`;
+        }
+
+        const { data } = supabase.storage.from("staffQR").getPublicUrl(fileName);
+        return data.publicUrl;
 
     } catch (error) {
         throw error;
