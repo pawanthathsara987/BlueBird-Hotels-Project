@@ -1,8 +1,3 @@
-/**
- * Migration: Add qrCodeUrl column to staff_members table.
- *
- * Run once:  node scripts/add-qrcode-to-staff-member.js
- */
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -13,19 +8,18 @@ async function migrate() {
     await sequelize.authenticate();
     console.log('✅ Connected to database');
 
-    // Check if column already exists
     const [results] = await sequelize.query(
       `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-       WHERE TABLE_NAME = 'staff_members' AND COLUMN_NAME = 'qrCodeUrl'`
+       WHERE TABLE_NAME = 'vehicle_service_logs' AND COLUMN_NAME = 'deleted_at'`
     );
 
     if (results.length > 0) {
-      console.log('ℹ️  qrCodeUrl column already exists — skipping');
+      console.log('ℹ️  deleted_at column already exists — skipping');
     } else {
       await sequelize.query(
-        `ALTER TABLE staff_members ADD COLUMN qrCodeUrl VARCHAR(255) NULL DEFAULT NULL`
+        `ALTER TABLE vehicle_service_logs ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL`
       );
-      console.log('✅ Added qrCodeUrl column to staff_members table');
+      console.log('✅ Added deleted_at column to vehicle_service_logs table');
     }
 
     process.exit(0);

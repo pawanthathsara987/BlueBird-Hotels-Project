@@ -82,13 +82,20 @@ export default function ServiceLogManagement() {
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  // ── Auth Config ──────────────────────────────────
+  const token = localStorage.getItem("managerToken") || localStorage.getItem("token") || localStorage.getItem("accessToken");
+  const config = useMemo(
+    () => (token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+    [token]
+  );
+
   // ── Load ─────────────────────────────────────────
   const loadData = async () => {
     try {
       setLoading(true);
       const [logsRes, vehiclesRes] = await Promise.all([
-        axios.get(`${API}/manager/service-logs`),
-        axios.get(`${API}/vehicles`),
+        axios.get(`${API}/manager/service-logs`, config),
+        axios.get(`${API}/vehicles`), // public or standard endpoint
       ]);
       setLogs(Array.isArray(logsRes.data?.data) ? logsRes.data.data : []);
       setVehicles(Array.isArray(vehiclesRes.data?.data) ? vehiclesRes.data.data : []);
@@ -157,10 +164,15 @@ export default function ServiceLogManagement() {
       });
       if (receiptFile) formData.append("receiptImage", receiptFile);
 
+      const reqConfig = {
+        ...config,
+        headers: { ...config.headers, 'Content-Type': 'multipart/form-data' }
+      };
+
       if (editingId) {
-        await axios.put(`${API}/manager/service-logs/${editingId}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        await axios.put(`${API}/manager/service-logs/${editingId}`, formData, reqConfig);
       } else {
-        await axios.post(`${API}/manager/service-logs`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        await axios.post(`${API}/manager/service-logs`, formData, reqConfig);
       }
       setModalOpen(false);
       await loadData();
@@ -180,7 +192,7 @@ export default function ServiceLogManagement() {
     if (!deleteId) return;
     setDeleting(true);
     try {
-      await axios.delete(`${API}/manager/service-logs/${deleteId}`);
+      await axios.delete(`${API}/manager/service-logs/${deleteId}`, config);
       setDeleteId(null);
       await loadData();
     } catch (err) {

@@ -11,7 +11,7 @@ import { getAllOccupancyTypes } from "../controllers/admin/occupancyTypeControll
 import { getAllBoardTypes } from "../controllers/admin/boardTypeController.js";
 import { upload } from "../controllers/admin/imageUploadController.js";
 import { getAllRoomPrices, getRoomPriceMetadata, createRoomPrice, updateRoomPrice, deleteRoomPrice } from "../controllers/admin/roomPriceController.js";
-import { getAllOtherItemPrices, createOtherItemPrice, updateOtherItemPrice, deleteOtherItemPrice } from "../controllers/admin/otherItemPriceController.js";
+import { getAllServiceCharges, updateServiceCharge } from "../controllers/admin/serviceChargeController.js";
 import { getAllShopItems, getShopItemById, createShopItem, updateShopItem, deleteShopItem } from "../controllers/admin/shopController.js";
 
 const router = express.Router();
@@ -51,11 +51,9 @@ router.post('/room-prices', createRoomPrice);
 router.put('/room-prices/:id', updateRoomPrice);
 router.delete('/room-prices/:id', deleteRoomPrice);
 
-// Other Item Price routes
-router.get('/other-item-prices', getAllOtherItemPrices);
-router.post('/other-item-prices', createOtherItemPrice);
-router.put('/other-item-prices/:id', updateOtherItemPrice);
-router.delete('/other-item-prices/:id', deleteOtherItemPrice);
+// Service Charge routes
+router.get('/service-charges', getAllServiceCharges);
+router.put('/service-charges/:id', updateServiceCharge);
 
 // Shop Items routes
 router.get('/shop-items', getAllShopItems);

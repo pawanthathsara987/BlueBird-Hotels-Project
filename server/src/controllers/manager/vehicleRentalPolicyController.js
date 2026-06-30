@@ -45,8 +45,6 @@ export const updateVehicleRentalPolicy = async (req, res) => {
       lateReturnGraceHours: toInteger(req.body.lateReturnGraceHours),
       lateReturnFeePerHour: toNumber(req.body.lateReturnFeePerHour),
       lateReturnFullDayAfterHours: toInteger(req.body.lateReturnFullDayAfterHours),
-      cleaningFee: toNumber(req.body.cleaningFee),
-      damageLiabilityCap: toNumber(req.body.damageLiabilityCap),
       includedKilometersPerDay: toInteger(req.body.includedKilometersPerDay),
       extraMileageFee: toNumber(req.body.extraMileageFee),
       extraMileageCurrency: normalizeText(req.body.extraMileageCurrency) || 'USD',
@@ -67,13 +65,6 @@ export const updateVehicleRentalPolicy = async (req, res) => {
       validationErrors.lateReturnFullDayAfterHours = 'Full-day cutoff must be zero or a positive integer.';
     }
 
-    if (!Number.isFinite(payload.cleaningFee) || payload.cleaningFee < 0) {
-      validationErrors.cleaningFee = 'Cleaning fee must be zero or a positive number.';
-    }
-
-    if (!Number.isFinite(payload.damageLiabilityCap) || payload.damageLiabilityCap < 0) {
-      validationErrors.damageLiabilityCap = 'Damage liability cap must be zero or a positive number.';
-    }
 
     if (!Number.isFinite(payload.includedKilometersPerDay) || payload.includedKilometersPerDay < 0) {
       validationErrors.includedKilometersPerDay = 'Included kilometers must be zero or a positive integer.';

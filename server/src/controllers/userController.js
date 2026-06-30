@@ -259,7 +259,10 @@ export async function deleteUser(req, res) {
                 email: staffMember.email,
                 roleId: staffMember.Role.roleId,
                 roleName: staffMember.Role.roleName,
-                phoneNumber: staffMember.phoneNumber
+                phoneNumber: staffMember.phoneNumber,
+                nicNumber: staffMember.nicNumber,
+                address: staffMember.address,
+                imageUrl: staffMember.imageUrl
             }, { transaction });
 
             await UserRegisterModel.destroy({

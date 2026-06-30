@@ -410,8 +410,11 @@ const createBooking = async (req, res) => {
 
         // Add airport pickup surcharge if enabled
         if (airportPickup?.enabled) {
-            const pickupPriceRecord = await OtherItemPrice.findOne({
-                where: { item_name: { [Op.like]: "%airport pickup%" }, status: true },
+            if (!airportPickup.pickupDate || !airportPickup.pickupTime) {
+                throw new Error("Airport pickup date and time are required");
+            }
+            const pickupPriceRecord = await ServiceCharge.findOne({
+                where: { service_name: { [Op.like]: "%airport pickup%" }, status: true },
                 transaction: t
             });
             const pickupPrice = pickupPriceRecord ? parseFloat(pickupPriceRecord.price) : 50.00;
@@ -821,7 +824,7 @@ const getAvailableRoomTypesByDate = async (req, res) => {
             type: QueryTypes.SELECT
         });
 
-        const otherPricesList = await OtherItemPrice.findAll({
+        const otherPricesList = await ServiceCharge.findAll({
             where: { status: true }
         });
 
@@ -969,8 +972,8 @@ const checkBookingPrice = async (req, res) => {
 
         let airportPickupSurcharge = 0;
         if (airportPickup?.enabled) {
-            const pickupPriceRecord = await OtherItemPrice.findOne({
-                where: { item_name: { [Op.like]: "%airport pickup%" }, status: true }
+            const pickupPriceRecord = await ServiceCharge.findOne({
+                where: { service_name: { [Op.like]: "%airport pickup%" }, status: true }
             });
             const pickupPrice = pickupPriceRecord ? parseFloat(pickupPriceRecord.price) : 50.00;
             calculatedTotalPrice += pickupPrice;

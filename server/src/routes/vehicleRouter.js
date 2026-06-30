@@ -10,7 +10,7 @@ import {
 } from '../controllers/manager/vehicleController.js';
 import { createVehicleBooking } from '../controllers/booking/vehicleBookingController.js';
 
-// import { requireAuth, requireRole } from '../middleware/authMiddleware.js'; // TODO: re-enable auth
+import { requireAuth } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -23,6 +23,6 @@ router.delete('/:id', deleteVehicle);
 
 router.get('/:id/availability', checkAvailability);
 router.get('/:id', getVehicle);
-router.post('/:id/book', createVehicleBooking);
+router.post('/:id/book', requireAuth, createVehicleBooking);
 
 export default router;

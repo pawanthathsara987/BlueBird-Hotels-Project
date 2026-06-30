@@ -1,6 +1,6 @@
 import { FaTimes, FaUser, FaEnvelope, FaShieldAlt, FaPhone, FaIdCard, FaMapMarkerAlt, FaGlobe } from "react-icons/fa";
 
-export default function StaffDetailsModal({ isOpen, member, onClose }) {
+export default function StaffDetailsModal({ isOpen, member, onClose, status = "Active" }) {
     if (!isOpen || !member) {
         return null;
     }
@@ -34,14 +34,16 @@ export default function StaffDetailsModal({ isOpen, member, onClose }) {
                                 {member.name ? member.name.charAt(0).toUpperCase() : <FaUser className="text-slate-400" />}
                             </div>
                         )}
-                        <span className="absolute -bottom-2 right-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500 text-white border-2 border-white shadow-md">
-                            Active
+                        <span className={`absolute -bottom-2 right-2 px-3 py-1 rounded-full text-xs font-semibold border-2 border-white shadow-md ${
+                            status === "Active" ? "bg-emerald-500 text-white" : "bg-rose-500 text-white"
+                        }`}>
+                            {status}
                         </span>
                     </div>
 
                     <h2 className="mt-4 text-2xl font-bold text-slate-800 tracking-tight">{member.name}</h2>
                     <span className="text-sm font-semibold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full mt-1.5 shadow-sm">
-                        {member.Role?.roleName || "Staff"}
+                        {member.roleName || member.Role?.roleName || "Staff"}
                     </span>
                 </div>
 

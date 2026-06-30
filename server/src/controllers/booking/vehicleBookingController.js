@@ -149,22 +149,16 @@ export const createVehicleBooking = async (req, res) => {
       const depositAmount = parseFloat(((totalPayable * depositPercentage) / 100).toFixed(2));
       const balanceAmount = parseFloat((totalPayable - depositAmount).toFixed(2));
 
-      // find or create customer
-      const [customer] = await Customer.findOrCreate({ 
-        where: { email }, 
-        defaults: { 
-          firstName: name.split(' ')[0] || name, 
-          lastName: name.split(' ').slice(1).join(' '), 
-          email, 
-          phoneNumber: phone 
-        }, 
-        transaction: t 
-      });
+      const customerId = req.user?.id;
+      if (!customerId) {
+        await t.rollback();
+        return res.status(401).json({ success: false, message: 'Unauthorized. Please login to book a vehicle.' });
+      }
 
       // create booking
       const booking = await VehicleBooking.create({
         bookingNo: generateBookingNo(),
-        customerId: customer.id,
+        customerId: customerId,
         vehicleId,
         driverId: null,
         hireType: withDriver ? 'with_driver' : 'without_driver',
