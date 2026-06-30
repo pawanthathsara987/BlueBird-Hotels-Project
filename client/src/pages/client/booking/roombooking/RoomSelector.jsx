@@ -141,29 +141,34 @@ const RoomSelector = () => {
                         startDate.getMonth() === today.getMonth() &&
                         startDate.getFullYear() === today.getFullYear();
                         
-    if (!isTodayDate) {
-      return { disabled: false, min: "", error: "" };
-    }
-    
-    const minTime = new Date();
-    minTime.setHours(minTime.getHours() + 3);
-    
-    // Check if 3 hours from now rolls over to tomorrow
-    if (minTime.getDate() !== today.getDate()) {
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const isTomorrowDate = startDate.getDate() === tomorrow.getDate() &&
+                           startDate.getMonth() === tomorrow.getMonth() &&
+                           startDate.getFullYear() === tomorrow.getFullYear();
+
+    if (isTodayDate) {
       return {
         disabled: true,
         min: "",
-        error: "Same-day shuttle transfers are no longer requestable. Requires at least 3 hours advance notice."
+        error: "Airport pickup requests must be made at least 1 day in advance. Shuttle service is unavailable for today."
       };
     }
     
-    const hours = minTime.getHours();
-    const minutes = minTime.getMinutes();
-    const minTimeString = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    if (isTomorrowDate) {
+      const hours = today.getHours();
+      const minutes = today.getMinutes();
+      const minTimeString = String(hours).padStart(2, '0') + ":" + String(minutes).padStart(2, '0');
+      return {
+        disabled: false,
+        min: minTimeString,
+        error: ""
+      };
+    }
     
     return {
       disabled: false,
-      min: minTimeString,
+      min: "",
       error: ""
     };
   };
@@ -762,11 +767,11 @@ const RoomSelector = () => {
     if (airportPickupEnabled) {
       const constraints = getPickupTimeConstraints();
       if (constraints.disabled) {
-        toast.error("Same-day airport pickup requests must be made at least 3 hours in advance. Shuttle service is unavailable for today.");
+        toast.error("Airport pickup requests must be made at least 1 day in advance. Shuttle service is unavailable for today.");
         return;
       }
       if (constraints.min && (!pickupTime || pickupTime < constraints.min)) {
-        toast.error(`For same-day arrivals, pickup time must be at least 3 hours in the future (after ${constraints.min}).`);
+        toast.error(`For tomorrow arrivals, pickup time must be at least 1 day in the future (after ${constraints.min} tomorrow).`);
         return;
       }
     }
@@ -1726,7 +1731,7 @@ const RoomSelector = () => {
                             const val = e.target.value;
                             const curConstraints = getPickupTimeConstraints();
                             if (curConstraints.min && val < curConstraints.min) {
-                              toast.error(`For same-day arrivals, pickup time must be at least 3 hours in the future (after ${curConstraints.min}).`);
+                              toast.error(`Airport pickup requests require at least 1 day advance notice (after ${curConstraints.min} tomorrow).`);
                               setPickupTime(curConstraints.min);
                             } else {
                               setPickupTime(val);
@@ -1756,7 +1761,7 @@ const RoomSelector = () => {
                   onClick={() => {
                     const c = getPickupTimeConstraints();
                     if (c.disabled && !airportPickupEnabled) {
-                      toast.error("Same-day pickup requests must be made at least 3 hours in advance. Shuttle service is unavailable for today.");
+                      toast.error("Airport pickup requests must be made at least 1 day in advance. Shuttle service is unavailable for today.");
                       return;
                     }
                     setAirportPickupEnabled(!airportPickupEnabled);

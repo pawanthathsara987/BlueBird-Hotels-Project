@@ -531,7 +531,12 @@ export async function getCustomerBookings(req, res) {
         });
 
         const airportPickups = await AirPortPickup.findAll({
-            where: { customer_id: customerId }
+            include: [{
+                model: Booking,
+                as: 'booking',
+                where: { customer_id: customerId },
+                attributes: []
+            }]
         });
 
         res.status(200).json({

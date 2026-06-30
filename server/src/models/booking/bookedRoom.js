@@ -50,6 +50,11 @@ BookedRoom.init(
             allowNull: false,
             defaultValue: 0,
         },
+        board_type: {
+            type: DataTypes.STRING(100),
+            allowNull: true,
+            defaultValue: "Room Only",
+        },
     },
     {
         sequelize,

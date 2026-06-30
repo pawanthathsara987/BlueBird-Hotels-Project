@@ -1,7 +1,7 @@
 import { col, fn, Op, QueryTypes } from "sequelize";
 import sequelize from "../../config/database.js";
-import { sendEmail, sendBookingConfirmationEmail } from "../../services/emailService.js";
-import { Customer, Room, BookedRoom, Reservation, AirPortPickup, ServiceCharge, RoomType, Amenities, Policy, BoardType, OccupancyType, RoomPrice, SeasonalDiscount, RoomPayment } from "../../models/index.js";
+import { sendEmail, sendBookingConfirmationEmail, sendPersonalRequestEmail } from "../../services/emailService.js";
+import { Customer, Room, BookedRoom, Reservation, AirPortPickup, OtherItemPrice, RoomType, Amenities, Policy, BoardType, OccupancyType, RoomPrice, SeasonalDiscount, RoomPayment } from "../../models/index.js";
 
 /**
  * Helper to calculate dynamic price for a room stay based on RoomType, OccupancyType, BoardType and SeasonalDiscount.
@@ -229,12 +229,18 @@ const expireOldPendingBookings = async () => {
                 const t = await sequelize.transaction();
                 try {
                     await resv.update({ status: "cancelled" }, { transaction: t });
-                    await BookedRoom.update({ status: "cancelled" }, { where: { reservation_id: resv.id }, transaction: t });
+                    await BookedRoom.update({ status: "cancelled" }, { where: { booking_id: resv.id }, transaction: t });
                     
                     // Mark pending payment logs as failed
                     await RoomPayment.update(
                         { status: "failed" },
                         { where: { booking_id: resv.id, status: "pending" }, transaction: t }
+                    );
+
+                    // Cancel associated airport pickup
+                    await AirPortPickup.update(
+                        { status: "CANCELLED" },
+                        { where: { booking_id: resv.id }, transaction: t }
                     );
 
                     await t.commit();
@@ -298,11 +304,34 @@ const createBooking = async (req, res) => {
             });
         }
 
+        // Validate airport pickup selection (1-day advance cutoff rule)
+        if (airportPickup?.enabled) {
+            if (!airportPickup.pickupDate || !airportPickup.pickupTime) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Pickup not available for selected time"
+                });
+            }
+
+            const datePart = airportPickup.pickupDate.split('T')[0];
+            const pickupDateTime = new Date(`${datePart}T${airportPickup.pickupTime}`);
+            const cutoffTime = new Date();
+            cutoffTime.setDate(cutoffTime.getDate() + 1); // must be at least 24 hours (1 day) in the future
+
+            if (isNaN(pickupDateTime.getTime()) || pickupDateTime < cutoffTime) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Pickup not available for selected time"
+                });
+            }
+        }
+
         // -----------------------------
         // 2. Validate + process rooms (Calculate Server-Side Total Price)
         // -----------------------------
         let calculatedTotalPrice = 0;
         const bookedRoomEntries = [];
+        let totalPassengers = 0;
 
         for (const roomData of rooms) {
             const {
@@ -363,6 +392,7 @@ const createBooking = async (req, res) => {
             );
 
             calculatedTotalPrice += priceDetails.totalPrice;
+            totalPassengers += (Number(actualAdults) || 1) + (Number(actualKids) || 0);
 
             bookedRoomEntries.push({
                 room_id: roomId,
@@ -373,6 +403,7 @@ const createBooking = async (req, res) => {
                 actualKidAges,
                 adults: actualAdults,
                 kids: actualKids,
+                board_type: clientBoardType || "Room Only",
                 status: "reserved"
             });
         }
@@ -428,10 +459,12 @@ const createBooking = async (req, res) => {
         if (airportPickup?.enabled) {
             await AirPortPickup.create(
                 {
-                    guest_id: guestId,
-                    customer_id: guestId,
+                    booking_id: reservation.id,
                     pickup_date: airportPickup.pickupDate,
                     pickup_time: airportPickup.pickupTime,
+                    passenger_count: totalPassengers,
+                    pickup_location: "Katunayake Airport",
+                    status: "CONFIRMED"
                 },
                 { transaction: t }
             );
@@ -466,13 +499,12 @@ const createBooking = async (req, res) => {
         }
 
         if (personalRequest && personalRequest != null) {
-            await sendEmail({
-                to: "sandeepal513@gmail.com",
-                subject: "Personal Request",
-                html: "<h1>Personal Request</h1>" +
-                    "<p>Personal Request: " + personalRequest + "</p>",
-                text: personalRequest,
-            });
+            try {
+                const customer = await Customer.findByPk(guestId);
+                await sendPersonalRequestEmail(customer, reservation, personalRequest, checkInDate);
+            } catch (emailError) {
+                console.error("PERSONAL REQUEST EMAIL ERROR:", emailError.message);
+            }
         }
 
         return res.status(201).json({
@@ -504,7 +536,10 @@ const getAllBookings = async (req, res) => {
                 {
                     model: BookedRoom,
                     as: 'bookedRooms',
-                    include: [Room]
+                    include: [{
+                        model: Room,
+                        include: [{ model: RoomType, as: "roomType" }]
+                    }]
                 }
             ]
         });
@@ -521,7 +556,14 @@ const getBookingById = async (req, res) => {
         const booking = await Reservation.findByPk(id, {
             include: [
                 { model: Customer },
-                { model: BookedRoom, as: 'bookedRooms', include: [Room] }
+                {
+                    model: BookedRoom,
+                    as: 'bookedRooms',
+                    include: [{
+                        model: Room,
+                        include: [{ model: RoomType, as: "roomType" }]
+                    }]
+                }
             ]
         });
         if (!booking) return res.status(404).json({ message: "Not found" });
@@ -547,16 +589,20 @@ const updateBooking = async (req, res) => {
         if (status) {
             let bookedRoomStatus;
             let roomPaymentStatus;
+            let airportPickupStatus;
 
             if (status === "cancelled") {
                 bookedRoomStatus = "cancelled";
                 roomPaymentStatus = "failed";
+                airportPickupStatus = "CANCELLED";
             } else if (status === "confirmed") {
                 bookedRoomStatus = "reserved";
                 roomPaymentStatus = "success";
+                airportPickupStatus = "CONFIRMED";
             } else if (status === "completed") {
                 bookedRoomStatus = "checked_out";
                 roomPaymentStatus = "success";
+                airportPickupStatus = "COMPLETED";
             }
 
             if (bookedRoomStatus) {
@@ -585,6 +631,13 @@ const updateBooking = async (req, res) => {
                         },
                         transaction: t
                     }
+                );
+            }
+
+            if (airportPickupStatus) {
+                await AirPortPickup.update(
+                    { status: airportPickupStatus },
+                    { where: { booking_id: id }, transaction: t }
                 );
             }
         }
@@ -661,7 +714,7 @@ const getAvailableRoomAssignForPackage = async (req, res) => {
         const rooms = await sequelize.query(`
             SELECT r.*
             FROM room r
-            WHERE r.packageId = :packageId
+            WHERE r.room_type_id = :packageId
             AND r.status = 'available'
             AND r.id NOT IN (
                 SELECT br.room_id
