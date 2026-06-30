@@ -931,7 +931,7 @@ export default function Dashboard() {
             />
 
             {/* ----------------------------------------------------
-                SaaS Tasks Manager, Recent Bookings, Live Activities
+                Hotel BlueBird Tasks Manager, Recent Bookings, Live Activities
                ---------------------------------------------------- */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -1254,7 +1254,7 @@ export default function Dashboard() {
                         <div>
                             <h3 className="text-sm font-bold flex items-center gap-1.5">
                                 <Layers size={16} className={currentAccent.text} />
-                                Hotel SaaS Analytics Summary
+                                Hotel BlueBird Analytics Summary
                             </h3>
                             <p className="text-xs text-slate-600 dark:text-slate-400">ADR, RevPAR, and occupancy indexes</p>
                         </div>
