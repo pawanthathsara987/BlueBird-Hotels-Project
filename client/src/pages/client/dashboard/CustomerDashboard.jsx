@@ -260,6 +260,7 @@ export default function CustomerDashboard() {
             paymentStatus,
             amount: totalAmount,
             airportTransfer,
+            airportPickupFee: bookingsRes.data.airportPickupFee || 15000,
             amenities: ["24/7 Concierge Service", "Infinity Pool Access", "Complimentary Breakfast"],
             note: b.note || "",
             tax: b.tax || 0,

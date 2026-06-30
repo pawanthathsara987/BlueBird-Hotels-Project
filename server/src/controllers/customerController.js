@@ -11,7 +11,7 @@ import { Op } from "sequelize";
 dotenv.config();
 
 import sequelize from "../config/database.js";
-import { Booking, BookedRoom, Room, RoomType, AirPortPickup, VehicleBooking, Vehicle, TourInquiry, Tour, Payment, RoomPayment, BoardType, RoomPrice } from "../models/index.js";
+import { Booking, BookedRoom, Room, RoomType, AirPortPickup, VehicleBooking, Vehicle, TourInquiry, Tour, Payment, RoomPayment, BoardType, RoomPrice, ServiceCharge } from "../models/index.js";
 
 export async function registerCustomer(req, res) {
 
@@ -544,10 +544,16 @@ export async function getCustomerBookings(req, res) {
             }]
         });
 
+        const pickupCharge = await ServiceCharge.findOne({
+            where: { service_Code: "AIRPORT_PICKUP", status: true }
+        });
+        const airportPickupFee = pickupCharge ? parseFloat(pickupCharge.price) : 15000;
+
         res.status(200).json({
             success: true,
             data: bookings,
-            airportPickups
+            airportPickups,
+            airportPickupFee
         });
     } catch (error) {
         console.error("Error fetching customer bookings:", error);
@@ -913,6 +919,83 @@ export async function cancelSingleBookedRoom(req, res) {
     } catch (error) {
         await t.rollback();
         console.error("Error cancelling single room from booking:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export async function cancelAirportPickup(req, res) {
+    const t = await sequelize.transaction();
+    try {
+        const { bookingId } = req.params;
+        const customerId = req.user.id;
+
+        // 1. Fetch booking
+        const booking = await Booking.findOne({
+            where: { id: bookingId, customer_id: customerId },
+            transaction: t
+        });
+
+        if (!booking) {
+            await t.rollback();
+            return res.status(404).json({ message: "Booking not found or not authorized to cancel airport pickup" });
+        }
+
+        if (booking.status === "cancelled" || booking.status === "completed") {
+            await t.rollback();
+            return res.status(400).json({ message: `Cannot cancel airport pickup for a stay booking that is already ${booking.status}` });
+        }
+
+        // 2. Fetch airport pickup record
+        const pickup = await AirPortPickup.findOne({
+            where: { booking_id: bookingId },
+            transaction: t
+        });
+
+        if (!pickup) {
+            await t.rollback();
+            return res.status(404).json({ message: "Airport pickup reservation not found for this booking" });
+        }
+
+        if (pickup.status === "CANCELLED") {
+            await t.rollback();
+            return res.status(400).json({ message: "Airport pickup is already cancelled" });
+        }
+
+        // 3. Update pickup status to CANCELLED
+        await pickup.update({ status: "CANCELLED" }, { transaction: t });
+
+        // 4. Retrieve the airport pickup price from ServiceCharge
+        const pickupPriceRecord = await ServiceCharge.findOne({
+            where: { service_Code: "AIRPORT_PICKUP", status: true },
+            transaction: t
+        });
+        const pickupPrice = pickupPriceRecord ? parseFloat(pickupPriceRecord.price) : 15000.00;
+
+        // 5. Subtract price from booking total
+        const currentTotal = parseFloat(booking.total_price);
+        const newTotal = Math.max(0, currentTotal - pickupPrice);
+        
+        let newTax = 0;
+        if (booking.tax_percentage > 0) {
+            newTax = newTotal * (booking.tax_percentage / 100);
+        }
+
+        await booking.update({
+            total_price: newTotal,
+            tax: newTax
+        }, { transaction: t });
+
+        await t.commit();
+        res.status(200).json({
+            success: true,
+            message: "Airport pickup cancelled successfully",
+            refundAmount: pickupPrice,
+            newTotal
+        });
+
+    } catch (error) {
+        await t.rollback();
+        console.error("Error cancelling airport pickup:", error);
         res.status(500).json({ message: "Internal server error" });
     }
 }

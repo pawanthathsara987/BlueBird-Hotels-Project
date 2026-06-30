@@ -18,13 +18,12 @@ export default function BookingsTab({
   const [searchTerm, setSearchTerm] = useState("");
   const [filterTab, setFilterTab] = useState("all"); // "all", "upcoming", "completed", "cancelled"
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [roomToCancel, setRoomToCancel] = useState(null);
+  const [showPickupCancelDialog, setShowPickupCancelDialog] = useState(false);
 
-  const handleCancelSingleRoom = async (bookedRoomId) => {
-    const confirmCancel = window.confirm(
-      "Are you sure you want to cancel this room? Depending on the hotel's cancellation policy, cancellations made within 48 hours of check-in may incur a one-night room charge penalty."
-    );
-    if (!confirmCancel) return;
-
+  const confirmCancelSingleRoom = async () => {
+    if (!roomToCancel) return;
+    const bookedRoomId = roomToCancel.id;
     try {
       const token = localStorage.getItem("customerToken");
       const headers = { Authorization: `Bearer ${token}` };
@@ -96,6 +95,70 @@ export default function BookingsTab({
     } catch (error) {
       console.error("Error cancelling single room:", error);
       toast.error(error.response?.data?.message || "An error occurred while cancelling the room.");
+    } finally {
+      setRoomToCancel(null);
+    }
+  };
+
+  const confirmCancelAirportPickup = async () => {
+    try {
+      const token = localStorage.getItem("customerToken");
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.post(
+        `${process.env.VITE_BACKEND_URL || "http://localhost:3002/api"}/customers/bookings/${selectedBooking.realId}/airport-pickup/cancel`,
+        {},
+        { headers }
+      );
+
+      if (response.data.success) {
+        toast.success("Airport shuttle pickup cancelled successfully!");
+        
+        // Update local state bookings list
+        setBookings(prevBookings => 
+          prevBookings.map(b => {
+            if (b.realId === selectedBooking.realId) {
+              const updatedRaw = {
+                ...b.raw,
+                total_price: response.data.newTotal,
+                airportPickup: {
+                  ...b.raw.airportPickup,
+                  status: "CANCELLED"
+                }
+              };
+              return {
+                ...b,
+                amount: response.data.newTotal,
+                airportTransfer: "Cancelled",
+                raw: updatedRaw
+              };
+            }
+            return b;
+          })
+        );
+
+        // Update selected booking details to reflect changes instantly in the drawer popup
+        setSelectedBooking(prev => ({
+          ...prev,
+          amount: response.data.newTotal,
+          airportTransfer: "Cancelled",
+          raw: {
+            ...prev.raw,
+            total_price: response.data.newTotal,
+            airportPickup: {
+              ...prev.raw.airportPickup,
+              status: "CANCELLED"
+            }
+          }
+        }));
+
+      } else {
+        toast.error(response.data.message || "Failed to cancel airport pickup.");
+      }
+    } catch (error) {
+      console.error("Error cancelling airport pickup:", error);
+      toast.error(error.response?.data?.message || "An error occurred while cancelling the airport pickup.");
+    } finally {
+      setShowPickupCancelDialog(false);
     }
   };
 
@@ -873,7 +936,7 @@ export default function BookingsTab({
                         <span className="text-emerald-600 font-extrabold text-[9px] block mt-1.5 uppercase tracking-wide">✓ Checked In</span>
                       ) : (selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && selectedBooking.status.toLowerCase() !== "cancellation pending") ? (
                         <button
-                          onClick={() => handleCancelSingleRoom(room.id)}
+                          onClick={() => setRoomToCancel({ id: room.id, type: room.Room?.roomType?.type || "Deluxe Suite" })}
                           className="mt-2 text-rose-600 hover:text-rose-800 font-bold text-[9px] hover:underline cursor-pointer flex items-center gap-1 uppercase tracking-wider"
                         >
                           <XCircle size={11} className="text-rose-500" />
@@ -897,6 +960,19 @@ export default function BookingsTab({
                     <p>Date: {formatDate(selectedBooking.raw.airportPickup.pickup_date)}</p>
                     <p>Time: {selectedBooking.raw.airportPickup.pickup_time}</p>
                     <p>Status: {selectedBooking.raw.airportPickup.status}</p>
+                    {selectedBooking.raw.airportPickup.status === "CANCELLED" ? (
+                      <p className="col-span-2 text-rose-600 font-extrabold uppercase text-[10px] tracking-wide mt-1.5 flex items-center gap-1">
+                        🚫 Airport Shuttle Cancelled
+                      </p>
+                    ) : (selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && selectedBooking.status.toLowerCase() !== "cancellation pending") ? (
+                      <button
+                        onClick={() => setShowPickupCancelDialog(true)}
+                        className="col-span-2 mt-2 px-3 py-1.5 bg-rose-50 hover:bg-rose-105 border border-rose-200 text-rose-700 font-extrabold rounded-lg text-[9px] hover:underline cursor-pointer flex items-center justify-center gap-1.5 w-full uppercase tracking-wider transition-all"
+                      >
+                        <XCircle size={12} className="text-rose-500" />
+                        Cancel Airport Pickup Shuttle
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               )}
@@ -917,12 +993,12 @@ export default function BookingsTab({
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs space-y-2.5 font-semibold text-slate-700">
                   <div className="flex justify-between">
                     <span>Base stay price:</span>
-                    <span>{CURRENCY} {(selectedBooking.amount - (selectedBooking.raw?.airportPickup ? 15000 : 0) - selectedBooking.tax).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span>{CURRENCY} {(selectedBooking.amount - (selectedBooking.raw?.airportPickup && selectedBooking.raw.airportPickup.status !== "CANCELLED" ? (selectedBooking.airportPickupFee || 15000) : 0) - selectedBooking.tax).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   </div>
-                  {selectedBooking.raw?.airportPickup && (
+                  {selectedBooking.raw?.airportPickup && selectedBooking.raw.airportPickup.status !== "CANCELLED" && (
                     <div className="flex justify-between text-emerald-800 font-bold">
                       <span>Additional shuttle charges:</span>
-                      <span>{CURRENCY} 15,000.00</span>
+                      <span>{CURRENCY} {(selectedBooking.airportPickupFee || 15000).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                     </div>
                   )}
                   <div className="flex justify-between">
@@ -996,8 +1072,78 @@ export default function BookingsTab({
         </>
       )}
 
-      {/* Modify stay help modal info */}
-
+      {/* Dynamic Custom Dialog Box for Single Room Cancellation */}
+      {roomToCancel && (
+        <>
+          <div 
+            className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs z-55"
+            onClick={() => setRoomToCancel(null)}
+          />
+          <div className="fixed inset-0 flex items-center justify-center z-55 p-4 animate-scaleUp">
+            <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-slate-100 shadow-2xl space-y-4">
+              <div className="flex items-center gap-2.5 text-rose-650">
+                <AlertCircle className="w-8 h-8 text-rose-600 shrink-0" />
+                <h4 className="font-serif font-bold text-sm text-slate-800">Cancel Room Reservation</h4>
+              </div>
+              <p className="text-xs text-slate-550 leading-relaxed">
+                Are you sure you want to cancel the <span className="font-bold text-slate-800">{roomToCancel.type}</span> from this stay booking?
+                <br/><br/>
+                <span className="font-bold text-rose-700">Cancellation Policy:</span> Cancellations made within 48 hours of check-in are subject to a one-night charge penalty. Cancellations prior to 48 hours are free and fully refunded.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setRoomToCancel(null)}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold cursor-pointer transition-all"
+                >
+                  Keep Room
+                </button>
+                <button
+                  onClick={confirmCancelSingleRoom}
+                  className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold cursor-pointer transition-all"
+                >
+                  Cancel Room
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+      {/* Dynamic Custom Dialog Box for Airport Pickup Cancellation */}
+      {showPickupCancelDialog && (
+        <>
+          <div 
+            className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs z-55"
+            onClick={() => setShowPickupCancelDialog(false)}
+          />
+          <div className="fixed inset-0 flex items-center justify-center z-55 p-4 animate-scaleUp">
+            <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-slate-100 shadow-2xl space-y-4">
+              <div className="flex items-center gap-2.5 text-rose-650">
+                <AlertCircle className="w-8 h-8 text-rose-600 shrink-0" />
+                <h4 className="font-serif font-bold text-sm text-slate-800">Cancel Shuttle Service</h4>
+              </div>
+              <p className="text-xs text-slate-555 leading-relaxed">
+                Are you sure you want to cancel your airport transfer pickup service? 
+                <br/><br/>
+                The transfer surcharge of <span className="font-bold text-slate-800">{CURRENCY} {(selectedBooking.airportPickupFee || 15000).toLocaleString()}</span> will be deducted and refunded back to your stay booking subtotal amount.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowPickupCancelDialog(false)}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold cursor-pointer transition-all"
+                >
+                  Keep Service
+                </button>
+                <button
+                  onClick={confirmCancelAirportPickup}
+                  className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold cursor-pointer transition-all"
+                >
+                  Cancel Shuttle
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
     </div>
   );
