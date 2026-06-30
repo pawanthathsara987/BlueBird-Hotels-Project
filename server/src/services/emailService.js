@@ -15,6 +15,8 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+const getCurrencyType = () => process.env.CURRENCY_TYPE || 'LKR';
+
 // Helper function to send emails
 export const sendEmail = async ({ to, subject, html, text }) => {
   try {
@@ -291,12 +293,12 @@ export const sendBookingConfirmationEmail = async (booking) => {
                     </tr>
                     <tr>
                       <td class="label">Total Amount Price</td>
-                      <td class="value">${Number(booking.total_price || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                      <td class="value">${getCurrencyType()} ${Number(booking.total_price || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                     </tr>
                     <tr>
                       <td class="label">Paid Amount (Advance)</td>
                       <td class="value" style="color: #065f46; font-weight: 700;">
-                        ${Number(paidAmount || Number(booking.total_price) * 0.5).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        ${getCurrencyType()} ${Number(paidAmount || Number(booking.total_price) * 0.5).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </td>
                     </tr>
                     <tr>
@@ -334,8 +336,8 @@ export const sendBookingConfirmationEmail = async (booking) => {
             <!-- Customer Support Footer -->
             <div class="footer">
               <p style="margin: 0 0 8px; font-weight: bold; color: #1f2937;">Need Assistance or Support?</p>
-              <p style="margin: 4px 0;"><strong>Phone Support Contact:</strong> +94 11 234 5678</p>
-              <p style="margin: 4px 0;"><strong>Email Support Contact:</strong> <a href="mailto:support@bluebird-hotels.com" style="color: #0f766e; text-decoration: none;">support@bluebird-hotels.com</a></p>
+              <p style="margin: 4px 0;"><strong>Phone Support Contact:</strong> ${process.env.SUPPORT_CONTACT}</p>
+              <p style="margin: 4px 0;"><strong>Email Support Contact:</strong> <a href="mailto:${process.env.SUPPORT_EMAIL}" style="color: #0f766e; text-decoration: none;">support@bluebird-hotels.com</a></p>
               <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;">
               <p style="margin: 0; font-size: 11px;">Please keep this receipt as proof of payment. We look forward to welcoming you.</p>
               <p style="margin: 4px 0 0; font-size: 11px;">&copy; ${new Date().getFullYear()} BlueBird Hotels. All rights reserved.</p>
@@ -457,14 +459,14 @@ export const sendVehicleBookingConfirmationEmail = async (options) => {
                 </div>` : ''}
                 <div class="row" style="border-top: 2px solid #e5e7eb; padding-top: 12px; margin-top: 4px;">
                   <span class="label" style="font-weight: 600; color: #1e293b;">Total Price</span>
-                  <span class="value" style="font-size: 18px; color: #0f172a;">$${Number(totalPayable || 0).toLocaleString()}</span>
+                  <span class="value" style="font-size: 18px; color: #0f172a;">${getCurrencyType()} ${Number(totalPayable || 0).toLocaleString()}</span>
                 </div>
               </div>
 
               <div class="deposit-card">
                 <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: #3b82f6; font-weight: 700;">Advance Deposit Required (50%)</div>
-                <div class="deposit-amount">$${Number(depositAmount || 0).toLocaleString()}</div>
-                <div class="balance-note">Remaining balance of <strong>$${Number(balanceAmount || 0).toLocaleString()}</strong> is payable at vehicle pickup.</div>
+                <div class="deposit-amount">${getCurrencyType()} ${Number(depositAmount || 0).toLocaleString()}</div>
+                <div class="balance-note">Remaining balance of <strong>${getCurrencyType()} ${Number(balanceAmount || 0).toLocaleString()}</strong> is payable at vehicle pickup.</div>
               </div>
 
               <div class="section" style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 16px; font-size: 13px;">
@@ -558,13 +560,13 @@ export const sendAcceptedInquiryQuoteEmail = async (inquiry, booking, options = 
                 
                 <div style="background-color: white; padding: 12px; border-radius: 6px; margin-bottom: 12px;">
                   <p style="margin: 0; font-size: 13px; color: #666;"><strong>Tour Package Standard Price:</strong></p>
-                  <p style="margin: 4px 0; font-size: 18px; font-weight: bold; color: #0f766e;">$${Number(tourBasePrice || 0).toLocaleString()}</p>
+                  <p style="margin: 4px 0; font-size: 18px; font-weight: bold; color: #0f766e;">${getCurrencyType()} ${Number(tourBasePrice || 0).toLocaleString()}</p>
                 </div>
 
                 ${tourBasePrice !== totalAmount ? `
                 <div style="background-color: #f0fdf4; padding: 12px; border-radius: 6px; margin-bottom: 12px; border-left: 4px solid #059669;">
                   <p style="margin: 0; font-size: 13px; color: #666;"><strong>Your Customized Tour Package Price:</strong></p>
-                  <p style="margin: 4px 0; font-size: 18px; font-weight: bold; color: #059669;">$${Number(totalAmount || 0).toLocaleString()}</p>
+                  <p style="margin: 4px 0; font-size: 18px; font-weight: bold; color: #059669;">${getCurrencyType()} ${Number(totalAmount || 0).toLocaleString()}</p>
                 </div>
                 ` : ''}
 
@@ -575,14 +577,14 @@ export const sendAcceptedInquiryQuoteEmail = async (inquiry, booking, options = 
                   <table style="width: 100%; font-size: 14px; margin-top: 10px;">
                     <tr>
                       <td><strong>Total Tour Package Cost:</strong></td>
-                      <td style="text-align: right;"><strong style="font-size: 16px; color: #0f766e;">$${Number(booking.totalAmount || 0).toLocaleString()}</strong></td>
+                      <td style="text-align: right;"><strong style="font-size: 16px; color: #0f766e;">${getCurrencyType()} ${Number(booking.totalAmount || 0).toLocaleString()}</strong></td>
                     </tr>
                   </table>
 
                   <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 12px 0;">
 
-                  <p style="margin: 6px 0; font-size: 13px;"><strong>📌 Advance Payment (50%):</strong> <span style="color: #059669; font-weight: bold; font-size: 15px;">$${Number(booking.depositAmount || 0).toLocaleString()}</span></p>
-                  <p style="margin: 6px 0; font-size: 13px;"><strong>📌 Remaining (50%, Due Later):</strong> <span style="font-weight: bold;">$${Number(booking.remainingAmount || 0).toLocaleString()}</span></p>
+                  <p style="margin: 6px 0; font-size: 13px;"><strong>📌 Advance Payment (50%):</strong> <span style="color: #059669; font-weight: bold; font-size: 15px;">${getCurrencyType()} ${Number(booking.depositAmount || 0).toLocaleString()}</span></p>
+                  <p style="margin: 6px 0; font-size: 13px;"><strong>📌 Remaining (50%, Due Later):</strong> <span style="font-weight: bold;">${getCurrencyType()} ${Number(booking.remainingAmount || 0).toLocaleString()}</span></p>
                 </div>
               </div>
 
@@ -719,7 +721,7 @@ export const sendCancellationEmail = async (inquiry, booking, reason) => {
               
               ${booking.refundStatus === "approved" ? `
                 <p style="margin-top: 20px; color: #059669;">
-                  <strong>✓ Your refund of $${Number(booking.refundAmount).toLocaleString()} will be processed within 5-7 business days.</strong>
+                  <strong>✓ Your refund of ${getCurrencyType()} ${Number(booking.refundAmount).toLocaleString()} will be processed within 5-7 business days.</strong>
                 </p>
               ` : `
                 <p style="margin-top: 20px; color: #dc2626;">
