@@ -404,11 +404,13 @@ const createBooking = async (req, res) => {
                 adults: actualAdults,
                 kids: actualKids,
                 board_type: clientBoardType || "Room Only",
-                status: "reserved"
+                status: "reserved",
+                price: priceDetails.totalPrice
             });
         }
 
         // Add airport pickup surcharge if enabled
+        let pickupPrice = 0;
         if (airportPickup?.enabled) {
             if (!airportPickup.pickupDate || !airportPickup.pickupTime) {
                 throw new Error("Airport pickup date and time are required");
@@ -417,7 +419,7 @@ const createBooking = async (req, res) => {
                 where: { service_Code: "AIRPORT_PICKUP", status: true },
                 transaction: t
             });
-            const pickupPrice = pickupPriceRecord ? parseFloat(pickupPriceRecord.price) : 50.00;
+            pickupPrice = pickupPriceRecord ? parseFloat(pickupPriceRecord.price) : 50.00;
             calculatedTotalPrice += pickupPrice;
         }
 
@@ -464,7 +466,8 @@ const createBooking = async (req, res) => {
                     pickup_time: airportPickup.pickupTime,
                     passenger_count: totalPassengers,
                     pickup_location: "Katunayake Airport",
-                    status: "CONFIRMED"
+                    status: "CONFIRMED",
+                    price: pickupPrice
                 },
                 { transaction: t }
             );

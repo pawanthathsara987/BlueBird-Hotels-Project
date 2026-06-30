@@ -851,6 +851,8 @@ export async function cancelSingleBookedRoom(req, res) {
         });
 
         const nightlyPrice = roomPrice ? parseFloat(roomPrice.price) : (parseFloat(booking.total_price) / nights);
+        const roomStayCost = roomEntry.price > 0 ? parseFloat(roomEntry.price) : (nightlyPrice * nights);
+        const resolvedNightlyRate = roomEntry.price > 0 ? (roomStayCost / nights) : nightlyPrice;
 
         // 6. Calculate refund/deduction according to policy (48 hours free cancellation rule)
         let refundAmount = 0;
@@ -858,12 +860,12 @@ export async function cancelSingleBookedRoom(req, res) {
 
         if (diffHrs >= 48) {
             // Free cancellation: 100% refund
-            refundAmount = nightlyPrice * nights;
+            refundAmount = roomStayCost;
             policyApplied = "Free cancellation (>= 48h prior). 100% refunded.";
         } else {
             // Cancellation within 48h: Subject to 1-night charge penalty
             const refundableNights = Math.max(0, nights - 1);
-            refundAmount = nightlyPrice * refundableNights;
+            refundAmount = resolvedNightlyRate * refundableNights;
             policyApplied = "Late cancellation (< 48h prior). 1-night penalty charge applied.";
         }
 
@@ -964,12 +966,8 @@ export async function cancelAirportPickup(req, res) {
         // 3. Update pickup status to CANCELLED
         await pickup.update({ status: "CANCELLED" }, { transaction: t });
 
-        // 4. Retrieve the airport pickup price from ServiceCharge
-        const pickupPriceRecord = await ServiceCharge.findOne({
-            where: { service_Code: "AIRPORT_PICKUP", status: true },
-            transaction: t
-        });
-        const pickupPrice = pickupPriceRecord ? parseFloat(pickupPriceRecord.price) : 15000.00;
+        // 4. Retrieve the airport pickup price
+        const pickupPrice = pickup.price > 0 ? parseFloat(pickup.price) : 15000.00;
 
         // 5. Subtract price from booking total
         const currentTotal = parseFloat(booking.total_price);

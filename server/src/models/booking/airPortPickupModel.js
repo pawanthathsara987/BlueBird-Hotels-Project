@@ -42,6 +42,11 @@ AirPortPickup.init(
             allowNull: false,
             defaultValue: "CONFIRMED",
         },
+        price: {
+            type: DataTypes.DOUBLE,
+            allowNull: false,
+            defaultValue: 0.00,
+        },
     },
     {
         sequelize,

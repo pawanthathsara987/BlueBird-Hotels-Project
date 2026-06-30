@@ -21,6 +21,10 @@ export default function BookingsTab({
   const [roomToCancel, setRoomToCancel] = useState(null);
   const [showPickupCancelDialog, setShowPickupCancelDialog] = useState(false);
 
+  const selectedPickupPrice = selectedBooking?.raw?.airportPickup?.price > 0 
+    ? parseFloat(selectedBooking.raw.airportPickup.price) 
+    : (selectedBooking?.airportPickupFee || 15000);
+
   const confirmCancelSingleRoom = async () => {
     if (!roomToCancel) return;
     const bookedRoomId = roomToCancel.id;
@@ -993,12 +997,12 @@ export default function BookingsTab({
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs space-y-2.5 font-semibold text-slate-700">
                   <div className="flex justify-between">
                     <span>Base stay price:</span>
-                    <span>{CURRENCY} {(selectedBooking.amount - (selectedBooking.raw?.airportPickup && selectedBooking.raw.airportPickup.status !== "CANCELLED" ? (selectedBooking.airportPickupFee || 15000) : 0) - selectedBooking.tax).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span>{CURRENCY} {(selectedBooking.amount - (selectedBooking.raw?.airportPickup && selectedBooking.raw.airportPickup.status !== "CANCELLED" ? selectedPickupPrice : 0) - selectedBooking.tax).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   </div>
                   {selectedBooking.raw?.airportPickup && selectedBooking.raw.airportPickup.status !== "CANCELLED" && (
                     <div className="flex justify-between text-emerald-800 font-bold">
                       <span>Additional shuttle charges:</span>
-                      <span>{CURRENCY} {(selectedBooking.airportPickupFee || 15000).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span>{CURRENCY} {selectedPickupPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                     </div>
                   )}
                   <div className="flex justify-between">
@@ -1124,7 +1128,7 @@ export default function BookingsTab({
               <p className="text-xs text-slate-555 leading-relaxed">
                 Are you sure you want to cancel your airport transfer pickup service? 
                 <br/><br/>
-                The transfer surcharge of <span className="font-bold text-slate-800">{CURRENCY} {(selectedBooking.airportPickupFee || 15000).toLocaleString()}</span> will be deducted and refunded back to your stay booking subtotal amount.
+                The transfer surcharge of <span className="font-bold text-slate-800">{CURRENCY} {selectedPickupPrice.toLocaleString()}</span> will be deducted and refunded back to your stay booking subtotal amount.
               </p>
               <div className="flex gap-2">
                 <button
