@@ -199,14 +199,13 @@ export const updateBookingStatus = async (req, res) => {
     await booking.update({ status }, { transaction: t });
 
     // Auto-status logic for Vehicle
-    if (status === 'ongoing') {
-      await Vehicle.update({ status: 'booked' }, { where: { id: booking.vehicleId }, transaction: t });
-    } else if (status === 'returned') {
+    // Note: 'ongoing' does NOT change vehicle status — availability is date-based
+    if (status === 'returned') {
       await Vehicle.update({ status: 'pending_inspection' }, { where: { id: booking.vehicleId }, transaction: t });
     } else if (status === 'cancelled') {
-      // If cancelled, ensure it is available if it was booked/pending_inspection
+      // If cancelled while pending inspection, reset to available
       const vehicle = await Vehicle.findByPk(booking.vehicleId, { transaction: t });
-      if (vehicle && ['booked', 'pending_inspection'].includes(vehicle.status)) {
+      if (vehicle && vehicle.status === 'pending_inspection') {
         await vehicle.update({ status: 'available' }, { transaction: t });
       }
     }
