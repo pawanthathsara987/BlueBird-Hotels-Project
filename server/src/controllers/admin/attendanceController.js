@@ -74,3 +74,17 @@ export const updateAttendance = async (req, res) => {
     }
 };
 
+export const getStaffAttendanceHistory = async (req, res) => {
+    const { staffId } = req.params;
+    try {
+        const result = await attendanceService.getStaffAttendanceHistory(staffId);
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Failed to fetch staff attendance history"
+        });
+    }
+};
+
