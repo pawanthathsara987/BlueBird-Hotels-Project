@@ -403,6 +403,7 @@ const createBooking = async (req, res) => {
                 actualKidAges,
                 adults: actualAdults,
                 kids: actualKids,
+                board_type: clientBoardType || "Room Only",
                 status: "reserved"
             });
         }

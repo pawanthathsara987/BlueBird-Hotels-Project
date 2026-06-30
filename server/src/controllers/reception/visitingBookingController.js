@@ -202,7 +202,8 @@ const createVisitorBooking = async (req, res) => {
                 checkIn,
                 checkOut,
                 actualAdults = 1,
-                actualKids = 0
+                actualKids = 0,
+                boardType
             } = roomData;
 
             if (!roomId || !checkIn || !checkOut) {
@@ -245,6 +246,7 @@ const createVisitorBooking = async (req, res) => {
                 checkOut,
                 adults: actualAdults,
                 kids: actualKids,
+                board_type: boardType || "Room Only",
                 status: "reserved"
             });
         }
