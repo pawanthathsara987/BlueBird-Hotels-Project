@@ -26,9 +26,10 @@ const RoomSelector = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const hasBackSelectedRooms = location.state?.selectedRooms && location.state.selectedRooms.length > 0;
+  const isComingFromLogin = location.state?.from === "/booking";
   const [detailingRoom, setDetailingRoom] = useState(null);
   const [dateRange, setDateRange] = useState(() => {
-    const tempSaved = hasBackSelectedRooms ? localStorage.getItem("tempSavedBookingState") : null;
+    const tempSaved = (hasBackSelectedRooms || isComingFromLogin) ? localStorage.getItem("tempSavedBookingState") : null;
     if (tempSaved) {
       try {
         const parsed = JSON.parse(tempSaved);
@@ -70,7 +71,7 @@ const RoomSelector = () => {
 
   // Global settings
   const [nationality, setNationality] = useState(() => {
-    const tempSaved = hasBackSelectedRooms ? localStorage.getItem("tempSavedBookingState") : null;
+    const tempSaved = (hasBackSelectedRooms || isComingFromLogin) ? localStorage.getItem("tempSavedBookingState") : null;
     if (tempSaved) {
       try {
         const parsed = JSON.parse(tempSaved);
@@ -84,7 +85,7 @@ const RoomSelector = () => {
 
   // Extra booking options (Personal requests & airport pickup)
   const [personalRequest, setPersonalRequest] = useState(() => {
-    if (!hasBackSelectedRooms) return "";
+    if (!hasBackSelectedRooms && !isComingFromLogin) return "";
     const tempSaved = localStorage.getItem("tempSavedBookingState");
     if (tempSaved) {
       try {
@@ -98,7 +99,7 @@ const RoomSelector = () => {
   });
 
   const [airportPickupEnabled, setAirportPickupEnabled] = useState(() => {
-    if (!hasBackSelectedRooms) return false;
+    if (!hasBackSelectedRooms && !isComingFromLogin) return false;
     const tempSaved = localStorage.getItem("tempSavedBookingState");
     if (tempSaved) {
       try {
@@ -117,7 +118,7 @@ const RoomSelector = () => {
   });
 
   const [pickupTime, setPickupTime] = useState(() => {
-    if (!hasBackSelectedRooms) return "12:00";
+    if (!hasBackSelectedRooms && !isComingFromLogin) return "12:00";
     const tempSaved = localStorage.getItem("tempSavedBookingState");
     if (tempSaved) {
       try {
@@ -421,7 +422,7 @@ const RoomSelector = () => {
 
   // Dynamic added rooms list (Initialize with one default room using selected board type, initially unconfigured or restored from location state)
   const [addedRooms, setAddedRooms] = useState(() => {
-    const tempSaved = hasBackSelectedRooms ? localStorage.getItem("tempSavedBookingState") : null;
+    const tempSaved = (hasBackSelectedRooms || isComingFromLogin) ? localStorage.getItem("tempSavedBookingState") : null;
     if (tempSaved) {
       try {
         const parsed = JSON.parse(tempSaved);
@@ -478,13 +479,13 @@ const RoomSelector = () => {
 
   // Clear previous booking details from localStorage if starting a fresh booking
   useEffect(() => {
-    if (!hasBackSelectedRooms) {
+    if (!hasBackSelectedRooms && !isComingFromLogin) {
       localStorage.removeItem("tempSavedBookingState");
       localStorage.removeItem("personalRequest");
       localStorage.removeItem("airportPickUp");
       localStorage.removeItem("bookingDetails");
     }
-  }, [hasBackSelectedRooms]);
+  }, [hasBackSelectedRooms, isComingFromLogin]);
 
   // Add Room Button Handler
   const handleAddNewRoom = () => {
@@ -1507,7 +1508,7 @@ const RoomSelector = () => {
                           <div className="flex justify-between">
                             <span>Base Rate:</span>
                             <span>
-                              ${(() => {
+                              {process.env.CURRENCY_TYPE || "LKR"} {(() => {
                                 const typeObj = roomTypes.find(t => t.name === room.roomType);
                                 return typeObj ? Number(typeObj.price.replace(/[^0-9.]/g, '')) : 0;
                               })()}
@@ -1516,7 +1517,7 @@ const RoomSelector = () => {
                           <div className="flex justify-between">
                             <span>{room.boardType} Add-on:</span>
                             <span>
-                              +${(() => {
+                              +{process.env.CURRENCY_TYPE || "LKR"} {(() => {
                                 const addons = { "room only": 0, "bed & breakfast": 40, "half board": 90, "full board": 150 };
                                 const normalized = (room.boardType || "Room Only").toLowerCase();
                                 return addons[normalized] !== undefined ? addons[normalized] : 0;

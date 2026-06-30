@@ -15,6 +15,8 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+const getCurrencyType = () => process.env.CURRENCY_TYPE || 'LKR';
+
 // Helper function to send emails
 export const sendEmail = async ({ to, subject, html, text }) => {
   try {

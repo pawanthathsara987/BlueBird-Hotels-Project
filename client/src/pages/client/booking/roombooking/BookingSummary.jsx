@@ -381,7 +381,6 @@ const BookingSummary = () => {
                                 disabled={isProcessing}
                                 className="w-full rounded-xl bg-emerald-700 px-6 py-3 text-sm font-extrabold uppercase tracking-[0.14em] text-white transition hover:bg-emerald-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
-                                <DollarSign className="h-5 w-5" />
                                 {isProcessing ? 'Processing...' : 'Proceed to Payment'}
                             </button>
 
