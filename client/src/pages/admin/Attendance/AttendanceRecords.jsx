@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { FaSearch, FaTimes, FaQrcode, FaArrowLeft, FaArrowRight, FaCalendarAlt, FaCheckCircle, FaExclamationCircle, FaUserClock } from "react-icons/fa";
+import { FaSearch, FaTimes, FaQrcode, FaArrowLeft, FaArrowRight, FaCalendarAlt, FaCheckCircle, FaExclamationCircle, FaUserClock, FaEdit } from "react-icons/fa";
 import { getAttendanceRecords } from "../../../utils/attendanceService";
 import Loader from "../../../components/Loader";
 import toast from "react-hot-toast";
+import EditAttendanceModal from "./EditAttendanceModal";
 
 export default function AttendanceRecords() {
     const [records, setRecords] = useState([]);
@@ -18,6 +19,10 @@ export default function AttendanceRecords() {
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
     const limit = 10;
+
+    // Modal states
+    const [selectedAttendanceId, setSelectedAttendanceId] = useState(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     // Fetch records
     const fetchRecords = async () => {
@@ -219,6 +224,7 @@ export default function AttendanceRecords() {
                                             <th className="pb-4 pt-2">LATE MINUTES</th>
                                             <th className="pb-4 pt-2">WORKED TIME</th>
                                             <th className="pb-4 pt-2 text-center">STATUS</th>
+                                            <th className="pb-4 pt-2 text-center">ACTIONS</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
@@ -284,11 +290,26 @@ export default function AttendanceRecords() {
                                                             {record.status}
                                                         </span>
                                                     </td>
+
+                                                    {/* Actions */}
+                                                    <td className="py-4.5 text-center">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setSelectedAttendanceId(record.attendanceId);
+                                                                setIsEditModalOpen(true);
+                                                            }}
+                                                            className="inline-flex items-center justify-center p-2 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50 text-slate-500 hover:text-blue-600 transition shadow-sm hover:shadow active:scale-95 cursor-pointer"
+                                                            title="Edit Attendance"
+                                                        >
+                                                            <FaEdit className="text-xs" />
+                                                        </button>
+                                                    </td>
                                                 </tr>
                                             ))
                                         ) : (
                                             <tr>
-                                                <td colSpan="7" className="py-12 text-center text-sm font-semibold text-slate-400">
+                                                <td colSpan="8" className="py-12 text-center text-sm font-semibold text-slate-400">
                                                     No attendance logs found matching your criteria.
                                                 </td>
                                             </tr>
@@ -343,6 +364,16 @@ export default function AttendanceRecords() {
                     )}
                 </div>
             </div>
+            
+            <EditAttendanceModal
+                isOpen={isEditModalOpen}
+                onClose={() => {
+                    setIsEditModalOpen(false);
+                    setSelectedAttendanceId(null);
+                }}
+                attendanceId={selectedAttendanceId}
+                onSuccess={fetchRecords}
+            />
         </div>
     );
 }
