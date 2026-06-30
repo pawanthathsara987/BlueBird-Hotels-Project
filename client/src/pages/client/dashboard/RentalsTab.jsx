@@ -109,7 +109,7 @@ export default function RentalsTab({
                 <div className="flex justify-between items-center gap-4 pt-3 border-t border-slate-100 mt-2">
                   <div>
                     <span className="text-[9px] text-slate-400 font-bold block">RENTAL CHARGE</span>
-                    <span className="text-base font-serif font-semibold text-blue-950">${v.price.toLocaleString()} USD</span>
+                    <span className="text-base font-serif font-semibold text-blue-950">{process.env.CURRENCY_TYPE || 'LKR'} {v.price.toLocaleString()}</span>
                   </div>
                   <button
                     onClick={() => {

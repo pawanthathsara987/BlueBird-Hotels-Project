@@ -64,7 +64,8 @@ const formatStatusText = (status) => {
 
 const formatMoney = (value) => {
   const amount = Number(value);
-  return Number.isFinite(amount) ? `$${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "$0.00";
+  const currency = process.env.CURRENCY_TYPE || 'LKR';
+  return Number.isFinite(amount) ? `${currency} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : `${currency} 0.00`;
 };
 
 // Valid status transitions — must match the backend state machine

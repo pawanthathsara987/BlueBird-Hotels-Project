@@ -242,7 +242,7 @@ export default function TourDetailsPage() {
         <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-white/10">
           {[
             { icon: <Users size={15} />, label: 'Group size', value: tour?.groupSize ? `Up to ${tour.groupSize}` : '—' },
-            { icon: <Tag size={15} />,   label: 'From',       value: `$${Number(finalPrice).toLocaleString()}` },
+            { icon: <Tag size={15} />,   label: 'From',       value: `${process.env.CURRENCY_TYPE || 'LKR'} ${Number(finalPrice).toLocaleString()}` },
             { icon: <Star size={15} />,  label: 'Status',     value: isActive ? 'Available' : 'Unavailable', cls: isActive ? 'text-blue-300' : 'text-red-300' },
             { icon: <Clock size={15} />, label: 'Duration',   value: tour?.duration ? `${tour.duration} ${tour?.durationType === 'hours' ? 'hours' : 'days'}` : '—' },
           ].map((s, i) => (
@@ -372,11 +372,11 @@ export default function TourDetailsPage() {
             {/* Header */}
             <div className="bg-blue-900 px-6 py-5">
               <div className="flex items-baseline gap-2 flex-wrap">
-                <span className="text-3xl font-bold text-white">${Number(finalPrice).toLocaleString()}</span>
+                <span className="text-3xl font-bold text-white">{process.env.CURRENCY_TYPE || 'LKR'} {Number(finalPrice).toLocaleString()}</span>
                 <span className="text-xs text-white/50">/ package</span>
                 {tour?.discount > 0 && (
                   <>
-                    <span className="text-xs text-white/35 line-through">${Number(tour.price).toLocaleString()}</span>
+                    <span className="text-xs text-white/35 line-through">{process.env.CURRENCY_TYPE || 'LKR'} {Number(tour.price).toLocaleString()}</span>
                     <span className="ml-auto bg-yellow-400 text-blue-900 text-[10px] font-bold px-2.5 py-1 rounded-full">−{tour.discount}%</span>
                   </>
                 )}
@@ -400,17 +400,17 @@ export default function TourDetailsPage() {
               <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 space-y-2.5">
                 <div className="flex justify-between text-sm text-gray-500">
                   <span>Tour package price</span>
-                  <span className="font-semibold text-gray-800">${Number(finalPrice).toLocaleString()}</span>
+                  <span className="font-semibold text-gray-800">{process.env.CURRENCY_TYPE || 'LKR'} {Number(finalPrice).toLocaleString()}</span>
                 </div>
                 {tour?.discount > 0 && (
                   <div className="flex justify-between text-sm text-blue-600">
                     <span>Discount ({tour.discount}%)</span>
-                    <span className="font-semibold">−${(tour.price * tour.discount / 100).toLocaleString()}</span>
+                    <span className="font-semibold">−{process.env.CURRENCY_TYPE || 'LKR'} {(tour.price * tour.discount / 100).toLocaleString()}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-baseline pt-3 border-t border-gray-200">
                   <span className="text-sm font-bold text-gray-700">Total</span>
-                  <span className="text-2xl font-bold text-blue-800">${Number(total).toLocaleString()}</span>
+                  <span className="text-2xl font-bold text-blue-800">{process.env.CURRENCY_TYPE || 'LKR'} {Number(total).toLocaleString()}</span>
                 </div>
 
                 <div className="mt-3">
