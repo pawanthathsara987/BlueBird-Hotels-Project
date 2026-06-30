@@ -4,6 +4,7 @@ import { CheckCircle, ArrowLeft, Home, Calendar, Users } from "lucide-react";
 import { format } from "date-fns";
 
 const BookingConfirmation = () => {
+  const CURRENCY = process.env.CURRENCY_TYPE || "LKR";
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -146,11 +147,11 @@ const BookingConfirmation = () => {
             <div className="text-right">
               {totalOriginal > totalDiscounted && (
                 <p className="text-xs text-stone-400 line-through">
-                  ${totalOriginal.toFixed(2)}
+                  {CURRENCY} {totalOriginal.toFixed(2)}
                 </p>
               )}
               <span className="font-bold text-emerald-700 text-lg">
-                ${totalDiscounted.toFixed(2)}
+                {CURRENCY} {totalDiscounted.toFixed(2)}
               </span>
             </div>
           </div>
@@ -159,7 +160,7 @@ const BookingConfirmation = () => {
             <div className="flex justify-between items-center">
               <span className="text-stone-600 font-medium">You saved</span>
               <span className="font-bold text-emerald-700">
-                ${totalSavings.toFixed(2)}
+                {CURRENCY} {totalSavings.toFixed(2)}
               </span>
             </div>
           )}
@@ -187,7 +188,7 @@ const BookingConfirmation = () => {
                       <h3 className="font-bold text-stone-900">
                         {room.packageName || `Room ${index + 1}`}
                       </h3>
-                      <span className="text-emerald-700 font-bold">${room.totalPrice?.toFixed(2) || "0.00"}</span>
+                      <span className="text-emerald-700 font-bold">{CURRENCY} {room.totalPrice?.toFixed(2) || "0.00"}</span>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                       <div>
@@ -242,7 +243,7 @@ const BookingConfirmation = () => {
                       <div className="mt-3 flex items-center justify-between text-sm">
                         <span className="text-stone-500">Original total</span>
                         <span className="text-stone-400 line-through">
-                          ${Number(room.originalTotalPrice || 0).toFixed(2)}
+                          {CURRENCY} {Number(room.originalTotalPrice || 0).toFixed(2)}
                         </span>
                       </div>
                     )}
