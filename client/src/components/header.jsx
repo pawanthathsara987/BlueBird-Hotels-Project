@@ -127,7 +127,7 @@ export default function Header() {
   const leftLinks = [
     { label: "HOME", to: "/" },
     { label: "HOTELS", to: "/rooms" },
-    { label: "PAGES", to: "/" },
+    { label: "FAQ", to: "/faq" },
   ];
   const rightLinks = [
     { label: "TRAVELS", to: "/booking/tour" },
@@ -379,7 +379,7 @@ export default function Header() {
               {[
                 { label: "Home", to: "/" },
                 { label: "Hotels", to: "/rooms" },
-                { label: "Pages", to: "/" },
+                { label: "FAQ", to: "/faq" },
                 { label: "Travels", to: "/booking/tour" },
                 { label: "Vehicles", to: "/vehicles" },
                 { label: "Gallery", to: "/" },

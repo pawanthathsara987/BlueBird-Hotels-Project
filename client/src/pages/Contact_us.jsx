@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import Header from "../components/header";
 import Footer from "../components/footer";
 
@@ -146,8 +147,8 @@ export default function ContactPage() {
                         >
                             How can we help?
                         </h2>
-                        <p className="text-stone-400 text-sm mb-7">
-                            We'd love to hear from you. Send us a message and we'll respond as soon as possible.
+                        <p className="text-stone-500 text-sm mb-7">
+                            We'd love to hear from you. Check out our <Link to="/faq" className="text-sky-700 font-bold hover:underline">FAQ Page</Link> for instant answers, or drop us a message below.
                         </p>
 
                         {submitted ? (

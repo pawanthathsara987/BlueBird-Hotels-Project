@@ -6,6 +6,7 @@ import { jwtDecode } from 'jwt-decode';
 import { toast } from 'react-hot-toast';
 
 const RoomPayment = () => {
+  const CURRENCY = process.env.CURRENCY_TYPE || "LKR";
   const location = useLocation();
   const navigate = useNavigate();
   const bookingData = location.state?.bookingData || null;
@@ -356,7 +357,7 @@ const RoomPayment = () => {
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-stone-500 text-[10px] font-bold uppercase tracking-wider">Pay Today</p>
-                    <p className="text-3xl font-black text-emerald-800">${advanceAmount.toFixed(2)}</p>
+                    <p className="text-3xl font-black text-emerald-800">{CURRENCY} {advanceAmount.toFixed(2)}</p>
                   </div>
                 </div>
 
@@ -374,7 +375,7 @@ const RoomPayment = () => {
                     ) : (
                       <>
                         <Lock className="h-5 w-5" />
-                        Proceed to Pay ${advanceAmount.toFixed(2)} with PayHere
+                        Proceed to Pay {CURRENCY} {advanceAmount.toFixed(2)} with PayHere
                       </>
                     )}
                   </button>
@@ -456,26 +457,26 @@ const RoomPayment = () => {
                   {originalTotalAmount > totalAmount && (
                     <div className="flex justify-between text-sm">
                       <span className="text-stone-600">Original Total:</span>
-                      <span className="text-stone-400 line-through">${originalTotalAmount.toFixed(2)}</span>
+                      <span className="text-stone-400 line-through">{CURRENCY} {originalTotalAmount.toFixed(2)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm">
                     <span className="text-stone-600">Subtotal:</span>
-                    <span className="text-stone-900">${totalAmount.toFixed(2)}</span>
+                    <span className="text-stone-900">{CURRENCY} {totalAmount.toFixed(2)}</span>
                   </div>
                   {totalSavings > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-stone-600">Discount Savings:</span>
-                      <span className="font-semibold text-emerald-700">-${totalSavings.toFixed(2)}</span>
+                      <span className="font-semibold text-emerald-700">-{CURRENCY} {totalSavings.toFixed(2)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm">
                     <span className="text-stone-600">Advance (50%):</span>
-                    <span className="font-semibold text-emerald-700">${advanceAmount.toFixed(2)}</span>
+                    <span className="font-semibold text-emerald-700">{CURRENCY} {advanceAmount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-stone-600">Due at check-in:</span>
-                    <span className="font-semibold text-stone-900">${remainingAmount.toFixed(2)}</span>
+                    <span className="font-semibold text-stone-900">{CURRENCY} {remainingAmount.toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -484,9 +485,9 @@ const RoomPayment = () => {
                     <span className="font-semibold text-stone-900">Total Amount:</span>
                     <div className="text-right">
                       {originalTotalAmount > totalAmount && (
-                        <p className="text-xs text-stone-400 line-through">${originalTotalAmount.toFixed(2)}</p>
+                        <p className="text-xs text-stone-400 line-through">{CURRENCY} {originalTotalAmount.toFixed(2)}</p>
                       )}
-                      <span className="text-2xl font-bold text-emerald-700">${totalAmount.toFixed(2)}</span>
+                      <span className="text-2xl font-bold text-emerald-700">{CURRENCY} {totalAmount.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>

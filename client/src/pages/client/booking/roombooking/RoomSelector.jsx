@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { DateRange } from "react-date-range";
 import { addDays, format } from "date-fns";
-import { Plus, Minus, Calendar, Users, Globe, ChevronDown, ChevronLeft, ChevronRight, Info, Sparkles, Coffee, Utensils, Check, Moon, ArrowRight, Trash2, Lock, Unlock, Car, Clock, ClipboardList } from "lucide-react";
+import { Plus, Minus, Calendar, Users, Globe, ChevronDown, ChevronLeft, ChevronRight, Info, Sparkles, Coffee, Utensils, Check, Moon, ArrowRight, Trash2, Lock, Unlock, Car, Clock, ClipboardList, MapPin } from "lucide-react";
 import toast from "react-hot-toast";
 import RoomDetailsModal from "./RoomDetailsModal";
 import { jwtDecode } from "jwt-decode";
@@ -25,9 +25,11 @@ const getBoardTypeColor = (type) => {
 const RoomSelector = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const hasBackSelectedRooms = location.state?.selectedRooms && location.state.selectedRooms.length > 0;
+  const isComingFromLogin = location.state?.from === "/booking";
   const [detailingRoom, setDetailingRoom] = useState(null);
   const [dateRange, setDateRange] = useState(() => {
-    const tempSaved = localStorage.getItem("tempSavedBookingState");
+    const tempSaved = (hasBackSelectedRooms || isComingFromLogin) ? localStorage.getItem("tempSavedBookingState") : null;
     if (tempSaved) {
       try {
         const parsed = JSON.parse(tempSaved);
@@ -69,7 +71,7 @@ const RoomSelector = () => {
 
   // Global settings
   const [nationality, setNationality] = useState(() => {
-    const tempSaved = localStorage.getItem("tempSavedBookingState");
+    const tempSaved = (hasBackSelectedRooms || isComingFromLogin) ? localStorage.getItem("tempSavedBookingState") : null;
     if (tempSaved) {
       try {
         const parsed = JSON.parse(tempSaved);
@@ -83,6 +85,7 @@ const RoomSelector = () => {
 
   // Extra booking options (Personal requests & airport pickup)
   const [personalRequest, setPersonalRequest] = useState(() => {
+    if (!hasBackSelectedRooms && !isComingFromLogin) return "";
     const tempSaved = localStorage.getItem("tempSavedBookingState");
     if (tempSaved) {
       try {
@@ -96,6 +99,7 @@ const RoomSelector = () => {
   });
 
   const [airportPickupEnabled, setAirportPickupEnabled] = useState(() => {
+    if (!hasBackSelectedRooms && !isComingFromLogin) return false;
     const tempSaved = localStorage.getItem("tempSavedBookingState");
     if (tempSaved) {
       try {
@@ -114,6 +118,7 @@ const RoomSelector = () => {
   });
 
   const [pickupTime, setPickupTime] = useState(() => {
+    if (!hasBackSelectedRooms && !isComingFromLogin) return "12:00";
     const tempSaved = localStorage.getItem("tempSavedBookingState");
     if (tempSaved) {
       try {
@@ -335,7 +340,7 @@ const RoomSelector = () => {
               kidsAllow: dbKidsAllow,
               image: rt.image_url,
               images: [rt.image_url],
-              price: `$${priceVal}`,
+              price: `${process.env.CURRENCY_TYPE || "LKR"} ${priceVal}`,
               description,
               tagline,
               roomSize: size,
@@ -391,11 +396,23 @@ const RoomSelector = () => {
 
   // Helper to fetch airport pickup price dynamically from otherPrices state
   const getAirportPickupPrice = () => {
-    const item = otherPrices.find(op => op.item_name.toLowerCase() === "airport pickup");
+    const item = otherPrices.find(op => {
+      if (op.service_Code) {
+        return op.service_Code === "AIRPORT_PICKUP";
+      }
+      const name = op.service_name || op.item_name || "";
+      return name.toLowerCase() === "airport pickup";
+    });
     return item ? parseFloat(item.price) : 50.00;
   };
 
-  const hasAirportPickup = otherPrices.some(op => op.item_name.toLowerCase() === "airport pickup");
+  const hasAirportPickup = otherPrices.some(op => {
+    if (op.service_Code) {
+      return op.service_Code === "AIRPORT_PICKUP";
+    }
+    const name = op.service_name || op.item_name || "";
+    return name.toLowerCase() === "airport pickup";
+  });
 
   useEffect(() => {
     if (otherPrices.length > 0 && !hasAirportPickup) {
@@ -405,7 +422,7 @@ const RoomSelector = () => {
 
   // Dynamic added rooms list (Initialize with one default room using selected board type, initially unconfigured or restored from location state)
   const [addedRooms, setAddedRooms] = useState(() => {
-    const tempSaved = localStorage.getItem("tempSavedBookingState");
+    const tempSaved = (hasBackSelectedRooms || isComingFromLogin) ? localStorage.getItem("tempSavedBookingState") : null;
     if (tempSaved) {
       try {
         const parsed = JSON.parse(tempSaved);
@@ -459,6 +476,16 @@ const RoomSelector = () => {
       localStorage.removeItem("tempSavedBookingState");
     }
   }, []);
+
+  // Clear previous booking details from localStorage if starting a fresh booking
+  useEffect(() => {
+    if (!hasBackSelectedRooms && !isComingFromLogin) {
+      localStorage.removeItem("tempSavedBookingState");
+      localStorage.removeItem("personalRequest");
+      localStorage.removeItem("airportPickUp");
+      localStorage.removeItem("bookingDetails");
+    }
+  }, [hasBackSelectedRooms, isComingFromLogin]);
 
   // Add Room Button Handler
   const handleAddNewRoom = () => {
@@ -1166,7 +1193,7 @@ const RoomSelector = () => {
                     <h4 className="text-stone-800 font-extrabold text-base sm:text-lg tracking-tight flex items-center gap-2">
                       <span>{room.roomType}</span>
                       <span className="text-emerald-850 bg-emerald-50 border border-emerald-250/60 px-2 py-0.5 rounded-lg text-xs font-extrabold tracking-wide">
-                        ${room.price} / night
+                        {process.env.CURRENCY_TYPE || "LKR"} {room.price} / night
                       </span>
                     </h4>
 
@@ -1199,7 +1226,7 @@ const RoomSelector = () => {
                         className="w-full h-full object-cover"
                       />
                       <div className="absolute bottom-1 left-1 bg-stone-950/80 text-white text-xs font-black px-2 py-0.5 rounded backdrop-blur-3xs">
-                        ${room.price}
+                        {process.env.CURRENCY_TYPE || "LKR"} {room.price}
                       </div>
                     </div>
                   )}
@@ -1481,7 +1508,7 @@ const RoomSelector = () => {
                           <div className="flex justify-between">
                             <span>Base Rate:</span>
                             <span>
-                              ${(() => {
+                              {process.env.CURRENCY_TYPE || "LKR"} {(() => {
                                 const typeObj = roomTypes.find(t => t.name === room.roomType);
                                 return typeObj ? Number(typeObj.price.replace(/[^0-9.]/g, '')) : 0;
                               })()}
@@ -1490,7 +1517,7 @@ const RoomSelector = () => {
                           <div className="flex justify-between">
                             <span>{room.boardType} Add-on:</span>
                             <span>
-                              +${(() => {
+                              +{process.env.CURRENCY_TYPE || "LKR"} {(() => {
                                 const addons = { "room only": 0, "bed & breakfast": 40, "half board": 90, "full board": 150 };
                                 const normalized = (room.boardType || "Room Only").toLowerCase();
                                 return addons[normalized] !== undefined ? addons[normalized] : 0;
@@ -1501,7 +1528,7 @@ const RoomSelector = () => {
                         <div className="pt-2 border-t border-emerald-200/35 flex items-center justify-between">
                           <span className="text-xs font-black text-emerald-850">Total Nightly Rate:</span>
                           <span className="font-black text-emerald-900 text-sm sm:text-base">
-                            ${room.price} / night
+                            {process.env.CURRENCY_TYPE || "LKR"} {room.price} / night
                           </span>
                         </div>
                       </div>
@@ -1697,13 +1724,18 @@ const RoomSelector = () => {
 
                   {/* Surcharge Badge */}
                   <span className="text-xs font-black text-emerald-850 bg-emerald-50 border border-emerald-200/60 px-2.5 py-1 rounded-lg">
-                    +${getAirportPickupPrice().toFixed(2)} / trip
+                    +{process.env.CURRENCY_TYPE || "LKR"} {getAirportPickupPrice().toFixed(2)} / trip
                   </span>
                 </div>
 
                 <p className="text-xs text-stone-500 leading-relaxed font-medium mb-4">
                   A private chauffeur will meet you at the terminal arrivals lobby with a custom name board and drive you directly to BlueBird Hotels.
                 </p>
+
+                <div className="flex items-center gap-2 mb-4 text-xs text-stone-600 bg-stone-50 border border-stone-200/60 p-2.5 rounded-xl font-bold">
+                  <MapPin className="w-4 h-4 text-emerald-800" />
+                  <span>Pickup Location: <strong className="text-stone-850">Katunayake Airport (Fixed)</strong></span>
+                </div>
 
                 {/* Shuttle Schedule Inputs */}
                 {airportPickupEnabled && (
@@ -1836,21 +1868,21 @@ const RoomSelector = () => {
             <div className="flex flex-col items-end sm:items-start text-right sm:text-left bg-stone-50 border border-stone-200/50 px-4.5 py-2.5 rounded-2xl shadow-3xs animate-fadeIn shrink-0">
               <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-stone-400 mb-0.5">Est. Total Nightly Rate</span>
               <span className="text-emerald-900 font-black text-lg sm:text-xl tracking-tight">
-                ${totalNightlyRate} <span className="text-xs font-bold text-stone-450">/ night</span>
+                {process.env.CURRENCY_TYPE || "LKR"} {totalNightlyRate} <span className="text-xs font-bold text-stone-450">/ night</span>
               </span>
             </div>
             {airportPickupEnabled && (
               <div className="flex flex-col items-end sm:items-start text-right sm:text-left bg-emerald-50/40 border border-emerald-250/60 px-4.5 py-2.5 rounded-2xl shadow-3xs animate-fadeIn shrink-0">
                 <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-emerald-800 mb-0.5">Shuttle Surcharge</span>
                 <span className="text-emerald-950 font-black text-lg sm:text-xl tracking-tight">
-                  +${getAirportPickupPrice().toFixed(2)} <span className="text-xs font-bold text-stone-450">one-time</span>
+                  +{process.env.CURRENCY_TYPE || "LKR"} {getAirportPickupPrice().toFixed(2)} <span className="text-xs font-bold text-stone-450">one-time</span>
                 </span>
               </div>
             )}
             <div className="flex flex-col items-end sm:items-start text-right sm:text-left bg-emerald-800 text-white border border-emerald-900/15 px-4.5 py-2.5 rounded-2xl shadow-[0_6px_16px_rgba(6,95,70,0.18)] animate-fadeIn shrink-0">
               <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-emerald-200 mb-0.5">Total for {getStayNights()} {getStayNights() === 1 ? 'Night' : 'Nights'}</span>
               <span className="font-black text-lg sm:text-xl tracking-tight text-white">
-                ${(totalNightlyRate * getStayNights() + (airportPickupEnabled ? getAirportPickupPrice() : 0)).toFixed(2)}
+                {process.env.CURRENCY_TYPE || "LKR"} {(totalNightlyRate * getStayNights() + (airportPickupEnabled ? getAirportPickupPrice() : 0)).toFixed(2)}
               </span>
             </div>
           </div>
