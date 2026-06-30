@@ -16,3 +16,11 @@ export const getDailyAttendanceStats = () => {
     return API.get("/attendance/daily-stats");
 };
 
+export const getAttendanceById = (attendanceId) => {
+    return API.get(`/attendance/${attendanceId}`);
+};
+
+export const updateAttendance = (attendanceId, data) => {
+    return API.put(`/attendance/${attendanceId}`, data);
+};
+
