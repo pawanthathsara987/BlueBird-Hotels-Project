@@ -54,7 +54,7 @@ export default function Booking() {
                                 id: `${res.id}-${br.id}`,
                                 guestName: res.Customer ? `${res.Customer.firstName} ${res.Customer.lastName}` : 'Unknown',
                                 roomNumber: br.Room ? br.Room.roomNumber : 'N/A',
-                                roomType: br.Room && br.Room.roomType ? br.Room.roomType : 'Standard',
+                                roomType: br.Room && br.Room.roomType ? (br.Room.roomType.type || 'Standard') : 'Standard',
                                 checkInDate: br.checkIn,
                                 checkOutDate: br.checkOut,
                                 status: statusStr || "Pending",

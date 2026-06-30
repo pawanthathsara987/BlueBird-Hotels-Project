@@ -56,9 +56,7 @@ export default function ReceptionPage() {
         }
         try {
             const decoded = jwtDecode(token);
-            const isExpired = decoded.exp ? decoded.exp * 1000 < Date.now() : false;
-            if (!decoded || decoded.role !== "receptionist" || isExpired) {
-                localStorage.removeItem("token");
+            if (!decoded || decoded.role !== "receptionist") {
                 navigate("/receptionistLogin");
             } else {
                 setAuthorized(true);
