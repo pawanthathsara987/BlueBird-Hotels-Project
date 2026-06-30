@@ -309,3 +309,39 @@ export const updateAttendance = async (attendanceId, data) => {
     return getAttendanceById(attendanceId);
 };
 
+export const getStaffAttendanceHistory = async (staffId) => {
+    // Fetch all attendance records for the given staffId
+    const records = await Attendance.findAll({
+        where: { staffId },
+        order: [["attendanceDate", "DESC"]]
+    });
+
+    // Calculate summary statistics
+    const totalDays = records.length;
+    const presentCount = records.filter(r => r.status === "Present").length;
+    const lateCount = records.filter(r => r.status === "Late").length;
+    const absentCount = records.filter(r => r.status === "Absent").length;
+
+    // Total working hours
+    const totalWorkingHours = records.reduce((sum, r) => sum + (r.workingHours || 0), 0);
+
+    // Average lateness (only for days with Late status)
+    const lateDays = records.filter(r => r.status === "Late");
+    const avgLateMinutes = lateDays.length > 0
+        ? Math.round(lateDays.reduce((sum, r) => sum + (r.lateMinutes || 0), 0) / lateDays.length)
+        : 0;
+
+    return {
+        success: true,
+        summary: {
+            totalDays,
+            presentCount: presentCount + lateCount, // present includes on-time and late employees
+            lateCount,
+            absentCount,
+            totalWorkingHours: Number(totalWorkingHours.toFixed(2)),
+            avgLateMinutes
+        },
+        records
+    };
+};
+
