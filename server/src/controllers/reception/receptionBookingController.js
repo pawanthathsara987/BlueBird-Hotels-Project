@@ -1,6 +1,6 @@
 import sequelize from '../../config/database.js';
 import { QueryTypes } from 'sequelize';;
-import { BookedRoom } from '../../models/index.js';
+import { BookedRoom, AirPortPickup, Customer, Booking } from '../../models/index.js';
 
 async function setCheckIn(req, res) {
     try {
@@ -182,4 +182,100 @@ async function getPendingCheckOuts(req, res) {
     }
 }
 
-export { setCheckIn, setCheckOut, getPendingCheckins, getPendingCheckOuts };
+// get all airport pickups
+async function getAirportPickups(req, res) {
+    try {
+        const pickups = await AirPortPickup.findAll({
+            include: [
+                {
+                    model: Booking,
+                    as: 'booking',
+                    include: [{ model: Customer }]
+                }
+            ],
+            order: [['pickup_date', 'ASC'], ['pickup_time', 'ASC']]
+        });
+        return res.status(200).json({
+            success: true,
+            data: pickups
+        });
+    } catch (error) {
+        console.error("Error fetching airport pickups:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+}
+
+// update airport pickup status
+async function updateAirportPickupStatus(req, res) {
+    try {
+        const { id } = req.params;
+        const { status } = req.body; // 'CONFIRMED', 'COMPLETED', 'CANCELLED'
+        
+        const pickup = await AirPortPickup.findByPk(id);
+        if (!pickup) {
+            return res.status(404).json({
+                success: false,
+                message: "Airport pickup not found"
+            });
+        }
+        
+        pickup.status = status;
+        await pickup.save();
+        
+        return res.status(200).json({
+            success: true,
+            message: "Airport pickup status updated successfully",
+            data: pickup
+        });
+    } catch (error) {
+        console.error("Error updating airport pickup status:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+}
+
+// create airport pickup
+async function createAirportPickup(req, res) {
+    try {
+        const { booking_id, pickup_date, pickup_time, passenger_count, pickup_location } = req.body;
+        
+        const newPickup = await AirPortPickup.create({
+            booking_id,
+            pickup_date,
+            pickup_time,
+            passenger_count: passenger_count || 1,
+            pickup_location: pickup_location || "Katunayake Airport",
+            status: "CONFIRMED"
+        });
+        
+        return res.status(201).json({
+            success: true,
+            message: "Airport pickup request created successfully",
+            data: newPickup
+        });
+    } catch (error) {
+        console.error("Error creating airport pickup:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+}
+
+export { 
+    setCheckIn, 
+    setCheckOut, 
+    getPendingCheckins, 
+    getPendingCheckOuts, 
+    getAirportPickups, 
+    updateAirportPickupStatus, 
+    createAirportPickup 
+};

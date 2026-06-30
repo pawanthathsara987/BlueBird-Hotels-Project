@@ -1,6 +1,6 @@
 import express from 'express';
 import { getAvailableRooms, todayCheckIns, todayCheckOuts, getOccupiedRooms, recentCheckins, recentCheckouts, recentBookings, getAnalyticsSummary, getDailyReport, getMonthlyReport } from '../controllers/reception/dashboardController.js';
-import { setCheckIn, setCheckOut, getPendingCheckins, getPendingCheckOuts } from '../controllers/reception/receptionBookingController.js';
+import { setCheckIn, setCheckOut, getPendingCheckins, getPendingCheckOuts, getAirportPickups, updateAirportPickupStatus, createAirportPickup } from '../controllers/reception/receptionBookingController.js';
 import { requireAuth, requireRole } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -25,6 +25,18 @@ router.get('/pending-checkins', getPendingCheckins);
 router.post('/check-in/:reservation_id', setCheckIn);
 router.get("/pending-checkouts", getPendingCheckOuts);
 router.patch("/bookings/:id/checkout", setCheckOut);
+
+import { getDrivers } from '../controllers/manager/driverController.js';
+import { getVehicles } from '../controllers/manager/vehicleController.js';
+
+// Airport Pickups
+router.get('/airport-pickups', getAirportPickups);
+router.patch('/airport-pickups/:id/status', updateAirportPickupStatus);
+router.post('/airport-pickups', createAirportPickup);
+
+// Vehicles and Drivers for Airport Pickup assignment
+router.get('/drivers', getDrivers);
+router.get('/vehicles', getVehicles);
 
 
 export default router;  

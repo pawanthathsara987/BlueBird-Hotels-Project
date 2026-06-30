@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import RoomStatusGrid from "../../components/admin/dashboard/RoomStatusGrid";
 import { toast } from "react-hot-toast";
+import { MdLocalTaxi } from "react-icons/md";
 
 export default function Dashboard() {
     // ----------------------------------------------------
@@ -37,6 +38,7 @@ export default function Dashboard() {
     const [occupiedRooms, setOccupiedRooms] = useState(0);
     const [recentCheckIns, setRecentCheckIns] = useState([]);
     const [recentBookings, setRecentBookings] = useState([]);
+    const [todayPickups, setTodayPickups] = useState(0);
     const [analyticsSummary, setAnalyticsSummary] = useState({
         totalBookings: 0,
         totalRevenue: 0,
@@ -132,7 +134,8 @@ export default function Dashboard() {
                 recentBookingsRes,
                 roomsRes,
                 typesRes,
-                analyticsRes
+                analyticsRes,
+                pickupsRes
             ] = await Promise.all([
                 axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/available-rooms`),
                 axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/today-checkins`),
@@ -142,7 +145,8 @@ export default function Dashboard() {
                 axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/recent-bookings`),
                 axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/rooms`),
                 axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/room-types`),
-                axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/analytics-summary`)
+                axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/analytics-summary`),
+                axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/airport-pickups`)
             ]);
 
             setAvailableRooms(availableRes.data?.data?.availableRoom || availableRes.data?.data?.count || 0);
@@ -151,6 +155,10 @@ export default function Dashboard() {
             setOccupiedRooms(occupiedRes.data?.data?.occupiedRooms || occupiedRes.data?.data?.count || 0);
             setRecentCheckIns(recentCheckInsRes.data?.data || recentCheckInsRes.data || []);
             setRecentBookings(recentBookingsRes.data?.data || recentBookingsRes.data || []);
+            
+            const todayStr = new Date().toISOString().split("T")[0];
+            const pickupsCount = pickupsRes.data?.data?.filter(p => p.pickup_date === todayStr).length || 0;
+            setTodayPickups(pickupsCount);
 
             if (analyticsRes.data && analyticsRes.data.success) {
                 setAnalyticsSummary(analyticsRes.data.data || {});
@@ -579,7 +587,7 @@ export default function Dashboard() {
             {/* ----------------------------------------------------
                 KPI Cards Section (Bookings, Revenue, Occupancy, Check-ins, Check-outs)
                ---------------------------------------------------- */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
 
                 {/* 1. Bookings Card */}
                 <div className={getCardStyle()}>
@@ -667,6 +675,67 @@ export default function Dashboard() {
                     </div>
                 </div>
 
+                {/* 6. Airport Pickups Card */}
+                <div className={getCardStyle()}>
+                    <div className="flex justify-between items-start">
+                        <div className="p-3 rounded-xl bg-teal-50 dark:bg-teal-950/40 text-teal-650 dark:text-teal-400">
+                            <MdLocalTaxi size={20} />
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400 bg-slate-50 dark:bg-slate-805 px-2 py-0.5 rounded-full">
+                            Today
+                        </span>
+                    </div>
+                    <div className="mt-4 space-y-1">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Airport Pickups</p>
+                        <h3 className="text-2xl font-black">{loading ? "..." : todayPickups}</h3>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Expected pickup requests today</p>
+                    </div>
+                </div>
+
+            </div>
+
+            {/* ----------------------------------------------------
+                Quick Actions Panel
+               ---------------------------------------------------- */}
+            <div className={`${getCardStyle()} border border-slate-100 dark:border-slate-800`}>
+                <h3 className="text-sm font-bold flex items-center gap-1.5 border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
+                    <Sparkles size={16} className={currentAccent.text} />
+                    Quick Actions Panel
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+                    <button onClick={() => window.location.href = "/reception/bookings?tab=new"} className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 transition cursor-pointer text-center group">
+                        <Calendar className="w-5 h-5 text-blue-500 mb-2 group-hover:scale-110 transition" />
+                        <span className="text-[11px] font-bold">New Booking</span>
+                    </button>
+                    <button onClick={() => window.location.href = "/reception/bookings?tab=new"} className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 transition cursor-pointer text-center group">
+                        <User className="w-5 h-5 text-emerald-500 mb-2 group-hover:scale-110 transition" />
+                        <span className="text-[11px] font-bold">Walk-in Guest</span>
+                    </button>
+                    <button onClick={() => window.location.href = "/reception/checkin"} className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 transition cursor-pointer text-center group">
+                        <CheckCircle className="w-5 h-5 text-indigo-500 mb-2 group-hover:scale-110 transition" />
+                        <span className="text-[11px] font-bold">Check In</span>
+                    </button>
+                    <button onClick={() => window.location.href = "/reception/checkout"} className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 transition cursor-pointer text-center group">
+                        <CheckSquare className="w-5 h-5 text-orange-500 mb-2 group-hover:scale-110 transition" />
+                        <span className="text-[11px] font-bold">Check Out</span>
+                    </button>
+                    <button onClick={() => window.location.href = "/reception/checkin"} className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 transition cursor-pointer text-center group">
+                        <Hotel className="w-5 h-5 text-violet-500 mb-2 group-hover:scale-110 transition" />
+                        <span className="text-[11px] font-bold">Assign Room</span>
+                    </button>
+                    <button onClick={() => window.location.href = "/reception/reports"} className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 transition cursor-pointer text-center group">
+                        <ClipboardList className="w-5 h-5 text-amber-500 mb-2 group-hover:scale-110 transition" />
+                        <span className="text-[11px] font-bold">Generate Invoice</span>
+                    </button>
+                    <button onClick={() => window.location.href = "/reception/pickups?action=new"} className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 transition cursor-pointer text-center group">
+                        <MdLocalTaxi className="w-5.5 h-5.5 text-teal-650 mb-1.5 group-hover:scale-110 transition" />
+                        <span className="text-[11px] font-bold">Airport Pickup</span>
+                    </button>
+                    <button onClick={() => window.location.href = "/reception/bookings"} className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 transition cursor-pointer text-center group">
+                        <Search className="w-5 h-5 text-slate-500 mb-2 group-hover:scale-110 transition" />
+                        <span className="text-[11px] font-bold">Search Guest</span>
+                    </button>
+                </div>
             </div>
 
             {/* ----------------------------------------------------

@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import axios from "axios";
+import { useLocation } from "react-router-dom";
 import { MdCalendarToday, MdSearch, MdChevronLeft, MdChevronRight, MdList, MdAdd } from "react-icons/md";
 import NewBookingFlow from "./NewBookingFlow";
 
@@ -8,6 +9,18 @@ export default function Booking() {
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
     const [searchTerm, setSearchTerm] = useState("");
     const [allBookings, setAllBookings] = useState([]);
+    
+    const location = useLocation();
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const tab = params.get("tab");
+        if (tab === "new") {
+            setActiveTab("new");
+        } else {
+            setActiveTab("list");
+        }
+    }, [location.search]);
     const [isLoading, setIsLoading] = useState(true);
 
     // Theme state
@@ -136,9 +149,8 @@ export default function Booking() {
     const currentAccent = accentColors[theme.accent] || accentColors.indigo;
 
     return (
-        <div className={`w-full px-4 md:px-6 lg:px-8 py-6 min-h-screen transition-colors duration-300 ${
-            theme.mode === "dark" ? "bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-800"
-        }`}>
+        <div className={`w-full px-4 md:px-6 lg:px-8 py-6 min-h-screen transition-colors duration-300 ${theme.mode === "dark" ? "bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-800"
+            }`}>
             <style>{`
                 .light-mode-high-contrast .text-slate-400 {
                     color: #475569 !important;
@@ -157,26 +169,23 @@ export default function Booking() {
                         Manage walk-in bookings and view existing reservations
                     </p>
                 </div>
-                <div className={`p-1 rounded-xl flex items-center gap-2 border ${
-                    theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-slate-100 border-slate-200"
-                }`}>
+                <div className={`p-1 rounded-xl flex items-center gap-2 border ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-slate-100 border-slate-200"
+                    }`}>
                     <button
                         onClick={() => setActiveTab("list")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            activeTab === 'list'
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeTab === 'list'
                                 ? (theme.mode === "dark" ? "bg-slate-800 text-white shadow-sm" : "bg-white text-blue-600 shadow-sm")
                                 : "text-slate-500 hover:text-slate-700"
-                        }`}
+                            }`}
                     >
                         <MdList className="text-lg" /> View Bookings
                     </button>
                     <button
                         onClick={() => setActiveTab("new")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            activeTab === 'new'
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeTab === 'new'
                                 ? (theme.mode === "dark" ? "bg-slate-800 text-white shadow-sm" : "bg-white text-green-600 shadow-sm")
                                 : "text-slate-500 hover:text-slate-700"
-                        }`}
+                            }`}
                     >
                         <MdAdd className="text-lg" /> New Booking
                     </button>
@@ -188,9 +197,8 @@ export default function Booking() {
             ) : (
                 <>
                     {/* Filter Section */}
-                    <div className={`rounded-2xl border p-4 md:p-6 mb-6 shadow-sm ${
-                        theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
-                    }`}>
+                    <div className={`rounded-2xl border p-4 md:p-6 mb-6 shadow-sm ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+                        }`}>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
                             {/* Date Navigation */}
                             <div className="flex items-center gap-2 md:gap-4">
@@ -206,11 +214,10 @@ export default function Booking() {
                                         type="date"
                                         value={selectedDate}
                                         onChange={(e) => setSelectedDate(e.target.value)}
-                                        className={`w-full px-3 md:px-4 py-2 text-sm border rounded-xl focus:outline-none ${
-                                            theme.mode === "dark"
+                                        className={`w-full px-3 md:px-4 py-2 text-sm border rounded-xl focus:outline-none ${theme.mode === "dark"
                                                 ? "bg-slate-900 border-slate-800 text-white focus:border-slate-600"
                                                 : "bg-white border-slate-200 text-slate-800 focus:border-blue-500"
-                                        }`}
+                                            }`}
                                     />
                                 </div>
                                 <button
@@ -230,20 +237,18 @@ export default function Booking() {
                                     placeholder="Search by guest name or room..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className={`w-full pl-9 md:pl-10 pr-3 md:pr-4 py-2 text-sm border rounded-xl focus:outline-none ${
-                                        theme.mode === "dark"
+                                    className={`w-full pl-9 md:pl-10 pr-3 md:pr-4 py-2 text-sm border rounded-xl focus:outline-none ${theme.mode === "dark"
                                             ? "bg-slate-900 border-slate-800 text-white focus:border-slate-600"
                                             : "bg-white border-slate-200 text-slate-800 focus:border-blue-500"
-                                    }`}
+                                        }`}
                                 />
                             </div>
 
                             {/* Date Display */}
-                            <div className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl border ${
-                                theme.mode === "dark"
+                            <div className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl border ${theme.mode === "dark"
                                     ? "bg-teal-950/20 border-teal-900/30 text-teal-400"
                                     : "bg-blue-50 border-blue-100 text-blue-900"
-                            }`}>
+                                }`}>
                                 <MdCalendarToday className="text-lg md:text-xl flex-shrink-0" />
                                 <span className="font-extrabold text-sm md:text-base">{formatDate(selectedDate)}</span>
                             </div>
@@ -251,9 +256,8 @@ export default function Booking() {
                     </div>
 
                     {/* Bookings Table */}
-                    <div className={`rounded-2xl border overflow-hidden shadow-sm ${
-                        theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
-                    }`}>
+                    <div className={`rounded-2xl border overflow-hidden shadow-sm ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+                        }`}>
                         {filteredBookings.length > 0 ? (
                             <>
                                 {/* Desktop Table */}
@@ -379,9 +383,8 @@ export default function Booking() {
 
                     {/* Summary statistics */}
                     {filteredBookings.length > 0 && (
-                        <div className={`mt-6 rounded-2xl border p-4 md:p-6 shadow-sm ${
-                            theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
-                        }`}>
+                        <div className={`mt-6 rounded-2xl border p-4 md:p-6 shadow-sm ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+                            }`}>
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                                 <div className="border-l-4 border-blue-500 pl-3 md:pl-4">
                                     <p className="text-slate-500 text-xs md:text-sm font-bold uppercase tracking-wider">Total Bookings</p>
