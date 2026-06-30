@@ -130,13 +130,13 @@ export default function ReceptionPage() {
             {/* Mobile overlay */}
             {sidebarOpen && (
                 <div
-                    className="fixed inset-0 bg-black/40 backdrop-blur-xs z-20 md:hidden"
+                    className="fixed inset-0 bg-black/40 backdrop-blur-xs z-20 md:hidden print:hidden"
                     onClick={() => setSidebarOpen(false)}
                 />
             )}
 
             {/* Sidebar */}
-            <div className={`fixed md:static z-30 w-72 md:w-64 lg:w-72 h-full flex flex-col transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+            <div className={`fixed md:static z-30 w-72 md:w-64 lg:w-72 h-full flex flex-col transition-transform duration-300 print:hidden ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
                 } md:translate-x-0 shadow-lg md:shadow-none ${theme.mode === "dark"
                     ? "bg-slate-900 border-r border-slate-800/80"
                     : "bg-white border-r border-slate-200/60"
@@ -207,7 +207,7 @@ export default function ReceptionPage() {
             <div className="flex-grow flex flex-col h-full overflow-hidden">
                 
                 {/* Persistent Top Header Bar with Centered Clock */}
-                <header className={`w-full h-16 grid grid-cols-3 items-center px-6 border-b flex-shrink-0 z-40 transition-colors ${
+                <header className={`w-full h-16 grid grid-cols-3 items-center px-6 border-b flex-shrink-0 z-40 transition-colors print:hidden ${
                     theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200/60"
                 }`}>
                     

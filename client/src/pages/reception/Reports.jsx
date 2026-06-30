@@ -117,12 +117,15 @@ export default function Reports() {
 
     return (
         <div className={`p-4 md:p-6 lg:p-8 space-y-6 print:p-0 print:bg-white print:text-black ${theme.mode === "dark" ? "bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-900"} min-h-screen transition-colors duration-300`}>
-            {/* Custom Print Style */}
             <style>{`
                 @media print {
+                    @page {
+                        margin: 0;
+                    }
                     body {
                         background: white !important;
                         color: black !important;
+                        padding: 1.5cm 1cm !important;
                     }
                     .no-print {
                         display: none !important;
