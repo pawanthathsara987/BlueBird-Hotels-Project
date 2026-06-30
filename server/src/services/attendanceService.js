@@ -1,5 +1,6 @@
 import StaffMember from "../models/User/StaffMember.js";
 import Attendance from "../models/attendance/Attendance.js";
+import AttendanceEditLog from "../models/attendance/AttendanceEditLog.js";
 import dayjs from "dayjs";
 import { Op } from "sequelize";
 
@@ -200,5 +201,111 @@ export const getDailyAttendanceStats = async () => {
             recentLogs: logs.slice(0, 5)
         }
     };
+};
+
+export const getAttendanceById = async (attendanceId) => {
+    const attendance = await Attendance.findOne({
+        where: { attendanceId },
+        include: [
+            {
+                model: StaffMember,
+                attributes: ["name", "staffId"]
+            },
+            {
+                model: AttendanceEditLog,
+                as: "editLogs"
+            }
+        ],
+        order: [
+            [{ model: AttendanceEditLog, as: "editLogs" }, "editedAt", "DESC"]
+        ]
+    });
+
+    if (!attendance) {
+        throw new Error("Attendance record not found");
+    }
+
+    return {
+        success: true,
+        data: attendance
+    };
+};
+
+export const updateAttendance = async (attendanceId, data) => {
+    const { checkInTime, checkOutTime, reason, editedBy } = data;
+
+    if (!reason || reason.trim() === "") {
+        throw new Error("Reason is required.");
+    }
+
+    if (!checkInTime && !checkOutTime) {
+        throw new Error("Check-In and Check-Out times cannot both be empty.");
+    }
+
+    if (checkInTime && checkOutTime) {
+        const inTime = dayjs(checkInTime);
+        const outTime = dayjs(checkOutTime);
+        if (!outTime.isAfter(inTime)) {
+            throw new Error("Check-out time must be after check-in time.");
+        }
+    }
+
+    const attendance = await Attendance.findOne({
+        where: { attendanceId }
+    });
+
+    if (!attendance) {
+        throw new Error("Attendance record not found.");
+    }
+
+    // Log the edit
+    await AttendanceEditLog.create({
+        attendanceId,
+        oldCheckIn: attendance.checkInTime,
+        newCheckIn: checkInTime ? new Date(checkInTime) : null,
+        oldCheckOut: attendance.checkOutTime,
+        newCheckOut: checkOutTime ? new Date(checkOutTime) : null,
+        reason: reason.trim(),
+        editedBy: editedBy || "Admin"
+    });
+
+    // Update times
+    attendance.checkInTime = checkInTime ? new Date(checkInTime) : null;
+    attendance.checkOutTime = checkOutTime ? new Date(checkOutTime) : null;
+
+    // Recalculate Late Minutes and Status based on Check-In Time
+    if (attendance.checkInTime) {
+        const checkIn = dayjs(attendance.checkInTime);
+        const officeStart = dayjs(attendance.attendanceDate).hour(8).minute(0).second(0);
+        
+        if (checkIn.isAfter(officeStart)) {
+            attendance.lateMinutes = checkIn.diff(officeStart, "minute");
+            attendance.status = "Late";
+        } else {
+            attendance.lateMinutes = 0;
+            attendance.status = "Present";
+        }
+    } else {
+        attendance.lateMinutes = 0;
+        attendance.status = "Present";
+    }
+
+    // Recalculate Working Time
+    if (attendance.checkInTime && attendance.checkOutTime) {
+        const checkIn = dayjs(attendance.checkInTime);
+        const checkOut = dayjs(attendance.checkOutTime);
+        const workingMinutes = checkOut.diff(checkIn, "minute");
+        
+        attendance.workingMinutes = workingMinutes;
+        attendance.workingHours = Number((workingMinutes / 60).toFixed(2));
+    } else {
+        attendance.workingMinutes = 0;
+        attendance.workingHours = 0;
+    }
+
+    await attendance.save();
+
+    // Fetch complete record with associated staff member and edit logs to return
+    return getAttendanceById(attendanceId);
 };
 
