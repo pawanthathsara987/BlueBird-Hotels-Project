@@ -86,7 +86,7 @@ export default function ToursTab({
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 font-bold block mb-1">ESTIMATED RATE</span>
-                  <span className="font-serif font-semibold text-blue-950">${tour.price.toLocaleString()} USD</span>
+                  <span className="font-serif font-semibold text-blue-950">{process.env.CURRENCY_TYPE || 'LKR'} {tour.price.toLocaleString()}</span>
                 </div>
               </div>
 

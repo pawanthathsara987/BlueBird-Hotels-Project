@@ -198,12 +198,12 @@ export default function BookingsTab({
                       <span className="text-[9px] text-slate-400 font-bold tracking-widest uppercase block">TOTAL AMOUNT</span>
                       <div className="flex items-baseline gap-2">
                         <span className="text-xl font-serif font-bold text-blue-950">
-                          ${isNaN(booking.amount) ? "0.00" : booking.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {process.env.CURRENCY_TYPE || 'LKR'} {isNaN(booking.amount) ? "0.00" : booking.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
-                        <span className="text-slate-400 text-[10px]">USD</span>
+                        <span className="text-slate-400 text-[10px]">{process.env.CURRENCY_TYPE || 'LKR'}</span>
                       </div>
                       {booking.tax > 0 && (
-                        <span className="text-slate-400 text-[10px]">incl. ${booking.tax.toFixed(2)} tax ({booking.taxPercentage}%)</span>
+                        <span className="text-slate-400 text-[10px]">incl. {process.env.CURRENCY_TYPE || 'LKR'} {booking.tax.toFixed(2)} tax ({booking.taxPercentage}%)</span>
                       )}
                     </div>
                     <div className="flex gap-2.5 w-full sm:w-auto">

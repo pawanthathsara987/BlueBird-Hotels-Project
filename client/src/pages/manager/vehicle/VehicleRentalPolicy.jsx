@@ -109,7 +109,7 @@ export default function VehicleRentalPolicy() {
 
           <div>
             <label className="block text-sm font-medium">Extra mileage currency</label>
-            <input type="text" value={policy.extraMileageCurrency ?? 'USD'} onChange={(e) => handleChange('extraMileageCurrency', e.target.value)} className="mt-1 w-full border rounded px-2 py-1" />
+            <input type="text" value={policy.extraMileageCurrency ?? (process.env.CURRENCY_TYPE || 'LKR')} onChange={(e) => handleChange('extraMileageCurrency', e.target.value)} className="mt-1 w-full border rounded px-2 py-1" />
           </div>
         </div>
 

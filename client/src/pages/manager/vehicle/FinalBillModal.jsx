@@ -65,7 +65,7 @@ export default function FinalBillModal({
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Damage Fee (Manual Entry)</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">{process.env.CURRENCY_TYPE || 'LKR'}</span>
                     <input
                       type="number"
                       min="0"
@@ -86,7 +86,7 @@ export default function FinalBillModal({
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Fuel Refill Charge (Manual Entry)</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">{process.env.CURRENCY_TYPE || 'LKR'}</span>
                     <input
                       type="number"
                       min="0"
@@ -146,7 +146,7 @@ export default function FinalBillModal({
                       ) : (
                         <>
                           <span className="text-indigo-700">Balance Settled:</span>
-                          <span className="text-indigo-700 text-lg">$0.00</span>
+                          <span className="text-indigo-700 text-lg">{process.env.CURRENCY_TYPE || 'LKR'} 0.00</span>
                         </>
                       )}
                     </div>
