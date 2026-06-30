@@ -523,7 +523,12 @@ export async function getCustomerBookings(req, res) {
                 {
                     model: RoomPayment,
                     as: "payments",
-                    attributes: ["id", "amount", "status", "method"],
+                    attributes: ["id", "payment_no", "amount", "currency", "method", "status", "createdAt"],
+                    required: false
+                },
+                {
+                    model: AirPortPickup,
+                    as: "airportPickup",
                     required: false
                 }
             ],

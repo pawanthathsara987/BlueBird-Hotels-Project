@@ -263,7 +263,8 @@ export default function CustomerDashboard() {
             amenities: ["24/7 Concierge Service", "Infinity Pool Access", "Complimentary Breakfast"],
             note: b.note || "",
             tax: b.tax || 0,
-            taxPercentage: b.tax_percentage || 0
+            taxPercentage: b.tax_percentage || 0,
+            raw: b
           };
         });
         setBookings(mappedBookings);
@@ -681,6 +682,7 @@ export default function CustomerDashboard() {
                   isEmptyState={isEmptyState}
                   handleInitiateCancel={handleInitiateCancel}
                   filterList={filterList}
+                  profile={profile}
                 />
               )}
 
