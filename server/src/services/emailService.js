@@ -334,8 +334,8 @@ export const sendBookingConfirmationEmail = async (booking) => {
             <!-- Customer Support Footer -->
             <div class="footer">
               <p style="margin: 0 0 8px; font-weight: bold; color: #1f2937;">Need Assistance or Support?</p>
-              <p style="margin: 4px 0;"><strong>Phone Support Contact:</strong> +94 11 234 5678</p>
-              <p style="margin: 4px 0;"><strong>Email Support Contact:</strong> <a href="mailto:support@bluebird-hotels.com" style="color: #0f766e; text-decoration: none;">support@bluebird-hotels.com</a></p>
+              <p style="margin: 4px 0;"><strong>Phone Support Contact:</strong> ${process.env.SUPPORT_CONTACT}</p>
+              <p style="margin: 4px 0;"><strong>Email Support Contact:</strong> <a href="mailto:${process.env.SUPPORT_EMAIL}" style="color: #0f766e; text-decoration: none;">support@bluebird-hotels.com</a></p>
               <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;">
               <p style="margin: 0; font-size: 11px;">Please keep this receipt as proof of payment. We look forward to welcoming you.</p>
               <p style="margin: 4px 0 0; font-size: 11px;">&copy; ${new Date().getFullYear()} BlueBird Hotels. All rights reserved.</p>

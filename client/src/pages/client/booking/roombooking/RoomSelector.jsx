@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { DateRange } from "react-date-range";
 import { addDays, format } from "date-fns";
-import { Plus, Minus, Calendar, Users, Globe, ChevronDown, ChevronLeft, ChevronRight, Info, Sparkles, Coffee, Utensils, Check, Moon, ArrowRight, Trash2, Lock, Unlock, Car, Clock, ClipboardList } from "lucide-react";
+import { Plus, Minus, Calendar, Users, Globe, ChevronDown, ChevronLeft, ChevronRight, Info, Sparkles, Coffee, Utensils, Check, Moon, ArrowRight, Trash2, Lock, Unlock, Car, Clock, ClipboardList, MapPin } from "lucide-react";
 import toast from "react-hot-toast";
 import RoomDetailsModal from "./RoomDetailsModal";
 import { jwtDecode } from "jwt-decode";
@@ -25,9 +25,10 @@ const getBoardTypeColor = (type) => {
 const RoomSelector = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const hasBackSelectedRooms = location.state?.selectedRooms && location.state.selectedRooms.length > 0;
   const [detailingRoom, setDetailingRoom] = useState(null);
   const [dateRange, setDateRange] = useState(() => {
-    const tempSaved = localStorage.getItem("tempSavedBookingState");
+    const tempSaved = hasBackSelectedRooms ? localStorage.getItem("tempSavedBookingState") : null;
     if (tempSaved) {
       try {
         const parsed = JSON.parse(tempSaved);
@@ -69,7 +70,7 @@ const RoomSelector = () => {
 
   // Global settings
   const [nationality, setNationality] = useState(() => {
-    const tempSaved = localStorage.getItem("tempSavedBookingState");
+    const tempSaved = hasBackSelectedRooms ? localStorage.getItem("tempSavedBookingState") : null;
     if (tempSaved) {
       try {
         const parsed = JSON.parse(tempSaved);
@@ -83,6 +84,7 @@ const RoomSelector = () => {
 
   // Extra booking options (Personal requests & airport pickup)
   const [personalRequest, setPersonalRequest] = useState(() => {
+    if (!hasBackSelectedRooms) return "";
     const tempSaved = localStorage.getItem("tempSavedBookingState");
     if (tempSaved) {
       try {
@@ -96,6 +98,7 @@ const RoomSelector = () => {
   });
 
   const [airportPickupEnabled, setAirportPickupEnabled] = useState(() => {
+    if (!hasBackSelectedRooms) return false;
     const tempSaved = localStorage.getItem("tempSavedBookingState");
     if (tempSaved) {
       try {
@@ -114,6 +117,7 @@ const RoomSelector = () => {
   });
 
   const [pickupTime, setPickupTime] = useState(() => {
+    if (!hasBackSelectedRooms) return "12:00";
     const tempSaved = localStorage.getItem("tempSavedBookingState");
     if (tempSaved) {
       try {
@@ -391,11 +395,23 @@ const RoomSelector = () => {
 
   // Helper to fetch airport pickup price dynamically from otherPrices state
   const getAirportPickupPrice = () => {
-    const item = otherPrices.find(op => op.item_name.toLowerCase() === "airport pickup");
+    const item = otherPrices.find(op => {
+      if (op.service_Code) {
+        return op.service_Code === "AIRPORT_PICKUP";
+      }
+      const name = op.service_name || op.item_name || "";
+      return name.toLowerCase() === "airport pickup";
+    });
     return item ? parseFloat(item.price) : 50.00;
   };
 
-  const hasAirportPickup = otherPrices.some(op => op.item_name.toLowerCase() === "airport pickup");
+  const hasAirportPickup = otherPrices.some(op => {
+    if (op.service_Code) {
+      return op.service_Code === "AIRPORT_PICKUP";
+    }
+    const name = op.service_name || op.item_name || "";
+    return name.toLowerCase() === "airport pickup";
+  });
 
   useEffect(() => {
     if (otherPrices.length > 0 && !hasAirportPickup) {
@@ -405,7 +421,7 @@ const RoomSelector = () => {
 
   // Dynamic added rooms list (Initialize with one default room using selected board type, initially unconfigured or restored from location state)
   const [addedRooms, setAddedRooms] = useState(() => {
-    const tempSaved = localStorage.getItem("tempSavedBookingState");
+    const tempSaved = hasBackSelectedRooms ? localStorage.getItem("tempSavedBookingState") : null;
     if (tempSaved) {
       try {
         const parsed = JSON.parse(tempSaved);
@@ -459,6 +475,16 @@ const RoomSelector = () => {
       localStorage.removeItem("tempSavedBookingState");
     }
   }, []);
+
+  // Clear previous booking details from localStorage if starting a fresh booking
+  useEffect(() => {
+    if (!hasBackSelectedRooms) {
+      localStorage.removeItem("tempSavedBookingState");
+      localStorage.removeItem("personalRequest");
+      localStorage.removeItem("airportPickUp");
+      localStorage.removeItem("bookingDetails");
+    }
+  }, [hasBackSelectedRooms]);
 
   // Add Room Button Handler
   const handleAddNewRoom = () => {
@@ -1704,6 +1730,11 @@ const RoomSelector = () => {
                 <p className="text-xs text-stone-500 leading-relaxed font-medium mb-4">
                   A private chauffeur will meet you at the terminal arrivals lobby with a custom name board and drive you directly to BlueBird Hotels.
                 </p>
+
+                <div className="flex items-center gap-2 mb-4 text-xs text-stone-600 bg-stone-50 border border-stone-200/60 p-2.5 rounded-xl font-bold">
+                  <MapPin className="w-4 h-4 text-emerald-800" />
+                  <span>Pickup Location: <strong className="text-stone-850">Katunayake Airport (Fixed)</strong></span>
+                </div>
 
                 {/* Shuttle Schedule Inputs */}
                 {airportPickupEnabled && (

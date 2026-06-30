@@ -46,6 +46,9 @@ const BookingConfirmation = () => {
   useEffect(() => {
     localStorage.removeItem("bookingDetails");
     localStorage.removeItem("completedBookingDetails");
+    localStorage.removeItem("tempSavedBookingState");
+    localStorage.removeItem("personalRequest");
+    localStorage.removeItem("airportPickUp");
   }, []);
 
   // fallback guard
