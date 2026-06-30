@@ -50,11 +50,32 @@ export async function userLogin(req, res) {
                 message: "Invalid password"
             });
         }
-        const staff = await StaffMember.findOne({ where: { email: email.trim() } });
+        const staff = await StaffMember.findOne({
+            where: { email: email.trim() },
+            include: [Role]
+        });
+
+        const tokenPayload = {
+            id: staff?.userId || user.id,
+            staffId: staff?.staffId || null,
+            name: staff?.name || "Staff Member",
+            email: email.trim(),
+            role: staff?.Role?.roleName || role || "staff"
+        };
+
+        const token = jwt.sign(tokenPayload, process.env.JWT_SECRET_KEY, { expiresIn: "1d" });
+
         res.json({
             message: "Login successful",
+            token: token,
             name: staff?.name || "Staff Member",
-            email: email.trim()
+            email: email.trim(),
+            user: {
+                name: staff?.name || "Staff Member",
+                email: email.trim(),
+                role: staff?.Role?.roleName || role || "staff",
+                imageUrl: staff?.imageUrl || null
+            }
         });
 
     } catch (error) {
