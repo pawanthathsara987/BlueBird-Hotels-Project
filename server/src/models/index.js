@@ -35,6 +35,8 @@ import ShopItem from "./shop/ShopItem.js";
 import Attendance from "./attendance/Attendance.js";
 import AttendanceEditLog from "./attendance/AttendanceEditLog.js";
 import AttendanceSetting from "./attendance/AttendanceSetting.js";
+import LeaveType from "./leave/LeaveType.js";
+import LeaveRequest from "./leave/LeaveRequest.js";
 
 
 
@@ -373,6 +375,35 @@ export function initModels() {
         as: "attendance"
     });
 
-    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, ServiceCharge, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance, AttendanceEditLog, AttendanceSetting };
+    // Leave Management
+    LeaveType.hasMany(LeaveRequest, {
+        foreignKey: "leaveTypeId",
+        as: "leaveRequests"
+    });
+
+    LeaveRequest.belongsTo(LeaveType, {
+        foreignKey: "leaveTypeId",
+        as: "leaveType"
+    });
+
+    StaffMember.hasMany(LeaveRequest, {
+        foreignKey: "staffId",
+        sourceKey: "staffId",
+        as: "leaveRequests"
+    });
+
+    LeaveRequest.belongsTo(StaffMember, {
+        foreignKey: "staffId",
+        targetKey: "staffId",
+        as: "staffMember"
+    });
+
+    LeaveRequest.belongsTo(StaffMember, {
+        foreignKey: "approvedBy",
+        targetKey: "staffId",
+        as: "approver"
+    });
+
+    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, ServiceCharge, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance, AttendanceEditLog, AttendanceSetting, LeaveType, LeaveRequest };
 }
-export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, ServiceCharge, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance, AttendanceEditLog, AttendanceSetting };
+export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, ServiceCharge, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance, AttendanceEditLog, AttendanceSetting, LeaveType, LeaveRequest };
