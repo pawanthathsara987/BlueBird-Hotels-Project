@@ -138,19 +138,19 @@ const RoomSelector = () => {
 
   const getPickupTimeConstraints = () => {
     if (!dateRange || !dateRange[0]?.startDate) return { disabled: false, min: "", error: "" };
-    
+
     const startDate = new Date(dateRange[0].startDate);
     const today = new Date();
-    
+
     const isTodayDate = startDate.getDate() === today.getDate() &&
-                        startDate.getMonth() === today.getMonth() &&
-                        startDate.getFullYear() === today.getFullYear();
-                        
+      startDate.getMonth() === today.getMonth() &&
+      startDate.getFullYear() === today.getFullYear();
+
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     const isTomorrowDate = startDate.getDate() === tomorrow.getDate() &&
-                           startDate.getMonth() === tomorrow.getMonth() &&
-                           startDate.getFullYear() === tomorrow.getFullYear();
+      startDate.getMonth() === tomorrow.getMonth() &&
+      startDate.getFullYear() === tomorrow.getFullYear();
 
     if (isTodayDate) {
       return {
@@ -159,7 +159,7 @@ const RoomSelector = () => {
         error: "Airport pickup requests must be made at least 1 day in advance. Shuttle service is unavailable for today."
       };
     }
-    
+
     if (isTomorrowDate) {
       const hours = today.getHours();
       const minutes = today.getMinutes();
@@ -170,7 +170,7 @@ const RoomSelector = () => {
         error: ""
       };
     }
-    
+
     return {
       disabled: false,
       min: "",
@@ -1518,9 +1518,9 @@ const RoomSelector = () => {
                             <span>{room.boardType} Add-on:</span>
                             <span>
                               +{process.env.CURRENCY_TYPE || "LKR"} {(() => {
-                                const addons = { "room only": 0, "bed & breakfast": 40, "half board": 90, "full board": 150 };
-                                const normalized = (room.boardType || "Room Only").toLowerCase();
-                                return addons[normalized] !== undefined ? addons[normalized] : 0;
+                                const typeObj = roomTypes.find(t => t.name === room.roomType);
+                                const baseRate = typeObj ? Number(typeObj.price.replace(/[^0-9.]/g, '')) : 0;
+                                return Math.max(0, room.price - baseRate);
                               })()}
                             </span>
                           </div>

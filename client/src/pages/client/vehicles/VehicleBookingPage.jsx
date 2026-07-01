@@ -7,8 +7,9 @@ const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:30
 
 const formatMoney = (value) => {
   const amount = Number(value);
-  if (!Number.isFinite(amount)) return "$0.00";
-  return `$${amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  const currency = import.meta.env.VITE_CURRENCY_TYPE || "LKR";
+  if (!Number.isFinite(amount)) return `${currency} 0.00`;
+  return `${currency} ${amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 };
 
 const calculateDeposit = (totalPrice) => {

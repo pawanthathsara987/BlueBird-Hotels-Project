@@ -31,7 +31,7 @@ export default function TourInquiriesManagement() {
   };
 
 
-  const formatCurrency = (value) => `$${Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatCurrency = (value) => `${import.meta.env.VITE_CURRENCY_TYPE || "LKR"} ${Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const getInquiryName = (inquiry) => {
     return (
@@ -527,7 +527,7 @@ export default function TourInquiriesManagement() {
 
                               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                                 <div>
-                                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Total Package Price (USD) *</label>
+                                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Total Package Price ({process.env.CURRENCY_TYPE || 'LKR'}) *</label>
                                   <p className="mb-2 text-xs text-slate-500">Final total for the entire package</p>
                                   <input
                                     type="number"

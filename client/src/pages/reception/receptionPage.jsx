@@ -10,6 +10,7 @@ import CheckOut from "./CheckOut";
 import Reports from "./Reports";
 import AirportPickups from "./AirportPickups";
 import TourBookings from "./TourBookings";
+import RefundRequests from "./RefundRequests";
 
 export default function ReceptionPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -233,6 +234,7 @@ export default function ReceptionPage() {
                     <Link to="/reception/pickups" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/pickups")}><MdLocalTaxi className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Airport Pickups</span></Link>
                     <Link to="/reception/tours" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/tours")}><MdTerrain className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Tour Bookings</span></Link>
                     <Link to="/reception/reports" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/reports")}><MdBarChart className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Reports</span></Link>
+                    <Link to="/reception/refunds" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/refunds")}><MdOutlineBookOnline className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Refunds Approval</span></Link>
 
                     <div className="mt-auto pt-6">
                         <button
@@ -410,6 +412,7 @@ export default function ReceptionPage() {
                         <Route path="/pickups" element={<AirportPickups />} />
                         <Route path="/tours" element={<TourBookings />} />
                         <Route path="/reports" element={<Reports />} />
+                        <Route path="/refunds" element={<RefundRequests />} />
                     </Routes>
                 </div>
             </div>

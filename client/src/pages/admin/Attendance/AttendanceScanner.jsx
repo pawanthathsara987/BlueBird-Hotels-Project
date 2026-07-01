@@ -9,15 +9,40 @@ export default function AttendanceScanner() {
 
     const handleScan = async (decodedText) => {
         const scanId = Date.now();
+        let qrData = null;
         try {
-            const qrData = JSON.parse(decodedText);
+            qrData = JSON.parse(decodedText);
+        } catch (e) {
+            setScanResult({
+                id: scanId,
+                type: "error",
+                title: "Invalid QR Code",
+                message: "The scanned QR code is invalid or unreadable."
+            });
+            return;
+        }
+
+        try {
             const response = await scanAttendance(qrData);
+
+            if (response.data && response.data.success === false) {
+                setScanResult({
+                    id: scanId,
+                    type: "error",
+                    title: "Scan Failed",
+                    staffName: response.data.staffName || response.data.staff?.name || "Staff Member",
+                    staffId: response.data.staff?.staffId || response.data.attendance?.staffId || qrData.staffId || "Unknown",
+                    message: response.data.message || "Failed to process attendance."
+                });
+                return;
+            }
 
             let result = {
                 id: scanId,
                 type: "success",
                 title: "Scan Successful",
-                staffName: response.data.staffName || "Staff Member",
+                staffName: response.data.staffName || response.data.staff?.name || "Staff Member",
+                staffId: response.data.staff?.staffId || response.data.attendance?.staffId || qrData.staffId || "Unknown",
                 action: response.data.action,
                 message: response.data.message || `${response.data.staffName} processed successfully.`
             };
@@ -33,14 +58,16 @@ export default function AttendanceScanner() {
             setScanResult(result);
         } catch (error) {
             const errMsg = error.response?.data?.message || "Scan failed";
+            const errorData = error.response?.data || {};
             setScanResult({
                 id: scanId,
                 type: "error",
                 title: "Scan Failed",
+                staffName: errorData.staffName || errorData.staff?.name || "Staff Member",
+                staffId: errorData.staff?.staffId || errorData.attendance?.staffId || qrData?.staffId || "Unknown",
                 message: errMsg
             });
         }
-
     };
 
     return (
@@ -109,25 +136,28 @@ export default function AttendanceScanner() {
 
                         {/* Content Details */}
                         <div className="w-full mt-6 space-y-4">
+                            {/* Always show Staff Member details if available */}
+                            {scanResult.staffId && scanResult.staffId !== "Unknown" && (
+                                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100 w-full">
+                                    <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600">
+                                        <FaUser className="text-sm" />
+                                    </div>
+                                    <div className="flex-1 text-left">
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Staff Member</p>
+                                        <p className="text-sm font-bold text-slate-800">{scanResult.staffName}</p>
+                                        <p className="text-xs text-slate-500 font-semibold mt-0.5">ID: {scanResult.staffId}</p>
+                                    </div>
+                                </div>
+                            )}
+
                             {scanResult.type === "success" ? (
                                 <div className="space-y-3">
-                                    {/* Staff Name Card */}
-                                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600">
-                                            <FaUser className="text-sm" />
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Staff Member</p>
-                                            <p className="text-sm font-semibold text-slate-800">{scanResult.staffName}</p>
-                                        </div>
-                                    </div>
-
                                     {/* Action Badge */}
-                                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100 w-full">
                                         <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600">
                                             <FaClock className="text-sm" />
                                         </div>
-                                        <div>
+                                        <div className="text-left">
                                             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Activity</p>
                                             <span className={`inline-block text-xs font-bold px-2.5 py-0.5 rounded-full mt-1 ${
                                                 scanResult.action === "CHECK_IN" 

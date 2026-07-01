@@ -10,7 +10,7 @@ import FloatingChatbot from '../../../../components/FloatingChatbot';
    TOUR CARD COMPONENT
    ==================================== */
 function TourCard({ tour, onSelect }) {
-  const finalPrice = tour.discount 
+  const finalPrice = tour.discount
     ? tour.price - (tour.price * tour.discount / 100)
     : tour.price;
 
@@ -47,11 +47,10 @@ function TourCard({ tour, onSelect }) {
         {/* Status Badge */}
         <div className="absolute top-4 right-4">
           <span
-            className={`px-3 py-1 rounded-full text-xs font-bold shadow-lg border ${
-              tour.status === 'active'
+            className={`px-3 py-1 rounded-full text-xs font-bold shadow-lg border ${tour.status === 'active'
                 ? 'bg-emerald-500/95 text-white border-emerald-300/50'
                 : 'bg-slate-500/95 text-white border-slate-300/50'
-            }`}
+              }`}
           >
             {tour.status === 'active' ? '✓ Active' : '● Inactive'}
           </span>
@@ -112,11 +111,11 @@ function TourCard({ tour, onSelect }) {
             <div className="mb-3">
               <p className="text-xs text-slate-500 mb-1">Original Price</p>
               <p className="text-sm text-slate-500 line-through mb-2">
-${Number(tour.price).toFixed(2)}
+                ${Number(tour.price).toFixed(2)}
               </p>
               <div className="flex items-baseline gap-2">
                 <p className="text-2xl font-bold text-emerald-700">
-${finalPrice.toFixed(2)}
+                  ${finalPrice.toFixed(2)}
                 </p>
                 <p className="text-xs text-emerald-700 font-semibold">
                   Save ${savings}
@@ -125,7 +124,7 @@ ${finalPrice.toFixed(2)}
             </div>
           ) : (
             <p className="text-2xl font-bold text-cyan-700 mb-3">
-${Number(tour.price).toFixed(2)}
+              ${Number(tour.price).toFixed(2)}
             </p>
           )}
 
@@ -241,7 +240,7 @@ function FilterSidebar({
         {/* Price Range Display */}
         <div className="p-3 bg-cyan-50 rounded-xl border border-cyan-200">
           <p className="text-sm text-center font-semibold text-cyan-900">
-${minPrice.toLocaleString()} - ${maxPrice.toLocaleString()}
+            ${minPrice.toLocaleString()} - ${maxPrice.toLocaleString()}
           </p>
         </div>
       </div>
@@ -474,7 +473,7 @@ export default function TourViewPage() {
       <Header />
       <div className="flex-1 bg-linear-to-b from-cyan-50 via-slate-50 to-white">
         <div className="w-full md:w-[95%] lg:w-[90%] mx-auto py-8 px-4">
-          
+
           {/* Page Title */}
           <div className="mb-8 rounded-3xl bg-slate-900 text-white px-6 py-8 md:px-8 md:py-10 relative overflow-hidden">
             <div className="absolute -top-16 -right-10 w-56 h-56 rounded-full bg-cyan-500/20 blur-2xl" />
@@ -482,10 +481,10 @@ export default function TourViewPage() {
             <div className="relative">
               <p className="text-xs uppercase tracking-[0.25em] text-cyan-200 font-semibold mb-2">BlueBird Experiences</p>
               <h1 className="text-4xl md:text-5xl font-black text-white mb-2">
-              Explore Our Tours
+                Explore Our Tours
               </h1>
               <p className="text-slate-200 text-lg max-w-2xl">
-              Discover amazing experiences at the best prices
+                Discover amazing experiences at the best prices
               </p>
             </div>
           </div>
@@ -573,7 +572,7 @@ export default function TourViewPage() {
                 </div>
               )}
             </div>
-        </div>
+          </div>
         </div>
       </div>
       <FloatingChatbot />

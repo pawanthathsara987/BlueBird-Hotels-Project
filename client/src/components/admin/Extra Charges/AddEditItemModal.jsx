@@ -118,10 +118,10 @@ const AddEditItemModal = ({ isOpen, onClose, onSubmit, modalMode, initialData, i
                         {/* Price Input */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                Price (USD)
+                                Price ({process.env.CURRENCY_TYPE || 'LKR'})
                             </label>
                             <div className="relative flex items-center bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all duration-300">
-                                <DollarSign size={16} className="text-slate-400 shrink-0 mr-1.5" />
+                                <span className="text-slate-400 shrink-0 mr-1.5 font-bold text-xs">{process.env.CURRENCY_TYPE || 'LKR'}</span>
                                 <input
                                     type="number"
                                     step="0.01"

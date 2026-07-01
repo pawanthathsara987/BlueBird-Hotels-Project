@@ -21,7 +21,8 @@ const Card = ({ children, className = "" }) => (
 
 const formatMoney = (value) => {
   const amount = Number(value);
-  return Number.isFinite(amount) ? `$${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "$0.00";
+  const currency = import.meta.env.VITE_CURRENCY_TYPE || "LKR";
+  return Number.isFinite(amount) ? `${currency} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : `${currency} 0.00`;
 };
 
 export default function VehicleReports() {

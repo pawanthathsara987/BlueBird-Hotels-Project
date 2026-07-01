@@ -575,14 +575,14 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                             {selectedRooms.map(r => (
                                 <div key={r.roomId} className="flex justify-between text-[11px] items-center bg-slate-900 p-2.5 rounded-xl border border-slate-800">
                                     <span className="truncate pr-2 font-bold text-slate-200">Room {r.roomNumber || r.roomId} ({r.packageName})</span>
-                                    <span className="font-black text-green-400">LKR {r.price}</span>
+                                    <span className="font-black text-green-400">{process.env.CURRENCY_TYPE || "LKR"} {r.price}</span>
                                 </div>
                             ))}
                         </div>
 
                         <div className="flex justify-between items-end border-t border-slate-800 pt-4 mb-6">
                             <span className="text-slate-400 font-bold">Total Amount</span>
-                            <span className="text-3xl font-black text-green-400">LKR {totalPrice.toLocaleString()}</span>
+                            <span className="text-3xl font-black text-green-400">{process.env.CURRENCY_TYPE || "LKR"} {totalPrice.toLocaleString()}</span>
                         </div>
 
                         <button
