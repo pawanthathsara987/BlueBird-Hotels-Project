@@ -1,12 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { FaSearch, FaTimes, FaQrcode, FaArrowLeft, FaArrowRight, FaCalendarAlt, FaCheckCircle, FaExclamationCircle, FaUserClock, FaEdit } from "react-icons/fa";
-import { getAttendanceRecords } from "../../../utils/attendanceService";
+import { FaSearch, FaTimes, FaQrcode, FaArrowLeft, FaArrowRight, FaCalendarAlt, FaCheckCircle, FaExclamationCircle, FaUserClock, FaEdit, FaCog, FaFilePdf } from "react-icons/fa";
+import { useReactToPrint } from "react-to-print";
+import axios from "axios";
+import { getAttendanceRecords, markAbsentees } from "../../../utils/attendanceService";
 import Loader from "../../../components/Loader";
 import toast from "react-hot-toast";
 import EditAttendanceModal from "./EditAttendanceModal";
+import AttendanceSettings from "./AttendanceSettings";
+import ExportReportModal from "./ExportReportModal";
+import PrintableAttendanceReport from "./PrintableAttendanceReport";
 
 export default function AttendanceRecords() {
+    const [activeTab, setActiveTab] = useState("logs");
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
@@ -23,6 +29,160 @@ export default function AttendanceRecords() {
     // Modal states
     const [selectedAttendanceId, setSelectedAttendanceId] = useState(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [marking, setMarking] = useState(false);
+
+    // Report states
+    const [reportRecords, setReportRecords] = useState([]);
+    const [isPreparingReport, setIsPreparingReport] = useState(false);
+    const contentRef = useRef(null);
+
+    // Export Report configuration states
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [staffList, setStaffList] = useState([]);
+    const [reportTitle, setReportTitle] = useState("Staff Attendance Report");
+    const [reportMeta, setReportMeta] = useState({
+        dateRange: "All Time",
+        statusFilter: "All",
+        search: "All Employees"
+    });
+
+    const reportFilenameRef = useRef("Attendance_Report");
+
+    // Load staff list for selection dropdown
+    const fetchStaffList = async () => {
+        try {
+            const res = await axios.get(import.meta.env.VITE_BACKEND_URL + "/users/getAll");
+            setStaffList(res.data || []);
+        } catch (error) {
+            console.error("Failed to load staff list for report selection:", error);
+        }
+    };
+
+    useEffect(() => {
+        fetchStaffList();
+    }, []);
+
+    const triggerPrint = useReactToPrint({
+        contentRef,
+        documentTitle: () => reportFilenameRef.current
+    });
+
+    const handleGenerateReport = async ({
+        reportType,
+        selectedDate,
+        selectedMonth,
+        selectedStaffId,
+        individualStartDate,
+        individualEndDate
+    }) => {
+        if (reportType === "individual" && !selectedStaffId) {
+            toast.error("Please select a valid staff member.");
+            return;
+        }
+
+        try {
+            setIsPreparingReport(true);
+            let params = { page: 1, limit: 1000 };
+            let title = "Staff Attendance Report";
+            let meta = {
+                dateRange: "All Time",
+                statusFilter: "All",
+                search: "All Employees"
+            };
+
+            if (reportType === "daily") {
+                params.startDate = selectedDate;
+                params.endDate = selectedDate;
+                
+                const formattedDate = new Date(selectedDate).toLocaleDateString(undefined, {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric"
+                });
+                title = `Daily Attendance Report - ${formattedDate}`;
+                meta.dateRange = formattedDate;
+                meta.search = "All Employees";
+                reportFilenameRef.current = `Daily_Attendance_Report_${selectedDate}`;
+
+            } else if (reportType === "monthly") {
+                const [year, month] = selectedMonth.split("-").map(Number);
+                const startDateStr = `${selectedMonth}-01`;
+                const lastDay = new Date(year, month, 0).getDate();
+                const endDateStr = `${selectedMonth}-${String(lastDay).padStart(2, "0")}`;
+
+                params.startDate = startDateStr;
+                params.endDate = endDateStr;
+
+                const monthName = new Date(year, month - 1).toLocaleDateString(undefined, {
+                    month: "long",
+                    year: "numeric"
+                });
+                title = `Monthly Attendance Report - ${monthName}`;
+                meta.dateRange = monthName;
+                meta.search = "All Employees";
+                reportFilenameRef.current = `Monthly_Attendance_Report_${selectedMonth}`;
+
+            } else if (reportType === "individual") {
+                params.search = selectedStaffId;
+                if (individualStartDate) params.startDate = individualStartDate;
+                if (individualEndDate) params.endDate = individualEndDate;
+
+                const staffObj = staffList.find(s => s.staffId === selectedStaffId);
+                const staffName = staffObj ? staffObj.name : selectedStaffId;
+
+                title = `Individual Employee Attendance Report`;
+                meta.search = `${staffName} (${selectedStaffId})`;
+                
+                if (individualStartDate || individualEndDate) {
+                    const startLabel = individualStartDate ? new Date(individualStartDate).toLocaleDateString() : "Beginning";
+                    const endLabel = individualEndDate ? new Date(individualEndDate).toLocaleDateString() : "Today";
+                    meta.dateRange = `${startLabel} to ${endLabel}`;
+                } else {
+                    meta.dateRange = "All Time";
+                }
+                reportFilenameRef.current = `Individual_Attendance_Report_${selectedStaffId}`;
+            }
+
+            setReportTitle(title);
+            setReportMeta(meta);
+
+            const response = await getAttendanceRecords(params);
+            if (response.data?.success) {
+                setReportRecords(response.data.data || []);
+                setIsExportModalOpen(false);
+                setTimeout(() => {
+                    triggerPrint();
+                }, 300);
+            } else {
+                toast.error("Failed to compile report data");
+            }
+        } catch (error) {
+            console.error("Error generating report:", error);
+            toast.error("Failed to generate report");
+        } finally {
+            setIsPreparingReport(false);
+        }
+    };
+
+    // Mark today's absentees
+    const handleMarkAbsentees = async () => {
+        try {
+            setMarking(true);
+            const response = await markAbsentees();
+            if (response.data?.success) {
+                toast.success(response.data.message || "Successfully marked today's absentees!");
+                fetchRecords();
+            } else {
+                toast.error(response.data?.message || "Failed to mark absentees");
+            }
+        } catch (error) {
+            console.error("Error marking absentees:", error);
+            const errorMessage = error.response?.data?.message || "Failed to mark absentees";
+            toast.error(errorMessage);
+        } finally {
+            setMarking(false);
+        }
+    };
 
     // Fetch records
     const fetchRecords = async () => {
@@ -95,24 +255,77 @@ export default function AttendanceRecords() {
             <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between mb-8">
                 <div>
                     <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight flex items-center gap-3">
-                        <FaUserClock className="text-blue-600" /> Staff Attendance Logs
+                        {activeTab === "logs" ? (
+                            <>
+                                <FaUserClock className="text-blue-600" /> Staff Attendance Logs
+                            </>
+                        ) : (
+                            <>
+                                <FaCog className="text-blue-600 animate-spin" style={{ animationDuration: '4s' }} /> Attendance Settings
+                            </>
+                        )}
                     </h1>
                     <p className="text-sm text-slate-500 mt-1">
-                        View employee check-in and check-out times, late tracking, and calculated work hours.
+                        {activeTab === "logs"
+                            ? "View employee check-in and check-out times, late tracking, and calculated work hours."
+                            : "Configure office work times, scanner cooling thresholds, manual logging privileges, and policies."}
                     </p>
                 </div>
-                <div>
-                    <Link
-                        to="/attendance"
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3 transition-all duration-250 shadow-md hover:shadow-lg active:scale-98"
-                    >
-                        <FaQrcode className="text-sm animate-pulse" /> Open Scanner App
-                    </Link>
-                </div>
+                {activeTab === "logs" && (
+                    <div className="flex flex-row items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={() => setIsExportModalOpen(true)}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-semibold px-4 py-2 text-sm transition-all duration-250 shadow-md hover:shadow-lg active:scale-98 cursor-pointer"
+                        >
+                            <FaFilePdf className="text-xs text-rose-400" /> Generate PDF Report
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleMarkAbsentees}
+                            disabled={marking}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white font-semibold px-4 py-2 text-sm transition-all duration-250 shadow-md hover:shadow-lg active:scale-98 disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                            <FaTimes className="text-xs" /> Mark Today's Absentees
+                        </button>
+                        <Link
+                            to="/attendance"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 text-sm transition-all duration-250 shadow-md hover:shadow-lg active:scale-98"
+                        >
+                            <FaQrcode className="text-xs animate-pulse" /> Open Scanner App
+                        </Link>
+                    </div>
+                )}
             </div>
 
-            {/* Filters panel card */}
-            <div className="rounded-3xl bg-white p-6 shadow-xl border border-slate-100/80 mb-6">
+            {/* Tabs */}
+            <div className="flex border-b border-slate-200 mb-6">
+                <button
+                    onClick={() => setActiveTab("logs")}
+                    className={`pb-3 px-4 font-bold text-sm border-b-2 transition-all duration-200 cursor-pointer ${
+                        activeTab === "logs"
+                            ? "border-blue-600 text-blue-600"
+                            : "border-transparent text-slate-400 hover:text-slate-600"
+                    }`}
+                >
+                    Attendance Logs
+                </button>
+                <button
+                    onClick={() => setActiveTab("settings")}
+                    className={`pb-3 px-4 font-bold text-sm border-b-2 transition-all duration-200 cursor-pointer ${
+                        activeTab === "settings"
+                            ? "border-blue-600 text-blue-600"
+                            : "border-transparent text-slate-400 hover:text-slate-600"
+                    }`}
+                >
+                    Settings Configuration
+                </button>
+            </div>
+
+            {activeTab === "logs" ? (
+                <>
+                    {/* Filters panel card */}
+                    <div className="rounded-3xl bg-white p-6 shadow-xl border border-slate-100/80 mb-6">
                 <form onSubmit={handleSearchSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
                         {/* Search Input */}
@@ -364,6 +577,10 @@ export default function AttendanceRecords() {
                     )}
                 </div>
             </div>
+            </>
+            ) : (
+                <AttendanceSettings />
+            )}
             
             <EditAttendanceModal
                 isOpen={isEditModalOpen}
@@ -373,6 +590,21 @@ export default function AttendanceRecords() {
                 }}
                 attendanceId={selectedAttendanceId}
                 onSuccess={fetchRecords}
+            />
+
+            <ExportReportModal
+                isOpen={isExportModalOpen}
+                onClose={() => setIsExportModalOpen(false)}
+                staffList={staffList}
+                isPreparingReport={isPreparingReport}
+                onGenerate={handleGenerateReport}
+            />
+
+            <PrintableAttendanceReport
+                ref={contentRef}
+                reportRecords={reportRecords}
+                reportTitle={reportTitle}
+                reportMeta={reportMeta}
             />
         </div>
     );
