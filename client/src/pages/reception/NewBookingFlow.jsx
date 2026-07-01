@@ -323,7 +323,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                             <option value="" className="bg-slate-900 text-white">-- Choose a Package --</option>
                             {packages.map(pkg => (
                                 <option key={pkg.room_type_id} value={pkg.room_type_id} disabled={pkg.available_rooms_count === 0} className="bg-slate-900 text-white">
-                                    {pkg.room_type_name} - ${pkg.price}/night ({pkg.available_rooms_count} rooms available)
+                                    {pkg.room_type_name} - LKR {pkg.price}/night ({pkg.available_rooms_count} rooms available)
                                 </option>
                             ))}
                         </select>

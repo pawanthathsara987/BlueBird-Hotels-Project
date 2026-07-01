@@ -155,7 +155,7 @@ export default function VehicleCatalogPage() {
               </div>
             </div>
 
-            <div className={`${cardShell} overflow-hidden`}> 
+            <div className={`${cardShell} overflow-hidden`}>
               <div className="relative h-full min-h-80 bg-linear-to-br from-slate-950 via-blue-700 to-sky-400 p-6 text-white">
                 <div className="absolute inset-0 opacity-25 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.35),transparent_40%)]" />
                 <div className="relative h-full flex flex-col justify-between">
@@ -425,7 +425,7 @@ export default function VehicleCatalogPage() {
         )}
       </section>
 
- 
+
     </div>
   );
 }
