@@ -2,6 +2,8 @@ import { Op } from "sequelize";
 import StaffMember from "../models/User/StaffMember.js";
 import UserRegisterModel from "../models/User/UserRegisterModel.js";
 import Otp from "../models/User/Otp.js";
+import QRCode from "qrcode";
+import crypto from "crypto";
 import { sendEmail } from "../services/emailService.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -11,7 +13,6 @@ import sequelize from "../config/database.js";
 import Role from "../models/User/Role.js";
 import DeletedStaffMember from "../models/User/DeletedStaffMember.js";
 import supabase from "../config/supabaseClient.js";
-import { generateQRCode } from "../utils/qrCodeGenerator.js";
 dotenv.config();
 
 export async function userLogin(req, res) {
@@ -159,11 +160,6 @@ export async function registerUser(req, res) {
         // Reload to get trigger-generated staffId
         await staffMember.reload();
 
-        // Generate and save QR code
-        const qrCodeUrl = await generateQRCode(staffMember.staffId);
-        staffMember.qrCodeUrl = qrCodeUrl;
-        await staffMember.save();
-
         res.json({
             message: "User registered successfully",
             user: staffMember
@@ -273,7 +269,16 @@ export async function updateUser(req, res) {
     const userId = req.params.id;
 
     try {
+        const staffToUpdate = await StaffMember.findByPk(userId, { include: [Role] });
+        if (!staffToUpdate) {
+            return res.status(404).json({ message: "Staff member not found" });
+        }
+
         const data = req.body;
+
+        if (staffToUpdate.Role?.roleName === 'admin' && data.roleId && parseInt(data.roleId) !== parseInt(staffToUpdate.roleId)) {
+            return res.status(403).json({ message: "Admin role cannot be changed" });
+        }
 
         // Check if another active staff member already uses the same email, userName, or nicNumber
         const orConditions = [
@@ -704,5 +709,45 @@ export async function getAllDeletedUsers(req, res) {
             message: "Failed to fetch deleted users",
             error: error.message
         });
+    }
+}
+
+export async function getStaffQRCode(req, res) {
+    try {
+        const { staffId } = req.params;
+
+        const staff = await StaffMember.findOne({ where: { staffId } });
+        if (!staff) {
+            return res.status(404).json({ success: false, message: "Staff member not found" });
+        }
+
+        const payload = {
+            staffId,
+            type: "attendance",
+            version: 1
+        };
+
+        const signature = crypto
+            .createHmac("sha256", process.env.QR_SECRET || "default_qr_secret_key_123456")
+            .update(JSON.stringify(payload))
+            .digest("hex");
+
+        const qrData = JSON.stringify({
+            ...payload,
+            signature
+        });
+
+        // Generate QR code as a PNG Buffer in-memory
+        const qrBuffer = await QRCode.toBuffer(qrData, {
+            width: 400,
+            margin: 2
+        });
+
+        // Set response headers and return PNG buffer directly
+        res.setHeader("Content-Type", "image/png");
+        res.setHeader("Cache-Control", "public, max-age=86400"); // Cache for 24h
+        return res.send(qrBuffer);
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
 }
