@@ -1,7 +1,7 @@
 import { Model, DataTypes } from "sequelize";
 import sequelize from "../../config/database.js";
 
-class AirPortPickup extends Model {}
+class AirPortPickup extends Model { }
 
 AirPortPickup.init(
     {

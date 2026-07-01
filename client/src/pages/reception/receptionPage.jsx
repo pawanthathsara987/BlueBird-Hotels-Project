@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, Routes, Route, useLocation, useNavigate } from "react-router-dom";
-import { MdDashboard, MdCheckCircle, MdLogout, MdMenu, MdClose, MdNotifications, MdOutlineBookOnline, MdBarChart, MdLocalTaxi } from "react-icons/md";
+import { MdDashboard, MdCheckCircle, MdLogout, MdMenu, MdClose, MdNotifications, MdOutlineBookOnline, MdBarChart, MdLocalTaxi, MdTerrain } from "react-icons/md";
 import { jwtDecode } from "jwt-decode";
 import axios from "axios";
 import Dashboard from "./Dashboard";
@@ -9,6 +9,7 @@ import CheckIn from "./CheckIn";
 import CheckOut from "./CheckOut";
 import Reports from "./Reports";
 import AirportPickups from "./AirportPickups";
+import TourBookings from "./TourBookings";
 
 export default function ReceptionPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -17,6 +18,12 @@ export default function ReceptionPage() {
     const [authorized, setAuthorized] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [showNotifications, setShowNotifications] = useState(false);
+    const [pickupAlerts, setPickupAlerts] = useState([]);
+    const [dismissedAlerts, setDismissedAlerts] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('dismissed_pickup_alerts') || '[]'); }
+        catch { return []; }
+    });
+    const [newAlertBanner, setNewAlertBanner] = useState(null);
 
     // Dynamic theme state synchronized with Dashboard customizer
     const [theme, setTheme] = useState(() => {
@@ -48,6 +55,45 @@ export default function ReceptionPage() {
         }, 1000);
         return () => clearInterval(timer);
     }, []);
+
+    // ---- Pickup Alert Polling (every 5 min) ----
+    const fetchPickupAlerts = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        try {
+            const res = await axios.get(
+                `${import.meta.env.VITE_BACKEND_URL}/reception/pickup-alerts`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            if (res.data?.success) {
+                const alerts = res.data.data || [];
+                setPickupAlerts(alerts);
+                // Show banner for new urgent (6h) alerts not yet dismissed
+                const dismissed = JSON.parse(localStorage.getItem('dismissed_pickup_alerts') || '[]');
+                const newUrgent = alerts.find(a => a.urgency === 'urgent' && !dismissed.includes(`${a.id}_${a.type}`));
+                if (newUrgent) setNewAlertBanner(newUrgent);
+            }
+        } catch (e) {
+            // silent fail
+        }
+    };
+
+    useEffect(() => {
+        if (!authorized) return;
+        fetchPickupAlerts();
+        const poll = setInterval(fetchPickupAlerts, 5 * 60 * 1000); // every 5 min
+        return () => clearInterval(poll);
+    }, [authorized]);
+
+    const dismissAlert = (alertId, alertType) => {
+        const key = `${alertId}_${alertType}`;
+        const updated = [...dismissedAlerts, key];
+        setDismissedAlerts(updated);
+        localStorage.setItem('dismissed_pickup_alerts', JSON.stringify(updated));
+        if (newAlertBanner && `${newAlertBanner.id}_${newAlertBanner.type}` === key) {
+            setNewAlertBanner(null);
+        }
+    };
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -185,6 +231,7 @@ export default function ReceptionPage() {
                     <Link to="/reception/checkout" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/checkout")}><MdCheckCircle className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Check-Out</span></Link>
                     <Link to="/reception/bookings" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/bookings")}><MdOutlineBookOnline className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Bookings</span></Link>
                     <Link to="/reception/pickups" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/pickups")}><MdLocalTaxi className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Airport Pickups</span></Link>
+                    <Link to="/reception/tours" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/tours")}><MdTerrain className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Tour Bookings</span></Link>
                     <Link to="/reception/reports" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/reports")}><MdBarChart className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Reports</span></Link>
 
                     <div className="mt-auto pt-6">
@@ -247,51 +294,109 @@ export default function ReceptionPage() {
                             onClick={() => setShowNotifications(!showNotifications)}
                             className="p-2 text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200 relative cursor-pointer"
                         >
-                            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full" />
+                            {/* Unread badge */}
+                            {pickupAlerts.filter(a => !dismissedAlerts.includes(`${a.id}_${a.type}`)).length > 0 && (
+                                <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 flex items-center justify-center bg-red-500 text-white text-[9px] font-black rounded-full">
+                                    {pickupAlerts.filter(a => !dismissedAlerts.includes(`${a.id}_${a.type}`)).length}
+                                </span>
+                            )}
                             <MdNotifications className="text-xl" />
                         </button>
 
                         {/* Notification Popup Dropdown */}
                         {showNotifications && (
-                            <div className={`absolute right-0 top-12 w-80 rounded-2xl border p-4 shadow-xl z-50 transition-colors duration-350 ${
+                            <div className={`absolute right-0 top-12 w-88 rounded-2xl border p-4 shadow-xl z-50 transition-colors duration-350 ${
                                 theme.mode === "dark" 
                                 ? "bg-slate-900 border-slate-800 text-slate-100" 
                                 : "bg-white border-slate-200 text-slate-800"
-                            }`}>
+                            }`} style={{width: "340px"}}>
                                 <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-2 mb-3">
-                                    <h4 className="text-xs font-black tracking-wide text-[#0c325e] dark:text-teal-400 uppercase">BLUEBIRD Hotel</h4>
-                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-black uppercase">Notifications</span>
+                                    <h4 className="text-xs font-black tracking-wide text-[#0c325e] dark:text-teal-400 uppercase flex items-center gap-1.5">
+                                        🚖 Airport Pickup Alerts
+                                    </h4>
+                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-black uppercase">
+                                        {pickupAlerts.filter(a => !dismissedAlerts.includes(`${a.id}_${a.type}`)).length} Active
+                                    </span>
                                 </div>
-                                <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
-                                    {/* Item 1 */}
-                                    <div className="p-3 rounded-xl bg-teal-50/60 dark:bg-teal-950/20 border border-teal-200/40 dark:border-teal-900/40 border-l-4 border-l-teal-600 text-xs space-y-1 text-left">
-                                        <div className="flex justify-between font-black">
-                                            <span className="text-teal-700 dark:text-teal-350 text-[10px] tracking-wide font-black">BLUEBIRD RESERVATION</span>
-                                            <span className="text-[9px] text-slate-500 dark:text-slate-400">Just Now</span>
+                                <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                                    {pickupAlerts.length === 0 ? (
+                                        <div className="text-center py-6 text-slate-400 dark:text-slate-500">
+                                            <p className="text-2xl mb-1">✅</p>
+                                            <p className="text-[11px] font-bold">No upcoming pickups in the next 24h</p>
                                         </div>
-                                        <p className="text-slate-900 dark:text-slate-200 text-[11px] font-bold leading-normal">New walk-in booking created successfully for Room 104.</p>
-                                    </div>
-                                    {/* Item 2 */}
-                                    <div className="p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/45 dark:border-blue-900/40 border-l-4 border-l-blue-600 text-xs space-y-1 text-left">
-                                        <div className="flex justify-between font-black">
-                                            <span className="text-blue-700 dark:text-blue-350 text-[10px] tracking-wide font-black">CHECK-IN COMPLETE</span>
-                                            <span className="text-[9px] text-slate-500 dark:text-slate-400">10m ago</span>
-                                        </div>
-                                        <p className="text-slate-900 dark:text-slate-200 text-[11px] font-bold leading-normal">Guest Nimal Silva has checked in to Room 201.</p>
-                                    </div>
-                                    {/* Item 3 */}
-                                    <div className="p-3 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-150/45 dark:border-amber-900/40 border-l-4 border-l-amber-600 text-xs space-y-1 text-left">
-                                        <div className="flex justify-between font-black">
-                                            <span className="text-amber-700 dark:text-amber-350 text-[10px] tracking-wide font-black">CHECK-OUT DUE</span>
-                                            <span className="text-[9px] text-slate-500 dark:text-slate-400">1h ago</span>
-                                        </div>
-                                        <p className="text-slate-900 dark:text-slate-200 text-[11px] font-bold leading-normal">Room 102 checkout is expected by 12:00 PM today.</p>
-                                    </div>
+                                    ) : (
+                                        pickupAlerts.map(alert => {
+                                            const isDismissed = dismissedAlerts.includes(`${alert.id}_${alert.type}`);
+                                            const isUrgent = alert.urgency === 'urgent';
+                                            return (
+                                                <div
+                                                    key={`${alert.id}_${alert.type}`}
+                                                    className={`p-3 rounded-xl text-xs space-y-1 text-left relative transition-opacity ${
+                                                        isDismissed ? 'opacity-40' : ''
+                                                    } ${isUrgent
+                                                        ? 'bg-red-50/80 dark:bg-red-950/25 border border-red-200/50 dark:border-red-900/40 border-l-4 border-l-red-600'
+                                                        : 'bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/40 border-l-4 border-l-amber-500'
+                                                    }`}
+                                                >
+                                                    <div className="flex justify-between items-start gap-2">
+                                                        <span className={`text-[10px] tracking-wide font-black ${isUrgent ? 'text-red-700 dark:text-red-400' : 'text-amber-700 dark:text-amber-400'}`}>
+                                                            {isUrgent ? '🚨 URGENT — ' : '⏰ UPCOMING — '}
+                                                            {isUrgent ? `In ${alert.hoursRemaining < 1 ? '<1h' : alert.hoursRemaining + 'h'}` : `In ${alert.hoursRemaining}h`}
+                                                        </span>
+                                                        {!isDismissed && (
+                                                            <button
+                                                                onClick={() => dismissAlert(alert.id, alert.type)}
+                                                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-[10px] leading-none ml-auto flex-shrink-0 cursor-pointer"
+                                                                title="Dismiss"
+                                                            >✕</button>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-slate-800 dark:text-slate-100 text-[11px] font-bold leading-snug">
+                                                        {alert.guestName}
+                                                    </p>
+                                                    <p className="text-slate-500 dark:text-slate-400 text-[10px]">
+                                                        📍 {alert.pickup_location} &nbsp;·&nbsp; 🕐 {alert.pickup_time} &nbsp;·&nbsp; 👥 {alert.passenger_count} pax
+                                                    </p>
+                                                    <p className="text-slate-500 dark:text-slate-400 text-[10px]">
+                                                        📅 {alert.pickup_date}
+                                                    </p>
+                                                </div>
+                                            );
+                                        })
+                                    )}
                                 </div>
+                                <button
+                                    onClick={() => { setShowNotifications(false); window.location.href = '/reception/pickups'; }}
+                                    className="mt-3 w-full text-center text-[10px] font-bold text-teal-600 dark:text-teal-400 hover:underline cursor-pointer"
+                                >
+                                    View All Pickups →
+                                </button>
                             </div>
                         )}
                     </div>
                 </header>
+
+                {/* Urgent Pickup Alert Banner — floats at top of main content */}
+                {newAlertBanner && !dismissedAlerts.includes(`${newAlertBanner.id}_${newAlertBanner.type}`) && (
+                    <div className="flex items-center gap-3 px-5 py-2.5 bg-red-600 text-white text-xs font-bold shadow-md z-30 flex-shrink-0 print:hidden">
+                        <span className="text-base">🚨</span>
+                        <span className="flex-1">
+                            <strong>AIRPORT PICKUP ALERT:</strong> {newAlertBanner.guestName} — {newAlertBanner.pickup_location} at {newAlertBanner.pickup_time} (in {newAlertBanner.hoursRemaining}h)
+                        </span>
+                        <button
+                            onClick={() => dismissAlert(newAlertBanner.id, newAlertBanner.type)}
+                            className="ml-auto px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-[11px] font-black cursor-pointer"
+                        >
+                            Dismiss
+                        </button>
+                        <button
+                            onClick={() => { dismissAlert(newAlertBanner.id, newAlertBanner.type); window.location.href = '/reception/pickups'; }}
+                            className="px-3 py-1 bg-white text-red-600 rounded-lg text-[11px] font-black cursor-pointer"
+                        >
+                            View Pickups
+                        </button>
+                    </div>
+                )}
 
                 {/* Content Panel */}
                 <div className={`flex-grow h-full overflow-y-auto ${
@@ -303,6 +408,7 @@ export default function ReceptionPage() {
                         <Route path="/checkout" element={<CheckOut />} />
                         <Route path="/bookings" element={<Booking />} />
                         <Route path="/pickups" element={<AirportPickups />} />
+                        <Route path="/tours" element={<TourBookings />} />
                         <Route path="/reports" element={<Reports />} />
                     </Routes>
                 </div>
