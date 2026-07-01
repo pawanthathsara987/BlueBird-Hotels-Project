@@ -144,7 +144,7 @@ export default function StaffManagement() {
                                         <thead>
                                             <tr className="border-b border-slate-100">
                                                 <th className="pb-4 pt-2 text-left text-xs font-bold uppercase tracking-wider text-slate-400">STAFF MEMBER</th>
-                                                <th className="pb-4 pt-2 text-left text-xs font-bold uppercase tracking-wider text-slate-400">USERNAME</th>
+                                                <th className="pb-4 pt-2 text-left text-xs font-bold uppercase tracking-wider text-slate-400">STAFF ID</th>
                                                 <th className="pb-4 pt-2 text-left text-xs font-bold uppercase tracking-wider text-slate-400">ROLE</th>
                                                 <th className="pb-4 pt-2 text-left text-xs font-bold uppercase tracking-wider text-slate-400">PHONE</th>
                                                 <th className="pb-4 pt-2 text-center text-xs font-bold uppercase tracking-wider text-slate-400">ACTIONS</th>
@@ -175,7 +175,7 @@ export default function StaffManagement() {
                                                             </div>
                                                         </td>
                                                         <td className="py-4.5 text-sm font-medium text-slate-600">
-                                                            @{member.userName}
+                                                            {member.staffId}
                                                         </td>
                                                         <td className="py-4.5">
                                                             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold tracking-wide capitalize ${
@@ -251,7 +251,7 @@ export default function StaffManagement() {
                                                         )}
                                                         <div>
                                                             <p className="text-base font-bold text-slate-800 leading-tight">{member.name}</p>
-                                                            <p className="text-xs text-slate-400 mt-0.5">@{member.userName}</p>
+                                                            <p className="text-xs text-slate-400 mt-0.5">{member.staffId}</p>
                                                         </div>
                                                     </div>
 
