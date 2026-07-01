@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { MdAdd, MdEdit, MdDelete } from "react-icons/md";
 import AddEditLeaveTypeModal from "../modals/AddEditLeaveTypeModal";
 import ConfirmDeleteModal from "../modals/ConfirmDeleteModal";
+import Loader from "../../../../components/Loader";
 
 export default function LeaveTypesTab() {
     const [leaveTypes, setLeaveTypes] = useState([]);
@@ -81,7 +82,7 @@ export default function LeaveTypesTab() {
 
             {loading ? (
                 <div className="flex justify-center items-center py-20">
-                    <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <Loader />
                 </div>
             ) : (
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">

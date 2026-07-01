@@ -6,6 +6,7 @@ import AddEditLeaveRequestModal from "../modals/AddEditLeaveRequestModal";
 import ConfirmDeleteModal from "../modals/ConfirmDeleteModal";
 import { format } from "date-fns";
 import { jwtDecode } from "jwt-decode";
+import Loader from "../../../../components/Loader";
 
 export default function LeaveRequestsTab() {
     const [requests, setRequests] = useState([]);
@@ -165,7 +166,7 @@ export default function LeaveRequestsTab() {
 
             {loading ? (
                 <div className="flex justify-center items-center py-20">
-                    <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <Loader />
                 </div>
             ) : (
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden overflow-x-auto">

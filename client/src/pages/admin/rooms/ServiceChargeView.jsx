@@ -3,6 +3,7 @@ import { Plus, Search, Tag, Activity, Pencil } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import AddEditItemModal from "../../../components/admin/Extra Charges/AddEditItemModal";
+import Loader from "../../../components/Loader";
 
 const ServiceChargeView = () => {
     const [isLoading, setLoading] = useState(false);
@@ -155,9 +156,7 @@ const ServiceChargeView = () => {
             {/* List / Table Area */}
             {isLoading ? (
                 <div className="py-24 text-center">
-                    <div className="flex justify-center items-center">
-                        <span className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></span>
-                    </div>
+                    <Loader />
                     <p className="text-slate-400 text-sm mt-4 font-medium">Loading service charges...</p>
                 </div>
             ) : filteredItems.length === 0 ? (

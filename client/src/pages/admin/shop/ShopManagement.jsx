@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
+import Loader from "../../../components/Loader";
 
 import useShopItems from "./hooks/useShopItems";
 import ShopHeader from "./components/ShopHeader";
@@ -163,9 +164,7 @@ export default function ShopManagement() {
       {/* List / Table Area */}
       {loading ? (
         <div className="py-24 text-center animate-fadeIn">
-          <div className="flex justify-center items-center">
-            <span className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></span>
-          </div>
+          <Loader />
           <p className="text-slate-400 text-sm mt-4 font-medium">Loading shop items...</p>
         </div>
       ) : (
