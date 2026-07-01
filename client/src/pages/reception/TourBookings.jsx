@@ -307,6 +307,22 @@ export default function TourBookings() {
         };
     };
 
+    const parseTotalPrice = (inq) => {
+        const selectedTour = tours.find(t => t.id === inq.tourId);
+        const basePrice = parseFloat(selectedTour?.price || 0);
+        const discount = parseFloat(selectedTour?.discount || 0);
+        const discountedBase = discount > 0 ? basePrice - (basePrice * discount / 100) : basePrice;
+        
+        let extraPrice = 0;
+        if (inq.specialRequests) {
+            const match = inq.specialRequests.match(/\[Additional Custom Price:\s*LKR\s*([\d.]+)\]/);
+            if (match && match[1]) {
+                extraPrice = parseFloat(match[1]) || 0;
+            }
+        }
+        return discountedBase + extraPrice;
+    };
+
     const priceDetails = getCalculatedPrice();
 
     // Counts
@@ -439,7 +455,7 @@ export default function TourBookings() {
                                     <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Pax</th>
                                     <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Pickup</th>
                                     <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Status</th>
-                                    <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Actions</th>
+                                    <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Total Price</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
@@ -481,32 +497,8 @@ export default function TourBookings() {
                                                     {inq.status}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex gap-2">
-                                                    {inq.status === "pending" ? (
-                                                        <>
-                                                            <button
-                                                                onClick={() => handleAccept(inq.id)}
-                                                                className="p-1.5 border border-emerald-200 hover:bg-emerald-50 text-emerald-500 rounded-lg cursor-pointer transition"
-                                                                title="Accept Booking"
-                                                            >
-                                                                <MdCheck size={14} />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => {
-                                                                    setRejectingInquiry(inq);
-                                                                    setRejectionReason("");
-                                                                }}
-                                                                className="p-1.5 border border-rose-200 hover:bg-rose-50 text-rose-500 rounded-lg cursor-pointer transition"
-                                                                title="Reject Booking"
-                                                            >
-                                                                <MdClose size={14} />
-                                                            </button>
-                                                        </>
-                                                    ) : (
-                                                        <span className="text-slate-400 italic text-[10px]">Processed</span>
-                                                    )}
-                                                </div>
+                                            <td className="px-6 py-4 font-extrabold text-slate-800 dark:text-slate-200">
+                                                LKR {parseTotalPrice(inq).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </td>
                                         </tr>
                                     );
