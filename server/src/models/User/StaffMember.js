@@ -56,7 +56,11 @@ StaffMember.init(
         },
         qrCodeUrl: {
             type: DataTypes.STRING,
-            allowNull: true
+            allowNull: true,
+            get() {
+                const staffId = this.getDataValue('staffId');
+                return staffId ? `/users/staff/${staffId}/qr-code` : null;
+            }
         }
     },
     {
