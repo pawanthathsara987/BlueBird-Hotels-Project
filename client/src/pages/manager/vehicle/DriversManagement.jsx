@@ -10,7 +10,7 @@ const Card = ({ children, className = "" }) => (
 
 const formatMoney = (value) => {
   const amount = Number(value);
-  const currency = process.env.CURRENCY_TYPE || 'LKR';
+  const currency = import.meta.env.VITE_CURRENCY_TYPE || "LKR";
   return Number.isFinite(amount) ? `${currency} ${amount.toFixed(2)}` : `${currency} 0.00`;
 };
 

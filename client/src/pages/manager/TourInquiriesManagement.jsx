@@ -31,7 +31,7 @@ export default function TourInquiriesManagement() {
   };
 
 
-  const formatCurrency = (value) => `$${Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatCurrency = (value) => `${import.meta.env.VITE_CURRENCY_TYPE || "LKR"} ${Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const getInquiryName = (inquiry) => {
     return (

@@ -225,7 +225,7 @@ export default function TourItemView({ selectionMode = false, searchQuery = "" }
                                                 <p className="text-sm text-gray-600 font-medium">Tour Package</p>
                                                 <p className="font-semibold text-gray-800">{tour.packageName}</p>
                                                 <p className="text-sm text-gray-600 mt-1">
-                                                    <span className="font-medium">Price:</span> {process.env.CURRENCY_TYPE || 'LKR'} {tour.price}
+                                                    <span className="font-medium">Price:</span> {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {tour.price}
                                                     {tour.discount && ` | Discount: ${tour.discount}%`}
                                                 </p>
                                             </div>

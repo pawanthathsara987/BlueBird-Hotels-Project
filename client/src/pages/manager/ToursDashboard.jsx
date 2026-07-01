@@ -66,7 +66,7 @@ export default function ToursDashboard() {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-gray-600 text-sm font-semibold mb-2">Total Revenue</p>
-                            <p className="text-3xl font-bold text-green-600">{process.env.CURRENCY_TYPE || 'LKR'} {totalRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+                            <p className="text-3xl font-bold text-green-600">{import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {totalRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
                         </div>
                         <DollarSign className="w-12 h-12 text-green-300 opacity-50" />
                     </div>
@@ -77,7 +77,7 @@ export default function ToursDashboard() {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-gray-600 text-sm font-semibold mb-2">Avg Price</p>
-                            <p className="text-3xl font-bold text-purple-600">{process.env.CURRENCY_TYPE || 'LKR'} {averagePrice.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+                            <p className="text-3xl font-bold text-purple-600">{import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {averagePrice.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
                         </div>
                         <MapPin className="w-12 h-12 text-purple-300 opacity-50" />
                     </div>
@@ -88,8 +88,8 @@ export default function ToursDashboard() {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-gray-600 text-sm font-semibold mb-2">Price Range</p>
-                            <p className="text-sm text-orange-700 font-bold">Min: ${minPrice.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
-                            <p className="text-sm text-orange-700 font-bold">Max: ${maxPrice.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+                            <p className="text-sm text-orange-700 font-bold">Min: {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {minPrice.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+                            <p className="text-sm text-orange-700 font-bold">Max: {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {maxPrice.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
                         </div>
                         <BarChart3 className="w-12 h-12 text-orange-300 opacity-50" />
                     </div>
