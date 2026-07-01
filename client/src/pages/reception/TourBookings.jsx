@@ -194,6 +194,25 @@ export default function TourBookings() {
             return;
         }
 
+        // Validate NIC or Passport ID formats
+        if (isLocalGuest) {
+            const nicRegex = /^([0-9]{9}[vVxX]|[0-9]{12})$/;
+            if (!newInquiry.nic || !nicRegex.test(newInquiry.nic.trim())) {
+                toast.error("Invalid Sri Lankan NIC format (e.g. 991234567V or 199912345678).");
+                return;
+            }
+        } else {
+            const passportRegex = /^[a-zA-Z0-9-]{5,15}$/;
+            if (!newInquiry.passportId || !passportRegex.test(newInquiry.passportId.trim())) {
+                toast.error("Invalid Passport ID (Must be 5 to 15 alphanumeric characters).");
+                return;
+            }
+            if (!newInquiry.nationality || newInquiry.nationality.trim().length < 2) {
+                toast.error("Nationality is required and must be at least 2 characters.");
+                return;
+            }
+        }
+
         const calc = getCalculatedPrice();
         if (calc.basePrice <= 0) {
             toast.error("Please select a valid tour first.");

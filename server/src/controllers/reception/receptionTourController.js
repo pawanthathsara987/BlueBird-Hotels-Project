@@ -89,12 +89,14 @@ export const createTourInquiry = async (req, res) => {
 
     const isLocal = nationality && (nationality.toLowerCase() === "sri lankan" || nationality.toLowerCase() === "local");
     if (isLocal) {
-      if (!nic || nic.trim().length < 5) {
-        validationErrors.nic = "NIC is required for local guests (min 5 characters)";
+      const nicRegex = /^([0-9]{9}[vVxX]|[0-9]{12})$/;
+      if (!nic || !nicRegex.test(nic.trim())) {
+        validationErrors.nic = "Invalid Sri Lankan NIC format (Must be e.g. 991234567V or 199912345678).";
       }
     } else {
-      if (!passportId || passportId.trim().length < 5) {
-        validationErrors.passportId = "Passport ID is required for foreign guests (min 5 characters)";
+      const passportRegex = /^[a-zA-Z0-9-]{5,15}$/;
+      if (!passportId || !passportRegex.test(passportId.trim())) {
+        validationErrors.passportId = "Invalid Passport ID (Must be 5 to 15 alphanumeric characters).";
       }
     }
     const tourDateVal = new Date(startDate);
