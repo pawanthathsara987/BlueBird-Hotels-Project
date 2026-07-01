@@ -10,15 +10,27 @@ import EditAttendanceModal from "./EditAttendanceModal";
 import AttendanceSettings from "./AttendanceSettings";
 import ExportReportModal from "./ExportReportModal";
 import PrintableAttendanceReport from "./PrintableAttendanceReport";
+import ConfirmMarkAbsenteesModal from "./ConfirmMarkAbsenteesModal";
 
 export default function AttendanceRecords() {
+    const getTodayLocalString = () => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const todayDateStr = getTodayLocalString();
+
     const [activeTab, setActiveTab] = useState("logs");
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
-    const [startDate, setStartDate] = useState("");
-    const [endDate, setEndDate] = useState("");
+    const [startDate, setStartDate] = useState(todayDateStr);
+    const [endDate, setEndDate] = useState(todayDateStr);
     
     // Pagination states
     const [currentPage, setCurrentPage] = useState(1);
@@ -30,6 +42,7 @@ export default function AttendanceRecords() {
     const [selectedAttendanceId, setSelectedAttendanceId] = useState(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [marking, setMarking] = useState(false);
+    const [isConfirmMarkModalOpen, setIsConfirmMarkModalOpen] = useState(false);
 
     // Report states
     const [reportRecords, setReportRecords] = useState([]);
@@ -181,8 +194,20 @@ export default function AttendanceRecords() {
             toast.error(errorMessage);
         } finally {
             setMarking(false);
+            setIsConfirmMarkModalOpen(false);
         }
     };
+
+    // Debounce search term changes
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearch(searchTerm);
+        }, 300);
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [searchTerm]);
 
     // Fetch records
     const fetchRecords = async () => {
@@ -191,7 +216,7 @@ export default function AttendanceRecords() {
             const params = {
                 page: currentPage,
                 limit,
-                search: searchTerm.trim() || undefined,
+                search: debouncedSearch.trim() || undefined,
                 status: statusFilter !== "All" ? statusFilter : undefined,
                 startDate: startDate || undefined,
                 endDate: endDate || undefined
@@ -214,21 +239,14 @@ export default function AttendanceRecords() {
     // Reload when search, filters, or page changes
     useEffect(() => {
         fetchRecords();
-    }, [currentPage, statusFilter, startDate, endDate]);
-
-    // Search submit handler (triggers refetch)
-    const handleSearchSubmit = (e) => {
-        e.preventDefault();
-        setCurrentPage(1);
-        fetchRecords();
-    };
+    }, [currentPage, statusFilter, startDate, endDate, debouncedSearch]);
 
     // Reset all filters
     const handleResetFilters = () => {
         setSearchTerm("");
         setStatusFilter("All");
-        setStartDate("");
-        setEndDate("");
+        setStartDate(todayDateStr);
+        setEndDate(todayDateStr);
         setCurrentPage(1);
     };
 
@@ -282,7 +300,7 @@ export default function AttendanceRecords() {
                         </button>
                         <button
                             type="button"
-                            onClick={handleMarkAbsentees}
+                            onClick={() => setIsConfirmMarkModalOpen(true)}
                             disabled={marking}
                             className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white font-semibold px-4 py-2 text-sm transition-all duration-250 shadow-md hover:shadow-lg active:scale-98 disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer"
                         >
@@ -326,7 +344,7 @@ export default function AttendanceRecords() {
                 <>
                     {/* Filters panel card */}
                     <div className="rounded-3xl bg-white p-6 shadow-xl border border-slate-100/80 mb-6">
-                <form onSubmit={handleSearchSubmit} className="space-y-4">
+                <div className="space-y-4">
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
                         {/* Search Input */}
                         <div className="space-y-1">
@@ -399,14 +417,8 @@ export default function AttendanceRecords() {
                         >
                             <FaTimes className="text-xs" /> Reset Filters
                         </button>
-                        <button
-                            type="submit"
-                            className="inline-flex items-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-semibold px-5 py-2.5 text-xs transition-colors duration-150 cursor-pointer"
-                        >
-                            <FaSearch className="text-xs" /> Apply Search
-                        </button>
                     </div>
-                </form>
+                </div>
             </div>
 
             {/* Logs Table Card */}
@@ -605,6 +617,13 @@ export default function AttendanceRecords() {
                 reportRecords={reportRecords}
                 reportTitle={reportTitle}
                 reportMeta={reportMeta}
+            />
+
+            <ConfirmMarkAbsenteesModal
+                isOpen={isConfirmMarkModalOpen}
+                onClose={() => setIsConfirmMarkModalOpen(false)}
+                onConfirm={handleMarkAbsentees}
+                isMarking={marking}
             />
         </div>
     );
