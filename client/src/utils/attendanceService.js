@@ -24,3 +24,16 @@ export const updateAttendance = (attendanceId, data) => {
     return API.put(`/attendance/${attendanceId}`, data);
 };
 
+export const markAbsentees = () => {
+    return API.post("/attendance/mark-absentees");
+};
+
+export const getAttendanceSettings = () => {
+    return API.get("/attendance/settings");
+};
+
+export const updateAttendanceSettings = (settings) => {
+    return API.put("/attendance/settings", settings);
+};
+
+
