@@ -3,6 +3,7 @@ import { useState } from "react";
 import Logo from "../../assets/bluebird logo.png";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 export default function ReceptionistLogin() {
 
@@ -11,6 +12,9 @@ export default function ReceptionistLogin() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [otp, setOtp] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [verifyMessage, setVerifyMessage] = useState("");
     const [isVerifying, setIsVerifying] = useState(false);
     const navigate = useNavigate();
@@ -42,7 +46,7 @@ export default function ReceptionistLogin() {
                 toast.success("Email verified. Please enter your password.");
             }
             else if (showRegister) {
-                toast.success("Staff email detected. Please complete registration.");
+                toast.success(res?.data?.message || "Staff email detected. Please complete registration.");
             }
             else {
                 toast.error("Email is not authorized.");
@@ -89,8 +93,8 @@ export default function ReceptionistLogin() {
 
         try {
 
-            if (!email.trim() || !password || !confirmPassword) {
-                toast.error("Please fill in all fields.");
+            if (!email.trim() || !password || !confirmPassword || !otp.trim()) {
+                toast.error("Please fill in all fields including the verification code.");
                 return;
             }
 
@@ -102,7 +106,9 @@ export default function ReceptionistLogin() {
             const res = await axios.post(import.meta.env.VITE_BACKEND_URL + "/users/registerStaffMember", {
                 email: email.trim(),
                 password: password,
-                confirmPassword: confirmPassword
+                confirmPassword: confirmPassword,
+                otp: otp.trim(),
+                role: "receptionist"
             });
 
             toast.success(res?.data?.message || "Registration successful. You can now log in.");
@@ -184,24 +190,65 @@ export default function ReceptionistLogin() {
                     {shouldRegister && !emailVerified && (
                         <div className="space-y-4 animate-fadeIn pt-2 border-t border-slate-100 mt-2">
                             <div className="space-y-1.5">
-                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide">Password</label>
+                                <div className="flex justify-between items-center">
+                                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide">
+                                        Verification Code (OTP)
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={handleVerifyEmail}
+                                        disabled={isVerifying}
+                                        className="text-xs font-bold text-blue-600 hover:text-blue-800 transition disabled:opacity-50 cursor-pointer"
+                                    >
+                                        {isVerifying ? "Resending..." : "Resend Code"}
+                                    </button>
+                                </div>
                                 <input
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Create password"
+                                    type="text"
+                                    value={otp}
+                                    onChange={(e) => setOtp(e.target.value)}
+                                    placeholder="Enter 6-digit code"
+                                    maxLength={6}
                                     className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200"
                                 />
                             </div>
                             <div className="space-y-1.5">
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide">Password</label>
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        placeholder="Create password"
+                                        className="w-full border border-slate-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword((prev) => !prev)}
+                                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer animate-none"
+                                    >
+                                        {showPassword ? <FaEyeSlash className="text-sm" /> : <FaEye className="text-sm" />}
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
                                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide">Confirm Password</label>
-                                <input
-                                    type="password"
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    placeholder="Confirm password"
-                                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200"
-                                />
+                                <div className="relative">
+                                    <input
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        placeholder="Confirm password"
+                                        className="w-full border border-slate-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword((prev) => !prev)}
+                                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer animate-none"
+                                    >
+                                        {showConfirmPassword ? <FaEyeSlash className="text-sm" /> : <FaEye className="text-sm" />}
+                                    </button>
+                                </div>
                             </div>
                             <button
                                 onClick={register}
@@ -222,13 +269,22 @@ export default function ReceptionistLogin() {
                                         Forgot Password?
                                     </Link>
                                 </div>
-                                <input
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Enter your password"
-                                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200"
-                                />
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        placeholder="Enter your password"
+                                        className="w-full border border-slate-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword((prev) => !prev)}
+                                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer animate-none"
+                                    >
+                                        {showPassword ? <FaEyeSlash className="text-sm" /> : <FaEye className="text-sm" />}
+                                    </button>
+                                </div>
                             </div>
 
                             <button

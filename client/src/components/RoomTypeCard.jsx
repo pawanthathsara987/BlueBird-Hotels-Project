@@ -5,7 +5,7 @@ export default function RoomTypeCard({ id, name, image, price, occupancyType }) 
     const currencyType = process.env.CURRENCY_TYPE || "LKR";
 
     return (
-        <div className="group h-[450px] bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
+        <Link to={`/room-type/${id}`} className="group h-[450px] bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col block">
             {/* Image Container with Zoom effect */}
             <div className="relative h-60 w-full overflow-hidden shrink-0">
                 {image ? (
@@ -20,7 +20,7 @@ export default function RoomTypeCard({ id, name, image, price, occupancyType }) 
                     </div>
                 )}
                 {/* Visual Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 
                 {/* Occupancy Badge over image */}
                 {occupancyType && (
@@ -64,14 +64,13 @@ export default function RoomTypeCard({ id, name, image, price, occupancyType }) 
                         </div>
                     </div>
 
-                    <Link
-                        to={`/room-type/${id}`}
+                    <div
                         className="flex items-center justify-center w-11 h-11 bg-slate-50 group-hover:bg-blue-600 text-slate-500 group-hover:text-white rounded-full transition-all duration-300 shadow-sm"
                     >
                         <ArrowRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
-                    </Link>
+                    </div>
                 </div>
             </div>
-        </div>
+        </Link>
     );
 }
