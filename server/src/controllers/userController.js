@@ -112,6 +112,32 @@ export async function registerUser(req, res) {
 
         console.log(req.body);
 
+        // Check if there is an active staff member with same email, userName, or nicNumber
+        const orConditions = [
+            { email: data.email.trim() },
+            { userName: data.userName.trim() }
+        ];
+        if (data.nicNumber && data.nicNumber.trim() !== "") {
+            orConditions.push({ nicNumber: data.nicNumber.trim() });
+        }
+
+        const existingStaff = await StaffMember.findOne({
+            where: {
+                [Op.or]: orConditions
+            }
+        });
+
+        if (existingStaff) {
+            let conflictField = "email, username, or NIC";
+            if (existingStaff.email.toLowerCase() === data.email.trim().toLowerCase()) conflictField = "Email";
+            else if (existingStaff.userName.toLowerCase() === data.userName.trim().toLowerCase()) conflictField = "Username";
+            else if (data.nicNumber && existingStaff.nicNumber && existingStaff.nicNumber.toLowerCase() === data.nicNumber.trim().toLowerCase()) conflictField = "NIC Number";
+            
+            return res.status(400).json({
+                message: `${conflictField} is already in use by an active staff member.`
+            });
+        }
+
         let imageUrl = null;
         if (req.file) {
             imageUrl = await uploadImageToSupabase(req.file);
@@ -174,8 +200,8 @@ export async function registerStaffMember(req, res) {
             });
         }
 
-        // Verify OTP if the registering role is receptionist
-        if (data.role === "receptionist") {
+        // Verify OTP if the registering role is receptionist, admin, or manager
+        if (["receptionist", "admin", "manager"].includes(data.role)) {
             if (!data.otp) {
                 return res.status(400).json({
                     message: "Verification code is required"
@@ -248,6 +274,34 @@ export async function updateUser(req, res) {
 
     try {
         const data = req.body;
+
+        // Check if another active staff member already uses the same email, userName, or nicNumber
+        const orConditions = [
+            { email: data.email.trim() },
+            { userName: data.userName.trim() }
+        ];
+        if (data.nicNumber && data.nicNumber.trim() !== "") {
+            orConditions.push({ nicNumber: data.nicNumber.trim() });
+        }
+
+        const existingStaff = await StaffMember.findOne({
+            where: {
+                [Op.or]: orConditions,
+                userId: { [Op.ne]: userId }
+            }
+        });
+
+        if (existingStaff) {
+            let conflictField = "email, username, or NIC";
+            if (existingStaff.email.toLowerCase() === data.email.trim().toLowerCase()) conflictField = "Email";
+            else if (existingStaff.userName.toLowerCase() === data.userName.trim().toLowerCase()) conflictField = "Username";
+            else if (data.nicNumber && existingStaff.nicNumber && existingStaff.nicNumber.toLowerCase() === data.nicNumber.trim().toLowerCase()) conflictField = "NIC Number";
+            
+            return res.status(400).json({
+                message: `Another active staff member is already using this ${conflictField}.`
+            });
+        }
+
         let imageUrl = data.imageUrl;
 
         if (req.file) {
@@ -295,30 +349,12 @@ export async function deleteUser(req, res) {
         const deletedCount = await sequelize.transaction(async (transaction) => {
             const staffMember = await StaffMember.findOne({
                 where: { userId: userId },
-                include: [
-                    {
-                        model: Role,
-                        attributes: ['roleId', 'roleName']
-                    }
-                ],
                 transaction
             });
 
             if (!staffMember) {
                 return null;
             }
-
-            await DeletedStaffMember.create({
-                name: staffMember.name,
-                userName: staffMember.userName,
-                email: staffMember.email,
-                roleId: staffMember.Role.roleId,
-                roleName: staffMember.Role.roleName,
-                phoneNumber: staffMember.phoneNumber,
-                nicNumber: staffMember.nicNumber,
-                address: staffMember.address,
-                imageUrl: staffMember.imageUrl
-            }, { transaction });
 
             await UserRegisterModel.destroy({
                 where: { email: staffMember.email },
@@ -426,7 +462,7 @@ export async function verifyEmail(req, res) {
             });
         }
 
-        if (targetRole === "receptionist") {
+        if (["receptionist", "admin", "manager"].includes(targetRole)) {
             const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
             const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiration
 
@@ -437,10 +473,11 @@ export async function verifyEmail(req, res) {
                 expiresAt
             });
 
+            const roleCapitalized = targetRole.charAt(0).toUpperCase() + targetRole.slice(1);
             try {
                 await sendEmail({
                     to: email.trim(),
-                    subject: "BlueBird Hotels - Reception Portal Verification Code",
+                    subject: `BlueBird Hotels - ${roleCapitalized} Portal Verification Code`,
                     text: `Your verification code is: ${otpCode}. Please use this code to register your password and log in.`
                 });
             } catch (err) {
@@ -600,19 +637,34 @@ export async function searchDeletedUsers(req, res) {
 
     try {
 
-        const users = await DeletedStaffMember.findAll({
+        const users = await StaffMember.findAll({
             where: {
+                deletedAt: { [Op.ne]: null },
                 [Op.or]: [
                     { name: { [Op.like]: `%${query}%` } },
                     { userName: { [Op.like]: `%${query}%` } },
                     { email: { [Op.like]: `%${query}%` } },
-                    { phoneNumber: { [Op.like]: `%${query}%` } },
-                    { roleName: { [Op.like]: `%${query}%` } }
+                    { phoneNumber: { [Op.like]: `%${query}%` } }
                 ]
-            }
+            },
+            include: [
+                {
+                    model: Role,
+                    attributes: ['roleId', 'roleName']
+                }
+            ],
+            paranoid: false
         });
 
-        res.json(users);
+        const formattedUsers = users.map(user => {
+            const u = user.toJSON();
+            return {
+                ...u,
+                roleName: user.Role ? user.Role.roleName : "Staff"
+            };
+        });
+
+        res.json(formattedUsers);
 
     } catch (error) {
 
@@ -625,8 +677,28 @@ export async function searchDeletedUsers(req, res) {
 
 export async function getAllDeletedUsers(req, res) {
     try {
-        const users = await DeletedStaffMember.findAll();
-        res.json(users);
+        const users = await StaffMember.findAll({
+            where: {
+                deletedAt: { [Op.ne]: null }
+            },
+            include: [
+                {
+                    model: Role,
+                    attributes: ['roleId', 'roleName']
+                }
+            ],
+            paranoid: false
+        });
+
+        const formattedUsers = users.map(user => {
+            const u = user.toJSON();
+            return {
+                ...u,
+                roleName: user.Role ? user.Role.roleName : "Staff"
+            };
+        });
+
+        res.json(formattedUsers);
     } catch (error) {
         res.status(500).json({
             message: "Failed to fetch deleted users",
