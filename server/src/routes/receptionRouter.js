@@ -41,13 +41,15 @@ router.get('/vehicles', getVehicles);
 
 // Tours and Tour Inquiries
 import { getAllTours } from '../controllers/manager/tourController.js';
-import { createTourInquiry, getAllInquiries, acceptInquiry, rejectInquiry } from '../controllers/reception/receptionTourController.js';
+import { createTourInquiry, getAllInquiries, acceptInquiry, rejectInquiry, cancelInquiry, updatePax } from '../controllers/reception/receptionTourController.js';
 
 router.get('/tours', getAllTours);
 router.get('/tour-inquiries', getAllInquiries);
 router.post('/tour-inquiries', createTourInquiry);
 router.put('/tour-inquiries/:id/accept', acceptInquiry);
 router.put('/tour-inquiries/:id/reject', rejectInquiry);
+router.put('/tour-inquiries/:id/cancel', cancelInquiry);
+router.put('/tour-inquiries/:id/pax', updatePax);
 
 
 export default router;  
