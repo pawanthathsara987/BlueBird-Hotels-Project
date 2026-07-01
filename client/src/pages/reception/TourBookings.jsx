@@ -13,7 +13,9 @@ import {
     MdEmail,
     MdPhone,
     MdFlag,
-    MdWarning
+    MdWarning,
+    MdEdit,
+    MdCancel
 } from "react-icons/md";
 import { toast } from "react-hot-toast";
 import { useLocation } from "react-router-dom";
@@ -31,6 +33,11 @@ export default function TourBookings() {
 
     // Tour booking form state
     const [showForm, setShowForm] = useState(false);
+
+    // Pax editing state
+    const [editingPaxInquiry, setEditingPaxInquiry] = useState(null);
+    const [editAdults, setEditAdults] = useState(1);
+    const [editChildren, setEditChildren] = useState(0);
 
     // Calculate min date (1 day ahead)
     const getMinStartDate = () => {
@@ -272,6 +279,42 @@ export default function TourBookings() {
         }
     };
 
+    // Update pax count API submit
+    const handleUpdatePaxSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/reception/tour-inquiries/${editingPaxInquiry.id}/pax`, {
+                numberOfAdults: editAdults,
+                numberOfChildren: editChildren
+            });
+            if (res.data.success) {
+                toast.success("Guest count updated successfully!");
+                setEditingPaxInquiry(null);
+                fetchData();
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error(error.response?.data?.message || "Failed to update guest count.");
+        }
+    };
+
+    // Cancel tour booking API request
+    const handleCancelBooking = async (id) => {
+        if (!window.confirm("Are you sure you want to cancel this tour booking?\nThis will mark the booking as rejected, and the manager will handle any cash refund/reconciliations on the admin side.")) {
+            return;
+        }
+        try {
+            const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/reception/tour-inquiries/${id}/cancel`);
+            if (res.data.success) {
+                toast.success("Tour booking cancelled successfully!");
+                fetchData();
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error(error.response?.data?.message || "Failed to cancel tour booking.");
+        }
+    };
+
     // Filters
     const filteredInquiries = inquiries.filter((inq) => {
         const matchesSearch = inq.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -307,11 +350,11 @@ export default function TourBookings() {
         };
     };
 
-    const parseTotalPrice = (inq) => {
+    const getRowPriceParts = (inq) => {
         const selectedTour = tours.find(t => t.id === inq.tourId);
         const basePrice = parseFloat(selectedTour?.price || 0);
         const discount = parseFloat(selectedTour?.discount || 0);
-        const discountedBase = discount > 0 ? basePrice - (basePrice * discount / 100) : basePrice;
+        const tourPrice = discount > 0 ? basePrice - (basePrice * discount / 100) : basePrice;
         
         let extraPrice = 0;
         if (inq.specialRequests) {
@@ -320,7 +363,16 @@ export default function TourBookings() {
                 extraPrice = parseFloat(match[1]) || 0;
             }
         }
-        return discountedBase + extraPrice;
+        return {
+            tourPrice,
+            extraPrice,
+            totalPrice: tourPrice + extraPrice
+        };
+    };
+
+    const parseTotalPrice = (inq) => {
+        const { totalPrice } = getRowPriceParts(inq);
+        return totalPrice;
     };
 
     const priceDetails = getCalculatedPrice();
@@ -455,7 +507,8 @@ export default function TourBookings() {
                                     <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Pax</th>
                                     <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Pickup</th>
                                     <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Status</th>
-                                    <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Total Price</th>
+                                    <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Price Details</th>
+                                    <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
@@ -497,9 +550,58 @@ export default function TourBookings() {
                                                     {inq.status}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 font-extrabold text-slate-800 dark:text-slate-200">
-                                                LKR {parseTotalPrice(inq).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                            </td>
+                                            <td className="px-6 py-4">
+                                                 {(() => {
+                                                     const { tourPrice, extraPrice, totalPrice } = getRowPriceParts(inq);
+                                                     return (
+                                                         <div className="flex flex-col gap-0.5 text-[10px] text-slate-500 font-medium min-w-[120px] text-left">
+                                                             <span className="flex justify-between gap-4">
+                                                                 <span>Tour:</span>
+                                                                 <span className="font-semibold text-slate-700 dark:text-slate-350">LKR {tourPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                             </span>
+                                                             {extraPrice > 0 && (
+                                                                 <span className="flex justify-between gap-4 text-teal-650 dark:text-teal-400">
+                                                                     <span>Extra:</span>
+                                                                     <span className="font-semibold">+ LKR {extraPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                                 </span>
+                                                             )}
+                                                             <div className="border-t border-slate-200 dark:border-slate-800 my-0.5"></div>
+                                                             <span className="flex justify-between gap-4 font-black text-slate-900 dark:text-white text-xs">
+                                                                 <span>Total:</span>
+                                                                 <span className={currentAccent.text}>LKR {totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                             </span>
+                                                         </div>
+                                                     );
+                                                 })()}
+                                             </td>
+                                             <td className="px-6 py-4">
+                                                 <div className="flex gap-2">
+                                                     {inq.status !== "rejected" ? (
+                                                         <>
+                                                             <button
+                                                                 onClick={() => {
+                                                                     setEditingPaxInquiry(inq);
+                                                                     setEditAdults(inq.numberOfAdults);
+                                                                     setEditChildren(inq.numberOfChildren);
+                                                                 }}
+                                                                 className="p-1.5 border border-indigo-200 dark:border-slate-800 hover:bg-indigo-50 dark:hover:bg-slate-800 text-indigo-600 dark:text-indigo-400 rounded-lg cursor-pointer transition shadow-sm bg-white dark:bg-slate-900"
+                                                                 title="Edit Pax Count"
+                                                             >
+                                                                 <MdEdit size={14} />
+                                                             </button>
+                                                             <button
+                                                                 onClick={() => handleCancelBooking(inq.id)}
+                                                                 className="p-1.5 border border-rose-200 dark:border-slate-800 hover:bg-rose-50 dark:hover:bg-slate-800 text-rose-500 rounded-lg cursor-pointer transition shadow-sm bg-white dark:bg-slate-900"
+                                                                 title="Cancel Booking"
+                                                             >
+                                                                 <MdCancel size={14} />
+                                                             </button>
+                                                         </>
+                                                     ) : (
+                                                         <span className="text-slate-400 italic text-[10px]">No Actions</span>
+                                                     )}
+                                                 </div>
+                                             </td>
                                         </tr>
                                     );
                                 })}
@@ -789,6 +891,52 @@ export default function TourBookings() {
                                 className={`w-full text-white py-3.5 rounded-xl flex items-center justify-center gap-1.5 font-extrabold cursor-pointer transition shadow-md ${currentAccent.bg}`}
                             >
                                 <MdCheckCircle size={18} /> Submit Tour Inquiry
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {/* EDIT PAX MODAL */}
+            {editingPaxInquiry && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <form onSubmit={handleUpdatePaxSubmit} className={`w-full max-w-sm rounded-2xl p-6 shadow-2xl border text-left ${
+                        theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
+                    }`}>
+                        <div className="flex justify-between items-center mb-4 border-b pb-3 dark:border-slate-800 border-slate-100">
+                            <h2 className="text-md font-black uppercase tracking-wide">Update Pax Count</h2>
+                            <button type="button" onClick={() => setEditingPaxInquiry(null)} className="cursor-pointer">
+                                <MdClose size={22} className={theme.mode === "dark" ? "text-white" : "text-slate-600"} />
+                            </button>
+                        </div>
+                        <div className="space-y-4 text-xs font-bold">
+                            <div>
+                                <label className="block text-slate-500 mb-2">Adults *</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    required
+                                    value={editAdults}
+                                    onChange={(e) => setEditAdults(parseInt(e.target.value) || 1)}
+                                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-slate-500 mb-2">Children *</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    required
+                                    value={editChildren}
+                                    onChange={(e) => setEditChildren(parseInt(e.target.value) || 0)}
+                                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none"
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                className={`w-full text-white py-3 rounded-xl flex items-center justify-center gap-1.5 font-bold cursor-pointer transition shadow-md ${currentAccent.bg}`}
+                            >
+                                Save Changes
                             </button>
                         </div>
                     </form>
