@@ -88,3 +88,43 @@ export const getStaffAttendanceHistory = async (req, res) => {
     }
 };
 
+export const markAbsentees = async (req, res) => {
+    try {
+        const result = await attendanceService.markAbsentees();
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error(error);
+        return res.status(400).json({
+            success: false,
+            message: error.message || "Failed to mark absentees"
+        });
+    }
+};
+
+export const getAttendanceSettings = async (req, res) => {
+    try {
+        const result = await attendanceService.getAttendanceSettings();
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Failed to fetch attendance settings"
+        });
+    }
+};
+
+export const updateAttendanceSettings = async (req, res) => {
+    try {
+        const result = await attendanceService.updateAttendanceSettings(req.body);
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error(error);
+        return res.status(400).json({
+            success: false,
+            message: error.message || "Failed to update attendance settings"
+        });
+    }
+};
+
+
