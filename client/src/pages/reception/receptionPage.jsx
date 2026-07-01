@@ -10,6 +10,7 @@ import CheckOut from "./CheckOut";
 import Reports from "./Reports";
 import AirportPickups from "./AirportPickups";
 import TourBookings from "./TourBookings";
+import VehicleBookings from "./VehicleBookings";
 import RefundRequests from "./RefundRequests";
 
 export default function ReceptionPage() {
@@ -232,6 +233,7 @@ export default function ReceptionPage() {
                     <Link to="/reception/checkout" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/checkout")}><MdCheckCircle className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Check-Out</span></Link>
                     <Link to="/reception/bookings" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/bookings")}><MdOutlineBookOnline className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Bookings</span></Link>
                     <Link to="/reception/pickups" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/pickups")}><MdLocalTaxi className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Airport Pickups</span></Link>
+                    <Link to="/reception/vehicles" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/vehicles")}><MdLocalTaxi className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Vehicle Bookings</span></Link>
                     <Link to="/reception/tours" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/tours")}><MdTerrain className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Tour Bookings</span></Link>
                     <Link to="/reception/reports" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/reports")}><MdBarChart className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Reports</span></Link>
                     <Link to="/reception/refunds" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/refunds")}><MdOutlineBookOnline className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Refunds Approval</span></Link>
@@ -410,6 +412,7 @@ export default function ReceptionPage() {
                         <Route path="/checkout" element={<CheckOut />} />
                         <Route path="/bookings" element={<Booking />} />
                         <Route path="/pickups" element={<AirportPickups />} />
+                        <Route path="/vehicles" element={<VehicleBookings />} />
                         <Route path="/tours" element={<TourBookings />} />
                         <Route path="/reports" element={<Reports />} />
                         <Route path="/refunds" element={<RefundRequests />} />
