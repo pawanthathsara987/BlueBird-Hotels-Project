@@ -32,10 +32,10 @@ export default function TourBookings() {
     // Tour booking form state
     const [showForm, setShowForm] = useState(false);
     
-    // Calculate min date (4 days ahead)
+    // Calculate min date (1 day ahead)
     const getMinStartDate = () => {
         const date = new Date();
-        date.setDate(date.getDate() + 4);
+        date.setDate(date.getDate() + 1);
         return date.toISOString().split("T")[0];
     };
 
@@ -179,15 +179,15 @@ export default function TourBookings() {
     const handleCreateInquiry = async (e) => {
         e.preventDefault();
         
-        // Strict frontend validation: Tour must be booked at least 4 days in advance
+        // Strict frontend validation: Tour must be booked at least 1 day in advance
         const tourDate = new Date(newInquiry.startDate);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const diffTime = tourDate - today;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
-        if (diffDays < 4) {
-            toast.error("Tours must be booked at least 4 days in advance.");
+        if (diffDays < 1) {
+            toast.error("Tours must be booked at least 1 day in advance.");
             return;
         }
 
@@ -315,12 +315,12 @@ export default function TourBookings() {
                 </div>
             </div>
 
-            {/* Warning Alert about 4 days advance booking */}
+            {/* Warning Alert about 1 day advance booking */}
             <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 mb-6 flex gap-3 text-xs text-amber-700 dark:text-amber-400">
                 <MdWarning size={18} className="flex-shrink-0" />
                 <div>
                     <span className="font-bold uppercase tracking-wider block mb-0.5">Hotel Excursion Rule:</span>
-                    All guided tours must be booked at least **4 days in advance** of the start date. This allows the logistics team to organize tour guides, vehicles, and reservations.
+                    All guided tours must be booked at least **1 day in advance** of the start date. This allows the logistics team to organize tour guides, vehicles, and reservations.
                 </div>
             </div>
 
@@ -530,7 +530,7 @@ export default function TourBookings() {
             {/* TOUR BOOKING CREATE MODAL */}
             {showForm && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 overflow-y-auto">
-                    <form onSubmit={handleCreateInquiry} className={`my-8 w-full max-w-lg rounded-2xl p-6 shadow-2xl border flex flex-col max-h-[90vh] ${
+                    <form onSubmit={handleCreateInquiry} className={`my-8 w-full max-w-2xl rounded-2xl p-6 shadow-2xl border flex flex-col max-h-[90vh] ${
                         theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
                     }`}>
                         <div className="flex justify-between items-center mb-4 border-b pb-3 dark:border-slate-800 border-slate-100 flex-shrink-0">
