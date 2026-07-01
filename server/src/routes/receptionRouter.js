@@ -41,7 +41,7 @@ router.get('/vehicles', getVehicles);
 
 // Tours and Tour Inquiries
 import { getAllTours } from '../controllers/manager/tourController.js';
-import { createTourInquiry, getAllInquiries, acceptInquiry, rejectInquiry } from '../controllers/booking/tourInquiryController.js';
+import { createTourInquiry, getAllInquiries, acceptInquiry, rejectInquiry } from '../controllers/reception/receptionTourController.js';
 
 router.get('/tours', getAllTours);
 router.get('/tour-inquiries', getAllInquiries);

@@ -1,4 +1,4 @@
-import { TourInquiry, Tour, Customer } from "../../models/index.js";
+import { TourInquiry, Tour } from "../../models/index.js";
 import crypto from "crypto";
 import {
   validateEmail,
@@ -187,34 +187,22 @@ export const createTourInquiry = async (req, res) => {
     // Generate unique inquiry reference
     const inquiryRef = await generateUniqueReferenceCode(TourInquiry, "inquiryRef", "TI");
 
-     let guestCustomerId = null;
-     if (req.user) {
-       if (req.user.role === "customer") {
-         guestCustomerId = req.user.id;
-       } else {
-         const customerObj = await Customer.findOne({ where: { email } });
-         if (customerObj) {
-           guestCustomerId = customerObj.id;
-         }
-       }
-     }
-
-     // Create inquiry
-     const inquiry = await TourInquiry.create({
-       inquiryRef,
-       tourId,
-       customerId: guestCustomerId,
-       fullName,
-       email,
-       phone,
-       nationality,
-       numberOfAdults: numAdults,
-       numberOfChildren: numChildren,
-       startDate,
-       pickupLocation,
-       specialRequests,
-       status: "pending",
-     });
+    // Create inquiry
+    const inquiry = await TourInquiry.create({
+      inquiryRef,
+      tourId,
+      customerId: req.user?.id,
+      fullName,
+      email,
+      phone,
+      nationality,
+      numberOfAdults: numAdults,
+      numberOfChildren: numChildren,
+      startDate,
+      pickupLocation,
+      specialRequests,
+      status: "pending",
+    });
 
     res.status(201).json({
       success: true,
