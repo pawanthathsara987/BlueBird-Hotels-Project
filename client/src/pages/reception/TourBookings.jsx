@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { 
-    MdTerrain, 
-    MdSearch, 
-    MdPerson, 
-    MdCheckCircle, 
-    MdAccessTime, 
-    MdLocationOn, 
-    MdAdd, 
-    MdClose, 
+import {
+    MdTerrain,
+    MdSearch,
+    MdPerson,
+    MdCheckCircle,
+    MdAccessTime,
+    MdLocationOn,
+    MdAdd,
+    MdClose,
     MdCheck,
     MdEmail,
     MdPhone,
@@ -31,7 +31,7 @@ export default function TourBookings() {
 
     // Tour booking form state
     const [showForm, setShowForm] = useState(false);
-    
+
     // Calculate min date (1 day ahead)
     const getMinStartDate = () => {
         const date = new Date();
@@ -178,14 +178,14 @@ export default function TourBookings() {
     // Submit New Inquiry
     const handleCreateInquiry = async (e) => {
         e.preventDefault();
-        
+
         // Strict frontend validation: Tour must be booked at least 1 day in advance
         const tourDate = new Date(newInquiry.startDate);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const diffTime = tourDate - today;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
+
         if (diffDays < 1) {
             toast.error("Tours must be booked at least 1 day in advance.");
             return;
@@ -242,8 +242,8 @@ export default function TourBookings() {
 
     // Filters
     const filteredInquiries = inquiries.filter((inq) => {
-        const matchesSearch = inq.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                              inq.inquiryRef?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = inq.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            inq.inquiryRef?.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = statusFilter === "all" ? true : inq.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
@@ -258,14 +258,14 @@ export default function TourBookings() {
         if (!newInquiry.tourId) return { packageName: "", basePrice: 0, discount: 0, discountedBase: 0, totalPrice: 0 };
         const selectedTour = tours.find(t => t.id === parseInt(newInquiry.tourId));
         if (!selectedTour) return { packageName: "", basePrice: 0, discount: 0, discountedBase: 0, totalPrice: 0 };
-        
+
         const basePrice = parseFloat(selectedTour.price) || 0;
         const discount = parseFloat(selectedTour.discount) || 0;
         const discountedBase = discount > 0 ? basePrice - (basePrice * discount / 100) : basePrice;
-        
+
         const extraPrice = parseFloat(additionalPrice) || 0;
         const totalPrice = discountedBase + extraPrice;
-        
+
         return {
             packageName: selectedTour.packageName,
             basePrice,
@@ -283,10 +283,9 @@ export default function TourBookings() {
     const acceptedCount = inquiries.filter(i => i.status === "accepted").length;
 
     return (
-        <div className={`w-full px-6 py-6 min-h-screen transition-colors duration-300 ${
-            theme.mode === "dark" ? "bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-800"
-        }`}>
-            
+        <div className={`w-full px-6 py-6 min-h-screen transition-colors duration-300 ${theme.mode === "dark" ? "bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-800"
+            }`}>
+
             {/* Header section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm p-6 rounded-2xl mb-6 relative overflow-hidden">
                 <div className="space-y-1">
@@ -341,9 +340,8 @@ export default function TourBookings() {
             </div>
 
             {/* Filters Row */}
-            <div className={`p-4 rounded-2xl border mb-6 flex flex-col md:flex-row gap-4 justify-between items-center shadow-sm ${
-                theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
-            }`}>
+            <div className={`p-4 rounded-2xl border mb-6 flex flex-col md:flex-row gap-4 justify-between items-center shadow-sm ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+                }`}>
                 <div className="relative w-full md:w-80">
                     <MdSearch className="absolute left-3 top-3 text-slate-400 text-lg" />
                     <input
@@ -357,31 +355,28 @@ export default function TourBookings() {
                 <div className="flex gap-2 w-full md:w-auto">
                     <button
                         onClick={() => setStatusFilter("all")}
-                        className={`flex-1 md:flex-none px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer border ${
-                            statusFilter === "all"
-                                ? `${currentAccent.bg} text-white border-transparent` 
+                        className={`flex-1 md:flex-none px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer border ${statusFilter === "all"
+                                ? `${currentAccent.bg} text-white border-transparent`
                                 : "bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-slate-600 dark:text-slate-300"
-                        }`}
+                            }`}
                     >
                         All
                     </button>
                     <button
                         onClick={() => setStatusFilter("pending")}
-                        className={`flex-1 md:flex-none px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer border ${
-                            statusFilter === "pending"
-                                ? `${currentAccent.bg} text-white border-transparent` 
+                        className={`flex-1 md:flex-none px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer border ${statusFilter === "pending"
+                                ? `${currentAccent.bg} text-white border-transparent`
                                 : "bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-slate-600 dark:text-slate-300"
-                        }`}
+                            }`}
                     >
                         Pending
                     </button>
                     <button
                         onClick={() => setStatusFilter("accepted")}
-                        className={`flex-1 md:flex-none px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer border ${
-                            statusFilter === "accepted"
-                                ? `${currentAccent.bg} text-white border-transparent` 
+                        className={`flex-1 md:flex-none px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer border ${statusFilter === "accepted"
+                                ? `${currentAccent.bg} text-white border-transparent`
                                 : "bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-slate-600 dark:text-slate-300"
-                        }`}
+                            }`}
                     >
                         Accepted
                     </button>
@@ -389,9 +384,8 @@ export default function TourBookings() {
             </div>
 
             {/* Tour Inquiries Table */}
-            <div className={`rounded-2xl border overflow-hidden shadow-sm ${
-                theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
-            }`}>
+            <div className={`rounded-2xl border overflow-hidden shadow-sm ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+                }`}>
                 {isLoading ? (
                     <div className="py-20 text-center">
                         <span className="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></span>
@@ -492,9 +486,8 @@ export default function TourBookings() {
             {/* TOUR REJECTION MODAL */}
             {rejectingInquiry && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn">
-                    <form onSubmit={handleReject} className={`w-full max-w-md rounded-2xl p-6 shadow-2xl border ${
-                        theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
-                    }`}>
+                    <form onSubmit={handleReject} className={`w-full max-w-md rounded-2xl p-6 shadow-2xl border ${theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
+                        }`}>
                         <div className="flex justify-between items-center mb-4 border-b pb-3 dark:border-slate-800 border-slate-100">
                             <h2 className="text-lg font-black uppercase tracking-wide">Reject Tour Inquiry</h2>
                             <button type="button" onClick={() => setRejectingInquiry(null)} className="cursor-pointer">
@@ -530,9 +523,8 @@ export default function TourBookings() {
             {/* TOUR BOOKING CREATE MODAL */}
             {showForm && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 overflow-y-auto">
-                    <form onSubmit={handleCreateInquiry} className={`my-8 w-full max-w-2xl rounded-2xl p-6 shadow-2xl border flex flex-col max-h-[90vh] ${
-                        theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
-                    }`}>
+                    <form onSubmit={handleCreateInquiry} className={`my-8 w-full max-w-2xl rounded-2xl p-6 shadow-2xl border flex flex-col max-h-[90vh] ${theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
+                        }`}>
                         <div className="flex justify-between items-center mb-4 border-b pb-3 dark:border-slate-800 border-slate-100 flex-shrink-0">
                             <h2 className="text-lg font-black uppercase tracking-wide">Book Excursion / Tour</h2>
                             <button type="button" onClick={() => setShowForm(false)} className="cursor-pointer">
