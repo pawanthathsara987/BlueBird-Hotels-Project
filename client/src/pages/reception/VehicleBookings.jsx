@@ -43,7 +43,7 @@ export default function VehicleBookings() {
         customerLicenseNo: "",
         customerLicenseExpiry: "",
         specialRequirements: "",
-        isFullyPaid: false,
+        isFullyPaid: true,
         paymentMethod: "cash"
     });
 
@@ -210,7 +210,7 @@ export default function VehicleBookings() {
                     customerLicenseNo: "",
                     customerLicenseExpiry: "",
                     specialRequirements: "",
-                    isFullyPaid: false,
+                    isFullyPaid: true,
                     paymentMethod: "cash"
                 });
                 fetchData();
@@ -511,18 +511,10 @@ export default function VehicleBookings() {
                                             )}
                                         </div>
 
-                                        <div className="space-y-2.5">
+                                        <div className="space-y-2.5 pt-1 border-t dark:border-slate-800 border-slate-200">
                                             <div className="flex justify-between font-black text-slate-900 dark:text-white text-sm">
                                                 <span>Estimated Total:</span>
                                                 <span className={currentAccent.text}>LKR {priceDetails.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                                            </div>
-                                            <div className="flex justify-between text-[11px] text-slate-500 pt-1 border-t dark:border-slate-800 border-slate-200">
-                                                <span>Deposit (50%):</span>
-                                                <span>LKR {priceDetails.deposit.toLocaleString()}</span>
-                                            </div>
-                                            <div className="flex justify-between text-[11px] text-slate-500">
-                                                <span>At Hotel (50%):</span>
-                                                <span>LKR {priceDetails.balance.toLocaleString()}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -711,33 +703,24 @@ export default function VehicleBookings() {
                                 </div>
 
                                 {/* Payment and Desk Options */}
-                                <div className="grid grid-cols-2 gap-3 p-4 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200/50 dark:border-slate-850">
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="checkbox"
-                                            id="isFullyPaid"
-                                            checked={newBooking.isFullyPaid}
-                                            onChange={(e) => setNewBooking({ ...newBooking, isFullyPaid: e.target.checked })}
-                                            className="rounded border-slate-350 accent-indigo-650 w-4 h-4 cursor-pointer"
-                                        />
-                                        <label htmlFor="isFullyPaid" className="text-xs text-slate-700 dark:text-slate-300 cursor-pointer select-none">
-                                            Mark as Fully Paid (LKR)
-                                        </label>
+                                <div className="grid grid-cols-2 gap-3 p-4 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200/50 dark:border-slate-850 items-center">
+                                    <div>
+                                        <span className="text-xs text-slate-500">
+                                            ℹ️ Booking requires immediate full payment at the reception desk.
+                                        </span>
                                     </div>
-                                    {newBooking.isFullyPaid && (
-                                        <div>
-                                            <label className="block text-slate-550 mb-1 text-[10px]">Payment Method</label>
-                                            <select
-                                                value={newBooking.paymentMethod}
-                                                onChange={(e) => setNewBooking({ ...newBooking, paymentMethod: e.target.value })}
-                                                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl px-2 py-1.5 text-[11px] outline-none cursor-pointer"
-                                            >
-                                                <option value="cash">Cash Payment</option>
-                                                <option value="card">Credit/Debit Card</option>
-                                                <option value="bank_transfer">Bank Transfer</option>
-                                            </select>
-                                        </div>
-                                    )}
+                                    <div>
+                                        <label className="block text-slate-550 mb-1 text-[10px]">Payment Method *</label>
+                                        <select
+                                            value={newBooking.paymentMethod}
+                                            onChange={(e) => setNewBooking({ ...newBooking, paymentMethod: e.target.value })}
+                                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl px-3 py-2 text-xs outline-none cursor-pointer font-bold"
+                                        >
+                                            <option value="cash">Cash Payment</option>
+                                            <option value="card">Credit/Debit Card</option>
+                                            <option value="bank_transfer">Bank Transfer</option>
+                                        </select>
+                                    </div>
                                 </div>
 
                                 {/* Form Action Buttons */}

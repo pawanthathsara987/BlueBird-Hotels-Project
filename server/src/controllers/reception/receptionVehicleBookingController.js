@@ -163,9 +163,9 @@ export const createReceptionVehicleBooking = async (req, res) => {
     const subtotal = (vehicleRatePerDay + (driverRatePerDay || 0)) * numDays;
     const discount = 0.0;
     const totalPayable = subtotal - discount;
-    const depositPercentage = 50;
-    const depositAmount = parseFloat(((totalPayable * depositPercentage) / 100).toFixed(2));
-    const balanceAmount = parseFloat((totalPayable - depositAmount).toFixed(2));
+    const depositPercentage = 100;
+    const depositAmount = totalPayable;
+    const balanceAmount = 0.00;
 
     // Handle Customer lookup or create
     let customerObj = await Customer.findOne({
@@ -192,17 +192,10 @@ export const createReceptionVehicleBooking = async (req, res) => {
       }, { transaction: t });
     }
 
-    // Since it's reception, we collect deposit immediately
     const depositPaidAt = new Date();
-    let balancePaidAt = null;
-    let balanceCollectedBy = null;
-    let status = "confirmed";
-
-    if (isFullyPaid) {
-      status = "balance_paid";
-      balancePaidAt = new Date();
-      balanceCollectedBy = req.user?.id || null;
-    }
+    const balancePaidAt = new Date();
+    const balanceCollectedBy = req.user?.id || null;
+    const status = "balance_paid";
 
     const booking = await VehicleBooking.create({
       bookingNo: generateBookingNo(),
@@ -227,7 +220,7 @@ export const createReceptionVehicleBooking = async (req, res) => {
       depositPaidAt,
       balanceAmount: balanceAmount.toFixed(2),
       balancePaidAt,
-      balancePaymentMethod: isFullyPaid ? paymentMethod : null,
+      balancePaymentMethod: paymentMethod || "cash",
       balanceCollectedBy,
       status,
       specialRequirements
