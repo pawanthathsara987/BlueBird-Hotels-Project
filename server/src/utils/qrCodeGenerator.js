@@ -1,7 +1,9 @@
 import QRCode from "qrcode";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 import supabase from "../config/supabaseClient.js";
+import StaffMember from "../models/User/StaffMember.js";
 
 const qrFolder = path.join(process.cwd(), "uploads", "qrcodes");
 
@@ -14,11 +16,20 @@ export const generateQRCode = async (staffId) => {
     try {
         const qrPath = path.join(qrFolder, `${staffId}.png`);
 
-        // Payload (we'll improve this later)
-        const qrData = JSON.stringify({
+        const payload = {
             staffId,
             type: "attendance",
             version: 1
+        };
+
+        const signature = crypto
+            .createHmac("sha256", process.env.QR_SECRET || "default_qr_secret_key_123456")
+            .update(JSON.stringify(payload))
+            .digest("hex");
+
+        const qrData = JSON.stringify({
+            ...payload,
+            signature
         });
 
         // Generate QR code as buffer
@@ -49,5 +60,21 @@ export const generateQRCode = async (staffId) => {
 
     } catch (error) {
         throw error;
+    }
+};
+
+export const regenerateAllStaffQRCodes = async () => {
+    try {
+        console.log("🔄 Starting background regeneration of Staff QR Codes with HMAC signatures...");
+        const staffMembers = await StaffMember.findAll();
+        for (const staff of staffMembers) {
+            console.log(`Generating signed QR for ${staff.name} (${staff.staffId})...`);
+            const qrCodeUrl = await generateQRCode(staff.staffId);
+            staff.qrCodeUrl = qrCodeUrl;
+            await staff.save();
+        }
+        console.log("✅ All Staff QR Codes regenerated successfully with HMAC signatures.");
+    } catch (error) {
+        console.error("❌ Failed to regenerate staff QR codes:", error);
     }
 };
