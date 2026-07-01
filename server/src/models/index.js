@@ -36,6 +36,7 @@ import Attendance from "./attendance/Attendance.js";
 import AttendanceEditLog from "./attendance/AttendanceEditLog.js";
 import BookingRefund from "./booking/bookingRefund.js";
 import BookingRefundItem from "./booking/bookingRefundItem.js";
+import AttendanceSetting from "./attendance/AttendanceSetting.js";
 
 
 

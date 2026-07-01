@@ -9,7 +9,8 @@ import {
    getAvailableRoomTypesByDate,
    getAvailableRoomAssignForPackage,
    getPricingMatrix,
-   checkBookingPrice
+   checkBookingPrice,
+   getActivePolicy
 } from '../controllers/booking/roomBookingController.js';
 
 import { createVisitorBooking, createReceptionCustomer } from '../controllers/reception/visitingBookingController.js';
@@ -38,6 +39,7 @@ router.get('/available-packages', getAvailableRoomTypesByDate);
 router.post('/available-rooms', getAvailableRoomAssignForPackage);
 router.get('/pricing-matrix', getPricingMatrix);
 router.post('/check-price', checkBookingPrice);
+router.get('/policy', getActivePolicy);
 
 // Refund routes
 router.get('/refunds/eligibility/:bookingId', requireAuth, getRefundEligibility);
