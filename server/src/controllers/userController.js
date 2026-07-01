@@ -133,7 +133,7 @@ export async function registerUser(req, res) {
             if (existingStaff.email.toLowerCase() === data.email.trim().toLowerCase()) conflictField = "Email";
             else if (existingStaff.userName.toLowerCase() === data.userName.trim().toLowerCase()) conflictField = "Username";
             else if (data.nicNumber && existingStaff.nicNumber && existingStaff.nicNumber.toLowerCase() === data.nicNumber.trim().toLowerCase()) conflictField = "NIC Number";
-            
+
             return res.status(400).json({
                 message: `${conflictField} is already in use by an active staff member.`
             });
@@ -301,7 +301,7 @@ export async function updateUser(req, res) {
             if (existingStaff.email.toLowerCase() === data.email.trim().toLowerCase()) conflictField = "Email";
             else if (existingStaff.userName.toLowerCase() === data.userName.trim().toLowerCase()) conflictField = "Username";
             else if (data.nicNumber && existingStaff.nicNumber && existingStaff.nicNumber.toLowerCase() === data.nicNumber.trim().toLowerCase()) conflictField = "NIC Number";
-            
+
             return res.status(400).json({
                 message: `Another active staff member is already using this ${conflictField}.`
             });
