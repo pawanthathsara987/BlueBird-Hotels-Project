@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import sequelize from '../config/database.js';
 import { Reservation, Customer, BookedRoom, Room, RoomType, RoomPayment, AirPortPickup } from "../models/index.js";
-import { sendBookingConfirmationEmail } from "../services/emailService.js";
+import { sendBookingConfirmationEmail, sendPersonalRequestEmail } from "../services/emailService.js";
 
 // Helper to generate MD5 hash
 const md5 = (string) => {
@@ -163,6 +163,20 @@ export const handlePayHereNotification = async (req, res) => {
                     if (confirmedBooking) {
                         await sendBookingConfirmationEmail(confirmedBooking);
                         console.log(`[PAYHERE EMAIL] Confirmed booking receipt email successfully sent for Booking #${order_id}`);
+
+                        if (confirmedBooking.note && confirmedBooking.note.trim()) {
+                            try {
+                                await sendPersonalRequestEmail(
+                                    confirmedBooking.Customer,
+                                    confirmedBooking,
+                                    confirmedBooking.note,
+                                    confirmedBooking.check_in_date
+                                );
+                                console.log(`[PAYHERE EMAIL] Special personal request email successfully sent for Booking #${order_id}`);
+                            } catch (reqEmailErr) {
+                                console.error("[PAYHERE EMAIL ERROR] Failed to send special request email:", reqEmailErr.message);
+                            }
+                        }
                     }
                 } catch (emailErr) {
                     console.error("[PAYHERE EMAIL ERROR] Failed to send receipt email:", emailErr);
