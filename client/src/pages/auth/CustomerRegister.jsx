@@ -511,6 +511,7 @@ export default function CustomerRegister() {
                                         placeholder="Confirm Password"
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') handleRegister(); }}
                                         disabled={loading}
                                         className="w-full pl-10 pr-12 py-2.5 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-4 focus:ring-amber-500/20 focus:border-amber-400/80 focus:bg-white/10 transition-all text-xs text-white placeholder-slate-400"
                                     />

@@ -146,6 +146,7 @@ export default function ReceptionistLogin() {
                             value={email}
                             disabled={emailVerified}
                             onChange={(e) => setEmail(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { if (emailVerified) handleLogin(); else handleVerifyEmail(); } }}
                             placeholder="username@bluebird.com"
                             className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200 disabled:opacity-75 disabled:bg-slate-100 disabled:cursor-not-allowed"
                         />
@@ -189,6 +190,7 @@ export default function ReceptionistLogin() {
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') register(); }}
                                     placeholder="Create password"
                                     className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200"
                                 />
@@ -199,6 +201,7 @@ export default function ReceptionistLogin() {
                                     type="password"
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') register(); }}
                                     placeholder="Confirm password"
                                     className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200"
                                 />
@@ -226,6 +229,7 @@ export default function ReceptionistLogin() {
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') handleLogin(); }}
                                     placeholder="Enter your password"
                                     className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200"
                                 />
