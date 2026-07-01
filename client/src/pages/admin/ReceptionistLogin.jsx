@@ -17,6 +17,8 @@ export default function ReceptionistLogin() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [verifyMessage, setVerifyMessage] = useState("");
     const [isVerifying, setIsVerifying] = useState(false);
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
+    const [isRegistering, setIsRegistering] = useState(false);
     const navigate = useNavigate();
 
     async function handleVerifyEmail() {
@@ -69,6 +71,7 @@ export default function ReceptionistLogin() {
         }
 
         try {
+            setIsLoggingIn(true);
             const res = await axios.post(import.meta.env.VITE_BACKEND_URL + "/users/login", {
                 email: email,
                 password: password,
@@ -86,6 +89,8 @@ export default function ReceptionistLogin() {
             navigate("/reception");
         } catch (error) {
             toast.error(error?.response?.data?.message || "Login failed.");
+        } finally {
+            setIsLoggingIn(false);
         }
     }
 
@@ -103,6 +108,7 @@ export default function ReceptionistLogin() {
                 return;
             }
 
+            setIsRegistering(true);
             const res = await axios.post(import.meta.env.VITE_BACKEND_URL + "/users/registerStaffMember", {
                 email: email.trim(),
                 password: password,
@@ -117,6 +123,8 @@ export default function ReceptionistLogin() {
 
         } catch (err) {
             toast.error(err?.response?.data?.message || "Registration failed");
+        } finally {
+            setIsRegistering(false);
         }
     }
 
@@ -150,7 +158,7 @@ export default function ReceptionistLogin() {
                         <input
                             type="text"
                             value={email}
-                            disabled={emailVerified}
+                            disabled={emailVerified || shouldRegister}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="username@bluebird.com"
                             className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200 disabled:opacity-75 disabled:bg-slate-100 disabled:cursor-not-allowed"
@@ -252,9 +260,17 @@ export default function ReceptionistLogin() {
                             </div>
                             <button
                                 onClick={register}
-                                className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl transition duration-200 shadow-md shadow-emerald-500/10 hover:scale-[1.01] flex items-center justify-center cursor-pointer mt-2"
+                                disabled={isRegistering}
+                                className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl transition duration-200 shadow-md shadow-emerald-500/10 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer mt-2"
                             >
-                                Register staff member
+                                {isRegistering ? (
+                                    <div className="flex items-center gap-2">
+                                        <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                        <span>Registering...</span>
+                                    </div>
+                                ) : (
+                                    "Register staff member"
+                                )}
                             </button>
                         </div>
                     )}
@@ -287,11 +303,19 @@ export default function ReceptionistLogin() {
                                 </div>
                             </div>
 
-                            <button
+                             <button
                                 onClick={handleLogin}
-                                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl transition duration-200 shadow-md shadow-blue-500/10 hover:scale-[1.01] flex items-center justify-center cursor-pointer mt-2"
+                                disabled={isLoggingIn}
+                                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl transition duration-200 shadow-md shadow-blue-500/10 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer mt-2"
                             >
-                                Sign In
+                                {isLoggingIn ? (
+                                    <div className="flex items-center gap-2">
+                                        <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                        <span>Signing In...</span>
+                                    </div>
+                                ) : (
+                                    "Sign In"
+                                )}
                             </button>
                         </div>
                     )}
