@@ -167,7 +167,13 @@ export default function Dashboard() {
             }
         } catch (error) {
             console.error("Dashboard refresh error:", error);
-            toast.error("Failed to load live dashboard statistics.");
+            if (error.response?.status === 401) {
+                localStorage.removeItem("token");
+                toast.error("Session expired. Please log in again.");
+                window.location.href = "/receptionistLogin";
+            } else {
+                toast.error("Failed to load live dashboard statistics.");
+            }
         } finally {
             setLoading(false);
             setRefreshing(false);
