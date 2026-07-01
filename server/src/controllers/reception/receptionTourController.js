@@ -40,6 +40,8 @@ export const createTourInquiry = async (req, res) => {
       email,
       phone,
       nationality,
+      nic,
+      passportId,
       numberOfAdults,
       numberOfChildren,
       startDate,
@@ -83,6 +85,17 @@ export const createTourInquiry = async (req, res) => {
     }
     if (!validateNationality(nationality)) {
       validationErrors.nationality = "Nationality must be at least 2 characters";
+    }
+
+    const isLocal = nationality && (nationality.toLowerCase() === "sri lankan" || nationality.toLowerCase() === "local");
+    if (isLocal) {
+      if (!nic || nic.trim().length < 5) {
+        validationErrors.nic = "NIC is required for local guests (min 5 characters)";
+      }
+    } else {
+      if (!passportId || passportId.trim().length < 5) {
+        validationErrors.passportId = "Passport ID is required for foreign guests (min 5 characters)";
+      }
     }
     const tourDateVal = new Date(startDate);
     tourDateVal.setHours(0, 0, 0, 0);
@@ -140,6 +153,8 @@ export const createTourInquiry = async (req, res) => {
       email,
       phone,
       nationality,
+      nic: isLocal ? nic : null,
+      passportId: !isLocal ? passportId : null,
       numberOfAdults: numAdults,
       numberOfChildren: numChildren,
       startDate,

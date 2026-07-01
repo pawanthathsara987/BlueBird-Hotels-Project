@@ -40,6 +40,7 @@ export default function TourBookings() {
     };
 
     const [additionalPrice, setAdditionalPrice] = useState("0");
+    const [isLocalGuest, setIsLocalGuest] = useState(false);
 
     const [newInquiry, setNewInquiry] = useState({
         tourId: "",
@@ -47,6 +48,8 @@ export default function TourBookings() {
         email: "",
         phone: "",
         nationality: "",
+        nic: "",
+        passportId: "",
         numberOfAdults: 1,
         numberOfChildren: 0,
         startDate: getMinStartDate(),
@@ -197,9 +200,16 @@ export default function TourBookings() {
             return;
         }
 
+        const idDetails = isLocalGuest 
+            ? `🪪 NIC: ${newInquiry.nic}`
+            : `🛂 Passport: ${newInquiry.passportId} (${newInquiry.nationality})`;
+
         const confirmMsg = `Confirm Tour Booking?\n\n` +
             `🔹 Tour Package: ${calc.packageName}\n` +
             `📅 Start Date: ${newInquiry.startDate}\n` +
+            `👤 Guest: ${newInquiry.fullName}\n` +
+            `📞 Phone: ${newInquiry.phone}\n` +
+            `🆔 Identification: ${idDetails}\n` +
             `👥 Guests: ${newInquiry.numberOfAdults} Adult(s), ${newInquiry.numberOfChildren} Child(ren)\n` +
             `📍 Pickup: ${newInquiry.pickupLocation}\n` +
             `💵 Estimated Total: LKR ${calc.totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n\n` +
@@ -220,12 +230,15 @@ export default function TourBookings() {
                 toast.success("Tour booking inquiry created successfully!");
                 setShowForm(false);
                 setAdditionalPrice("0");
+                setIsLocalGuest(false);
                 setNewInquiry({
                     tourId: "",
                     fullName: "",
                     email: "",
                     phone: "",
                     nationality: "",
+                    nic: "",
+                    passportId: "",
                     numberOfAdults: 1,
                     numberOfChildren: 0,
                     startDate: getMinStartDate(),
@@ -412,7 +425,7 @@ export default function TourBookings() {
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
                                 {filteredInquiries.map((inq) => {
-                                    const tourName = tours.find(t => t.id === inq.tourId)?.title || "Custom Package";
+                                    const tourName = tours.find(t => t.id === inq.tourId)?.packageName || "Custom Excursion";
                                     return (
                                         <tr key={inq.id} className={theme.mode === "dark" ? "hover:bg-slate-800/20" : "hover:bg-slate-50/50"}>
                                             <td className="px-6 py-4 font-bold text-blue-500">{inq.inquiryRef}</td>
@@ -425,6 +438,8 @@ export default function TourBookings() {
                                                     <span className="flex items-center gap-0.5"><MdEmail size={11} /> {inq.email}</span>
                                                     <span className="flex items-center gap-0.5"><MdPhone size={11} /> {inq.phone}</span>
                                                     <span className="flex items-center gap-0.5"><MdFlag size={11} /> {inq.nationality}</span>
+                                                    {inq.nic && <span className="flex items-center gap-1 font-bold text-teal-650 dark:text-teal-400">🪪 NIC: {inq.nic}</span>}
+                                                    {inq.passportId && <span className="flex items-center gap-1 font-bold text-indigo-600 dark:text-indigo-400">🛂 Passport: {inq.passportId}</span>}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
@@ -585,17 +600,79 @@ export default function TourBookings() {
                                         className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none"
                                     />
                                 </div>
-                                <div>
-                                    <label className="block font-bold uppercase text-slate-500 mb-2">Nationality *</label>
+                            </div>
+                            
+                            <div className="bg-slate-50/50 dark:bg-slate-900/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800/80">
+                                <label className="flex items-center gap-2 font-bold uppercase text-slate-500 cursor-pointer select-none">
                                     <input
-                                        type="text"
-                                        required
-                                        placeholder="e.g. Sri Lankan, British"
-                                        value={newInquiry.nationality}
-                                        onChange={(e) => setNewInquiry({ ...newInquiry, nationality: e.target.value })}
-                                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none"
+                                        type="checkbox"
+                                        checked={isLocalGuest}
+                                        onChange={(e) => {
+                                            const checked = e.target.checked;
+                                            setIsLocalGuest(checked);
+                                            setNewInquiry(prev => ({
+                                                ...prev,
+                                                nationality: checked ? "Sri Lankan" : "",
+                                                nic: checked ? prev.nic : "",
+                                                passportId: checked ? "" : prev.passportId
+                                            }));
+                                        }}
+                                        className="rounded border-slate-350 accent-indigo-650 w-4 h-4 cursor-pointer"
                                     />
-                                </div>
+                                    <span className="text-slate-700 dark:text-slate-300 text-xs">Local Guest (Sri Lankan)</span>
+                                </label>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                {isLocalGuest ? (
+                                    <>
+                                        <div>
+                                            <label className="block font-bold uppercase text-slate-500 mb-2">Nationality</label>
+                                            <input
+                                                type="text"
+                                                readOnly
+                                                value="Sri Lankan"
+                                                className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-850 rounded-xl p-3 outline-none text-slate-500 font-bold cursor-not-allowed"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold uppercase text-slate-500 mb-2">NIC Number *</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                placeholder="NIC number (e.g. 199912345678)"
+                                                value={newInquiry.nic}
+                                                onChange={(e) => setNewInquiry(prev => ({ ...prev, nic: e.target.value }))}
+                                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none font-bold"
+                                            />
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div>
+                                            <label className="block font-bold uppercase text-slate-500 mb-2">Nationality *</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                placeholder="e.g. British, French"
+                                                value={newInquiry.nationality}
+                                                onChange={(e) => setNewInquiry(prev => ({ ...prev, nationality: e.target.value }))}
+                                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none font-bold"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold uppercase text-slate-500 mb-2">Passport ID *</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                placeholder="Passport ID (e.g. N1234567)"
+                                                value={newInquiry.passportId}
+                                                onChange={(e) => setNewInquiry(prev => ({ ...prev, passportId: e.target.value }))}
+                                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none font-bold"
+                                            />
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                             <div className="grid grid-cols-3 gap-3">
