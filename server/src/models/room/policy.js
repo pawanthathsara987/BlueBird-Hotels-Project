@@ -37,6 +37,11 @@ Policy.init({
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true
+    },
+    free_cancellation_days: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 7
     }
 }, {
     sequelize,

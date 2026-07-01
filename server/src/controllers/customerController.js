@@ -11,7 +11,7 @@ import { Op } from "sequelize";
 dotenv.config();
 
 import sequelize from "../config/database.js";
-import { Booking, BookedRoom, Room, RoomType, AirPortPickup, VehicleBooking, Vehicle, TourInquiry, Tour, Payment, RoomPayment } from "../models/index.js";
+import { Booking, BookedRoom, Room, RoomType, AirPortPickup, VehicleBooking, Vehicle, TourInquiry, Tour, Payment, RoomPayment, BoardType, RoomPrice, ServiceCharge } from "../models/index.js";
 
 export async function registerCustomer(req, res) {
 
@@ -523,7 +523,12 @@ export async function getCustomerBookings(req, res) {
                 {
                     model: RoomPayment,
                     as: "payments",
-                    attributes: ["id", "amount", "status", "method"],
+                    attributes: ["id", "payment_no", "amount", "currency", "method", "status", "createdAt"],
+                    required: false
+                },
+                {
+                    model: AirPortPickup,
+                    as: "airportPickup",
                     required: false
                 }
             ],
@@ -539,10 +544,16 @@ export async function getCustomerBookings(req, res) {
             }]
         });
 
+        const pickupCharge = await ServiceCharge.findOne({
+            where: { service_Code: "AIRPORT_PICKUP", status: true }
+        });
+        const airportPickupFee = pickupCharge ? parseFloat(pickupCharge.price) : 15000;
+
         res.status(200).json({
             success: true,
             data: bookings,
-            airportPickups
+            airportPickups,
+            airportPickupFee
         });
     } catch (error) {
         console.error("Error fetching customer bookings:", error);
@@ -764,6 +775,225 @@ export async function cancelCustomerRental(req, res) {
     } catch (error) {
         await t.rollback();
         console.error("Error cancelling rental booking:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export async function cancelSingleBookedRoom(req, res) {
+    const t = await sequelize.transaction();
+    try {
+        const { bookingId, bookedRoomId } = req.params;
+        const customerId = req.user.id;
+
+        // 1. Fetch booking
+        const booking = await Booking.findOne({
+            where: { id: bookingId, customer_id: customerId },
+            transaction: t
+        });
+
+        if (!booking) {
+            await t.rollback();
+            return res.status(404).json({ message: "Booking not found or not authorized to cancel" });
+        }
+
+        if (booking.status === "cancelled" || booking.status === "completed") {
+            await t.rollback();
+            return res.status(400).json({ message: `Cannot cancel room from a booking that is already ${booking.status}` });
+        }
+
+        // 2. Fetch the booked room entry
+        const roomEntry = await BookedRoom.findOne({
+            where: { id: bookedRoomId, booking_id: bookingId },
+            include: [
+                {
+                    model: Room,
+                    as: undefined,
+                    attributes: ["id", "room_number", "room_type_id", "occupancy_type_id"]
+                }
+            ],
+            transaction: t
+        });
+
+        if (!roomEntry) {
+            await t.rollback();
+            return res.status(404).json({ message: "Booked room entry not found" });
+        }
+
+        if (roomEntry.status === "cancelled" || roomEntry.status === "checked_out") {
+            await t.rollback();
+            return res.status(400).json({ message: `This room is already ${roomEntry.status}` });
+        }
+
+        // 3. Calculate check-in hours difference
+        const now = new Date();
+        const checkInDate = new Date(roomEntry.checkIn);
+        const diffMs = checkInDate - now;
+        const diffHrs = diffMs / (1000 * 60 * 60);
+
+        // 4. Calculate stay nights for this room
+        const checkOutDate = new Date(roomEntry.checkOut);
+        const msPerDay = 1000 * 60 * 60 * 24;
+        const nights = Math.max(1, Math.round(Math.abs(checkOutDate - checkInDate) / msPerDay));
+
+        // 5. Look up dynamic nightly rate for room type + board type + occupancy
+        const board = await BoardType.findOne({
+            where: { type: roomEntry.board_type || "Room Only" },
+            transaction: t
+        });
+
+        const roomPrice = await RoomPrice.findOne({
+            where: {
+                roomTypeId: roomEntry.Room?.room_type_id,
+                occupancyTypeId: roomEntry.Room?.occupancy_type_id,
+                boardTypeId: board ? board.id : 1
+            },
+            transaction: t
+        });
+
+        const nightlyPrice = roomPrice ? parseFloat(roomPrice.price) : (parseFloat(booking.total_price) / nights);
+        const roomStayCost = roomEntry.price > 0 ? parseFloat(roomEntry.price) : (nightlyPrice * nights);
+        const resolvedNightlyRate = roomEntry.price > 0 ? (roomStayCost / nights) : nightlyPrice;
+
+        // 6. Calculate refund/deduction according to policy (48 hours free cancellation rule)
+        let refundAmount = 0;
+        let policyApplied = "";
+
+        if (diffHrs >= 48) {
+            // Free cancellation: 100% refund
+            refundAmount = roomStayCost;
+            policyApplied = "Free cancellation (>= 48h prior). 100% refunded.";
+        } else {
+            // Cancellation within 48h: Subject to 1-night charge penalty
+            const refundableNights = Math.max(0, nights - 1);
+            refundAmount = resolvedNightlyRate * refundableNights;
+            policyApplied = "Late cancellation (< 48h prior). 1-night penalty charge applied.";
+        }
+
+        // 7. Update booked room status
+        await roomEntry.update({ status: "cancelled" }, { transaction: t });
+
+        // 8. Adjust booking total price
+        const currentTotal = parseFloat(booking.total_price);
+        const newTotal = Math.max(0, currentTotal - refundAmount);
+        
+        // Recalculate tax if tax exists
+        let newTax = 0;
+        if (booking.tax_percentage > 0) {
+            newTax = newTotal * (booking.tax_percentage / 100);
+        }
+
+        await booking.update({
+            total_price: newTotal,
+            tax: newTax
+        }, { transaction: t });
+
+        // 9. If all rooms under this booking are now cancelled, set overall booking status to cancelled
+        const activeRoomsCount = await BookedRoom.count({
+            where: {
+                booking_id: bookingId,
+                status: { [Op.notIn]: ["cancelled", "checked_out"] }
+            },
+            transaction: t
+        });
+
+        if (activeRoomsCount === 0) {
+            await booking.update({ status: "cancelled" }, { transaction: t });
+            
+            // Also mark pending payments as failed
+            await RoomPayment.update(
+                { status: "failed" },
+                {
+                    where: { booking_id: bookingId, status: "pending" },
+                    transaction: t
+                }
+            );
+        }
+
+        await t.commit();
+        res.status(200).json({
+            success: true,
+            message: "Room cancelled successfully",
+            policyApplied,
+            refundAmount,
+            newTotal
+        });
+
+    } catch (error) {
+        await t.rollback();
+        console.error("Error cancelling single room from booking:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export async function cancelAirportPickup(req, res) {
+    const t = await sequelize.transaction();
+    try {
+        const { bookingId } = req.params;
+        const customerId = req.user.id;
+
+        // 1. Fetch booking
+        const booking = await Booking.findOne({
+            where: { id: bookingId, customer_id: customerId },
+            transaction: t
+        });
+
+        if (!booking) {
+            await t.rollback();
+            return res.status(404).json({ message: "Booking not found or not authorized to cancel airport pickup" });
+        }
+
+        if (booking.status === "cancelled" || booking.status === "completed") {
+            await t.rollback();
+            return res.status(400).json({ message: `Cannot cancel airport pickup for a stay booking that is already ${booking.status}` });
+        }
+
+        // 2. Fetch airport pickup record
+        const pickup = await AirPortPickup.findOne({
+            where: { booking_id: bookingId },
+            transaction: t
+        });
+
+        if (!pickup) {
+            await t.rollback();
+            return res.status(404).json({ message: "Airport pickup reservation not found for this booking" });
+        }
+
+        if (pickup.status === "CANCELLED") {
+            await t.rollback();
+            return res.status(400).json({ message: "Airport pickup is already cancelled" });
+        }
+
+        // 3. Update pickup status to CANCELLED
+        await pickup.update({ status: "CANCELLED" }, { transaction: t });
+
+        // 4. Retrieve the airport pickup price
+        const pickupPrice = pickup.price > 0 ? parseFloat(pickup.price) : 15000.00;
+
+        // 5. Subtract price from booking total
+        const currentTotal = parseFloat(booking.total_price);
+        const newTotal = Math.max(0, currentTotal - pickupPrice);
+        
+        let newTax = 0;
+        if (booking.tax_percentage > 0) {
+            newTax = newTotal * (booking.tax_percentage / 100);
+        }
+
+        await booking.update({
+            total_price: newTotal,
+            tax: newTax
+        }, { transaction: t });
+
+        await t.commit();
+        res.status(200).json({
+            success: true,
+            message: "Airport pickup cancelled successfully",
+            refundAmount: pickupPrice,
+            newTotal
+        });
+
+    } catch (error) {
+        await t.rollback();
+        console.error("Error cancelling airport pickup:", error);
         res.status(500).json({ message: "Internal server error" });
     }
 }
