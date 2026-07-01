@@ -254,7 +254,7 @@ const RoomPayment = () => {
           cancel_url: `${window.location.origin}/payment`,
           notify_url: import.meta.env.VITE_NOTIFY_URL
             ? `${import.meta.env.VITE_NOTIFY_URL}/api/payment/notify`
-            : `${cleanBackendUrl}api/payment/notify`,
+            : `${cleanBackendUrl}payment/notify`,
           order_id: String(reservationId),
           items: `BlueBird Room Booking #${reservationId}`,
           amount: Number(advanceAmount).toFixed(2),
