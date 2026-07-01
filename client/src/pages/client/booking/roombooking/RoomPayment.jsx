@@ -89,7 +89,7 @@ const RoomPayment = () => {
     setProcessing(true);
 
     let token = localStorage.getItem("customerToken") ||
-                  sessionStorage.getItem("customerToken");
+                sessionStorage.getItem("customerToken");
     if (token === "undefined" || token === "null") {
       localStorage.removeItem("customerToken");
       sessionStorage.removeItem("customerToken");
@@ -241,6 +241,11 @@ const RoomPayment = () => {
           setProcessing(false);
         };
 
+        // Construct formatting for target validation strings cleanly
+        const cleanBackendUrl = String(import.meta.env.VITE_BACKEND_URL).endsWith('/')
+          ? import.meta.env.VITE_BACKEND_URL
+          : `${import.meta.env.VITE_BACKEND_URL}/`;
+
         // Construct inline payment request object
         const payment = {
           sandbox: true,
@@ -249,10 +254,10 @@ const RoomPayment = () => {
           cancel_url: `${window.location.origin}/payment`,
           notify_url: import.meta.env.VITE_NOTIFY_URL
             ? `${import.meta.env.VITE_NOTIFY_URL}/api/payment/notify`
-            : `${import.meta.env.VITE_BACKEND_URL}api/payment/notify`,
+            : `${cleanBackendUrl}api/payment/notify`,
           order_id: String(reservationId),
           items: `BlueBird Room Booking #${reservationId}`,
-          amount: parseFloat(advanceAmount).toFixed(2),
+          amount: Number(advanceAmount).toFixed(2),
           currency: "LKR",
           hash: hash,
           first_name: billingDetails.firstName,
@@ -276,7 +281,6 @@ const RoomPayment = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-stone-50">
-
       <main className="grow py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Back Button */}
@@ -397,7 +401,6 @@ const RoomPayment = () => {
                 <h3 className="text-xl font-bold text-stone-900 mb-6">Booking Summary</h3>
 
                 <div className="space-y-4 mb-6 pb-6 border-b border-stone-200">
-
                   <div className="flex justify-between text-sm">
                     <span className="text-stone-600">Check-in:</span>
                     <span className="font-semibold text-stone-900">
@@ -425,7 +428,6 @@ const RoomPayment = () => {
                       {totalAdults} Adults, {totalKids} Kids
                     </span>
                   </div>
-
                 </div>
 
                 {/* Show per-room kid ages if available */}
@@ -504,6 +506,5 @@ const RoomPayment = () => {
     </div>
   );
 }
-
 
 export default RoomPayment;
