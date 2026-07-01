@@ -277,3 +277,75 @@ export const rejectInquiry = async (req, res) => {
     });
   }
 };
+
+// Cancel inquiry
+export const cancelInquiry = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const inquiry = await TourInquiry.findByPk(id);
+
+    if (!inquiry) {
+      return res.status(404).json({ success: false, message: "Inquiry not found" });
+    }
+
+    if (inquiry.status === "rejected") {
+      return res.status(400).json({ success: false, message: "Booking is already cancelled/rejected" });
+    }
+
+    await inquiry.update({
+      status: "rejected",
+      rejectionReason: "Cancelled by receptionist",
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Tour booking cancelled successfully.",
+      data: { inquiry },
+    });
+  } catch (error) {
+    console.error("Error cancelling inquiry in reception:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error cancelling inquiry",
+      error: error.message,
+    });
+  }
+};
+
+// Update guest count (pax)
+export const updatePax = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { numberOfAdults, numberOfChildren } = req.body;
+
+    const inquiry = await TourInquiry.findByPk(id);
+
+    if (!inquiry) {
+      return res.status(404).json({ success: false, message: "Inquiry not found" });
+    }
+
+    const numAdults = Number(numberOfAdults) || 1;
+    const numChildren = Number(numberOfChildren) || 0;
+    if (!validateGuestCount(numAdults, numChildren)) {
+      return res.status(400).json({ success: false, message: "Total guests must be between 1 and 100" });
+    }
+
+    await inquiry.update({
+      numberOfAdults: numAdults,
+      numberOfChildren: numChildren,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Pax updated successfully.",
+      data: { inquiry },
+    });
+  } catch (error) {
+    console.error("Error updating pax in reception:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating pax",
+      error: error.message,
+    });
+  }
+};
