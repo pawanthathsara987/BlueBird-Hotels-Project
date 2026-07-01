@@ -9,7 +9,7 @@ export default function Booking() {
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
     const [searchTerm, setSearchTerm] = useState("");
     const [allBookings, setAllBookings] = useState([]);
-    
+
     const location = useLocation();
 
     useEffect(() => {
@@ -174,8 +174,8 @@ export default function Booking() {
                     <button
                         onClick={() => setActiveTab("list")}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeTab === 'list'
-                                ? (theme.mode === "dark" ? "bg-slate-800 text-white shadow-sm" : "bg-white text-blue-600 shadow-sm")
-                                : "text-slate-500 hover:text-slate-700"
+                            ? (theme.mode === "dark" ? "bg-slate-800 text-white shadow-sm" : "bg-white text-blue-600 shadow-sm")
+                            : "text-slate-500 hover:text-slate-700"
                             }`}
                     >
                         <MdList className="text-lg" /> View Bookings
@@ -183,8 +183,8 @@ export default function Booking() {
                     <button
                         onClick={() => setActiveTab("new")}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeTab === 'new'
-                                ? (theme.mode === "dark" ? "bg-slate-800 text-white shadow-sm" : "bg-white text-green-600 shadow-sm")
-                                : "text-slate-500 hover:text-slate-700"
+                            ? (theme.mode === "dark" ? "bg-slate-800 text-white shadow-sm" : "bg-white text-green-600 shadow-sm")
+                            : "text-slate-500 hover:text-slate-700"
                             }`}
                     >
                         <MdAdd className="text-lg" /> New Booking
@@ -215,8 +215,8 @@ export default function Booking() {
                                         value={selectedDate}
                                         onChange={(e) => setSelectedDate(e.target.value)}
                                         className={`w-full px-3 md:px-4 py-2 text-sm border rounded-xl focus:outline-none ${theme.mode === "dark"
-                                                ? "bg-slate-900 border-slate-800 text-white focus:border-slate-600"
-                                                : "bg-white border-slate-200 text-slate-800 focus:border-blue-500"
+                                            ? "bg-slate-900 border-slate-800 text-white focus:border-slate-600"
+                                            : "bg-white border-slate-200 text-slate-800 focus:border-blue-500"
                                             }`}
                                     />
                                 </div>
@@ -238,16 +238,16 @@ export default function Booking() {
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className={`w-full pl-9 md:pl-10 pr-3 md:pr-4 py-2 text-sm border rounded-xl focus:outline-none ${theme.mode === "dark"
-                                            ? "bg-slate-900 border-slate-800 text-white focus:border-slate-600"
-                                            : "bg-white border-slate-200 text-slate-800 focus:border-blue-500"
+                                        ? "bg-slate-900 border-slate-800 text-white focus:border-slate-600"
+                                        : "bg-white border-slate-200 text-slate-800 focus:border-blue-500"
                                         }`}
                                 />
                             </div>
 
                             {/* Date Display */}
                             <div className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl border ${theme.mode === "dark"
-                                    ? "bg-teal-950/20 border-teal-900/30 text-teal-400"
-                                    : "bg-blue-50 border-blue-100 text-blue-900"
+                                ? "bg-teal-950/20 border-teal-900/30 text-teal-400"
+                                : "bg-blue-50 border-blue-100 text-blue-900"
                                 }`}>
                                 <MdCalendarToday className="text-lg md:text-xl flex-shrink-0" />
                                 <span className="font-extrabold text-sm md:text-base">{formatDate(selectedDate)}</span>

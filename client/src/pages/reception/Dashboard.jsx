@@ -155,7 +155,7 @@ export default function Dashboard() {
             setOccupiedRooms(occupiedRes.data?.data?.occupiedRooms || occupiedRes.data?.data?.count || 0);
             setRecentCheckIns(recentCheckInsRes.data?.data || recentCheckInsRes.data || []);
             setRecentBookings(recentBookingsRes.data?.data || recentBookingsRes.data || []);
-            
+
             const todayStr = new Date().toISOString().split("T")[0];
             const pickupsCount = pickupsRes.data?.data?.filter(p => p.pickup_date === todayStr).length || 0;
             setTodayPickups(pickupsCount);
@@ -619,7 +619,7 @@ export default function Dashboard() {
                     </div>
                     <div className="mt-4 space-y-1">
                         <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Projected Revenue</p>
-                        <h3 className="text-2xl font-black">{loading ? "..." : `$${dynamicRevenue.toLocaleString()}`}</h3>
+                        <h3 className="text-2xl font-black">{loading ? "..." : `LKR ${dynamicRevenue.toLocaleString()}`}</h3>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400">Occupied rooms calculation</p>
                     </div>
                 </div>
@@ -1130,7 +1130,7 @@ export default function Dashboard() {
                                                     </p>
                                                     {booking.total_price && (
                                                         <p className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
-                                                            Rs. {Number(booking.total_price).toLocaleString()}
+                                                            LKR {Number(booking.total_price).toLocaleString()}
                                                         </p>
                                                     )}
                                                 </div>
@@ -1267,7 +1267,7 @@ export default function Dashboard() {
                         <div className="p-4 bg-slate-100/70 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800/50">
                             <h5 className="text-xs text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider">Average Daily Rate (ADR)</h5>
                             <h3 className="text-xl font-black mt-1 text-slate-800 dark:text-white">
-                                {loading ? "..." : (occupiedRooms > 0 ? `Rs. ${Math.round(dynamicRevenue / occupiedRooms).toLocaleString()}` : "N/A")}
+                                {loading ? "..." : (occupiedRooms > 0 ? `LKR ${Math.round(dynamicRevenue / occupiedRooms).toLocaleString()}` : "N/A")}
                             </h3>
                             <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 flex items-center gap-1">
                                 Revenue ÷ occupied rooms
@@ -1277,7 +1277,7 @@ export default function Dashboard() {
                         <div className="p-4 bg-slate-100/70 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800/50">
                             <h5 className="text-xs text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider">Revenue Per Available Room (RevPAR)</h5>
                             <h3 className="text-xl font-black mt-1 text-slate-800 dark:text-white">
-                                {loading ? "..." : (totalRoomsCount > 0 ? `Rs. ${Math.round(dynamicRevenue / totalRoomsCount).toLocaleString()}` : "N/A")}
+                                {loading ? "..." : (totalRoomsCount > 0 ? `LKR ${Math.round(dynamicRevenue / totalRoomsCount).toLocaleString()}` : "N/A")}
                             </h3>
                             <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 flex items-center gap-1">
                                 Total revenue ÷ total rooms
