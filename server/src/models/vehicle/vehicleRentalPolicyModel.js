@@ -41,11 +41,7 @@ VehicleRentalPolicy.init(
       allowNull: false,
       defaultValue: 120.0,
     },
-    extraMileageCurrency: {
-      type: DataTypes.STRING(10),
-      allowNull: false,
-      defaultValue: 'USD',
-    },
+
     termsAndConditions: {
       type: DataTypes.TEXT,
       allowNull: true,

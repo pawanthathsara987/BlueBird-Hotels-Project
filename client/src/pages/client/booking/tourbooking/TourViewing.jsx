@@ -112,20 +112,20 @@ function TourCard({ tour, onSelect }) {
             <div className="mb-3">
               <p className="text-xs text-slate-500 mb-1">Original Price</p>
               <p className="text-sm text-slate-500 line-through mb-2">
-${Number(tour.price).toFixed(2)}
+                {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {Number(tour.price).toFixed(2)}
               </p>
               <div className="flex items-baseline gap-2">
                 <p className="text-2xl font-bold text-emerald-700">
-${finalPrice.toFixed(2)}
+                  {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {finalPrice.toFixed(2)}
                 </p>
                 <p className="text-xs text-emerald-700 font-semibold">
-                  Save ${savings}
+                  Save {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {savings}
                 </p>
               </div>
             </div>
           ) : (
             <p className="text-2xl font-bold text-cyan-700 mb-3">
-${Number(tour.price).toFixed(2)}
+              {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {Number(tour.price).toFixed(2)}
             </p>
           )}
 
@@ -218,7 +218,7 @@ function FilterSidebar({
             className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-cyan-700"
           />
           <div className="flex items-center justify-between mt-2">
-            <span className="text-sm font-semibold text-slate-900">${minPrice.toLocaleString()}</span>
+            <span className="text-sm font-semibold text-slate-900">{import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {minPrice.toLocaleString()}</span>
           </div>
         </div>
 
@@ -234,14 +234,14 @@ function FilterSidebar({
             className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-cyan-700"
           />
           <div className="flex items-center justify-between mt-2">
-            <span className="text-sm font-semibold text-slate-900">${maxPrice.toLocaleString()}</span>
+            <span className="text-sm font-semibold text-slate-900">{import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {maxPrice.toLocaleString()}</span>
           </div>
         </div>
 
         {/* Price Range Display */}
         <div className="p-3 bg-cyan-50 rounded-xl border border-cyan-200">
           <p className="text-sm text-center font-semibold text-cyan-900">
-${minPrice.toLocaleString()} - ${maxPrice.toLocaleString()}
+            {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {minPrice.toLocaleString()} - {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {maxPrice.toLocaleString()}
           </p>
         </div>
       </div>
