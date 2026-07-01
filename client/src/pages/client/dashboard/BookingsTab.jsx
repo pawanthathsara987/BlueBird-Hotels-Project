@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { 
   Calendar, MapPin, Check, BedDouble, Users, AlertCircle, Info, Search, Filter, 
   FileText, Receipt, XCircle, ArrowRight, HelpCircle, User, CreditCard, Clock, 
@@ -21,150 +21,193 @@ export default function BookingsTab({
   const [roomToCancel, setRoomToCancel] = useState(null);
   const [showPickupCancelDialog, setShowPickupCancelDialog] = useState(false);
 
+  // Refund Module States
+  const [refundEligibility, setRefundEligibility] = useState(null);
+  const [selectedRefundRooms, setSelectedRefundRooms] = useState([]);
+  const [selectedRefundPickup, setSelectedRefundPickup] = useState(false);
+  const [refundCalculation, setRefundCalculation] = useState(null);
+  const [refundReason, setRefundReason] = useState("");
+  const [refundPaymentMethod, setRefundPaymentMethod] = useState("Cash");
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
+  const [refundHistory, setRefundHistory] = useState([]);
+  const [isSubmittingRefund, setIsSubmittingRefund] = useState(false);
+
   const selectedPickupPrice = selectedBooking?.raw?.airportPickup?.price > 0 
     ? parseFloat(selectedBooking.raw.airportPickup.price) 
     : (selectedBooking?.airportPickupFee || 15000);
 
-  const confirmCancelSingleRoom = async () => {
-    if (!roomToCancel) return;
-    const bookedRoomId = roomToCancel.id;
+  useEffect(() => {
+    if (selectedBooking) {
+      fetchRefundHistory(selectedBooking.realId);
+    } else {
+      setRefundHistory([]);
+    }
+  }, [selectedBooking]);
+
+  const fetchRefundHistory = async (bookingId) => {
     try {
       const token = localStorage.getItem("customerToken");
       const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.post(
-        `${process.env.VITE_BACKEND_URL || "http://localhost:3002/api"}/customers/bookings/${selectedBooking.realId}/rooms/${bookedRoomId}/cancel`,
-        {},
+      const response = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api"}/roombook/refunds/history/${bookingId}`,
         { headers }
       );
-
       if (response.data.success) {
-        toast.success(
-          `Room cancelled successfully! ${response.data.policyApplied || ""}`, 
-          { duration: 6000 }
-        );
-        
-        // Update local state by updating the booked room's status and updating the booking total price
-        setBookings(prevBookings => 
-          prevBookings.map(b => {
-            if (b.realId === selectedBooking.realId) {
-              const updatedRooms = b.raw.bookedRooms.map(r => 
-                r.id === bookedRoomId ? { ...r, status: "cancelled" } : r
-              );
-              
-              const activeRooms = updatedRooms.filter(r => r.status !== "cancelled" && r.status !== "checked_out");
-              const isFullyCancelled = activeRooms.length === 0;
-
-              const updatedRaw = {
-                ...b.raw,
-                total_price: response.data.newTotal,
-                status: isFullyCancelled ? "cancelled" : b.raw.status,
-                bookedRooms: updatedRooms
-              };
-
-              return {
-                ...b,
-                amount: response.data.newTotal,
-                status: isFullyCancelled ? "Cancelled" : b.status,
-                raw: updatedRaw
-              };
-            }
-            return b;
-          })
-        );
-
-        // Update selected booking details to reflect changes instantly in the drawer popup
-        setSelectedBooking(prev => {
-          const updatedRooms = prev.raw.bookedRooms.map(r => 
-            r.id === bookedRoomId ? { ...r, status: "cancelled" } : r
-          );
-          const activeRooms = updatedRooms.filter(r => r.status !== "cancelled" && r.status !== "checked_out");
-          const isFullyCancelled = activeRooms.length === 0;
-
-          return {
-            ...prev,
-            amount: response.data.newTotal,
-            status: isFullyCancelled ? "Cancelled" : prev.status,
-            raw: {
-              ...prev.raw,
-              total_price: response.data.newTotal,
-              status: isFullyCancelled ? "cancelled" : prev.raw.status,
-              bookedRooms: updatedRooms
-            }
-          };
-        });
-
-      } else {
-        toast.error(response.data.message || "Failed to cancel room.");
+        setRefundHistory(response.data.data || []);
       }
     } catch (error) {
-      console.error("Error cancelling single room:", error);
-      toast.error(error.response?.data?.message || "An error occurred while cancelling the room.");
-    } finally {
-      setRoomToCancel(null);
+      console.error("Error fetching refund history:", error);
     }
   };
 
-  const confirmCancelAirportPickup = async () => {
+  const handleRequestRefundClick = async (preSelectedRoomId = null, preSelectedPickup = false, selectAll = false, targetBooking = null) => {
+    // Ensure we filter out click synthetic events passed as parameters
+    const actualRoomId = (preSelectedRoomId && typeof preSelectedRoomId === "number") ? preSelectedRoomId : null;
+    const actualPickup = typeof preSelectedPickup === "boolean" ? preSelectedPickup : false;
+    const shouldSelectAll = typeof selectAll === "boolean" ? selectAll : false;
+    const activeBooking = targetBooking || selectedBooking;
+
+    if (!activeBooking) return;
+
     try {
       const token = localStorage.getItem("customerToken");
       const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.post(
-        `${process.env.VITE_BACKEND_URL || "http://localhost:3002/api"}/customers/bookings/${selectedBooking.realId}/airport-pickup/cancel`,
-        {},
+      const response = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api"}/roombook/refunds/eligibility/${activeBooking.realId}`,
         { headers }
       );
-
       if (response.data.success) {
-        toast.success("Airport shuttle pickup cancelled successfully!");
+        setRefundEligibility(response.data);
         
-        // Update local state bookings list
-        setBookings(prevBookings => 
-          prevBookings.map(b => {
-            if (b.realId === selectedBooking.realId) {
-              const updatedRaw = {
-                ...b.raw,
-                total_price: response.data.newTotal,
-                airportPickup: {
-                  ...b.raw.airportPickup,
-                  status: "CANCELLED"
-                }
-              };
-              return {
-                ...b,
-                amount: response.data.newTotal,
-                airportTransfer: "Cancelled",
-                raw: updatedRaw
-              };
-            }
-            return b;
-          })
-        );
+        let roomsInit = actualRoomId ? [actualRoomId] : [];
+        let pickupInit = actualPickup;
 
-        // Update selected booking details to reflect changes instantly in the drawer popup
-        setSelectedBooking(prev => ({
-          ...prev,
-          amount: response.data.newTotal,
-          airportTransfer: "Cancelled",
-          raw: {
-            ...prev.raw,
-            total_price: response.data.newTotal,
-            airportPickup: {
-              ...prev.raw.airportPickup,
-              status: "CANCELLED"
+        if (shouldSelectAll) {
+          roomsInit = (response.data.eligibleRooms || []).map(r => r.id);
+          pickupInit = !!response.data.eligibleAirportPickup;
+        }
+
+        setSelectedRefundRooms(roomsInit);
+        setSelectedRefundPickup(pickupInit);
+        setRefundReason("");
+        setRefundPaymentMethod("Cash");
+        setIsRefundModalOpen(true);
+
+        if (roomsInit.length > 0 || pickupInit) {
+          try {
+            const calcResponse = await axios.post(
+              `${import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api"}/roombook/refunds/calculate`,
+              {
+                bookingId: activeBooking.realId,
+                rooms: roomsInit,
+                airportPickup: pickupInit
+              },
+              { headers }
+            );
+            if (calcResponse.data.success) {
+              setRefundCalculation(calcResponse.data);
             }
+          } catch (calcErr) {
+            console.error("Error calculating pre-selected refund:", calcErr);
           }
-        }));
-
+        } else {
+          setRefundCalculation(null);
+        }
       } else {
-        toast.error(response.data.message || "Failed to cancel airport pickup.");
+        toast.error(response.data.message || "Failed to load refund eligibility.");
       }
     } catch (error) {
-      console.error("Error cancelling airport pickup:", error);
-      toast.error(error.response?.data?.message || "An error occurred while cancelling the airport pickup.");
-    } finally {
-      setShowPickupCancelDialog(false);
+      console.error("Error checking refund eligibility:", error);
+      toast.error(error.response?.data?.message || "This stays booking is not eligible for refunds.");
     }
   };
+
+  const handleRefundSelectionChange = async (roomId, isRoom, isChecked) => {
+    let updatedRooms = [...selectedRefundRooms];
+    let updatedPickup = selectedRefundPickup;
+
+    if (isRoom) {
+      if (isChecked) {
+        updatedRooms.push(roomId);
+      } else {
+        updatedRooms = updatedRooms.filter(id => id !== roomId);
+      }
+      
+      // Auto-check airport pickup if all eligible rooms are selected
+      if (refundEligibility?.eligibleRooms && updatedRooms.length === refundEligibility.eligibleRooms.length) {
+        if (refundEligibility.eligibleAirportPickup) {
+          updatedPickup = true;
+          setSelectedRefundPickup(true);
+        }
+      }
+      setSelectedRefundRooms(updatedRooms);
+    } else {
+      updatedPickup = isChecked;
+      setSelectedRefundPickup(updatedPickup);
+    }
+
+    if (updatedRooms.length === 0 && !updatedPickup) {
+      setRefundCalculation(null);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("customerToken");
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api"}/roombook/refunds/calculate`,
+        {
+          bookingId: selectedBooking.realId,
+          rooms: updatedRooms,
+          airportPickup: updatedPickup
+        },
+        { headers }
+      );
+      if (response.data.success) {
+        setRefundCalculation(response.data);
+      }
+    } catch (error) {
+      console.error("Error calculating refund:", error);
+    }
+  };
+
+  const handleSubmitRefundRequest = async (e) => {
+    e.preventDefault();
+    if (selectedRefundRooms.length === 0 && !selectedRefundPickup) {
+      toast.error("Please select at least one room stay or airport pickup to refund.");
+      return;
+    }
+    setIsSubmittingRefund(true);
+    try {
+      const token = localStorage.getItem("customerToken");
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api"}/roombook/refunds`,
+        {
+          bookingId: selectedBooking.realId,
+          rooms: selectedRefundRooms,
+          airportPickup: selectedRefundPickup,
+          reason: refundReason,
+          paymentMethod: refundPaymentMethod
+        },
+        { headers }
+      );
+      if (response.data.success) {
+        toast.success("Refund request successfully submitted and is pending review!");
+        setIsRefundModalOpen(false);
+        fetchRefundHistory(selectedBooking.realId);
+      } else {
+        toast.error(response.data.message || "Failed to create refund request.");
+      }
+    } catch (error) {
+      console.error("Error submitting refund request:", error);
+      toast.error(error.response?.data?.message || "Failed to submit refund request.");
+    } finally {
+      setIsSubmittingRefund(false);
+    }
+  };
+
+
 
 
   const CURRENCY = process.env.CURRENCY_TYPE || "LKR";
@@ -249,6 +292,10 @@ export default function BookingsTab({
     const checkIn = formatDate(booking.checkIn);
     const checkOut = formatDate(booking.checkOut);
     const createdDate = formatDateTime(booking.raw?.createdAt);
+
+    const successPayments = booking.raw?.payments?.filter(p => p.status === "success" || p.status === "paid") || [];
+    const totalPaid = successPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+    const balanceDue = Math.max(0, booking.amount - totalPaid);
 
     const priceBreakdownRows = booking.raw?.bookedRooms?.map((room, idx) => {
       const rate = parseFloat(room.Room?.roomPrices?.[0]?.price || room.pricePerNight || 0);
@@ -357,6 +404,14 @@ export default function BookingsTab({
           <div class="totals-row grand-total">
             <span>Total Payable:</span>
             <span>${CURRENCY} ${booking.amount.toFixed(2)}</span>
+          </div>
+          <div class="totals-row" style="font-weight: bold; color: #10b981; border-top: 1px dashed #e2e8f0; padding-top: 6px; margin-top: 6px;">
+            <span>Amount Paid (Deposit):</span>
+            <span>${CURRENCY} ${totalPaid.toFixed(2)}</span>
+          </div>
+          <div class="totals-row" style="font-weight: bold; color: #f59e0b;">
+            <span>Balance Due at Check-In:</span>
+            <span>${CURRENCY} ${balanceDue.toFixed(2)}</span>
           </div>
         </div>
 
@@ -577,7 +632,7 @@ export default function BookingsTab({
             { id: "all", label: "All Stays" },
             { id: "upcoming", label: "Upcoming" },
             { id: "completed", label: "Completed" },
-            { id: "cancelled", label: "Cancelled / Rejected" }
+            { id: "cancelled", label: "Cancelled" }
           ].map(tab => (
             <button
               key={tab.id}
@@ -692,7 +747,10 @@ export default function BookingsTab({
                         )}
                         {b.status.toLowerCase() !== "cancelled" && b.status.toLowerCase() !== "completed" && b.status.toLowerCase() !== "cancellation pending" ? (
                           <button
-                            onClick={() => handleInitiateCancel(b)}
+                            onClick={() => {
+                              setSelectedBooking(b);
+                              handleRequestRefundClick(null, false, true, b);
+                            }}
                             title="Cancel reservation"
                             className="p-1.5 bg-rose-50 border border-rose-100 rounded-lg text-rose-600 hover:text-rose-800 transition cursor-pointer"
                           >
@@ -777,7 +835,10 @@ export default function BookingsTab({
                   )}
                   {b.status.toLowerCase() !== "cancelled" && b.status.toLowerCase() !== "completed" && b.status.toLowerCase() !== "cancellation pending" ? (
                     <button
-                      onClick={() => handleInitiateCancel(b)}
+                      onClick={() => {
+                        setSelectedBooking(b);
+                        handleRequestRefundClick(null, false, true, b);
+                      }}
                       className="p-2 bg-rose-50 border border-rose-100 text-rose-600 rounded-lg cursor-pointer"
                     >
                       <XCircle size={14} />
@@ -940,7 +1001,7 @@ export default function BookingsTab({
                         <span className="text-emerald-600 font-extrabold text-[9px] block mt-1.5 uppercase tracking-wide">✓ Checked In</span>
                       ) : (selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && selectedBooking.status.toLowerCase() !== "cancellation pending") ? (
                         <button
-                          onClick={() => setRoomToCancel({ id: room.id, type: room.Room?.roomType?.type || "Deluxe Suite" })}
+                          onClick={() => handleRequestRefundClick(room.id, false)}
                           className="mt-2 text-rose-600 hover:text-rose-800 font-bold text-[9px] hover:underline cursor-pointer flex items-center gap-1 uppercase tracking-wider"
                         >
                           <XCircle size={11} className="text-rose-500" />
@@ -970,7 +1031,7 @@ export default function BookingsTab({
                       </p>
                     ) : (selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && selectedBooking.status.toLowerCase() !== "cancellation pending") ? (
                       <button
-                        onClick={() => setShowPickupCancelDialog(true)}
+                        onClick={() => handleRequestRefundClick(null, true)}
                         className="col-span-2 mt-2 px-3 py-1.5 bg-rose-50 hover:bg-rose-105 border border-rose-200 text-rose-700 font-extrabold rounded-lg text-[9px] hover:underline cursor-pointer flex items-center justify-center gap-1.5 w-full uppercase tracking-wider transition-all"
                       >
                         <XCircle size={12} className="text-rose-500" />
@@ -1039,6 +1100,37 @@ export default function BookingsTab({
                 )}
               </div>
 
+              {/* Refund Requests History */}
+              <div className="space-y-2.5 pt-4 border-t border-slate-100">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block pl-0.5">Refund Requests history</span>
+                {refundHistory && refundHistory.length > 0 ? (
+                  refundHistory.map((refund, idx) => (
+                    <div key={idx} className="p-3 bg-slate-50 border border-slate-200/50 rounded-xl flex items-center justify-between text-xs font-semibold text-slate-700">
+                      <div>
+                        <p className="font-bold text-slate-800">Refund: {refund.refund_no}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Requested on: {new Date(refund.request_date).toLocaleDateString()}</p>
+                        {refund.reason && <p className="text-[10px] text-slate-500 italic mt-0.5">Reason: "{refund.reason}"</p>}
+                        {refund.transaction_ref && <p className="text-[10px] text-mono text-slate-400">Ref: {refund.transaction_ref}</p>}
+                      </div>
+                      <div className="text-right">
+                        <p className="font-black text-rose-700">-{CURRENCY} {parseFloat(refund.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                        <span className={`inline-block mt-0.5 px-2 py-0.5 text-[8px] font-black uppercase rounded-full border ${
+                          refund.status === "COMPLETED" || refund.status === "APPROVED"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : refund.status === "PENDING"
+                            ? "bg-amber-50 text-amber-700 border-amber-250 animate-pulse"
+                            : "bg-rose-50 text-rose-700 border-rose-200"
+                        }`}>
+                          {refund.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-[10px] text-slate-400 italic">No refund requests submitted for this booking.</p>
+                )}
+              </div>
+
             </div>
 
             {/* Modal Actions Footer */}
@@ -1059,15 +1151,23 @@ export default function BookingsTab({
                   Receipt
                 </button>
               )}
+              {selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && (
+                <button
+                  onClick={() => handleRequestRefundClick(null, false)}
+                  className="px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold text-center cursor-pointer flex justify-center items-center gap-1 hover:scale-[1.02] transition-all"
+                >
+                  <RefreshCw size={13} className="animate-spin-slow" />
+                  Request Refund
+                </button>
+              )}
               {selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && selectedBooking.status.toLowerCase() !== "cancellation pending" ? (
                 <button
                   onClick={() => {
-                    setSelectedBooking(null);
-                    handleInitiateCancel(selectedBooking);
+                    handleRequestRefundClick(null, false, true);
                   }}
                   className="px-4 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold text-center cursor-pointer hover:scale-[1.02] transition-all"
                 >
-                  Cancel
+                  Cancel Booking
                 </button>
               ) : null}
             </div>
@@ -1076,74 +1176,192 @@ export default function BookingsTab({
         </>
       )}
 
-      {/* Dynamic Custom Dialog Box for Single Room Cancellation */}
-      {roomToCancel && (
+
+
+      {/* Dynamic Refund Request Selection Modal */}
+      {isRefundModalOpen && refundEligibility && (
         <>
           <div 
-            className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs z-55"
-            onClick={() => setRoomToCancel(null)}
+            className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs z-55 animate-fadeIn"
+            onClick={() => setIsRefundModalOpen(false)}
           />
-          <div className="fixed inset-0 flex items-center justify-center z-55 p-4 animate-scaleUp">
-            <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-slate-100 shadow-2xl space-y-4">
-              <div className="flex items-center gap-2.5 text-rose-650">
-                <AlertCircle className="w-8 h-8 text-rose-600 shrink-0" />
-                <h4 className="font-serif font-bold text-sm text-slate-800">Cancel Room Reservation</h4>
-              </div>
-              <p className="text-xs text-slate-550 leading-relaxed">
-                Are you sure you want to cancel the <span className="font-bold text-slate-800">{roomToCancel.type}</span> from this stay booking?
-                <br/><br/>
-                <span className="font-bold text-rose-700">Cancellation Policy:</span> Cancellations made within 48 hours of check-in are subject to a one-night charge penalty. Cancellations prior to 48 hours are free and fully refunded.
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setRoomToCancel(null)}
-                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold cursor-pointer transition-all"
+          <div className="fixed inset-0 flex items-center justify-center z-55 p-4">
+            <div className="bg-white rounded-3xl p-6 max-w-lg w-full border border-slate-100 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto animate-scaleUp">
+              <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="w-6 h-6 text-indigo-650 animate-spin-slow animate-pulse" />
+                  <h4 className="font-serif font-bold text-base text-slate-800">Request Booking Refund</h4>
+                </div>
+                <button 
+                  onClick={() => setIsRefundModalOpen(false)}
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition cursor-pointer"
                 >
-                  Keep Room
-                </button>
-                <button
-                  onClick={confirmCancelSingleRoom}
-                  className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold cursor-pointer transition-all"
-                >
-                  Cancel Room
+                  <XCircle size={18} />
                 </button>
               </div>
-            </div>
-          </div>
-        </>
-      )}
-      {/* Dynamic Custom Dialog Box for Airport Pickup Cancellation */}
-      {showPickupCancelDialog && (
-        <>
-          <div 
-            className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs z-55"
-            onClick={() => setShowPickupCancelDialog(false)}
-          />
-          <div className="fixed inset-0 flex items-center justify-center z-55 p-4 animate-scaleUp">
-            <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-slate-100 shadow-2xl space-y-4">
-              <div className="flex items-center gap-2.5 text-rose-650">
-                <AlertCircle className="w-8 h-8 text-rose-600 shrink-0" />
-                <h4 className="font-serif font-bold text-sm text-slate-800">Cancel Shuttle Service</h4>
-              </div>
-              <p className="text-xs text-slate-555 leading-relaxed">
-                Are you sure you want to cancel your airport transfer pickup service? 
-                <br/><br/>
-                The transfer surcharge of <span className="font-bold text-slate-800">{CURRENCY} {selectedPickupPrice.toLocaleString()}</span> will be deducted and refunded back to your stay booking subtotal amount.
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowPickupCancelDialog(false)}
-                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold cursor-pointer transition-all"
-                >
-                  Keep Service
-                </button>
-                <button
-                  onClick={confirmCancelAirportPickup}
-                  className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold cursor-pointer transition-all"
-                >
-                  Cancel Shuttle
-                </button>
-              </div>
+
+              <form onSubmit={handleSubmitRefundRequest} className="space-y-4 text-xs">
+                {/* Eligible Stays List */}
+                <div className="space-y-2">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Select items to refund:</span>
+                  
+                  {/* Rooms list */}
+                  {refundEligibility.eligibleRooms && refundEligibility.eligibleRooms.length > 0 ? (
+                    <div className="space-y-2">
+                      <p className="font-bold text-slate-700">Rooms Stay Service:</p>
+                      {refundEligibility.eligibleRooms.map((room) => (
+                        <label 
+                          key={room.id} 
+                          className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                            selectedRefundRooms.includes(room.id)
+                              ? "bg-indigo-50/50 border-indigo-250 shadow-3xs"
+                              : "bg-slate-50/50 border-slate-200 hover:bg-slate-50"
+                          }`}
+                        >
+                          <input 
+                            type="checkbox"
+                            className="mt-1 accent-indigo-600"
+                            checked={selectedRefundRooms.includes(room.id)}
+                            onChange={(e) => handleRefundSelectionChange(room.id, true, e.target.checked)}
+                          />
+                          <div className="flex-1">
+                            <div className="flex justify-between font-bold">
+                              <span>Room {room.roomNumber} ({room.roomType})</span>
+                              <span className="text-slate-800">{CURRENCY} {room.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between text-[10px] text-slate-400 mt-0.5">
+                              <span>{new Date(room.checkIn).toLocaleDateString()} - {new Date(room.checkOut).toLocaleDateString()} ({room.nights} Night(s))</span>
+                              {room.penaltyApplied ? (
+                                <span className="text-rose-605 font-bold">Late Cancel Penalty: 1-night stay rate deducted</span>
+                              ) : (
+                                <span className="text-emerald-650 font-bold">Free cancellation (100% refundable)</span>
+                              )}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-slate-400 italic">No eligible room stays available to refund.</p>
+                  )}
+
+                  {/* Airport pickup */}
+                  {refundEligibility.eligibleAirportPickup && (
+                    <div className="space-y-2 pt-2">
+                      <p className="font-bold text-slate-700">Airport Transfer Shuttle Service:</p>
+                      <label 
+                        className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                          selectedRefundPickup
+                            ? "bg-indigo-50/50 border-indigo-250 shadow-3xs"
+                            : "bg-slate-50/50 border-slate-200 hover:bg-slate-50"
+                        }`}
+                      >
+                        <input 
+                          type="checkbox"
+                          className="mt-1 accent-indigo-600"
+                          checked={selectedRefundPickup}
+                          onChange={(e) => handleRefundSelectionChange(null, false, e.target.checked)}
+                          disabled={refundEligibility?.eligibleRooms && selectedRefundRooms.length === refundEligibility.eligibleRooms.length}
+                        />
+                        <div className="flex-1">
+                          <div className="flex justify-between font-bold">
+                            <span>Airport Pickup ({refundEligibility.eligibleAirportPickup.location})</span>
+                            <span className="text-slate-800">{CURRENCY} {refundEligibility.eligibleAirportPickup.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          </div>
+                          <p className="text-[10px] text-slate-400 mt-0.5">
+                            Scheduled: {new Date(refundEligibility.eligibleAirportPickup.pickupDate).toLocaleDateString()} at {refundEligibility.eligibleAirportPickup.pickupTime}
+                          </p>
+                          {refundEligibility?.eligibleRooms && selectedRefundRooms.length === refundEligibility.eligibleRooms.length && (
+                            <p className="text-[10px] text-indigo-650 font-bold mt-1">
+                              * Airport pickup must be cancelled when cancelling all room bookings.
+                            </p>
+                          )}
+                        </div>
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+                {/* Calculation breakdown */}
+                {refundCalculation && (
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Estimated Refund Breakdown</span>
+                    <div className="flex justify-between">
+                      <span>Room stay subtotal:</span>
+                      <span>{CURRENCY} {refundCalculation.roomTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    {refundCalculation.airportPickup > 0 && (
+                      <div className="flex justify-between">
+                        <span>Shuttle charges subtotal:</span>
+                        <span>{CURRENCY} {refundCalculation.airportPickup.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-rose-650 font-bold">
+                      <span>Cancellation fee/penalties:</span>
+                      <span>-{CURRENCY} {refundCalculation.cancellationFee.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="flex justify-between pt-2 border-t border-slate-200 font-black text-slate-900 text-sm">
+                      <span>Expected Refund:</span>
+                      <span>{CURRENCY} {refundCalculation.refundAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} ({refundCalculation.refundPercentage}%)</span>
+                    </div>
+                    {refundCalculation.refundAmount === refundCalculation.totalPaid && refundCalculation.totalPaid < (refundCalculation.roomTotal + refundCalculation.airportPickup - refundCalculation.cancellationFee) && (
+                      <p className="text-[9px] text-rose-600 font-bold leading-normal mt-1 animate-pulse">
+                        * Note: Refund is capped at {CURRENCY} {refundCalculation.totalPaid.toLocaleString()} (total amount paid by you).
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Refund Form inputs */}
+                <div className="space-y-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="font-bold text-slate-700">Preferred Refund Method:</label>
+                    <select
+                      value={refundPaymentMethod}
+                      onChange={(e) => setRefundPaymentMethod(e.target.value)}
+                      className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-750 focus:outline-indigo-650"
+                    >
+                      <option value="Cash">Cash (Collect at Reception)</option>
+                      <option value="Card">Card Reversal</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="font-bold text-slate-700">Reason for Cancellation:</label>
+                    <textarea
+                      required
+                      placeholder="Please tell us why you are canceling..."
+                      value={refundReason}
+                      onChange={(e) => setRefundReason(e.target.value)}
+                      className="p-3 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-750 focus:outline-indigo-650 h-20 resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsRefundModalOpen(false)}
+                    className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition cursor-pointer text-center"
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingRefund || (selectedRefundRooms.length === 0 && !selectedRefundPickup)}
+                    className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-750 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl font-bold transition cursor-pointer text-center flex items-center justify-center gap-1.5"
+                  >
+                    {isSubmittingRefund ? (
+                      <>
+                        <RefreshCw size={13} className="animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      "Submit Refund Request"
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </>

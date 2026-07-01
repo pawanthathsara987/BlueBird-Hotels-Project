@@ -97,35 +97,22 @@ export default function ReturnPolicy() {
                                             100%
                                         </span>
                                         <div className="bg-emerald-50/30 border border-emerald-100/50 rounded-xl p-4 md:p-5">
-                                            <h4 className="font-bold text-emerald-950 text-sm md:text-base font-serif">30+ Days Prior to Arrival</h4>
+                                            <h4 className="font-bold text-emerald-950 text-sm md:text-base font-serif">7+ Days Prior to Arrival</h4>
                                             <p className="text-xs md:text-sm text-stone-600 mt-1 leading-relaxed">
-                                                Cancellations made more than 30 days before your scheduled check-in date qualify for a **100% full refund** of the deposit amount. No cancellation fees apply.
+                                                Cancellations made 7 days (168 hours) or more before your scheduled check-in date qualify for a **100% full refund** of the 50% deposit amount. No cancellation fees apply.
                                             </p>
                                         </div>
                                     </div>
 
                                     {/* Timeline Item 2 */}
                                     <div className="relative">
-                                        <span className="absolute -left-[35px] md:-left-[51px] top-1 w-6 h-6 md:w-8 md:h-8 rounded-full bg-sky-100 border-2 border-sky-500 flex items-center justify-center font-bold text-[10px] md:text-xs text-sky-700">
-                                            50%
-                                        </span>
-                                        <div className="bg-sky-50/30 border border-sky-100/40 rounded-xl p-4 md:p-5">
-                                            <h4 className="font-bold text-sky-950 text-sm md:text-base font-serif">14 to 30 Days Prior to Arrival</h4>
-                                            <p className="text-xs md:text-sm text-stone-600 mt-1 leading-relaxed">
-                                                Cancellations requested between 14 and 30 days before check-in qualify for a **50% refund** of the total reservation deposit.
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {/* Timeline Item 3 */}
-                                    <div className="relative">
                                         <span className="absolute -left-[35px] md:-left-[51px] top-1 w-6 h-6 md:w-8 md:h-8 rounded-full bg-rose-100 border-2 border-rose-500 flex items-center justify-center font-bold text-[10px] md:text-xs text-rose-700">
                                             0%
                                         </span>
                                         <div className="bg-rose-50/30 border border-rose-100/40 rounded-xl p-4 md:p-5">
-                                            <h4 className="font-bold text-rose-950 text-sm md:text-base font-serif">Less than 14 Days or No-Show</h4>
+                                            <h4 className="font-bold text-rose-950 text-sm md:text-base font-serif">Within 7 Days of Arrival</h4>
                                             <p className="text-xs md:text-sm text-stone-600 mt-1 leading-relaxed">
-                                                Any cancellation made within 14 days of check-in, or failure to check in on the reserved date (no-show), is **non-refundable**. The full deposit is retained to cover room hold costs.
+                                                Any cancellation made within 7 days of check-in, or failure to check in on the reserved date (no-show), is **non-refundable**. The 50% advance deposit is retained as a late cancellation fee.
                                             </p>
                                         </div>
                                     </div>
@@ -137,6 +124,7 @@ export default function ReturnPolicy() {
                             <div className="space-y-4">
                                 <h3 className="text-xl font-bold text-sky-950 border-b border-stone-100 pb-3 font-serif">Important Information</h3>
                                 <ul className="list-disc pl-5 space-y-3.5 text-[14px] text-stone-600 leading-relaxed">
+                                    <li><strong>Airport Transfer Shuttle:</strong> The airport shuttle service deposit is always **100% refundable** regardless of the cancellation date. If room bookings remain active, the refund amount is credited to cover the remaining room balance (reducing checkout payment). If all room bookings are cancelled, the shuttle deposit is fully refunded as cash.</li>
                                     <li><strong>Peak Season Bookings:</strong> Room reservations made during absolute peak seasons (December 15 – January 15 and August festival season) operate under a strict non-refundable policy unless cancelled 45 days prior.</li>
                                     <li><strong>Early Departures:</strong> In the event that a guest checks out of the hotel before their reserved check-out date, the hotel is unable to refund the unused nights.</li>
                                     <li><strong>Non-Refundable Promo Rates:</strong> Bookings made under promotional packages labeled "Non-Refundable" or "Advance Purchase" are exempt from standard refund rates and are 100% non-refundable under all circumstances.</li>
@@ -223,7 +211,7 @@ export default function ReturnPolicy() {
                             How to Claim a Refund &amp; Cancel
                         </h3>
                         <p className="text-[14px] text-stone-600 leading-relaxed">
-                            To request a room or tour cancellation, you must submit a written request outlining your booking details. We process all refunds within **7 to 10 working days** from formal authorization.
+                            To request a room or tour cancellation, you must submit a written request outlining your booking details. We process all refunds within **10 to 15 business days** from formal authorization.
                         </p>
                         
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-3">
@@ -231,21 +219,21 @@ export default function ReturnPolicy() {
                                 <div className="w-8 h-8 rounded-full bg-sky-50 flex items-center justify-center font-bold text-xs text-sky-700 mx-auto">1</div>
                                 <h4 className="font-semibold text-stone-850 text-xs">Submit Request</h4>
                                 <p className="text-[10px] text-stone-500 leading-normal">
-                                    Email us at <strong>info@bluebirdhotels.lk</strong> with your Reservation ID.
+                                    Submit online via the **Bookings History** tab inside your Customer Dashboard.
                                 </p>
                             </div>
                             <div className="bg-white border border-stone-200 rounded-xl p-4 text-center space-y-1 hover:shadow-xs transition duration-300">
                                 <div className="w-8 h-8 rounded-full bg-sky-50 flex items-center justify-center font-bold text-xs text-sky-700 mx-auto">2</div>
                                 <h4 className="font-semibold text-stone-850 text-xs">Verification</h4>
                                 <p className="text-[10px] text-stone-500 leading-normal">
-                                    Our audit team reviews the timestamp against the reservation parameters.
+                                    Our audit team reviews the timestamp against the cancellation policy windows.
                                 </p>
                             </div>
                             <div className="bg-white border border-stone-200 rounded-xl p-4 text-center space-y-1 hover:shadow-xs transition duration-300">
                                 <div className="w-8 h-8 rounded-full bg-sky-50 flex items-center justify-center font-bold text-xs text-sky-700 mx-auto">3</div>
                                 <h4 className="font-semibold text-stone-850 text-xs">Payout Process</h4>
                                 <p className="text-[10px] text-stone-500 leading-normal">
-                                    Approved amount is returned via the same transaction channel (Credit Card / Bank Transfer).
+                                    Approved amount is returned via your chosen payment method (Cash / Card Reversal).
                                 </p>
                             </div>
                         </div>

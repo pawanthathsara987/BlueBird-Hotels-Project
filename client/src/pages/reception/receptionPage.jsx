@@ -8,6 +8,7 @@ import Booking from "./booking";
 import CheckIn from "./CheckIn";
 import CheckOut from "./CheckOut";
 import Reports from "./Reports";
+import RefundRequests from "./RefundRequests";
 
 export default function ReceptionPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -186,6 +187,7 @@ export default function ReceptionPage() {
                     <Link to="/reception/checkout" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/checkout")}><MdCheckCircle className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Check-Out</span></Link>
                     <Link to="/reception/bookings" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/bookings")}><MdOutlineBookOnline className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Bookings</span></Link>
                     <Link to="/reception/reports" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/reports")}><MdBarChart className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Reports</span></Link>
+                    <Link to="/reception/refunds" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/refunds")}><MdOutlineBookOnline className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Refunds Approval</span></Link>
 
                     <div className="mt-auto pt-6">
                         <button
@@ -303,6 +305,7 @@ export default function ReceptionPage() {
                         <Route path="/checkout" element={<CheckOut />} />
                         <Route path="/bookings" element={<Booking />} />
                         <Route path="/reports" element={<Reports />} />
+                        <Route path="/refunds" element={<RefundRequests />} />
                     </Routes>
                 </div>
             </div>
