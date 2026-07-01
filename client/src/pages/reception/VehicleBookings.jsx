@@ -702,26 +702,7 @@ export default function VehicleBookings() {
                                     />
                                 </div>
 
-                                {/* Payment and Desk Options */}
-                                <div className="grid grid-cols-2 gap-3 p-4 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200/50 dark:border-slate-850 items-center">
-                                    <div>
-                                        <span className="text-xs text-slate-500">
-                                            ℹ️ Booking requires immediate full payment at the reception desk.
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <label className="block text-slate-550 mb-1 text-[10px]">Payment Method *</label>
-                                        <select
-                                            value={newBooking.paymentMethod}
-                                            onChange={(e) => setNewBooking({ ...newBooking, paymentMethod: e.target.value })}
-                                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl px-3 py-2 text-xs outline-none cursor-pointer font-bold"
-                                        >
-                                            <option value="cash">Cash Payment</option>
-                                            <option value="card">Credit/Debit Card</option>
-                                            <option value="bank_transfer">Bank Transfer</option>
-                                        </select>
-                                    </div>
-                                </div>
+
 
                                 {/* Form Action Buttons */}
                                 <div className="flex justify-end gap-3 pt-4 border-t dark:border-slate-800 border-slate-100 flex-shrink-0">
