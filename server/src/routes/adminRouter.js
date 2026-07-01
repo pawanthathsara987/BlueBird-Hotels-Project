@@ -6,7 +6,7 @@ import {
 } from "./../controllers/admin/amenitiesController.js";
 
 import { addRoom, updateRoom, deleteRoom, getAllRooms, searchRooms } from "../controllers/admin/roomController.js";
-import {getAllRoomTypes, createRoomType, updateRoomType, deleteRoomType } from "../controllers/admin/roomTypeController.js";
+import { getAllRoomTypes, getRoomTypeById, createRoomType, updateRoomType, deleteRoomType, deleteRoomTypeImage } from "../controllers/admin/roomTypeController.js";
 import { getAllOccupancyTypes } from "../controllers/admin/occupancyTypeController.js";
 import { getAllBoardTypes } from "../controllers/admin/boardTypeController.js";
 import { upload } from "../controllers/admin/imageUploadController.js";
@@ -27,9 +27,11 @@ router.delete('/amenitie/:id', deleteAmenitie);
 
 // Room Type routes
 router.get('/room-types', getAllRoomTypes);
-router.post('/room-type', upload.single("image"), createRoomType);
-router.put('/room-type/:id', upload.single("image"), updateRoomType);
+router.get('/room-type/:id', getRoomTypeById);
+router.post('/room-type', upload.array("images"), createRoomType);
+router.put('/room-type/:id', upload.array("images"), updateRoomType);
 router.delete('/room-type/:id', deleteRoomType);
+router.delete('/room-type/:id/image', deleteRoomTypeImage);
 
 // Occupancy Type routes
 router.get('/occupancy-types', getAllOccupancyTypes);
