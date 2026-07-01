@@ -33,6 +33,7 @@ import VehicleCatalogPage from "./pages/client/vehicles/VehicleCatalogPage";
 import VehicleDetailsPage from "./pages/client/vehicles/VehicleDetailsPage";
 import VehicleBookingPage from "./pages/client/vehicles/VehicleBookingPage";
 import CustomerDetailsPage from "./pages/client/booking/roombooking/CustomerDetailsPage";
+import RoomTypeDetails from "./pages/client/RoomTypeDetails";
 import FaqPage from "./pages/Faq";
 
 export default function App() {
@@ -43,6 +44,7 @@ export default function App() {
                 <div className="w-full h-screen">
                     <Routes>
                         <Route path="/booking" element={<BookingRoom />} />
+                        <Route path="/room-type/:id" element={<RoomTypeDetails />} />
                         <Route path="/booking-summary" element={<BookingSummary />} />
                         <Route path="/booking-details" element={<CustomerDetailsPage />} />
                         <Route path="/booking-confirm" element={<BookingConfirmation />} />

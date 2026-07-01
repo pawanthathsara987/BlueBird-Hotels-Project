@@ -6,7 +6,6 @@ import toast from "react-hot-toast";
 import DashboardHeader from "../../components/admin/dashboard/DashboardHeader";
 import DashboardStats from "../../components/admin/dashboard/DashboardStats";
 import RoomStatusGrid from "../../components/admin/dashboard/RoomStatusGrid";
-import DashboardQuickActions from "../../components/admin/dashboard/DashboardQuickActions";
 import DailyAttendanceStats from "../../components/admin/dashboard/DailyAttendanceStats";
 
 export default function AdminDashboard() {
@@ -106,11 +105,6 @@ export default function AdminDashboard() {
                 loading={loading} 
                 rooms={rooms} 
                 roomTypes={roomTypes} 
-            />
-            
-            <DashboardQuickActions 
-                stats={stats} 
-                loading={loading} 
             />
 
             <DailyAttendanceStats />    

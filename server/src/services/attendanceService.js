@@ -105,7 +105,9 @@ export const scanAttendance = async (data) => {
     if (attendance && attendance.status === "Absent") {
         return {
             success: false,
-            message: "Staff member is marked as Absent today."
+            message: "Staff member is marked as Absent today.",
+            staffName: staff.name,
+            staff
         };
     }
 
@@ -157,7 +159,9 @@ export const scanAttendance = async (data) => {
         if (now.diff(checkIn, "minute") < cooldownMins) {
             return {
                 success: false,
-                message: `Scan cooldown active. Please wait at least ${cooldownMins} minutes since your check-in.`
+                message: `Scan cooldown active. Please wait at least ${cooldownMins} minutes since your check-in.`,
+                staffName: staff.name,
+                staff
             };
         }
 
@@ -184,7 +188,9 @@ export const scanAttendance = async (data) => {
     // Third Scan (Attendance Completed)
     return {
         success: false,
-        message: "Attendance already completed today."
+        message: "Attendance already completed today.",
+        staffName: staff.name,
+        staff
     };
 };
 
