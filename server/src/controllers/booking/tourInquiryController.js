@@ -149,22 +149,6 @@ export const createTourInquiry = async (req, res) => {
       validationErrors.pickupLocation = "Pickup location must be at least 3 characters";
     }
 
-    // Validate guest count
-    const numAdults = Number(numberOfAdults) || 1;
-    const numChildren = Number(numberOfChildren) || 0;
-    if (!validateGuestCount(numAdults, numChildren)) {
-      validationErrors.numberOfAdults = "Total guests must be between 1 and 100";
-    }
-
-    // Return validation errors if any
-    if (Object.keys(validationErrors).length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Validation failed",
-        errors: validationErrors,
-      });
-    }
-
     // Validate tour exists
     const tour = await Tour.findByPk(tourId);
     if (!tour) {
@@ -181,6 +165,26 @@ export const createTourInquiry = async (req, res) => {
         success: false,
         message: "This tour is not currently available for inquiries",
         field: "tourId",
+      });
+    }
+
+    // Validate guest count
+    const numAdults = Number(numberOfAdults) || 1;
+    const numChildren = Number(numberOfChildren) || 0;
+    const totalGuests = numAdults + numChildren;
+    
+    if (!validateGuestCount(numAdults, numChildren)) {
+      validationErrors.numberOfAdults = "Total guests must be between 1 and 100";
+    } else if (tour.groupSize && totalGuests > tour.groupSize) {
+      validationErrors.numberOfAdults = `Total guests cannot exceed the maximum group size of ${tour.groupSize}`;
+    }
+
+    // Return validation errors if any
+    if (Object.keys(validationErrors).length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors: validationErrors,
       });
     }
 
