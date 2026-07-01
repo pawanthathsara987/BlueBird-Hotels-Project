@@ -14,6 +14,7 @@ export default function UpdateStaffMember() {
     const [userName, setUserName] = useState(location.state.member.userName);
     const [name, setName] = useState(location.state.member.name);
     const [email, setEmail] = useState(location.state.member.email);
+    const isCurrentAdmin = location.state.member.Role?.roleName === 'admin';
     const [role, setRole] = useState(location.state.member.roleId);
     const [roles, setRoles] = useState([]);
     const [phoneNumber, setPhoneNumber] = useState(location.state.member.phoneNumber);
@@ -282,7 +283,7 @@ export default function UpdateStaffMember() {
                                     menuPortalTarget={document.body}
                                     menuPosition="fixed"
                                     maxMenuHeight={200}
-                                    isDisabled={loading}
+                                    isDisabled={loading || isCurrentAdmin}
                                     placeholder="Select a role..."
                                 />
                             </div>
