@@ -47,7 +47,7 @@ export const updateVehicleRentalPolicy = async (req, res) => {
       lateReturnFullDayAfterHours: toInteger(req.body.lateReturnFullDayAfterHours),
       includedKilometersPerDay: toInteger(req.body.includedKilometersPerDay),
       extraMileageFee: toNumber(req.body.extraMileageFee),
-
+      extraMileageCurrency: normalizeText(req.body.extraMileageCurrency) || process.env.CURRENCY_TYPE || 'LKR',
       termsAndConditions: normalizeText(req.body.termsAndConditions),
     };
 

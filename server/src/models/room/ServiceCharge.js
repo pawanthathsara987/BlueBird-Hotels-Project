@@ -1,16 +1,20 @@
 import { Model, DataTypes } from 'sequelize';
 import sequelize from '../../config/database.js';
 
-class OtherItemPrice extends Model { }
+class ServiceCharge extends Model { }
 
-OtherItemPrice.init({
+ServiceCharge.init({
     id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true,
         allowNull: false
     },
-    item_name: {
+    service_name: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    service_Code: {
         type: DataTypes.STRING,
         allowNull: false
     },
@@ -25,9 +29,9 @@ OtherItemPrice.init({
     }   
 }, {
     sequelize,
-    modelName: "OtherItemPrice",
-    tableName: 'other_item_prices',
+    modelName: "ServiceCharge",
+    tableName: 'service_charges',
     timestamps: true
 });
 
-export default OtherItemPrice;
+export default ServiceCharge;

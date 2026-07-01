@@ -6,12 +6,12 @@ import {
 } from "./../controllers/admin/amenitiesController.js";
 
 import { addRoom, updateRoom, deleteRoom, getAllRooms, searchRooms } from "../controllers/admin/roomController.js";
-import {getAllRoomTypes, createRoomType, updateRoomType, deleteRoomType } from "../controllers/admin/roomTypeController.js";
+import { getAllRoomTypes, getRoomTypeById, createRoomType, updateRoomType, deleteRoomType, deleteRoomTypeImage } from "../controllers/admin/roomTypeController.js";
 import { getAllOccupancyTypes } from "../controllers/admin/occupancyTypeController.js";
 import { getAllBoardTypes } from "../controllers/admin/boardTypeController.js";
 import { upload } from "../controllers/admin/imageUploadController.js";
 import { getAllRoomPrices, getRoomPriceMetadata, createRoomPrice, updateRoomPrice, deleteRoomPrice } from "../controllers/admin/roomPriceController.js";
-import { getAllOtherItemPrices, createOtherItemPrice, updateOtherItemPrice, deleteOtherItemPrice } from "../controllers/admin/otherItemPriceController.js";
+import { getAllServiceCharges, updateServiceCharge } from "../controllers/admin/serviceChargeController.js";
 import { getAllShopItems, getShopItemById, createShopItem, updateShopItem, deleteShopItem } from "../controllers/admin/shopController.js";
 
 const router = express.Router();
@@ -27,9 +27,11 @@ router.delete('/amenitie/:id', deleteAmenitie);
 
 // Room Type routes
 router.get('/room-types', getAllRoomTypes);
-router.post('/room-type', upload.single("image"), createRoomType);
-router.put('/room-type/:id', upload.single("image"), updateRoomType);
+router.get('/room-type/:id', getRoomTypeById);
+router.post('/room-type', upload.array("images"), createRoomType);
+router.put('/room-type/:id', upload.array("images"), updateRoomType);
 router.delete('/room-type/:id', deleteRoomType);
+router.delete('/room-type/:id/image', deleteRoomTypeImage);
 
 // Occupancy Type routes
 router.get('/occupancy-types', getAllOccupancyTypes);
@@ -51,11 +53,9 @@ router.post('/room-prices', createRoomPrice);
 router.put('/room-prices/:id', updateRoomPrice);
 router.delete('/room-prices/:id', deleteRoomPrice);
 
-// Other Item Price routes
-router.get('/other-item-prices', getAllOtherItemPrices);
-router.post('/other-item-prices', createOtherItemPrice);
-router.put('/other-item-prices/:id', updateOtherItemPrice);
-router.delete('/other-item-prices/:id', deleteOtherItemPrice);
+// Service Charge routes
+router.get('/service-charges', getAllServiceCharges);
+router.put('/service-charges/:id', updateServiceCharge);
 
 // Shop Items routes
 router.get('/shop-items', getAllShopItems);

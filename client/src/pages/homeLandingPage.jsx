@@ -1,5 +1,6 @@
 import ImageCarousel from "../components/imageCarousel";
 import RoomPackageCarousel from "../components/RoomPackageCarousel";
+import RoomTypeCarousel from "../components/RoomTypeCarousel";
 
 export default function HomeLandingPage() {
     return (
@@ -18,8 +19,8 @@ export default function HomeLandingPage() {
                     </p>
                 </div>
             </div>
-            <div className="w-full mt-10 px-4 sm:px-8 lg:px-10 flex items-center bg-gray-100 justify-center flex-col gap-5">
-                {/* room Type */}
+            <div className="w-full mt-10 bg-slate-50 flex items-center justify-center flex-col">
+                <RoomTypeCarousel />
             </div>
             <div className="w-full mt-16 pb-10 px-4 sm:px-8 lg:px-10 flex items-center justify-center flex-col gap-5">
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-black/30 text-center mt-10">Blue Bird Travels</h2>

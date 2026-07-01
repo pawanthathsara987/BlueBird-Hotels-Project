@@ -87,6 +87,7 @@ function Footer() {
                         <Link to="/terms" className="hover:text-blue-400 transition-colors">Terms &amp; Conditions</Link>
                         <Link to="/privacy-policy" className="hover:text-blue-400 transition-colors">Privacy Policy</Link>
                         <Link to="/return-policy" className="hover:text-blue-400 transition-colors">Return Policy</Link>
+                        <Link to="/faq" className="hover:text-blue-400 transition-colors">FAQ</Link>
                     </div>
                 </div>
             </div>

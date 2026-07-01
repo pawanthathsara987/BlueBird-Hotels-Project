@@ -4,6 +4,7 @@ import { ArrowLeft, Calendar, Users, DollarSign, Car, Sparkles, Clock } from 'lu
 import { useState } from 'react';
 
 const BookingSummary = () => {
+    const CURRENCY = process.env.CURRENCY_TYPE || "LKR";
     const location = useLocation();
     const navigate = useNavigate();
     const [isProcessing, setIsProcessing] = useState(false);
@@ -180,7 +181,7 @@ const BookingSummary = () => {
                                                 </p>
                                                 <p className="flex justify-between text-xs pt-1.5 border-t border-emerald-100 text-emerald-800 font-bold">
                                                     <span>Shuttle Fee:</span>
-                                                    <span className="font-extrabold">${shuttleCost.toFixed(2)} (One-time)</span>
+                                                    <span className="font-extrabold">{CURRENCY} {shuttleCost.toFixed(2)} (One-time)</span>
                                                 </p>
                                             </div>
                                         </div>
@@ -235,11 +236,11 @@ const BookingSummary = () => {
                                                 <div className="text-right">
                                                     {hasDiscount(room) && (
                                                         <p className="text-xs text-stone-400 line-through">
-                                                            ${Number(room.originalTotalPrice || 0).toFixed(2)}
+                                                            {CURRENCY} {Number(room.originalTotalPrice || 0).toFixed(2)}
                                                         </p>
                                                     )}
                                                     <p className="text-2xl font-black text-emerald-700">
-                                                        ${calculateRoomTotal(room).toFixed(2)}
+                                                        {CURRENCY} {calculateRoomTotal(room).toFixed(2)}
                                                     </p>
                                                     <p className="text-xs text-stone-500">total for stay</p>
                                                 </div>
@@ -334,10 +335,10 @@ const BookingSummary = () => {
                                     <div key={room.roomId || index} className="flex justify-between text-sm">
                                         <span className="text-stone-600">Room {index + 1}</span>
                                         <span className="font-semibold text-stone-900">
-                                            ${calculateRoomTotal(room).toFixed(2)}
+                                            {CURRENCY} {calculateRoomTotal(room).toFixed(2)}
                                             {hasDiscount(room) && (
                                                 <span className="ml-2 text-xs text-stone-400 line-through">
-                                                    ${Number(room.originalTotalPrice || 0).toFixed(2)}
+                                                    {CURRENCY} {Number(room.originalTotalPrice || 0).toFixed(2)}
                                                 </span>
                                             )}
                                         </span>
@@ -348,7 +349,7 @@ const BookingSummary = () => {
                                         <span className="flex items-center gap-1.5">
                                             <Car className="h-3.5 w-3.5" /> Airport Shuttle
                                         </span>
-                                        <span>+${shuttleCost.toFixed(2)}</span>
+                                        <span>+{CURRENCY} {shuttleCost.toFixed(2)}</span>
                                     </div>
                                 )}
                             </div>
@@ -358,11 +359,11 @@ const BookingSummary = () => {
                                 <div className="text-right">
                                     {originalTotalCost > totalCost && (
                                         <p className="text-xs text-stone-400 line-through">
-                                            ${originalTotalCost.toFixed(2)}
+                                            {CURRENCY} {originalTotalCost.toFixed(2)}
                                         </p>
                                     )}
                                     <span className="text-3xl font-black text-emerald-700">
-                                        ${totalCost.toFixed(2)}
+                                        {CURRENCY} {totalCost.toFixed(2)}
                                     </span>
                                 </div>
                             </div>
@@ -370,7 +371,7 @@ const BookingSummary = () => {
                             {totalSavings > 0 && (
                                 <div className="mb-6 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
                                     <p className="text-sm font-semibold text-emerald-800">
-                                        You save ${totalSavings.toFixed(2)} with your discount
+                                        You save {CURRENCY} {totalSavings.toFixed(2)} with your discount
                                     </p>
                                 </div>
                             )}
@@ -380,7 +381,6 @@ const BookingSummary = () => {
                                 disabled={isProcessing}
                                 className="w-full rounded-xl bg-emerald-700 px-6 py-3 text-sm font-extrabold uppercase tracking-[0.14em] text-white transition hover:bg-emerald-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
-                                <DollarSign className="h-5 w-5" />
                                 {isProcessing ? 'Processing...' : 'Proceed to Payment'}
                             </button>
 

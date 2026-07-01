@@ -113,7 +113,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
     };
 
     const handleAddRoom = (room) => {
-        const pkg = packages.find(p => p.id === parseInt(selectedPackageId));
+        const pkg = packages.find(p => p.room_type_id === parseInt(selectedPackageId));
         if (!pkg) return;
 
         // Check if already added
@@ -125,13 +125,13 @@ export default function NewBookingFlow({ onBookingSuccess }) {
         setSelectedRooms(prev => [...prev, {
             roomId: room.id,
             roomNumber: room.roomNumber || `Room ${room.id}`,
-            packageId: pkg.id,
-            packageName: pkg.pname,
-            price: pkg.pprice,
+            packageId: pkg.room_type_id,
+            packageName: pkg.room_type_name,
+            price: pkg.price,
             actualAdults: 1,
             actualKids: 0,
-            maxAdults: pkg.maxAdults,
-            maxKids: pkg.maxKids
+            maxAdults: pkg.max_adults,
+            maxKids: pkg.max_kids
         }]);
     };
 
@@ -322,8 +322,8 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                         >
                             <option value="" className="bg-slate-900 text-white">-- Choose a Package --</option>
                             {packages.map(pkg => (
-                                <option key={pkg.id} value={pkg.id} disabled={pkg.available_room === 0} className="bg-slate-900 text-white">
-                                    {pkg.pname} - ${pkg.pprice}/night ({pkg.available_room} rooms available)
+                                <option key={pkg.room_type_id} value={pkg.room_type_id} disabled={pkg.available_rooms_count === 0} className="bg-slate-900 text-white">
+                                    {pkg.room_type_name} - ${pkg.price}/night ({pkg.available_rooms_count} rooms available)
                                 </option>
                             ))}
                         </select>
@@ -575,14 +575,14 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                             {selectedRooms.map(r => (
                                 <div key={r.roomId} className="flex justify-between text-[11px] items-center bg-slate-900 p-2.5 rounded-xl border border-slate-800">
                                     <span className="truncate pr-2 font-bold text-slate-200">Room {r.roomNumber || r.roomId} ({r.packageName})</span>
-                                    <span className="font-black text-green-400">${r.price}</span>
+                                    <span className="font-black text-green-400">{process.env.CURRENCY_TYPE || "LKR"} {r.price}</span>
                                 </div>
                             ))}
                         </div>
 
                         <div className="flex justify-between items-end border-t border-slate-800 pt-4 mb-6">
                             <span className="text-slate-400 font-bold">Total Amount</span>
-                            <span className="text-3xl font-black text-green-400">${totalPrice.toLocaleString()}</span>
+                            <span className="text-3xl font-black text-green-400">{process.env.CURRENCY_TYPE || "LKR"} {totalPrice.toLocaleString()}</span>
                         </div>
 
                         <button

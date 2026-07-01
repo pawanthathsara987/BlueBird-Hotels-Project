@@ -27,12 +27,14 @@ import Payment from "./vehicle/paymentModel.js";
 // Checklist and VehicleServiceLog restored
 import VehicleChecklist from "./vehicle/vehicleChecklistModel.js";
 import VehicleServiceLog from "./vehicle/vehicleServiceLogModel.js";
-import OtherItemPrice from "./room/otherItemPrice.js";
+import ServiceCharge from "./room/ServiceCharge.js";
 import Policy from "./room/policy.js";
 import VehicleFinalBill from "./vehicle/vehicleFinalBillModel.js";
 import RoomPayment from "./booking/roomPayment.js";
 import ShopItem from "./shop/ShopItem.js";
 import Attendance from "./attendance/Attendance.js";
+import AttendanceEditLog from "./attendance/AttendanceEditLog.js";
+import AttendanceSetting from "./attendance/AttendanceSetting.js";
 
 
 
@@ -79,15 +81,17 @@ export function initModels() {
     });
 
 
-    // Customer -> AirPortPickup
-    Customer.hasMany(AirPortPickup, {
-        foreignKey: "customer_id",
+    // Booking -> AirPortPickup
+    Booking.hasOne(AirPortPickup, {
+        foreignKey: "booking_id",
+        as: "airportPickup",
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
     });
 
-    AirPortPickup.belongsTo(Customer, {
-        foreignKey: "customer_id",
+    AirPortPickup.belongsTo(Booking, {
+        foreignKey: "booking_id",
+        as: "booking",
     });
 
     // Room -> RoomAmenities
@@ -359,6 +363,16 @@ export function initModels() {
         targetKey: "staffId"
     });
 
-    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, OtherItemPrice, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance };
+    Attendance.hasMany(AttendanceEditLog, {
+        foreignKey: "attendanceId",
+        as: "editLogs"
+    });
+
+    AttendanceEditLog.belongsTo(Attendance, {
+        foreignKey: "attendanceId",
+        as: "attendance"
+    });
+
+    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, ServiceCharge, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance, AttendanceEditLog, AttendanceSetting };
 }
-export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, OtherItemPrice, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance };
+export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, ServiceCharge, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance, AttendanceEditLog, AttendanceSetting };

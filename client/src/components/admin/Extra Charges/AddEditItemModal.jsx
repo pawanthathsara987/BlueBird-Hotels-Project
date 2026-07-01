@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import { X, DollarSign } from "lucide-react";
+import { X, DollarSign, FileCode } from "lucide-react";
 import toast from "react-hot-toast";
 
 const AddEditItemModal = ({ isOpen, onClose, onSubmit, modalMode, initialData, isSaving = false }) => {
-    const [name, setName] = useState("");
+    const [serviceName, setServiceName] = useState("");
+    const [serviceCode, setServiceCode] = useState("");
     const [price, setPrice] = useState("");
     const [status, setStatus] = useState(true);
 
@@ -12,11 +13,13 @@ const AddEditItemModal = ({ isOpen, onClose, onSubmit, modalMode, initialData, i
     useEffect(() => {
         if (isOpen) {
             if (modalMode === "edit" && initialData) {
-                setName(initialData.item_name || "");
+                setServiceName(initialData.service_name || "");
+                setServiceCode(initialData.service_Code || "");
                 setPrice(initialData.price !== undefined ? initialData.price.toString() : "");
                 setStatus(initialData.status !== undefined ? initialData.status : true);
             } else {
-                setName("");
+                setServiceName("");
+                setServiceCode("");
                 setPrice("");
                 setStatus(true);
             }
@@ -28,8 +31,13 @@ const AddEditItemModal = ({ isOpen, onClose, onSubmit, modalMode, initialData, i
     const handleSubmit = (e) => {
         e.preventDefault();
         
-        if (!name.trim()) {
-            toast.error("Item name is required");
+        if (!serviceName.trim()) {
+            toast.error("Service name is required");
+            return;
+        }
+
+        if (!serviceCode.trim()) {
+            toast.error("Service code is required");
             return;
         }
 
@@ -40,7 +48,8 @@ const AddEditItemModal = ({ isOpen, onClose, onSubmit, modalMode, initialData, i
         }
 
         onSubmit({
-            item_name: name,
+            service_name: serviceName,
+            service_Code: serviceCode,
             price: parsedPrice,
             status: status
         });
@@ -59,7 +68,7 @@ const AddEditItemModal = ({ isOpen, onClose, onSubmit, modalMode, initialData, i
                     {/* Header */}
                     <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
                         <h4 className="text-lg font-bold text-slate-800">
-                            {modalMode === "add" ? "Add Extra Charge Item" : "Edit Item Details"}
+                            {modalMode === "add" ? "Add Service Charge Item" : "Edit Service Details"}
                         </h4>
                         <button 
                             onClick={onClose}
@@ -71,28 +80,48 @@ const AddEditItemModal = ({ isOpen, onClose, onSubmit, modalMode, initialData, i
 
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-5">
-                        {/* Item Name Input */}
+                        {/* Service Code Input */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                Item Name / Description
+                                Service Code
+                            </label>
+                            <div className="relative flex items-center bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all duration-300">
+                                <FileCode size={16} className="text-slate-400 shrink-0 mr-1.5" />
+                                <input
+                                    type="text"
+                                    placeholder="e.g. SC_AIRPORT, SC_EXTRA_BED"
+                                    required
+                                    disabled={modalMode === "edit"}
+                                    className="w-full bg-transparent outline-none text-sm text-slate-700 font-semibold placeholder-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    value={serviceCode}
+                                    onChange={(e) => setServiceCode(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Service Name Input */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                Service Name / Description
                             </label>
                             <input
                                 type="text"
                                 placeholder="e.g. Airport Pickup Surcharge, Extra Bed, Lunch Buffet"
                                 required
-                                className="w-full bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 font-medium placeholder-slate-400"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
+                                disabled={modalMode === "edit"}
+                                className="w-full bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 font-medium placeholder-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                                value={serviceName}
+                                onChange={(e) => setServiceName(e.target.value)}
                             />
                         </div>
 
                         {/* Price Input */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                Price (USD)
+                                Price ({process.env.CURRENCY_TYPE || 'LKR'})
                             </label>
                             <div className="relative flex items-center bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all duration-300">
-                                <DollarSign size={16} className="text-slate-400 shrink-0 mr-1.5" />
+                                <span className="text-slate-400 shrink-0 mr-1.5 font-bold text-xs">{process.env.CURRENCY_TYPE || 'LKR'}</span>
                                 <input
                                     type="number"
                                     step="0.01"

@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { RoomPayment, AirPortPickup, Policy } from '../models/index.js';
 
 // Configure Nodemailer transporter
 const transporter = nodemailer.createTransport({
@@ -13,6 +14,8 @@ const transporter = nodemailer.createTransport({
     rejectUnauthorized: false
   }
 });
+
+const getCurrencyType = () => process.env.CURRENCY_TYPE || 'LKR';
 
 // Helper function to send emails
 export const sendEmail = async ({ to, subject, html, text }) => {
@@ -117,17 +120,36 @@ export const sendBookingConfirmationEmail = async (booking) => {
     }
 
     const bookedRooms = Array.isArray(booking.bookedRooms) ? booking.bookedRooms : [];
+    const totalGuests = bookedRooms.reduce((sum, r) => sum + (Number(r.adults) || 1) + (Number(r.kids) || 0), 0);
+
+    // Fetch related payment, pickup and policy records
+    const payments = await RoomPayment.findAll({ where: { booking_id: booking.id, status: 'success' } });
+    const paidAmount = payments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+    const latestPayment = payments[payments.length - 1];
+    
+    const transactionId = latestPayment ? latestPayment.payment_no : 'N/A';
+    const paymentMethod = latestPayment ? latestPayment.method : 'N/A';
+    const paymentStatus = latestPayment ? latestPayment.status.toUpperCase() : (booking.status === 'confirmed' ? 'SUCCESS' : 'PENDING');
+
+    const airportPickup = await AirPortPickup.findOne({ where: { booking_id: booking.id } });
+    const policy = await Policy.findOne({ where: { status: true } });
+    const cancellationPolicyLink = process.env.CLIENT_URL ? `${process.env.CLIENT_URL}/policies` : 'https://bluebird-hotels.com/policies';
+    const cancellationPolicyText = policy ? policy.cancellation_policy : 'Cancellations must be made at least 24 hours prior to check-in for a full refund.';
+
+    // Construct room details row using standard table layout
     const roomSummary = bookedRooms
       .map((roomBooking, index) => {
         const room = roomBooking.Room;
-        const packageName = room?.roomType?.type || "Room";
-        const roomLabel = room?.roomNo || room?.roomNumber || room?.id || `Room ${index + 1}`;
+        const packageName = room?.roomType?.type || "Room Stay";
+        const roomLabel = room?.room_number || room?.roomNo || room?.id || `Room ${index + 1}`;
+        const boardType = roomBooking.board_type || "Room Only";
 
         return `
-          <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${packageName}</td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">${roomLabel}</td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">${roomBooking.checkIn} to ${roomBooking.checkOut}</td>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 12px 8px; text-align: left;">${packageName}</td>
+            <td style="padding: 12px 8px; text-align: center;">${roomLabel}</td>
+            <td style="padding: 12px 8px; text-align: center;">${boardType}</td>
+            <td style="padding: 12px 8px; text-align: right;">${roomBooking.checkIn} to ${roomBooking.checkOut}</td>
           </tr>
         `;
       })
@@ -141,53 +163,184 @@ export const sendBookingConfirmationEmail = async (booking) => {
       <html>
         <head>
           <style>
-            body { font-family: Arial, sans-serif; background: #f8fafc; color: #1f2937; }
-            .container { max-width: 640px; margin: 0 auto; background: #ffffff; padding: 24px; border-radius: 16px; }
-            .header { background: #0f766e; color: #ffffff; padding: 24px; border-radius: 12px; }
-            .section { margin-top: 24px; }
+            body { font-family: Arial, sans-serif; background: #f8fafc; color: #1f2937; margin: 0; padding: 0; }
+            .container { max-width: 640px; margin: 20px auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+            .header { background: linear-gradient(135deg, #064e3b, #0f766e); color: #ffffff; padding: 32px 24px; text-align: center; }
+            .header h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+            .header p { margin: 8px 0 0; opacity: 0.9; font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; }
+            .body { padding: 24px; }
+            .section { margin-bottom: 24px; }
+            .section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #0f766e; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; margin-bottom: 12px; }
             .card { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; }
+            .table-container { border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
             .summary { width: 100%; border-collapse: collapse; font-size: 14px; }
-            .summary th { text-align: left; color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; padding-bottom: 8px; }
-            .footer { margin-top: 28px; font-size: 12px; color: #6b7280; }
+            .summary th { background: #f8fafc; text-align: left; color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; padding: 12px 8px; border-bottom: 1px solid #e5e7eb; }
+            .summary td { padding: 12px 8px; border-bottom: 1px solid #e5e7eb; }
+            .summary tr:last-child td { border-bottom: none; }
+            .row-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+            .row-table td { padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+            .row-table tr:last-child td { border-bottom: none; }
+            .label { color: #6b7280; font-weight: 550; text-align: left; }
+            .value { font-weight: 600; color: #1e293b; text-align: right; }
+            .badge-success { background-color: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700; }
+            .badge-pending { background-color: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700; }
+            .footer { padding: 24px; background: #f8fafc; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; text-align: center; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1 style="margin: 0; font-size: 24px;">Payment Received</h1>
-              <p style="margin: 8px 0 0;">Your room booking is confirmed.</p>
+              <h1>Booking Receipt & Confirmation</h1>
+              <p>BlueBird Hotels Reservation Confirmation</p>
             </div>
 
-            <div class="section">
-              <p>Dear ${guestName},</p>
-              <p>We have received your payment successfully and your room reservation is now confirmed.</p>
+            <div class="body">
+              <div class="section">
+                <p>Dear ${guestName},</p>
+                <p>Thank you for choosing BlueBird Hotels. Your payment has been received, and your room booking is now successfully confirmed.</p>
+              </div>
+
+              <!-- Guest Profile Details -->
+              <div class="section">
+                <div class="section-title">Guest Profile details</div>
+                <div class="card" style="padding: 8px 16px;">
+                  <table class="row-table">
+                    <tr>
+                      <td class="label" style="width: 40%;">Name</td>
+                      <td class="value">${guestName}</td>
+                    </tr>
+                    <tr>
+                      <td class="label">Email Address</td>
+                      <td class="value">${customer.email}</td>
+                    </tr>
+                    <tr>
+                      <td class="label">Contact Number</td>
+                      <td class="value">${customer.phoneNumber || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                      <td class="label">Total Guests</td>
+                      <td class="value">${totalGuests} Guests</td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Room Stay Details -->
+              <div class="section">
+                <div class="section-title">Room Stay Details</div>
+                <div class="table-container">
+                  <table class="summary">
+                    <thead>
+                      <tr>
+                        <th style="text-align: left;">Room Type</th>
+                        <th style="text-align: center;">Room No</th>
+                        <th style="text-align: center;">Board Type</th>
+                        <th style="text-align: right;">Stay Period</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${roomSummary || `<tr><td colspan="4" style="padding: 12px 8px; text-align: center; color: #6b7280;">No stay details available.</td></tr>`}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Additional Service: Airport Pickup -->
+              <div class="section">
+                <div class="section-title">Additional Service details</div>
+                <div class="card" style="padding: 8px 16px;">
+                  <table class="row-table">
+                    <tr>
+                      <td class="label" style="width: 40%;">Airport Pickup Shuttle</td>
+                      <td class="value">
+                        ${airportPickup ? `<span class="badge-success">REQUESTED</span>` : `<span style="color: #6b7280;">Not Requested</span>`}
+                      </td>
+                    </tr>
+                    ${airportPickup ? `
+                    <tr>
+                      <td class="label">Pickup Location</td>
+                      <td class="value">${airportPickup.pickup_location || 'Katunayake Airport'}</td>
+                    </tr>
+                    <tr>
+                      <td class="label">Shuttle Schedule</td>
+                      <td class="value">${airportPickup.pickup_date} at ${airportPickup.pickup_time}</td>
+                    </tr>
+                    <tr>
+                      <td class="label">Passenger Count</td>
+                      <td class="value">${airportPickup.passenger_count} Passenger(s)</td>
+                    </tr>
+                    <tr>
+                      <td class="label">Pickup Status</td>
+                      <td class="value" style="color: #0f766e; font-weight: 700;">${airportPickup.status}</td>
+                    </tr>
+                    ` : ''}
+                  </table>
+                </div>
+              </div>
+
+              <!-- Payment Details -->
+              <div class="section">
+                <div class="section-title">Payment & Billing Summary</div>
+                <div class="card" style="padding: 8px 16px;">
+                  <table class="row-table">
+                    <tr>
+                      <td class="label" style="width: 40%;">Booking Reference ID</td>
+                      <td class="value">#${booking.id}</td>
+                    </tr>
+                    <tr>
+                      <td class="label">Booking Status</td>
+                      <td class="value" style="color: #064e3b; font-weight: 700; text-transform: uppercase;">${booking.status}</td>
+                    </tr>
+                    <tr>
+                      <td class="label">Total Amount Price</td>
+                      <td class="value">${getCurrencyType()} ${Number(booking.total_price || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                    <tr>
+                      <td class="label">Paid Amount (Advance)</td>
+                      <td class="value" style="color: #065f46; font-weight: 700;">
+                        ${getCurrencyType()} ${Number(paidAmount || Number(booking.total_price) * 0.5).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="label">Transaction Reference ID</td>
+                      <td class="value">${transactionId}</td>
+                    </tr>
+                    <tr>
+                      <td class="label">Payment Method</td>
+                      <td class="value" style="text-transform: capitalize;">${paymentMethod}</td>
+                    </tr>
+                    <tr>
+                      <td class="label">Payment Status</td>
+                      <td class="value">
+                        <span class="${paymentStatus === 'SUCCESS' ? 'badge-success' : 'badge-pending'}">${paymentStatus}</span>
+                      </td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Cancellation Policy -->
+              <div class="section">
+                <div class="section-title">Cancellation Policy & Terms</div>
+                <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 16px; font-size: 13px;">
+                  <p style="margin: 0 0 10px; color: #92400e; font-weight: bold; line-height: 1.4;">
+                    ${cancellationPolicyText}
+                  </p>
+                  <a href="${cancellationPolicyLink}" style="color: #0f766e; font-weight: 700; text-decoration: underline;" target="_blank">
+                    Read Full Cancellation Policy Online
+                  </a>
+                </div>
+              </div>
             </div>
 
-            <div class="section card">
-              <p style="margin: 0 0 8px;"><strong>Reservation ID:</strong> #${booking.id}</p>
-              <p style="margin: 0 0 8px;"><strong>Total Amount:</strong> $${Number(booking.total_price || 0).toLocaleString()}</p>
-              <p style="margin: 0;"><strong>Guest Email:</strong> ${customer.email}</p>
-            </div>
-
-            <div class="section">
-              <h3 style="margin: 0 0 12px;">Booking Details</h3>
-              <table class="summary">
-                <thead>
-                  <tr>
-                    <th>Room Type</th>
-                    <th style="text-align: right;">Room</th>
-                    <th style="text-align: right;">Stay Period</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${roomSummary || `<tr><td colspan="3" style="padding: 12px 0; color: #6b7280;">No room details available.</td></tr>`}
-                </tbody>
-              </table>
-            </div>
-
+            <!-- Customer Support Footer -->
             <div class="footer">
-              <p>Please keep this email for your records. Our team will contact you if any additional information is needed.</p>
-              <p>Best regards,<br/>BlueJay Hotels Team</p>
+              <p style="margin: 0 0 8px; font-weight: bold; color: #1f2937;">Need Assistance or Support?</p>
+              <p style="margin: 4px 0;"><strong>Phone Support Contact:</strong> ${process.env.SUPPORT_CONTACT}</p>
+              <p style="margin: 4px 0;"><strong>Email Support Contact:</strong> <a href="mailto:${process.env.SUPPORT_EMAIL}" style="color: #0f766e; text-decoration: none;">support@bluebird-hotels.com</a></p>
+              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;">
+              <p style="margin: 0; font-size: 11px;">Please keep this receipt as proof of payment. We look forward to welcoming you.</p>
+              <p style="margin: 4px 0 0; font-size: 11px;">&copy; ${new Date().getFullYear()} BlueBird Hotels. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -306,14 +459,14 @@ export const sendVehicleBookingConfirmationEmail = async (options) => {
                 </div>` : ''}
                 <div class="row" style="border-top: 2px solid #e5e7eb; padding-top: 12px; margin-top: 4px;">
                   <span class="label" style="font-weight: 600; color: #1e293b;">Total Price</span>
-                  <span class="value" style="font-size: 18px; color: #0f172a;">$${Number(totalPayable || 0).toLocaleString()}</span>
+                  <span class="value" style="font-size: 18px; color: #0f172a;">${getCurrencyType()} ${Number(totalPayable || 0).toLocaleString()}</span>
                 </div>
               </div>
 
               <div class="deposit-card">
                 <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: #3b82f6; font-weight: 700;">Advance Deposit Required (50%)</div>
-                <div class="deposit-amount">$${Number(depositAmount || 0).toLocaleString()}</div>
-                <div class="balance-note">Remaining balance of <strong>$${Number(balanceAmount || 0).toLocaleString()}</strong> is payable at vehicle pickup.</div>
+                <div class="deposit-amount">${getCurrencyType()} ${Number(depositAmount || 0).toLocaleString()}</div>
+                <div class="balance-note">Remaining balance of <strong>${getCurrencyType()} ${Number(balanceAmount || 0).toLocaleString()}</strong> is payable at vehicle pickup.</div>
               </div>
 
               <div class="section" style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 16px; font-size: 13px;">
@@ -407,13 +560,13 @@ export const sendAcceptedInquiryQuoteEmail = async (inquiry, booking, options = 
                 
                 <div style="background-color: white; padding: 12px; border-radius: 6px; margin-bottom: 12px;">
                   <p style="margin: 0; font-size: 13px; color: #666;"><strong>Tour Package Standard Price:</strong></p>
-                  <p style="margin: 4px 0; font-size: 18px; font-weight: bold; color: #0f766e;">$${Number(tourBasePrice || 0).toLocaleString()}</p>
+                  <p style="margin: 4px 0; font-size: 18px; font-weight: bold; color: #0f766e;">${getCurrencyType()} ${Number(tourBasePrice || 0).toLocaleString()}</p>
                 </div>
 
                 ${tourBasePrice !== totalAmount ? `
                 <div style="background-color: #f0fdf4; padding: 12px; border-radius: 6px; margin-bottom: 12px; border-left: 4px solid #059669;">
                   <p style="margin: 0; font-size: 13px; color: #666;"><strong>Your Customized Tour Package Price:</strong></p>
-                  <p style="margin: 4px 0; font-size: 18px; font-weight: bold; color: #059669;">$${Number(totalAmount || 0).toLocaleString()}</p>
+                  <p style="margin: 4px 0; font-size: 18px; font-weight: bold; color: #059669;">${getCurrencyType()} ${Number(totalAmount || 0).toLocaleString()}</p>
                 </div>
                 ` : ''}
 
@@ -424,14 +577,14 @@ export const sendAcceptedInquiryQuoteEmail = async (inquiry, booking, options = 
                   <table style="width: 100%; font-size: 14px; margin-top: 10px;">
                     <tr>
                       <td><strong>Total Tour Package Cost:</strong></td>
-                      <td style="text-align: right;"><strong style="font-size: 16px; color: #0f766e;">$${Number(booking.totalAmount || 0).toLocaleString()}</strong></td>
+                      <td style="text-align: right;"><strong style="font-size: 16px; color: #0f766e;">${getCurrencyType()} ${Number(booking.totalAmount || 0).toLocaleString()}</strong></td>
                     </tr>
                   </table>
 
                   <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 12px 0;">
 
-                  <p style="margin: 6px 0; font-size: 13px;"><strong>📌 Advance Payment (50%):</strong> <span style="color: #059669; font-weight: bold; font-size: 15px;">$${Number(booking.depositAmount || 0).toLocaleString()}</span></p>
-                  <p style="margin: 6px 0; font-size: 13px;"><strong>📌 Remaining (50%, Due Later):</strong> <span style="font-weight: bold;">$${Number(booking.remainingAmount || 0).toLocaleString()}</span></p>
+                  <p style="margin: 6px 0; font-size: 13px;"><strong>📌 Advance Payment (50%):</strong> <span style="color: #059669; font-weight: bold; font-size: 15px;">${getCurrencyType()} ${Number(booking.depositAmount || 0).toLocaleString()}</span></p>
+                  <p style="margin: 6px 0; font-size: 13px;"><strong>📌 Remaining (50%, Due Later):</strong> <span style="font-weight: bold;">${getCurrencyType()} ${Number(booking.remainingAmount || 0).toLocaleString()}</span></p>
                 </div>
               </div>
 
@@ -568,7 +721,7 @@ export const sendCancellationEmail = async (inquiry, booking, reason) => {
               
               ${booking.refundStatus === "approved" ? `
                 <p style="margin-top: 20px; color: #059669;">
-                  <strong>✓ Your refund of $${Number(booking.refundAmount).toLocaleString()} will be processed within 5-7 business days.</strong>
+                  <strong>✓ Your refund of ${getCurrencyType()} ${Number(booking.refundAmount).toLocaleString()} will be processed within 5-7 business days.</strong>
                 </p>
               ` : `
                 <p style="margin-top: 20px; color: #dc2626;">
@@ -591,5 +744,121 @@ export const sendCancellationEmail = async (inquiry, booking, reason) => {
   } catch (error) {
     console.error("Error sending cancellation email:", error);
     throw error;
+  }
+};
+
+/**
+ * Send customer special personal request to management
+ * @param {Object} customer - Customer/guest object
+ * @param {Object} booking - Reservation/Booking object
+ * @param {string} personalRequest - Request text
+ * @param {string} checkInDate - Check-in Date
+ */
+export const sendPersonalRequestEmail = async (customer, booking, personalRequest, checkInDate) => {
+  try {
+    const customerName = customer ? `${customer.firstName} ${customer.lastName}` : "Unknown Guest";
+    const customerEmail = customer ? customer.email : "N/A";
+    const customerPhone = customer ? customer.phoneNumber : "N/A";
+
+    const subject = `Special Personal Request from ${customerName} (Booking #${booking.id})`;
+
+    const emailBody = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; background: #f8fafc; color: #1f2937; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 20px auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+            .header { background: linear-gradient(135deg, #064e3b, #0f766e); color: #ffffff; padding: 28px 24px; text-align: center; }
+            .header h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+            .header p { margin: 6px 0 0; opacity: 0.85; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; }
+            .body { padding: 24px; }
+            .section { margin-bottom: 20px; }
+            .section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #0f766e; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; margin-bottom: 12px; }
+            .card { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; }
+            .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+            .row:last-child { border-bottom: none; }
+            .label { color: #6b7280; font-weight: 550; }
+            .value { font-weight: 600; color: #1e293b; }
+            .request-box { border-left: 4px solid #064e3b; background: #f0fdf4; border-radius: 0 8px 8px 0; padding: 16px; margin-top: 12px; }
+            .request-text { color: #064e3b; line-height: 1.6; font-style: italic; margin: 0; font-size: 14px; }
+            .footer { padding: 20px 24px; background: #f8fafc; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; text-align: center; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Special Personal Request</h1>
+              <p>BlueBird Hotels Reservation System</p>
+            </div>
+
+            <div class="body">
+              <div class="section">
+                <div class="section-title">Customer Information</div>
+                <div class="card" style="padding: 8px 16px;">
+                  <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 10px 0; color: #6b7280; font-weight: 550; text-align: left; width: 40%;">Name</td>
+                      <td style="padding: 10px 0; font-weight: 600; color: #1e293b; text-align: right;">${customerName}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 10px 0; color: #6b7280; font-weight: 550; text-align: left;">Email Address</td>
+                      <td style="padding: 10px 0; font-weight: 600; color: #1e293b; text-align: right;"><a href="mailto:${customerEmail}" style="color: #0f766e; text-decoration: none;">${customerEmail}</a></td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 10px 0; color: #6b7280; font-weight: 550; text-align: left;">Phone Number</td>
+                      <td style="padding: 10px 0; font-weight: 600; color: #1e293b; text-align: right;">${customerPhone}</td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+
+              <div class="section">
+                <div class="section-title">Booking Details</div>
+                <div class="card" style="padding: 8px 16px;">
+                  <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 10px 0; color: #6b7280; font-weight: 550; text-align: left; width: 45%;">Booking Reference ID</td>
+                      <td style="padding: 10px 0; font-weight: 600; color: #1e293b; text-align: right;">#${booking.id}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 10px 0; color: #6b7280; font-weight: 550; text-align: left;">Total Amount Price</td>
+                      <td style="padding: 10px 0; font-weight: 600; color: #1e293b; text-align: right;">$${parseFloat(booking.total_price || 0).toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 10px 0; color: #6b7280; font-weight: 550; text-align: left;">Check-in Date</td>
+                      <td style="padding: 10px 0; font-weight: 600; color: #1e293b; text-align: right;">${new Date(checkInDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+
+              <div class="section">
+                <div class="section-title">Customer Request Message</div>
+                <div class="request-box">
+                  <p class="request-text">"${personalRequest}"</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="footer">
+              <p>This is an automated request notification sent from your hotel reservation platform.</p>
+              <p>&copy; ${new Date().getFullYear()} BlueBird Hotels. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    await sendEmail({
+      to: process.env.PERSONAL_REQUEST_MAIL,
+      subject,
+      html: emailBody,
+      text: `Personal Request from ${customerName} (Booking #${booking.id}): ${personalRequest}`,
+    });
+    return true;
+  } catch (error) {
+    console.error("[EMAIL ERROR] Failed to send personal request email:", error.message);
+    return false;
   }
 };

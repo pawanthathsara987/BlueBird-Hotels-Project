@@ -6,52 +6,72 @@ export default function QRScanner({ onScanSuccess }) {
     const isProcessing = useRef(false);
 
     useEffect(() => {
-        const html5QrCode = new Html5Qrcode("qr-reader");
+        let isMounted = true;
+        let html5QrCode = null;
 
-        scannerRef.current = html5QrCode;
+        const startScanner = async () => {
+            try {
+                // Ensure the container is empty before initializing to avoid duplicate elements
+                const container = document.getElementById("qr-reader");
+                if (container) {
+                    container.innerHTML = "";
+                }
 
-        const config = {
-            fps: 10,
-            qrbox: {
-                width: 250,
-                height: 250,
-            },
+                html5QrCode = new Html5Qrcode("qr-reader");
+                scannerRef.current = html5QrCode;
+
+                const config = {
+                    fps: 10,
+                    qrbox: {
+                        width: 250,
+                        height: 250,
+                    },
+                };
+
+                if (!isMounted) return;
+
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    config,
+                    async (decodedText) => {
+                        // Ignore if we're already processing a scan
+                        if (isProcessing.current) return;
+
+                        isProcessing.current = true;
+
+                        try {
+                            await onScanSuccess(decodedText);
+                        } finally {
+                            // Allow another scan after 3 seconds
+                            setTimeout(() => {
+                                isProcessing.current = false;
+                            }, 3000);
+                        }
+                    },
+                    () => {}
+                );
+
+                // If the component unmounted while the scanner was starting, stop it immediately
+                if (!isMounted) {
+                    await html5QrCode.stop();
+                    html5QrCode.clear();
+                }
+            } catch (err) {
+                console.error("Camera Error:", err);
+            }
         };
 
-        html5QrCode
-            .start(
-                { facingMode: "environment" },
-                config,
-                async (decodedText) => {
-                    // Ignore if we're already processing a scan
-                    if (isProcessing.current) return;
-
-                    isProcessing.current = true;
-
-                    try {
-                        await onScanSuccess(decodedText);
-                    } finally {
-                        // Allow another scan after 3 seconds
-                        setTimeout(() => {
-                            isProcessing.current = false;
-                        }, 3000);
-                    }
-                },
-                () => {}
-            )
-            .catch((err) => {
-                console.error("Camera Error:", err);
-            });
+        startScanner();
 
         return () => {
-            if (
-                scannerRef.current &&
-                scannerRef.current.isScanning
-            ) {
-                scannerRef.current
-                    .stop()
-                    .then(() => scannerRef.current.clear())
-                    .catch(console.error);
+            isMounted = false;
+            if (html5QrCode) {
+                if (html5QrCode.isScanning) {
+                    html5QrCode
+                        .stop()
+                        .then(() => html5QrCode.clear())
+                        .catch(console.error);
+                }
             }
         };
     }, []);
