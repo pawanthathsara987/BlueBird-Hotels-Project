@@ -215,7 +215,7 @@ const availableRooms = async (req, res) => {
 const expireOldPendingBookings = async () => {
     try {
         const expirationTime = new Date(Date.now() - 10 * 60 * 1000); // 10 minutes ago
-        
+
         const oldPendingReservations = await Reservation.findAll({
             where: {
                 status: "pending",
@@ -230,7 +230,7 @@ const expireOldPendingBookings = async () => {
                 try {
                     await resv.update({ status: "cancelled" }, { transaction: t });
                     await BookedRoom.update({ status: "cancelled" }, { where: { booking_id: resv.id }, transaction: t });
-                    
+
                     // Mark pending payment logs as failed
                     await RoomPayment.update(
                         { status: "failed" },
@@ -998,6 +998,25 @@ const checkBookingPrice = async (req, res) => {
     }
 };
 
+const getActivePolicy = async (req, res) => {
+    try {
+        let policy = await Policy.findOne({ where: { status: true } });
+        if (!policy) {
+            policy = await Policy.create({
+                policy_name: "Default Hotel Policy",
+                cancellation_policy: "Free cancellation up to 48 hours prior to arrival. Cancellations made within 48 hours are subject to a one-night charge.",
+                payment_policy: "No prepayment required. Secure your booking online and pay 50% advance on checkout to hold your luxury stay.",
+                check_in_time: "2:00 PM",
+                check_out_time: "12:00 PM",
+                status: true
+            });
+        }
+        return res.status(200).json({ success: true, data: policy });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: "Error fetching policy", error: error.message });
+    }
+};
+
 export {
     createBooking,
     getAllBookings,
@@ -1009,5 +1028,6 @@ export {
     getAvailableRoomTypesByDate,
     getPricingMatrix,
     checkBookingPrice,
-    calculateRoomStayPrice
+    calculateRoomStayPrice,
+    getActivePolicy
 }
