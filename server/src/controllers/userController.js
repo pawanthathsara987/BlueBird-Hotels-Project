@@ -166,6 +166,40 @@ export async function registerStaffMember(req, res) {
             });
         }
 
+        // Verify if this email actually belongs to a valid staff member
+        const staffMember = await StaffMember.findOne({ where: { email: data.email.trim() } });
+        if (!staffMember) {
+            return res.status(400).json({
+                message: "This email is not authorized as a staff member."
+            });
+        }
+
+        // Verify OTP if the registering role is receptionist
+        if (data.role === "receptionist") {
+            if (!data.otp) {
+                return res.status(400).json({
+                    message: "Verification code is required"
+                });
+            }
+
+            const otpRecord = await Otp.findOne({
+                where: {
+                    email: data.email.trim(),
+                    otp: data.otp.trim(),
+                    expiresAt: { [Op.gt]: new Date() }
+                }
+            });
+
+            if (!otpRecord) {
+                return res.status(400).json({
+                    message: "Invalid or expired verification code"
+                });
+            }
+
+            // OTP is valid, destroy it so it cannot be reused
+            await Otp.destroy({ where: { email: data.email.trim() } });
+        }
+
         const hashedPassword = bcrypt.hashSync(data.password, 10);
 
         const newStaffMember = await UserRegisterModel.create({
@@ -389,6 +423,38 @@ export async function verifyEmail(req, res) {
             return res.json({
                 showLogin: true,
                 showRegister: false
+            });
+        }
+
+        if (targetRole === "receptionist") {
+            const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+            const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiration
+
+            await Otp.destroy({ where: { email: email.trim() } });
+            await Otp.create({
+                email: email.trim(),
+                otp: otpCode,
+                expiresAt
+            });
+
+            try {
+                await sendEmail({
+                    to: email.trim(),
+                    subject: "BlueBird Hotels - Reception Portal Verification Code",
+                    text: `Your verification code is: ${otpCode}. Please use this code to register your password and log in.`
+                });
+            } catch (err) {
+                console.error("Failed to send verification code email:", err);
+                return res.status(500).json({
+                    message: "Failed to send verification code email. Please check server logs or email configuration.",
+                    error: err.message
+                });
+            }
+
+            return res.json({
+                showLogin: false,
+                showRegister: true,
+                message: "A verification code has been sent to your email. Please enter it to complete registration."
             });
         }
 
