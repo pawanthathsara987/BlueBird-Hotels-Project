@@ -24,25 +24,53 @@ const ROLE_LOGIN_MAP = {
     customer:     "/customerLogin",
 };
 
+// Endpoints that can legitimately return 401 for wrong credentials.
+// These are NOT session-expiry errors — the caller handles their own errors.
+const AUTH_ENDPOINTS = [
+    "/users/login",
+    "/users/verify-email",
+    "/users/registerStaffMember",
+    "/customers/login",
+    "/customers/google-login",
+    "/customers/register",
+    "/customers/reset-password",
+    "/customers/send-otp",
+    "/customers/refresh",
+];
+
 axios.interceptors.response.use(
     (response) => response,                       // pass successful responses through
     (error) => {
         if (error.response?.status === 401) {
-            // Find out which login page to send the user to
+            // If this 401 came from a login/auth endpoint, let the
+            // calling code handle it (it will show its own error toast).
+            const requestUrl = error.config?.url || "";
+            const isAuthEndpoint = AUTH_ENDPOINTS.some((path) => requestUrl.includes(path));
+            if (isAuthEndpoint) {
+                return Promise.reject(error);
+            }
+
+            // For all other 401s (expired/invalid session token):
+            // find out which login page to send the user to.
             let redirectTo = "/";
             try {
-                const storedToken = localStorage.getItem("token");
-                if (storedToken) {
-                    // Inline decode – avoids an extra import at module level
-                    const payload = JSON.parse(atob(storedToken.split(".")[1]));
+                const staffToken = localStorage.getItem("token");
+                const customerToken = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
+                if (staffToken) {
+                    // Inline decode — avoids an extra import at module level
+                    const payload = JSON.parse(atob(staffToken.split(".")[1]));
                     redirectTo = ROLE_LOGIN_MAP[payload?.role] || "/";
+                } else if (customerToken) {
+                    redirectTo = "/customerLogin";
                 }
             } catch {
                 // Malformed token — fall back to home
             }
 
-            // Clean up stale credentials
+            // Clean up ALL stale credentials (staff + customer)
             localStorage.removeItem("token");
+            localStorage.removeItem("customerToken");
+            sessionStorage.removeItem("customerToken");
             delete axios.defaults.headers.common["Authorization"];
 
             window.location.href = redirectTo;
