@@ -34,6 +34,8 @@ import CustomerDashboard from "./pages/client/dashboard/CustomerDashboard";
 import VehicleCatalogPage from "./pages/client/vehicles/VehicleCatalogPage";
 import VehicleDetailsPage from "./pages/client/vehicles/VehicleDetailsPage";
 import VehicleBookingPage from "./pages/client/vehicles/VehicleBookingPage";
+import VehicleBookingSummary from "./pages/client/vehicles/VehicleBookingSummary";
+import VehiclePaymentPage from "./pages/client/vehicles/VehiclePaymentPage";
 import CustomerDetailsPage from "./pages/client/booking/roombooking/CustomerDetailsPage";
 import RoomTypeDetails from "./pages/client/RoomTypeDetails";
 import FaqPage from "./pages/Faq";
@@ -83,6 +85,8 @@ export default function App() {
                         <Route path="/vehicles" element={<VehicleCatalogPage />} />
                         <Route path="/vehicles/:id" element={<VehicleDetailsPage />} />
                         <Route path="/vehicles/:id/book" element={<VehicleBookingPage />} />
+                        <Route path="/vehicles/:id/summary" element={<VehicleBookingSummary />} />
+                        <Route path="/vehicles/:id/payment" element={<VehiclePaymentPage />} />
                         <Route path="/*" element={<HomePage />} />
                     </Routes>
                 </div>
