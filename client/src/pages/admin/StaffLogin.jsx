@@ -4,6 +4,7 @@ import Logo from "../../assets/bluebird logo.png";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { FaEye, FaEyeSlash, FaCheckCircle, FaEdit } from "react-icons/fa";
+import { getSubdomainUrl } from "../../utils/subdomain";
 
 export default function StaffLogin() {
     const [emailVerified, setEmailVerified] = useState(false);
@@ -126,19 +127,41 @@ export default function StaffLogin() {
                 localStorage.setItem("user", JSON.stringify(res.data.user));
             }
             
-            // Handle role-based settings and routing
+            // Handle cross-subdomain SSO redirection
             const userRole = res.data.user?.role || role;
+            let targetSubdomain = "";
+            let targetPath = "";
+            
             if (userRole === "admin") {
-                localStorage.setItem("adminName", res?.data?.name || "Administrator");
-                localStorage.setItem("adminEmail", res?.data?.email || email.trim());
-                navigate("/admin");
+                targetSubdomain = "admin";
+                targetPath = "/admin";
             } else if (userRole === "manager") {
-                navigate("/manager");
+                targetSubdomain = "manager";
+                targetPath = "/manager";
             } else if (userRole === "receptionist") {
-                navigate("/reception");
+                targetSubdomain = "reception";
+                targetPath = "/reception";
             } else {
-                navigate("/");
+                targetSubdomain = "booking";
+                targetPath = "/";
             }
+
+            let adminName = "";
+            let adminEmail = "";
+            if (userRole === "admin") {
+                adminName = res?.data?.name || "Administrator";
+                adminEmail = res?.data?.email || email.trim();
+            }
+
+            const tokenParam = encodeURIComponent(res.data.token);
+            const userParam = encodeURIComponent(JSON.stringify(res.data.user || { role: userRole }));
+            
+            let redirectUrl = getSubdomainUrl(targetSubdomain, targetPath);
+            redirectUrl += `?token=${tokenParam}&user=${userParam}`;
+            if (adminName) redirectUrl += `&adminName=${encodeURIComponent(adminName)}`;
+            if (adminEmail) redirectUrl += `&adminEmail=${encodeURIComponent(adminEmail)}`;
+            
+            window.location.href = redirectUrl;
         } catch (error) {
             toast.error(error?.response?.data?.message || "Login failed.");
         } finally {
