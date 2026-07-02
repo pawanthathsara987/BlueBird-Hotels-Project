@@ -8,6 +8,7 @@ import {
   rejectInquiry,
   getInquiriesByTour,
   getInquiryStats,
+  cancelInquiry,
 } from '../controllers/booking/tourInquiryController.js';
 import { requireAuth } from '../middleware/authMiddleware.js';
 
@@ -27,6 +28,9 @@ router.get('/tour/:tourId', getInquiriesByTour);
 
 // Get inquiry by ID
 router.get('/:id', getInquiryById);
+
+// Cancel inquiry by customer
+router.put('/:id/cancel', requireAuth, cancelInquiry);
 
 // Accept inquiry (manager accepts and creates booking)
 router.put('/:id/accept', acceptInquiry);
