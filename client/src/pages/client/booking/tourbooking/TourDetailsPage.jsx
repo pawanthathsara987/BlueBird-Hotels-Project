@@ -419,13 +419,6 @@ export default function TourDetailsPage() {
                 </div>
 
                 <div className="mt-3 space-y-2">
-                  <button
-                    onClick={() => setShowAvailabilityModal(true)}
-                    type="button"
-                    className="w-full py-2.5 rounded-lg text-sm font-bold tracking-wide bg-blue-700 hover:bg-blue-600 text-white transition-all shadow-md"
-                  >
-                    🔎 Check Availability
-                  </button>
                   {inquiry && inquiry.rawStatus === 'progress' && (
                     <button
                       onClick={handleProceedToPayment}
