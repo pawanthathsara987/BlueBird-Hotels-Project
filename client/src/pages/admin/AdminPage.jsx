@@ -1,5 +1,7 @@
-import { useState } from "react";
-import { NavLink, Routes, Route } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { NavLink, Routes, Route, useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
+import { logout } from "../../utils/logout";
 import { MdAdminPanelSettings, MdDashboard, MdBedroomParent, MdBookOnline, MdPeople, MdSettings, MdLogout, MdMenu, MdClose, MdShoppingBag, MdCoPresent, MdEventNote } from "react-icons/md";
 import RoomManagement from "./rooms/roomManagement";
 import AmenitiesForm from "./rooms/AmenitiesForm";
@@ -20,6 +22,36 @@ import AdminProfileSettings from "./AdminProfileSettings";
 
 export default function AdminPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [authorized, setAuthorized] = useState(false);
+    const navigate = useNavigate();
+
+    // ── Route Guard ─────────────────────────────────────────────────────────
+    // Protect the entire admin dashboard: verify JWT exists and belongs to
+    // an admin. Redirect to the login page if the check fails.
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            navigate("/staffLogin", { replace: true });
+            return;
+        }
+        try {
+            const decoded = jwtDecode(token);
+            if (!decoded || decoded.role !== "admin") {
+                // Token exists but belongs to a different role — reject access
+                navigate("/staffLogin", { replace: true });
+            } else {
+                setAuthorized(true);
+            }
+        } catch {
+            // Malformed / tampered token
+            localStorage.removeItem("token");
+            navigate("/staffLogin", { replace: true });
+        }
+    }, [navigate]);
+    // ────────────────────────────────────────────────────────────────────────
+
+    // Block render until the auth check is complete
+    if (!authorized) return null;
 
     const adminName = localStorage.getItem("adminName") || "Admin Portal";
     const adminEmail = localStorage.getItem("adminEmail") || "admin@bluebird.com";
@@ -135,14 +167,13 @@ export default function AdminPage() {
                             <p className="text-[10px] text-slate-500 truncate">{adminEmail}</p>
                         </div>
                     </div>
-                    <NavLink
-                        to="/logout"
-                        onClick={() => setSidebarOpen(false)}
-                        className="flex items-center justify-center gap-2 w-full py-2.5 px-4 text-xs font-medium text-rose-400 hover:text-white bg-rose-500/10 hover:bg-rose-600 border border-rose-500/20 hover:border-rose-600 rounded-xl transition-all duration-300 shadow-sm shadow-rose-950/20"
+                    <button
+                        onClick={() => { setSidebarOpen(false); logout(); }}
+                        className="flex items-center justify-center gap-2 w-full py-2.5 px-4 text-xs font-medium text-rose-400 hover:text-white bg-rose-500/10 hover:bg-rose-600 border border-rose-500/20 hover:border-rose-600 rounded-xl transition-all duration-300 shadow-sm shadow-rose-950/20 cursor-pointer"
                     >
                         <MdLogout className="text-base" />
                         <span>Logout</span>
-                    </NavLink>
+                    </button>
                 </div>
             </div>
 
