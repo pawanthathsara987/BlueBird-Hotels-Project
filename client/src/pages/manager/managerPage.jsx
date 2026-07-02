@@ -1,5 +1,7 @@
-import { useState } from "react";
-import { Link, Routes, Route } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, Routes, Route, useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
+import { logout } from "../../utils/logout";
 import { MdDashboard, MdBedroomParent, MdLoop, MdAssessment, MdLogout, MdMenu, MdClose } from "react-icons/md";
 import { Inbox, Calendar, Wrench, ClipboardCheck } from "lucide-react";
 import AddTour from "./tours/TourForm";
@@ -21,6 +23,34 @@ import ChecklistManagement from "./vehicle/ChecklistManagement";
 
 export default function ManagerPage() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [authorized, setAuthorized] = useState(false);
+    const navigate = useNavigate();
+
+    // ── Route Guard ────────────────────────────────────────────────────────
+    // Protect the manager dashboard: verify JWT exists and role is "manager".
+    // Redirects to /staffLogin if the check fails.
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            navigate("/staffLogin", { replace: true });
+            return;
+        }
+        try {
+            const decoded = jwtDecode(token);
+            if (!decoded || decoded.role !== "manager") {
+                navigate("/staffLogin", { replace: true });
+            } else {
+                setAuthorized(true);
+            }
+        } catch {
+            localStorage.removeItem("token");
+            navigate("/staffLogin", { replace: true });
+        }
+    }, [navigate]);
+    // ────────────────────────────────────────────────────────────────────────
+
+    // Block render until auth check completes
+    if (!authorized) return null;
 
     return (
         <div className="w-full h-screen flex relative">
@@ -56,7 +86,12 @@ export default function ManagerPage() {
                     <Link to="/manager/service-logs" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded"><Wrench className="w-5 h-5" /> Service Logs</Link>
                     <Link to="/manager/checklists" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded"><ClipboardCheck className="w-5 h-5" /> Checklists</Link>
                     <Link to="/manager/reports" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded"><MdAssessment className="text-2xl" /> Reports</Link>
-                    <Link to="/logout" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded"><MdLogout className="text-2xl" /> Logout</Link>
+                    <button
+                        onClick={() => { setSidebarOpen(false); logout(); }}
+                        className="flex items-center gap-2 p-3 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded cursor-pointer w-full text-left"
+                    >
+                        <MdLogout className="text-2xl" /> Logout
+                    </button>
                 </div>
             </div>
 
