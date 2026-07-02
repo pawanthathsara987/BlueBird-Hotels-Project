@@ -114,9 +114,9 @@ async function getPendingCheckins(req, res) {
             JOIN customer c ON b.customer_id = c.id
             WHERE b.status = 'confirmed'
             AND br.status = 'reserved'
-            AND br.checkIn = :date
+            AND br.checkIn >= :date
             GROUP BY b.id, c.firstName, c.lastName
-            ORDER BY b.createdAt ASC
+            ORDER BY br.checkIn ASC, b.createdAt ASC
         `;
 
         const result = await sequelize.query(query, {
@@ -145,7 +145,8 @@ async function getPendingCheckOuts(req, res) {
 
         const query = `
             SELECT
-                br.id AS booking_id,
+                b.id AS booking_id,
+                br.id AS booked_room_id,
                 c.firstName,
                 c.lastName,
                 br.room_id,

@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { format } from "date-fns";
 import toast from "react-hot-toast";
 import { MdCalendarToday, MdPerson, MdEmail, MdPhone, MdBadge, MdHotel } from "react-icons/md";
+import { FaMapMarkerAlt } from "react-icons/fa";
 import { validateSriLankanNIC, validatePassport } from "../../utils/validation";
+import { getCountries } from "libphonenumber-js";
 
 export default function NewBookingFlow({ onBookingSuccess }) {
     const today = new Date();
@@ -14,7 +16,8 @@ export default function NewBookingFlow({ onBookingSuccess }) {
     const [checkOutDate, setCheckOutDate] = useState(defaultCheckOut.toISOString().split("T")[0]);
 
     const [packages, setPackages] = useState([]);
-    const [selectedPackageId, setSelectedPackageId] = useState("");
+    const [selectedRoomTypeId, setSelectedRoomTypeId] = useState("");
+    const [selectedBoardTypeId, setSelectedBoardTypeId] = useState("");
     const [availableRoomsForPackage, setAvailableRoomsForPackage] = useState([]);
 
     const [selectedRooms, setSelectedRooms] = useState([]);
@@ -25,11 +28,36 @@ export default function NewBookingFlow({ onBookingSuccess }) {
         email: "",
         phoneNumber: "",
         idPassport: "",
-        country: ""
+        country: "Sri Lanka",
+        address: ""
     });
 
     const [isLocal, setIsLocal] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
+
+    // List of countries using Intl.DisplayNames and libphonenumber-js
+    const countriesList = useMemo(() => {
+        try {
+            const displayNames = new Intl.DisplayNames(["en"], { type: "region" });
+            return getCountries()
+                .map((code) => ({
+                    code,
+                    name: displayNames.of(code) || code
+                }))
+                .sort((a, b) => a.name.localeCompare(b.name));
+        } catch (e) {
+            return [
+                { code: "LK", name: "Sri Lanka" },
+                { code: "US", name: "United States" },
+                { code: "GB", name: "United Kingdom" },
+                { code: "IN", name: "India" },
+                { code: "MV", name: "Maldives" },
+                { code: "AU", name: "Australia" },
+                { code: "CA", name: "Canada" },
+                { code: "SG", name: "Singapore" }
+            ];
+        }
+    }, []);
 
     // Theme state
     const [theme, setTheme] = useState(() => {
@@ -62,14 +90,14 @@ export default function NewBookingFlow({ onBookingSuccess }) {
         }
     }, [checkInDate, checkOutDate]);
 
-    // Fetch specific rooms when package is selected
+    // Fetch specific rooms when room type is selected
     useEffect(() => {
-        if (selectedPackageId && checkInDate && checkOutDate) {
-            fetchRoomsForPackage(selectedPackageId, checkInDate, checkOutDate);
+        if (selectedRoomTypeId && checkInDate && checkOutDate) {
+            fetchRoomsForPackage(selectedRoomTypeId, checkInDate, checkOutDate);
         } else {
             setAvailableRoomsForPackage([]);
         }
-    }, [selectedPackageId, checkInDate, checkOutDate]);
+    }, [selectedRoomTypeId, checkInDate, checkOutDate]);
 
     const fetchPackages = async (checkIn, checkOut) => {
         try {
@@ -84,7 +112,8 @@ export default function NewBookingFlow({ onBookingSuccess }) {
             } else {
                 setPackages([]);
             }
-            setSelectedPackageId(""); // Reset package selection on date change
+            setSelectedRoomTypeId(""); // Reset selections on date change
+            setSelectedBoardTypeId("");
         } catch (error) {
             console.error("Error fetching packages:", error);
             setPackages([]);
@@ -113,8 +142,11 @@ export default function NewBookingFlow({ onBookingSuccess }) {
     };
 
     const handleAddRoom = (room) => {
-        const pkg = packages.find(p => p.room_type_id === parseInt(selectedPackageId));
-        if (!pkg) return;
+        const pkg = packages.find(p => p.room_type_id === parseInt(selectedRoomTypeId) && p.boardTypeId === parseInt(selectedBoardTypeId));
+        if (!pkg) {
+            toast.error("Please select a Board Type first");
+            return;
+        }
 
         // Check if already added
         if (selectedRooms.find(r => r.roomId === room.id)) {
@@ -122,16 +154,23 @@ export default function NewBookingFlow({ onBookingSuccess }) {
             return;
         }
 
+        // Determine if kids are allowed for this physical room & package
+        const kidsAllowed = (room.kids_allow === true || Number(room.kids_allow) === 1 || pkg.kids_allow === true || Number(pkg.kids_allow) === 1);
+        const maxKidsLimit = kidsAllowed ? (Number(room.max_kids) || Number(room.kids) || Number(pkg.max_kids) || 0) : 0;
+
         setSelectedRooms(prev => [...prev, {
             roomId: room.id,
-            roomNumber: room.roomNumber || `Room ${room.id}`,
+            roomNumber: room.roomNumber || room.room_number || `Room ${room.id}`,
             packageId: pkg.room_type_id,
             packageName: pkg.room_type_name,
+            boardTypeId: pkg.boardTypeId,
+            boardType: pkg.board_type_name || "Room Only",
             price: pkg.price,
             actualAdults: 1,
             actualKids: 0,
-            maxAdults: pkg.max_adults,
-            maxKids: pkg.max_kids
+            maxAdults: room.max_adults || pkg.max_adults || 3,
+            maxKids: maxKidsLimit,
+            kidsAllow: kidsAllowed
         }]);
     };
 
@@ -143,6 +182,21 @@ export default function NewBookingFlow({ onBookingSuccess }) {
         setSelectedRooms(prev => prev.map(r =>
             r.roomId === roomId ? { ...r, [field]: Number(value) } : r
         ));
+    };
+
+    const handleUpdateRoomBoard = (roomId, boardTypeId) => {
+        const targetId = parseInt(boardTypeId);
+        setSelectedRooms(prev => prev.map(r => {
+            if (r.roomId !== roomId) return r;
+            const opt = packages.find(p => p.room_type_id === r.packageId && p.boardTypeId === targetId);
+            if (!opt) return r;
+            return {
+                ...r,
+                boardTypeId: opt.boardTypeId,
+                boardType: opt.board_type_name,
+                price: opt.price
+            };
+        }));
     };
 
     const handleGuestChange = (e) => {
@@ -166,14 +220,31 @@ export default function NewBookingFlow({ onBookingSuccess }) {
             return;
         }
 
+        if (!guestDetails.address || guestDetails.address.trim() === "") {
+            toast.error("Guest Address is required.");
+            return;
+        }
+
         if (isLocal) {
-            if (guestDetails.idPassport && !validateSriLankanNIC(guestDetails.idPassport)) {
-                toast.error("Invalid Sri Lankan NIC number format. Must be 9 digits followed by V/X or 12 digits.");
+            if (!guestDetails.idPassport || guestDetails.idPassport.trim() === "") {
+                toast.error("National Identity Card (NIC) is required for local guests.");
+                return;
+            }
+            if (!validateSriLankanNIC(guestDetails.idPassport)) {
+                toast.error("Invalid Sri Lankan NIC format. Must be 9 digits followed by V/X or 12 digits.");
                 return;
             }
         } else {
-            if (guestDetails.idPassport && !validatePassport(guestDetails.idPassport)) {
+            if (!guestDetails.idPassport || guestDetails.idPassport.trim() === "") {
+                toast.error("Passport ID is required for international guests.");
+                return;
+            }
+            if (!validatePassport(guestDetails.idPassport)) {
                 toast.error("Invalid Passport format. Must be 6 to 15 alphanumeric characters.");
+                return;
+            }
+            if (!guestDetails.country || guestDetails.country === "Sri Lanka" || guestDetails.country === "") {
+                toast.error("Please select a valid international country.");
                 return;
             }
         }
@@ -195,7 +266,8 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                 idType: isLocal ? "NIC" : "PASSPORT",
                 idNumber: guestDetails.idPassport,
                 country: isLocal ? "Sri Lanka" : guestDetails.country,
-                idPassport: guestDetails.idPassport
+                idPassport: guestDetails.idPassport,
+                address: guestDetails.address
             };
             const customerResponse = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/roombook/reception-customer`, payload);
 
@@ -217,7 +289,8 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                     checkIn: new Date(checkInDate).toISOString(),
                     checkOut: new Date(checkOutDate).toISOString(),
                     actualAdults: r.actualAdults,
-                    actualKids: r.actualKids
+                    actualKids: r.actualKids,
+                    boardType: r.boardType
                 }))
             };
 
@@ -226,7 +299,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                 toast.dismiss('booking-progress');
                 toast.success("Booking created successfully!");
                 setSelectedRooms([]);
-                setGuestDetails({ firstName: "", lastName: "", email: "", phoneNumber: "", idPassport: "", country: "" });
+                setGuestDetails({ firstName: "", lastName: "", email: "", phoneNumber: "", idPassport: "", country: "Sri Lanka", address: "" });
                 setIsLocal(true);
                 if (onBookingSuccess) onBookingSuccess();
             }
@@ -247,7 +320,9 @@ export default function NewBookingFlow({ onBookingSuccess }) {
         rose: { bg: "bg-rose-600 hover:bg-rose-700", text: "text-rose-600 dark:text-rose-400" },
         slate: { bg: "bg-slate-700 hover:bg-slate-800", text: "text-slate-700 dark:text-slate-300" },
     };
-    const currentAccent = accentColors[theme.accent] || accentColors.indigo;
+    const isIdValid = isLocal
+        ? (!guestDetails.idPassport || validateSriLankanNIC(guestDetails.idPassport))
+        : (!guestDetails.idPassport || validatePassport(guestDetails.idPassport));
 
     return (
         <div className={`rounded-2xl border p-6 shadow-sm transition-colors duration-300 ${
@@ -302,35 +377,68 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                         </div>
                     </div>
 
-                    {/* Package & Room Selection */}
-                    <div className={`p-4 rounded-2xl border ${
+                    {/* Room Type & Board Type Selection */}
+                    <div className={`p-4 rounded-2xl border space-y-4 ${
                         theme.mode === "dark"
                             ? "bg-indigo-950/10 border-indigo-900/30"
                             : "bg-blue-50/50 border-blue-100"
                     }`}>
-                        <label className={`block text-xs font-black uppercase mb-2 ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
-                            Select Package to view available rooms
-                        </label>
-                        <select
-                            value={selectedPackageId}
-                            onChange={(e) => setSelectedPackageId(e.target.value)}
-                            className={`w-full p-3 border rounded-xl shadow-inner focus:outline-none transition-all font-bold text-xs ${
-                                theme.mode === "dark"
-                                    ? "bg-slate-950 border-slate-800 text-slate-200 focus:border-slate-700"
-                                    : "bg-white border-blue-200 text-slate-700 focus:border-blue-400"
-                            }`}
-                        >
-                            <option value="" className="bg-slate-900 text-white">-- Choose a Package --</option>
-                            {packages.map(pkg => (
-                                <option key={pkg.room_type_id} value={pkg.room_type_id} disabled={pkg.available_rooms_count === 0} className="bg-slate-900 text-white">
-                                    {pkg.room_type_name} - LKR {pkg.price}/night ({pkg.available_rooms_count} rooms available)
-                                </option>
-                            ))}
-                        </select>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className={`block text-xs font-black uppercase mb-2 ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
+                                    Select Room Type
+                                </label>
+                                <select
+                                    value={selectedRoomTypeId}
+                                    onChange={(e) => {
+                                        const rtid = e.target.value;
+                                        setSelectedRoomTypeId(rtid);
+                                        // Auto-select first available board type
+                                        const firstBoard = packages.find(p => p.room_type_id === parseInt(rtid));
+                                        setSelectedBoardTypeId(firstBoard ? firstBoard.boardTypeId.toString() : "");
+                                    }}
+                                    className={`w-full p-3 border rounded-xl shadow-inner focus:outline-none transition-all font-bold text-xs ${
+                                        theme.mode === "dark"
+                                            ? "bg-slate-950 border-slate-800 text-slate-200 focus:border-slate-700"
+                                            : "bg-white border-blue-200 text-slate-700 focus:border-blue-400"
+                                    }`}
+                                >
+                                    <option value="" className="bg-slate-900 text-white">-- Choose Room Type --</option>
+                                    {Array.from(new Map(packages.map(p => [p.room_type_id, { id: p.room_type_id, name: p.room_type_name }])).values()).map(rt => (
+                                        <option key={rt.id} value={rt.id} className="bg-slate-900 text-white">
+                                            {rt.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className={`block text-xs font-black uppercase mb-2 ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
+                                    Select Board Type
+                                </label>
+                                <select
+                                    value={selectedBoardTypeId}
+                                    onChange={(e) => setSelectedBoardTypeId(e.target.value)}
+                                    disabled={!selectedRoomTypeId}
+                                    className={`w-full p-3 border rounded-xl shadow-inner focus:outline-none transition-all font-bold text-xs ${
+                                        theme.mode === "dark"
+                                            ? "bg-slate-950 border-slate-800 text-slate-200 focus:border-slate-700"
+                                            : "bg-white border-blue-200 text-slate-700 focus:border-blue-400"
+                                    } disabled:opacity-50`}
+                                >
+                                    <option value="" className="bg-slate-900 text-white">-- Choose Board Type --</option>
+                                    {packages.filter(p => p.room_type_id === parseInt(selectedRoomTypeId)).map(opt => (
+                                        <option key={opt.boardTypeId} value={opt.boardTypeId} className="bg-slate-900 text-white">
+                                            {opt.board_type_name} (LKR {opt.price}/night)
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
 
                         {/* Room Grid */}
-                        {selectedPackageId && (
-                            <div className="mt-4">
+                        {selectedRoomTypeId && selectedBoardTypeId && (
+                            <div className="mt-4 pt-4 border-t dark:border-slate-800/60 border-slate-200/60">
                                 <p className={`text-xs font-black uppercase mb-3 ${theme.mode === "dark" ? "text-slate-400" : "text-slate-500"}`}>
                                     Available Room Numbers (Manual Override)
                                 </p>
@@ -353,7 +461,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                                                     }`}
                                                 >
                                                     <MdHotel className={`mx-auto mb-1 text-xl ${isSelected ? 'text-blue-200' : 'text-blue-500'}`} />
-                                                    <span className="font-extrabold text-xs">Room {room.roomNumber || room.id}</span>
+                                                    <span className="font-extrabold text-xs">Room {room.room_number || room.roomNumber || room.id}</span>
                                                     {isSelected && <span className="block text-[9px] uppercase font-black tracking-widest mt-1 opacity-80">Selected</span>}
                                                 </button>
                                             );
@@ -361,7 +469,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                                     </div>
                                 ) : (
                                     <p className="text-xs font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900/30 p-3 rounded-xl border border-amber-200">
-                                        No rooms available for this package on selected dates.
+                                        No rooms available for this room type on selected dates.
                                     </p>
                                 )}
                             </div>
@@ -382,7 +490,23 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                                         <p className={`font-black text-sm ${theme.mode === "dark" ? "text-white" : "text-slate-800"}`}>Room {room.roomNumber || room.roomId}</p>
                                         <p className={`text-xs ${theme.mode === "dark" ? "text-slate-400" : "text-slate-500"}`}>{room.packageName}</p>
                                     </div>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <div>
+                                            <label className="text-[10px] uppercase font-black text-slate-400 block mb-0.5">Board</label>
+                                            <select
+                                                value={room.boardTypeId}
+                                                onChange={(e) => handleUpdateRoomBoard(room.roomId, e.target.value)}
+                                                className={`border rounded-lg text-xs py-1 px-2 focus:outline-none ${
+                                                    theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-700"
+                                                }`}
+                                            >
+                                                {packages.filter(p => p.room_type_id === room.packageId).map(opt => (
+                                                    <option key={opt.boardTypeId} value={opt.boardTypeId}>
+                                                        {opt.board_type_name} (LKR {opt.price})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
                                         <div>
                                             <label className="text-[10px] uppercase font-black text-slate-400 block mb-0.5">Adults</label>
                                             <select
@@ -392,24 +516,30 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                                                     theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-700"
                                                 }`}
                                             >
-                                                {Array.from({ length: room.maxAdults || 2 }, (_, i) => i + 1).map(n => (
+                                                {Array.from({ length: room.maxAdults - room.actualKids }, (_, i) => i + 1).map(n => (
                                                     <option key={n} value={n}>{n}</option>
                                                 ))}
                                             </select>
                                         </div>
                                         <div>
                                             <label className="text-[10px] uppercase font-black text-slate-400 block mb-0.5">Kids</label>
-                                            <select
-                                                value={room.actualKids}
-                                                onChange={(e) => handleUpdateRoomGuests(room.roomId, 'actualKids', e.target.value)}
-                                                className={`border rounded-lg text-xs py-1 px-2 focus:outline-none ${
-                                                    theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-700"
-                                                }`}
-                                            >
-                                                {Array.from({ length: (room.maxKids || 2) + 1 }, (_, i) => i).map(n => (
-                                                    <option key={n} value={n}>{n}</option>
-                                                ))}
-                                            </select>
+                                            {room.kidsAllow && room.maxKids > 0 ? (
+                                                <select
+                                                    value={room.actualKids}
+                                                    onChange={(e) => handleUpdateRoomGuests(room.roomId, 'actualKids', e.target.value)}
+                                                    className={`border rounded-lg text-xs py-1 px-2 focus:outline-none ${
+                                                        theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-700"
+                                                    }`}
+                                                >
+                                                    {Array.from({ length: Math.min(room.maxKids, room.maxAdults - room.actualAdults) + 1 }, (_, i) => i).map(n => (
+                                                        <option key={n} value={n}>{n}</option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                <span className="text-xs font-bold text-red-500 bg-red-50 dark:bg-red-950/20 px-2 py-1.5 rounded-lg border border-red-100 dark:border-red-900/30">
+                                                    Not Allowed
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                     <button
@@ -497,7 +627,15 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                                     type="checkbox"
                                     id="isLocal"
                                     checked={isLocal}
-                                    onChange={(e) => setIsLocal(e.target.checked)}
+                                    onChange={(e) => {
+                                        const checked = e.target.checked;
+                                        setIsLocal(checked);
+                                        setGuestDetails(prev => ({
+                                            ...prev,
+                                            country: checked ? "Sri Lanka" : "",
+                                            idPassport: "" // Clear ID field when toggling nationality
+                                        }));
+                                    }}
                                     className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-700 cursor-pointer"
                                 />
                                 <label htmlFor="isLocal" className={`text-xs font-bold cursor-pointer select-none ${theme.mode === "dark" ? "text-slate-300" : "text-slate-700"}`}>
@@ -508,53 +646,92 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                             {isLocal ? (
                                 <div>
                                     <label className={`text-xs font-bold block mb-1 flex items-center gap-1 ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
-                                        <MdBadge /> National Identity Card (NIC)
+                                        <MdBadge /> National Identity Card (NIC) *
                                     </label>
                                     <input
                                         type="text"
                                         name="idPassport"
                                         value={guestDetails.idPassport}
                                         onChange={handleGuestChange}
-                                        className={`w-full border rounded-xl text-xs p-2 focus:outline-none ${
-                                            theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-800"
+                                        className={`w-full border rounded-xl text-xs p-2 focus:outline-none transition-all ${
+                                            !isIdValid && guestDetails.idPassport
+                                                ? "border-red-500 bg-red-50/10 focus:border-red-500"
+                                                : (theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white focus:border-slate-600" : "bg-white border-slate-200 text-slate-800 focus:border-blue-500")
                                         }`}
-                                        placeholder="Enter NIC number"
+                                        placeholder="Enter NIC (e.g. 991234567V or 199912345678)"
+                                        required
                                     />
+                                    {!isIdValid && guestDetails.idPassport && (
+                                        <p className="text-[10px] text-red-500 font-bold mt-1">
+                                            Format error: Must be 9 digits + V/X or 12 digits.
+                                        </p>
+                                    )}
                                 </div>
                             ) : (
                                 <>
                                     <div>
                                         <label className={`text-xs font-bold block mb-1 flex items-center gap-1 ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
-                                            <MdBadge /> Country
+                                            <MdBadge /> Country *
                                         </label>
-                                        <input
-                                            type="text"
+                                        <select
                                             name="country"
                                             value={guestDetails.country}
                                             onChange={handleGuestChange}
-                                            className={`w-full border rounded-xl text-xs p-2 focus:outline-none ${
+                                            className={`w-full border rounded-xl text-xs p-2 focus:outline-none cursor-pointer ${
                                                 theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-800"
                                             }`}
-                                            placeholder="Enter country name"
-                                        />
+                                            required
+                                        >
+                                            <option value="">-- Select Country --</option>
+                                            {countriesList.filter(c => c.name !== "Sri Lanka").map(c => (
+                                                <option key={c.code} value={c.name} className="bg-slate-900 text-white">
+                                                    {c.name}
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <div>
                                         <label className={`text-xs font-bold block mb-1 flex items-center gap-1 ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
-                                            <MdBadge /> Passport ID
+                                            <MdBadge /> Passport ID *
                                         </label>
                                         <input
                                             type="text"
                                             name="idPassport"
                                             value={guestDetails.idPassport}
                                             onChange={handleGuestChange}
-                                            className={`w-full border rounded-xl text-xs p-2 focus:outline-none ${
-                                                theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-800"
+                                            className={`w-full border rounded-xl text-xs p-2 focus:outline-none transition-all ${
+                                                !isIdValid && guestDetails.idPassport
+                                                    ? "border-red-500 bg-red-50/10 focus:border-red-500"
+                                                    : (theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white focus:border-slate-600" : "bg-white border-slate-200 text-slate-800 focus:border-blue-500")
                                             }`}
                                             placeholder="Enter passport number"
+                                            required
                                         />
+                                        {!isIdValid && guestDetails.idPassport && (
+                                            <p className="text-[10px] text-red-500 font-bold mt-1">
+                                                Format error: Must be 6-15 alphanumeric characters.
+                                            </p>
+                                        )}
                                     </div>
                                 </>
                             )}
+
+                            <div>
+                                <label className={`text-xs font-bold block mb-1 flex items-center gap-1 ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
+                                    <FaMapMarkerAlt /> Guest Address *
+                                </label>
+                                <input
+                                    type="text"
+                                    name="address"
+                                    value={guestDetails.address}
+                                    onChange={handleGuestChange}
+                                    className={`w-full border rounded-xl text-xs p-2 focus:outline-none ${
+                                        theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-800"
+                                    }`}
+                                    placeholder="Enter street, city, zip code"
+                                    required
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -574,7 +751,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                         <div className="space-y-2 mb-4 max-h-32 overflow-y-auto">
                             {selectedRooms.map(r => (
                                 <div key={r.roomId} className="flex justify-between text-[11px] items-center bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-                                    <span className="truncate pr-2 font-bold text-slate-200">Room {r.roomNumber || r.roomId} ({r.packageName})</span>
+                                    <span className="truncate pr-2 font-bold text-slate-200">Room {r.roomNumber || r.roomId} ({r.packageName} - {r.boardType})</span>
                                     <span className="font-black text-green-400">{process.env.CURRENCY_TYPE || "LKR"} {r.price}</span>
                                 </div>
                             ))}
