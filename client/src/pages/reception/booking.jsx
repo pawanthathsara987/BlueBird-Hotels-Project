@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import axios from "axios";
 import { useLocation } from "react-router-dom";
-import { MdCalendarToday, MdSearch, MdChevronLeft, MdChevronRight, MdList, MdAdd, MdClose } from "react-icons/md";
-import { Eye, FileText, Receipt, XCircle } from "lucide-react";
+import { MdCalendarToday, MdSearch, MdChevronLeft, MdChevronRight, MdList, MdAdd, MdClose, MdPayment } from "react-icons/md";
+import { Eye, FileText, Receipt, XCircle, LogIn, CheckCircle, CreditCard, Banknote, AlertCircle } from "lucide-react";
 import { toast } from "react-hot-toast";
 import NewBookingFlow from "./NewBookingFlow";
 
@@ -12,6 +12,15 @@ export default function Booking() {
     const [searchTerm, setSearchTerm] = useState("");
     const [allBookings, setAllBookings] = useState([]);
     const [selectedBooking, setSelectedBooking] = useState(null);
+
+    // Check-In verification modal state
+    const [checkInModal, setCheckInModal] = useState(null); // { bookingId, data } or null
+    const [checkInLoading, setCheckInLoading] = useState(false);
+    const [paymentAmount, setPaymentAmount] = useState("");
+    const [paymentMethod, setPaymentMethod] = useState("cash");
+    const [paymentNote, setPaymentNote] = useState("");
+    const [paymentRecording, setPaymentRecording] = useState(false);
+    const [paymentVerified, setPaymentVerified] = useState(false);
 
     const location = useLocation();
 
@@ -111,6 +120,91 @@ export default function Booking() {
         } catch (error) {
             console.error(error);
             toast.error(error.response?.data?.message || "Failed to cancel room booking.");
+        }
+    };
+
+    // Open Check-In verification modal
+    const openCheckInModal = async (booking) => {
+        const bookingId = booking.raw?.id;
+        if (!bookingId) return;
+        setCheckInLoading(true);
+        setCheckInModal({ bookingId, data: null });
+        setPaymentVerified(false);
+        setPaymentAmount("");
+        setPaymentNote("");
+        setPaymentMethod("cash");
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/checkin-details/${bookingId}`);
+            if (res.data.success) {
+                setCheckInModal({ bookingId, data: res.data.data });
+                // Auto-verify if fully paid
+                if (res.data.data.paymentSummary.balanceDue <= 0) {
+                    setPaymentVerified(true);
+                }
+            }
+        } catch (error) {
+            toast.error("Failed to load check-in details.");
+            setCheckInModal(null);
+        } finally {
+            setCheckInLoading(false);
+        }
+    };
+
+    // Record manual payment at reception
+    const handleRecordPayment = async () => {
+        if (!checkInModal?.bookingId) return;
+        const amt = parseFloat(paymentAmount);
+        if (!amt || amt <= 0) {
+            toast.error("Please enter a valid payment amount.");
+            return;
+        }
+        setPaymentRecording(true);
+        try {
+            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/reception/checkin-details/${checkInModal.bookingId}/pay`, {
+                amount: amt,
+                method: paymentMethod,
+                note: paymentNote
+            });
+            if (res.data.success) {
+                toast.success(`Payment of LKR ${amt.toLocaleString()} recorded!`);
+                const newSummary = res.data.data.paymentSummary;
+                setCheckInModal(prev => ({
+                    ...prev,
+                    data: {
+                        ...prev.data,
+                        paymentSummary: newSummary,
+                        payments: [...(prev.data.payments || []), res.data.data.payment]
+                    }
+                }));
+                setPaymentAmount("");
+                setPaymentNote("");
+                if (newSummary.balanceDue <= 0) {
+                    setPaymentVerified(true);
+                }
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to record payment.");
+        } finally {
+            setPaymentRecording(false);
+        }
+    };
+
+    // Final confirm check-in
+    const handleConfirmCheckIn = async () => {
+        if (!checkInModal?.bookingId) return;
+        if (!paymentVerified && checkInModal.data?.paymentSummary?.balanceDue > 0) {
+            toast.error("Please collect the remaining balance before checking in.");
+            return;
+        }
+        try {
+            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/reception/check-in/${checkInModal.bookingId}`);
+            if (res.data.success) {
+                toast.success("Guest checked in successfully! 🎉");
+                setCheckInModal(null);
+                fetchBookings();
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to complete check-in.");
         }
     };
 
@@ -573,6 +667,15 @@ export default function Booking() {
                                                                     <XCircle size={13} />
                                                                 </button>
                                                             ) : null}
+                                                            {booking.status === "Confirmed" ? (
+                                                                <button
+                                                                    onClick={() => openCheckInModal(booking)}
+                                                                    title="Check In Guest"
+                                                                    className="p-1.5 bg-emerald-50 border border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900/30 rounded-lg text-emerald-700 dark:text-emerald-400 hover:text-emerald-900 transition cursor-pointer shadow-2xs"
+                                                                >
+                                                                    <LogIn size={13} />
+                                                                </button>
+                                                            ) : null}
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -757,6 +860,255 @@ export default function Booking() {
                                 className={`px-5 py-2 text-xs font-bold text-white rounded-xl cursor-pointer transition shadow-xs ${currentAccent.bg}`}
                             >
                                 Close View
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* CHECK-IN VERIFICATION MODAL */}
+            {checkInModal && (
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <div className={`w-full max-w-3xl rounded-2xl shadow-2xl border overflow-hidden max-h-[92vh] flex flex-col ${
+                        theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-800"
+                    }`}>
+                        {/* Modal Header */}
+                        <div className={`flex items-center justify-between px-6 py-4 border-b ${theme.mode === "dark" ? "border-slate-800 bg-emerald-950/20" : "border-slate-100 bg-emerald-50/60"}`}>
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                                    <LogIn size={18} className="text-emerald-500" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-black tracking-tight">Guest Check-In Verification</h3>
+                                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Verify payment & guest details before check-in</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setCheckInModal(null)} className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg transition cursor-pointer">
+                                <MdClose size={20} />
+                            </button>
+                        </div>
+
+                        {checkInLoading ? (
+                            <div className="flex-1 flex items-center justify-center py-20">
+                                <div className="text-center">
+                                    <span className="inline-block w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></span>
+                                    <p className="text-slate-500 mt-3 text-xs font-bold">Loading guest details...</p>
+                                </div>
+                            </div>
+                        ) : checkInModal.data ? (() => {
+                            const { customer, booking: bk, bookedRooms, payments, paymentSummary } = checkInModal.data;
+                            const balanceDue = paymentSummary.balanceDue;
+                            const isFullyPaid = balanceDue <= 0;
+                            return (
+                                <div className="flex-1 overflow-y-auto p-6 space-y-5">
+
+                                    {/* Payment Status Banner */}
+                                    {isFullyPaid ? (
+                                        <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40">
+                                            <CheckCircle size={18} className="text-emerald-500 flex-shrink-0" />
+                                            <div>
+                                                <p className="text-xs font-black text-emerald-700 dark:text-emerald-400">Payment Fully Settled</p>
+                                                <p className="text-[10px] text-emerald-600 dark:text-emerald-500">Total of LKR {paymentSummary.totalPaid.toLocaleString(undefined, {minimumFractionDigits:2})} received. Ready to check in.</p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40">
+                                            <AlertCircle size={18} className="text-amber-500 flex-shrink-0" />
+                                            <div>
+                                                <p className="text-xs font-black text-amber-700 dark:text-amber-400">Balance Due: LKR {balanceDue.toLocaleString(undefined, {minimumFractionDigits:2})}</p>
+                                                <p className="text-[10px] text-amber-600 dark:text-amber-500">Collect remaining payment before completing check-in.</p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        {/* Customer Details */}
+                                        <div className={`rounded-xl border p-4 ${theme.mode === "dark" ? "bg-slate-800/40 border-slate-700" : "bg-slate-50 border-slate-200"}`}>
+                                            <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-3">👤 Guest Information</h4>
+                                            <div className="space-y-2 text-xs">
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-500">Full Name</span>
+                                                    <span className="font-bold">{customer?.firstName} {customer?.lastName}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-500">Email</span>
+                                                    <span className="font-semibold">{customer?.email || "N/A"}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-500">Phone</span>
+                                                    <span className="font-semibold">{customer?.phoneNumber || "N/A"}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-500">Country</span>
+                                                    <span className="font-semibold">{customer?.country || "N/A"}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-500">{customer?.idType === "PASSPORT" ? "Passport" : "NIC"}</span>
+                                                    <span className="font-bold text-indigo-600 dark:text-indigo-400">{customer?.idNumber || "N/A"}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-500">Address</span>
+                                                    <span className="font-semibold text-right max-w-[180px]">{customer?.address || "N/A"}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Booking & Room Details */}
+                                        <div className={`rounded-xl border p-4 ${theme.mode === "dark" ? "bg-slate-800/40 border-slate-700" : "bg-slate-50 border-slate-200"}`}>
+                                            <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-3">🏨 Booking Details</h4>
+                                            <div className="space-y-2 text-xs">
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-500">Booking Ref</span>
+                                                    <span className="font-bold text-blue-500">{bk.bookingNo || `RES-${bk.id}`}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-500">Booking Status</span>
+                                                    <span className="font-bold capitalize">{bk.status}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-500">Payment Status</span>
+                                                    <span className={`font-bold text-[10px] px-2 py-0.5 rounded-full ${bk.payment_status === "FULLY_PAID" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400" : bk.payment_status === "PAY_AT_CHECKIN" ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400" : "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400"}`}>{bk.payment_status?.replace(/_/g," ")}</span>
+                                                </div>
+                                                {bookedRooms && bookedRooms.map(br => (
+                                                    <div key={br.id} className={`mt-1 p-2 rounded-lg border ${theme.mode === "dark" ? "bg-slate-900/40 border-slate-700" : "bg-white border-slate-200"}`}>
+                                                        <div className="flex justify-between font-bold">
+                                                            <span>Room {br.Room?.roomNumber || br.room_id}</span>
+                                                            <span className="text-emerald-600 dark:text-emerald-400">LKR {parseFloat(br.price).toLocaleString(undefined,{minimumFractionDigits:2})}</span>
+                                                        </div>
+                                                        <div className="text-[10px] text-slate-500 mt-0.5">
+                                                            {br.checkIn} → {br.checkOut} · {br.board_type} · {br.adults} Adults, {br.kids} Kids
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {bk.note && <div className="flex justify-between"><span className="text-slate-500">Note</span><span className="font-medium text-right max-w-[180px]">{bk.note}</span></div>}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Payment Summary */}
+                                    <div className={`rounded-xl border p-4 ${theme.mode === "dark" ? "bg-slate-800/40 border-slate-700" : "bg-slate-50 border-slate-200"}`}>
+                                        <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-3">💳 Payment Summary</h4>
+                                        <div className="grid grid-cols-3 gap-3 mb-3">
+                                            <div className="text-center">
+                                                <p className="text-[10px] text-slate-500 font-bold uppercase">Total Charge</p>
+                                                <p className="text-base font-black mt-0.5">LKR {paymentSummary.totalPrice.toLocaleString(undefined,{minimumFractionDigits:2})}</p>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-[10px] text-slate-500 font-bold uppercase">Paid</p>
+                                                <p className="text-base font-black text-emerald-500 mt-0.5">LKR {paymentSummary.totalPaid.toLocaleString(undefined,{minimumFractionDigits:2})}</p>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-[10px] text-slate-500 font-bold uppercase">Balance Due</p>
+                                                <p className={`text-base font-black mt-0.5 ${balanceDue > 0 ? "text-amber-500" : "text-emerald-500"}`}>
+                                                    LKR {balanceDue.toLocaleString(undefined,{minimumFractionDigits:2})}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        {payments && payments.length > 0 && (
+                                            <div className="mt-2">
+                                                <p className="text-[10px] font-black text-slate-500 uppercase mb-1.5">Payment History</p>
+                                                <div className="space-y-1">
+                                                    {payments.map((p, i) => (
+                                                        <div key={i} className={`flex justify-between items-center text-[10px] px-2.5 py-1.5 rounded-lg ${theme.mode === "dark" ? "bg-slate-900/60" : "bg-white"} border ${theme.mode === "dark" ? "border-slate-700" : "border-slate-200"}`}>
+                                                            <span className="text-slate-500">{new Date(p.createdAt).toLocaleDateString()} — {p.method?.toUpperCase()}</span>
+                                                            <span className={`font-bold ${p.status === "success" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500"}`}>
+                                                                LKR {p.amount.toLocaleString(undefined,{minimumFractionDigits:2})}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Manual Payment Form */}
+                                    {!isFullyPaid && (
+                                        <div className={`rounded-xl border p-4 ${theme.mode === "dark" ? "bg-blue-950/20 border-blue-900/30" : "bg-blue-50 border-blue-100"}`}>
+                                            <h4 className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-3 flex items-center gap-1.5"><MdPayment size={14} /> Collect Payment at Reception</h4>
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-slate-500 block mb-1">Amount (LKR) *</label>
+                                                    <input
+                                                        type="number"
+                                                        value={paymentAmount}
+                                                        onChange={e => setPaymentAmount(e.target.value)}
+                                                        placeholder={`e.g. ${balanceDue.toFixed(2)}`}
+                                                        className={`w-full px-3 py-2 text-xs border rounded-lg outline-none focus:ring-1 focus:ring-blue-400 ${theme.mode === "dark" ? "bg-slate-800 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-800"}`}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-slate-500 block mb-1">Method</label>
+                                                    <select
+                                                        value={paymentMethod}
+                                                        onChange={e => setPaymentMethod(e.target.value)}
+                                                        className={`w-full px-3 py-2 text-xs border rounded-lg outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer ${theme.mode === "dark" ? "bg-slate-800 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-800"}`}
+                                                    >
+                                                        <option value="cash">💵 Cash</option>
+                                                        <option value="card">💳 Card</option>
+                                                        <option value="bank_transfer">🏦 Bank Transfer</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-slate-500 block mb-1">Note (optional)</label>
+                                                    <input
+                                                        type="text"
+                                                        value={paymentNote}
+                                                        onChange={e => setPaymentNote(e.target.value)}
+                                                        placeholder="e.g. Partial at desk"
+                                                        className={`w-full px-3 py-2 text-xs border rounded-lg outline-none focus:ring-1 focus:ring-blue-400 ${theme.mode === "dark" ? "bg-slate-800 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-800"}`}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2 mt-3">
+                                                <button
+                                                    onClick={handleRecordPayment}
+                                                    disabled={paymentRecording || !paymentAmount}
+                                                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    <CreditCard size={13} />
+                                                    {paymentRecording ? "Recording..." : "Record Payment"}
+                                                </button>
+                                                {balanceDue > 0 && (
+                                                    <button
+                                                        onClick={() => { setPaymentVerified(true); toast.success("Payment manually verified by receptionist."); }}
+                                                        className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 rounded-lg transition cursor-pointer hover:bg-amber-100"
+                                                    >
+                                                        <CheckCircle size={13} />
+                                                        Mark as Manually Verified
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Verification checkbox */}
+                                    {!isFullyPaid && (
+                                        <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer ${paymentVerified ? "border-emerald-300 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-900/40" : "border-slate-200 dark:border-slate-700"}`}>
+                                            <input type="checkbox" checked={paymentVerified} onChange={e => setPaymentVerified(e.target.checked)} className="w-4 h-4 accent-emerald-500 cursor-pointer" />
+                                            <span className={`text-xs font-bold ${paymentVerified ? "text-emerald-700 dark:text-emerald-400" : "text-slate-600 dark:text-slate-400"}`}>
+                                                I confirm that the remaining balance has been collected / waived and the guest is ready for check-in.
+                                            </span>
+                                        </label>
+                                    )}
+                                </div>
+                            );
+                        })() : null}
+
+                        {/* Modal Footer */}
+                        <div className={`flex justify-between items-center px-6 py-4 border-t ${theme.mode === "dark" ? "border-slate-800 bg-slate-950/40" : "border-slate-100 bg-slate-50"}`}>
+                            <button
+                                onClick={() => setCheckInModal(null)}
+                                className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl transition hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleConfirmCheckIn}
+                                disabled={checkInLoading || !checkInModal?.data || (!paymentVerified && checkInModal?.data?.paymentSummary?.balanceDue > 0)}
+                                className="flex items-center gap-2 px-6 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                            >
+                                <LogIn size={14} />
+                                Confirm Check-In
                             </button>
                         </div>
                     </div>
