@@ -43,8 +43,8 @@ export default function VehicleBookingPage() {
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
 
   const [bookingForm, setBookingForm] = useState({
-    pickupLocation: location.state?.bookingForm?.pickupLocation || "",
-    dropoffLocation: location.state?.bookingForm?.dropoffLocation || "",
+    pickupLocation: "Hotel Lobby",
+    dropoffLocation: "Hotel Lobby",
     specialRequirements: location.state?.bookingForm?.specialRequirements || ""
   });
 
@@ -338,11 +338,11 @@ export default function VehicleBookingPage() {
                     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                       <div className="md:col-span-2">
                         <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Pickup Location *</label>
-                        <input required type="text" value={bookingForm.pickupLocation} onChange={(e) => setBookingForm({ ...bookingForm, pickupLocation: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-100 transition bg-slate-50/50" placeholder="e.g. Airport, Hotel Name" />
+                        <input readOnly type="text" value={bookingForm.pickupLocation} className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition bg-slate-100 text-slate-600 font-semibold cursor-not-allowed" />
                       </div>
                       <div className="md:col-span-2">
                         <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Dropoff Location</label>
-                        <input type="text" value={bookingForm.dropoffLocation} onChange={(e) => setBookingForm({ ...bookingForm, dropoffLocation: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-100 transition bg-slate-50/50" placeholder="Leave blank if same as pickup" />
+                        <input readOnly type="text" value={bookingForm.dropoffLocation} className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition bg-slate-100 text-slate-600 font-semibold cursor-not-allowed" />
                       </div>
                       <div className="md:col-span-2">
                         <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Special Requirements</label>
