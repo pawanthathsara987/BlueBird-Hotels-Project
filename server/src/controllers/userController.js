@@ -436,23 +436,40 @@ export async function verifyEmail(req, res) {
             });
         }
 
-        const targetRole = role || "receptionist";
+        let staffMember;
 
-        const staffMember = await StaffMember.findOne({
-            where: { email: email.trim() },
-            include: [
-                {
-                    model: Role,
-                    where: { roleName: targetRole }
-                }
-            ]
-        });
+        if (role) {
+            // Backward compatibility: verify email is associated with the requested role
+            staffMember = await StaffMember.findOne({
+                where: { email: email.trim() },
+                include: [
+                    {
+                        model: Role,
+                        where: { roleName: role }
+                    }
+                ]
+            });
+        } else {
+            // Unified flow: detect role from email
+            staffMember = await StaffMember.findOne({
+                where: { email: email.trim() },
+                include: [Role]
+            });
+        }
 
         if (!staffMember) {
             return res.json({
                 showLogin: false,
                 showRegister: false,
-                message: `Email is not authorized as a ${targetRole}`
+                message: role ? `Email is not authorized as a ${role}` : "Email is not authorized as a staff member"
+            });
+        }
+
+        const userRole = staffMember.Role?.roleName;
+
+        if (!userRole || !["receptionist", "admin", "manager"].includes(userRole)) {
+            return res.status(403).json({
+                message: "Access denied. Only receptionist, manager, or admin accounts can log in here."
             });
         }
 
@@ -463,46 +480,42 @@ export async function verifyEmail(req, res) {
         if (registeredUser) {
             return res.json({
                 showLogin: true,
-                showRegister: false
+                showRegister: false,
+                role: userRole
             });
         }
 
-        if (["receptionist", "admin", "manager"].includes(targetRole)) {
-            const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-            const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiration
+        // New staff member registration: generate OTP
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiration
 
-            await Otp.destroy({ where: { email: email.trim() } });
-            await Otp.create({
-                email: email.trim(),
-                otp: otpCode,
-                expiresAt
+        await Otp.destroy({ where: { email: email.trim() } });
+        await Otp.create({
+            email: email.trim(),
+            otp: otpCode,
+            expiresAt
+        });
+
+        const roleCapitalized = userRole.charAt(0).toUpperCase() + userRole.slice(1);
+        try {
+            await sendEmail({
+                to: email.trim(),
+                subject: `BlueBird Hotels - ${roleCapitalized} Portal Verification Code`,
+                text: `Your verification code is: ${otpCode}. Please use this code to register your password and log in.`
             });
-
-            const roleCapitalized = targetRole.charAt(0).toUpperCase() + targetRole.slice(1);
-            try {
-                await sendEmail({
-                    to: email.trim(),
-                    subject: `BlueBird Hotels - ${roleCapitalized} Portal Verification Code`,
-                    text: `Your verification code is: ${otpCode}. Please use this code to register your password and log in.`
-                });
-            } catch (err) {
-                console.error("Failed to send verification code email:", err);
-                return res.status(500).json({
-                    message: "Failed to send verification code email. Please check server logs or email configuration.",
-                    error: err.message
-                });
-            }
-
-            return res.json({
-                showLogin: false,
-                showRegister: true,
-                message: "A verification code has been sent to your email. Please enter it to complete registration."
+        } catch (err) {
+            console.error("Failed to send verification code email:", err);
+            return res.status(500).json({
+                message: "Failed to send verification code email. Please check server logs or email configuration.",
+                error: err.message
             });
         }
 
         return res.json({
             showLogin: false,
-            showRegister: true
+            showRegister: true,
+            role: userRole,
+            message: "A verification code has been sent to your email. Please enter it to complete registration."
         });
 
     } catch (error) {
