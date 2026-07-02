@@ -172,7 +172,7 @@ export const createTourInquiry = async (req, res) => {
     const numAdults = Number(numberOfAdults) || 1;
     const numChildren = Number(numberOfChildren) || 0;
     const totalGuests = numAdults + numChildren;
-    
+
     if (!validateGuestCount(numAdults, numChildren)) {
       validationErrors.numberOfAdults = "Total guests must be between 1 and 100";
     } else if (tour.groupSize && totalGuests > tour.groupSize) {
