@@ -115,7 +115,7 @@ export default function ViewDeletedStaff() {
                                         <thead className="bg-slate-50 border-b border-slate-100 text-slate-400">
                                             <tr>
                                                 <th className="p-4 text-left text-xs font-bold uppercase tracking-wider">Staff Member</th>
-                                                <th className="p-4 text-left text-xs font-bold uppercase tracking-wider">Username</th>
+                                                <th className="p-4 text-left text-xs font-bold uppercase tracking-wider">Staff ID</th>
                                                 <th className="p-4 text-left text-xs font-bold uppercase tracking-wider">Email Address</th>
                                                 <th className="p-4 text-left text-xs font-bold uppercase tracking-wider">Role</th>
                                                 <th className="p-4 text-left text-xs font-bold uppercase tracking-wider">Phone Number</th>
@@ -142,7 +142,7 @@ export default function ViewDeletedStaff() {
                                                                 {member.name}
                                                             </div>
                                                         </td>
-                                                        <td className="p-4 text-sm text-slate-600 font-medium">@{member.userName}</td>
+                                                        <td className="p-4 text-sm text-slate-600 font-medium">{member.staffId}</td>
                                                         <td className="p-4 text-sm text-slate-500">{member.email}</td>
                                                         <td className="p-4 text-sm">
                                                             <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 capitalize border border-slate-200/50">
@@ -199,7 +199,7 @@ export default function ViewDeletedStaff() {
                                                     )}
                                                     <div>
                                                         <p className="text-sm font-bold text-slate-800">{member.name}</p>
-                                                        <p className="text-xs text-slate-400 font-medium">@{member.userName}</p>
+                                                        <p className="text-xs text-slate-400 font-medium">{member.staffId}</p>
                                                     </div>
                                                 </div>
 

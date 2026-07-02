@@ -2,6 +2,7 @@ import StaffMember from "../models/User/StaffMember.js";
 import Attendance from "../models/attendance/Attendance.js";
 import AttendanceEditLog from "../models/attendance/AttendanceEditLog.js";
 import AttendanceSetting from "../models/attendance/AttendanceSetting.js";
+import LeaveRequest from "../models/leave/LeaveRequest.js";
 import dayjs from "dayjs";
 import crypto from "crypto";
 import { Op } from "sequelize";
@@ -278,7 +279,8 @@ export const getDailyAttendanceStats = async () => {
 
     const presentCount = logs.filter(l => l.status === "Present").length;
     const lateCount = logs.filter(l => l.status === "Late").length;
-    const checkedInCount = logs.filter(l => l.status !== "Absent").length;
+    const onLeaveCount = logs.filter(l => l.status === "On Leave").length;
+    const checkedInCount = logs.filter(l => l.status === "Present" || l.status === "Late").length;
     const absentCount = logs.filter(l => l.status === "Absent").length + Math.max(0, totalStaff - logs.length);
 
     const attendanceRate = totalStaff > 0
@@ -292,6 +294,7 @@ export const getDailyAttendanceStats = async () => {
             totalStaff,
             presentCount,
             lateCount,
+            onLeaveCount,
             absentCount,
             checkedInCount,
             attendanceRate,
@@ -428,6 +431,7 @@ export const getStaffAttendanceHistory = async (staffId) => {
     const presentCount = records.filter(r => r.status === "Present").length;
     const lateCount = records.filter(r => r.status === "Late").length;
     const absentCount = records.filter(r => r.status === "Absent").length;
+    const onLeaveCount = records.filter(r => r.status === "On Leave").length;
 
     // Total working hours
     const totalWorkingHours = records.reduce((sum, r) => sum + (r.workingHours || 0), 0);
@@ -445,6 +449,7 @@ export const getStaffAttendanceHistory = async (staffId) => {
             presentCount: presentCount + lateCount, // present includes on-time and late employees
             lateCount,
             absentCount,
+            onLeaveCount,
             totalWorkingHours: Number(totalWorkingHours.toFixed(2)),
             avgLateMinutes
         },
@@ -481,19 +486,37 @@ export const markAbsentees = async () => {
         throw new Error("All employees already have attendance records for today.");
     }
 
-    // Create Absent records for the missing staff members
-    const recordsToCreate = missingStaff.map(staff => ({
-        staffId: staff.staffId,
-        attendanceDate: today,
-        checkInTime: null,
-        checkOutTime: null,
-        workingHours: 0,
-        workingMinutes: 0,
-        lateMinutes: 0,
-        status: "Absent",
-        attendanceMethod: "QR",
-        remarks: "Automatically marked absent"
-    }));
+    // Check which missing staff are on leave
+    const missingStaffIds = missingStaff.map(s => s.staffId);
+    const activeLeaves = await LeaveRequest.findAll({
+        where: {
+            staffId: {
+                [Op.in]: missingStaffIds
+            },
+            status: "Approved",
+            startDate: { [Op.lte]: today },
+            endDate: { [Op.gte]: today }
+        }
+    });
+
+    const staffOnLeave = new Set(activeLeaves.map(l => l.staffId));
+
+    // Create records for the missing staff members
+    const recordsToCreate = missingStaff.map(staff => {
+        const isOnLeave = staffOnLeave.has(staff.staffId);
+        return {
+            staffId: staff.staffId,
+            attendanceDate: today,
+            checkInTime: null,
+            checkOutTime: null,
+            workingHours: 0,
+            workingMinutes: 0,
+            lateMinutes: 0,
+            status: isOnLeave ? "On Leave" : "Absent",
+            attendanceMethod: "QR",
+            remarks: isOnLeave ? "Automatically marked on leave" : "Automatically marked absent"
+        };
+    });
 
     await Attendance.bulkCreate(recordsToCreate);
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { RiDeleteBinLine, RiEditLine } from "react-icons/ri";
 import { Link, useNavigate } from "react-router-dom";
+import Loader from "../../../components/Loader";
 
 const RoomTypeView = () => {
     const navigate = useNavigate();
@@ -104,9 +105,7 @@ const RoomTypeView = () => {
             {/* Table or Empty State */}
             {isLoading ? (
                 <div className="py-16 text-center">
-                    <div className="flex justify-center items-center">
-                        <span className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></span>
-                    </div>
+                    <Loader />
                 </div>
             ) : roomTypes.length === 0 ? (
                 <div className="text-center py-16 border border-dashed border-slate-200 rounded-2xl bg-slate-50/30">

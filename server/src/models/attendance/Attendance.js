@@ -50,7 +50,8 @@ Attendance.init(
             type: DataTypes.ENUM(
                 "Present",
                 "Late",
-                "Absent"
+                "Absent",
+                "On Leave"
             ),
             defaultValue: "Present"
         },

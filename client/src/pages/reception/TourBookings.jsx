@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { 
-    MdTerrain, 
-    MdSearch, 
-    MdPerson, 
-    MdCheckCircle, 
-    MdAccessTime, 
-    MdLocationOn, 
-    MdAdd, 
-    MdClose, 
+import {
+    MdTerrain,
+    MdSearch,
+    MdPerson,
+    MdCheckCircle,
+    MdAccessTime,
+    MdLocationOn,
+    MdAdd,
+    MdClose,
     MdCheck,
     MdEmail,
     MdPhone,
     MdFlag,
-    MdWarning
+    MdWarning,
+    MdEdit,
+    MdCancel
 } from "react-icons/md";
 import { toast } from "react-hot-toast";
 import { useLocation } from "react-router-dom";
@@ -31,15 +33,21 @@ export default function TourBookings() {
 
     // Tour booking form state
     const [showForm, setShowForm] = useState(false);
-    
-    // Calculate min date (4 days ahead)
+
+    // Pax editing state
+    const [editingPaxInquiry, setEditingPaxInquiry] = useState(null);
+    const [editAdults, setEditAdults] = useState(1);
+    const [editChildren, setEditChildren] = useState(0);
+
+    // Calculate min date (1 day ahead)
     const getMinStartDate = () => {
         const date = new Date();
-        date.setDate(date.getDate() + 4);
+        date.setDate(date.getDate() + 1);
         return date.toISOString().split("T")[0];
     };
 
     const [additionalPrice, setAdditionalPrice] = useState("0");
+    const [isLocalGuest, setIsLocalGuest] = useState(false);
 
     const [newInquiry, setNewInquiry] = useState({
         tourId: "",
@@ -47,6 +55,8 @@ export default function TourBookings() {
         email: "",
         phone: "",
         nationality: "",
+        nic: "",
+        passportId: "",
         numberOfAdults: 1,
         numberOfChildren: 0,
         startDate: getMinStartDate(),
@@ -178,17 +188,36 @@ export default function TourBookings() {
     // Submit New Inquiry
     const handleCreateInquiry = async (e) => {
         e.preventDefault();
-        
-        // Strict frontend validation: Tour must be booked at least 4 days in advance
+
+        // Strict frontend validation: Tour must be booked at least 1 day in advance
         const tourDate = new Date(newInquiry.startDate);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const diffTime = tourDate - today;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
-        if (diffDays < 4) {
-            toast.error("Tours must be booked at least 4 days in advance.");
+
+        if (diffDays < 1) {
+            toast.error("Tours must be booked at least 1 day in advance.");
             return;
+        }
+
+        // Validate NIC or Passport ID formats
+        if (isLocalGuest) {
+            const nicRegex = /^([0-9]{9}[vVxX]|[0-9]{12})$/;
+            if (!newInquiry.nic || !nicRegex.test(newInquiry.nic.trim())) {
+                toast.error("Invalid Sri Lankan NIC format (e.g. 991234567V or 199912345678).");
+                return;
+            }
+        } else {
+            const passportRegex = /^[a-zA-Z0-9-]{5,15}$/;
+            if (!newInquiry.passportId || !passportRegex.test(newInquiry.passportId.trim())) {
+                toast.error("Invalid Passport ID (Must be 5 to 15 alphanumeric characters).");
+                return;
+            }
+            if (!newInquiry.nationality || newInquiry.nationality.trim().length < 2) {
+                toast.error("Nationality is required and must be at least 2 characters.");
+                return;
+            }
         }
 
         const calc = getCalculatedPrice();
@@ -197,9 +226,16 @@ export default function TourBookings() {
             return;
         }
 
+        const idDetails = isLocalGuest 
+            ? `🪪 NIC: ${newInquiry.nic}`
+            : `🛂 Passport: ${newInquiry.passportId} (${newInquiry.nationality})`;
+
         const confirmMsg = `Confirm Tour Booking?\n\n` +
             `🔹 Tour Package: ${calc.packageName}\n` +
             `📅 Start Date: ${newInquiry.startDate}\n` +
+            `👤 Guest: ${newInquiry.fullName}\n` +
+            `📞 Phone: ${newInquiry.phone}\n` +
+            `🆔 Identification: ${idDetails}\n` +
             `👥 Guests: ${newInquiry.numberOfAdults} Adult(s), ${newInquiry.numberOfChildren} Child(ren)\n` +
             `📍 Pickup: ${newInquiry.pickupLocation}\n` +
             `💵 Estimated Total: LKR ${calc.totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n\n` +
@@ -220,12 +256,15 @@ export default function TourBookings() {
                 toast.success("Tour booking inquiry created successfully!");
                 setShowForm(false);
                 setAdditionalPrice("0");
+                setIsLocalGuest(false);
                 setNewInquiry({
                     tourId: "",
                     fullName: "",
                     email: "",
                     phone: "",
                     nationality: "",
+                    nic: "",
+                    passportId: "",
                     numberOfAdults: 1,
                     numberOfChildren: 0,
                     startDate: getMinStartDate(),
@@ -240,10 +279,46 @@ export default function TourBookings() {
         }
     };
 
+    // Update pax count API submit
+    const handleUpdatePaxSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/reception/tour-inquiries/${editingPaxInquiry.id}/pax`, {
+                numberOfAdults: editAdults,
+                numberOfChildren: editChildren
+            });
+            if (res.data.success) {
+                toast.success("Guest count updated successfully!");
+                setEditingPaxInquiry(null);
+                fetchData();
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error(error.response?.data?.message || "Failed to update guest count.");
+        }
+    };
+
+    // Cancel tour booking API request
+    const handleCancelBooking = async (id) => {
+        if (!window.confirm("Are you sure you want to cancel this tour booking?\nThis will mark the booking as rejected, and the manager will handle any cash refund/reconciliations on the admin side.")) {
+            return;
+        }
+        try {
+            const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/reception/tour-inquiries/${id}/cancel`);
+            if (res.data.success) {
+                toast.success("Tour booking cancelled successfully!");
+                fetchData();
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error(error.response?.data?.message || "Failed to cancel tour booking.");
+        }
+    };
+
     // Filters
     const filteredInquiries = inquiries.filter((inq) => {
-        const matchesSearch = inq.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                              inq.inquiryRef?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = inq.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            inq.inquiryRef?.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = statusFilter === "all" ? true : inq.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
@@ -258,14 +333,14 @@ export default function TourBookings() {
         if (!newInquiry.tourId) return { packageName: "", basePrice: 0, discount: 0, discountedBase: 0, totalPrice: 0 };
         const selectedTour = tours.find(t => t.id === parseInt(newInquiry.tourId));
         if (!selectedTour) return { packageName: "", basePrice: 0, discount: 0, discountedBase: 0, totalPrice: 0 };
-        
+
         const basePrice = parseFloat(selectedTour.price) || 0;
         const discount = parseFloat(selectedTour.discount) || 0;
         const discountedBase = discount > 0 ? basePrice - (basePrice * discount / 100) : basePrice;
-        
+
         const extraPrice = parseFloat(additionalPrice) || 0;
         const totalPrice = discountedBase + extraPrice;
-        
+
         return {
             packageName: selectedTour.packageName,
             basePrice,
@@ -273,6 +348,31 @@ export default function TourBookings() {
             discountedBase,
             totalPrice
         };
+    };
+
+    const getRowPriceParts = (inq) => {
+        const selectedTour = tours.find(t => t.id === inq.tourId);
+        const basePrice = parseFloat(selectedTour?.price || 0);
+        const discount = parseFloat(selectedTour?.discount || 0);
+        const tourPrice = discount > 0 ? basePrice - (basePrice * discount / 100) : basePrice;
+        
+        let extraPrice = 0;
+        if (inq.specialRequests) {
+            const match = inq.specialRequests.match(/\[Additional Custom Price:\s*LKR\s*([\d.]+)\]/);
+            if (match && match[1]) {
+                extraPrice = parseFloat(match[1]) || 0;
+            }
+        }
+        return {
+            tourPrice,
+            extraPrice,
+            totalPrice: tourPrice + extraPrice
+        };
+    };
+
+    const parseTotalPrice = (inq) => {
+        const { totalPrice } = getRowPriceParts(inq);
+        return totalPrice;
     };
 
     const priceDetails = getCalculatedPrice();
@@ -283,10 +383,9 @@ export default function TourBookings() {
     const acceptedCount = inquiries.filter(i => i.status === "accepted").length;
 
     return (
-        <div className={`w-full px-6 py-6 min-h-screen transition-colors duration-300 ${
-            theme.mode === "dark" ? "bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-800"
-        }`}>
-            
+        <div className={`w-full px-6 py-6 min-h-screen transition-colors duration-300 ${theme.mode === "dark" ? "bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-800"
+            }`}>
+
             {/* Header section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm p-6 rounded-2xl mb-6 relative overflow-hidden">
                 <div className="space-y-1">
@@ -315,12 +414,12 @@ export default function TourBookings() {
                 </div>
             </div>
 
-            {/* Warning Alert about 4 days advance booking */}
+            {/* Warning Alert about 1 day advance booking */}
             <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 mb-6 flex gap-3 text-xs text-amber-700 dark:text-amber-400">
                 <MdWarning size={18} className="flex-shrink-0" />
                 <div>
                     <span className="font-bold uppercase tracking-wider block mb-0.5">Hotel Excursion Rule:</span>
-                    All guided tours must be booked at least **4 days in advance** of the start date. This allows the logistics team to organize tour guides, vehicles, and reservations.
+                    All guided tours must be booked at least **1 day in advance** of the start date. This allows the logistics team to organize tour guides, vehicles, and reservations.
                 </div>
             </div>
 
@@ -341,9 +440,8 @@ export default function TourBookings() {
             </div>
 
             {/* Filters Row */}
-            <div className={`p-4 rounded-2xl border mb-6 flex flex-col md:flex-row gap-4 justify-between items-center shadow-sm ${
-                theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
-            }`}>
+            <div className={`p-4 rounded-2xl border mb-6 flex flex-col md:flex-row gap-4 justify-between items-center shadow-sm ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+                }`}>
                 <div className="relative w-full md:w-80">
                     <MdSearch className="absolute left-3 top-3 text-slate-400 text-lg" />
                     <input
@@ -357,31 +455,28 @@ export default function TourBookings() {
                 <div className="flex gap-2 w-full md:w-auto">
                     <button
                         onClick={() => setStatusFilter("all")}
-                        className={`flex-1 md:flex-none px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer border ${
-                            statusFilter === "all"
-                                ? `${currentAccent.bg} text-white border-transparent` 
+                        className={`flex-1 md:flex-none px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer border ${statusFilter === "all"
+                                ? `${currentAccent.bg} text-white border-transparent`
                                 : "bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-slate-600 dark:text-slate-300"
-                        }`}
+                            }`}
                     >
                         All
                     </button>
                     <button
                         onClick={() => setStatusFilter("pending")}
-                        className={`flex-1 md:flex-none px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer border ${
-                            statusFilter === "pending"
-                                ? `${currentAccent.bg} text-white border-transparent` 
+                        className={`flex-1 md:flex-none px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer border ${statusFilter === "pending"
+                                ? `${currentAccent.bg} text-white border-transparent`
                                 : "bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-slate-600 dark:text-slate-300"
-                        }`}
+                            }`}
                     >
                         Pending
                     </button>
                     <button
                         onClick={() => setStatusFilter("accepted")}
-                        className={`flex-1 md:flex-none px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer border ${
-                            statusFilter === "accepted"
-                                ? `${currentAccent.bg} text-white border-transparent` 
+                        className={`flex-1 md:flex-none px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer border ${statusFilter === "accepted"
+                                ? `${currentAccent.bg} text-white border-transparent`
                                 : "bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-slate-600 dark:text-slate-300"
-                        }`}
+                            }`}
                     >
                         Accepted
                     </button>
@@ -389,9 +484,8 @@ export default function TourBookings() {
             </div>
 
             {/* Tour Inquiries Table */}
-            <div className={`rounded-2xl border overflow-hidden shadow-sm ${
-                theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
-            }`}>
+            <div className={`rounded-2xl border overflow-hidden shadow-sm ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+                }`}>
                 {isLoading ? (
                     <div className="py-20 text-center">
                         <span className="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></span>
@@ -413,12 +507,13 @@ export default function TourBookings() {
                                     <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Pax</th>
                                     <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Pickup</th>
                                     <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Status</th>
+                                    <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Price Details</th>
                                     <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
                                 {filteredInquiries.map((inq) => {
-                                    const tourName = tours.find(t => t.id === inq.tourId)?.title || "Custom Package";
+                                    const tourName = tours.find(t => t.id === inq.tourId)?.packageName || "Custom Excursion";
                                     return (
                                         <tr key={inq.id} className={theme.mode === "dark" ? "hover:bg-slate-800/20" : "hover:bg-slate-50/50"}>
                                             <td className="px-6 py-4 font-bold text-blue-500">{inq.inquiryRef}</td>
@@ -431,6 +526,8 @@ export default function TourBookings() {
                                                     <span className="flex items-center gap-0.5"><MdEmail size={11} /> {inq.email}</span>
                                                     <span className="flex items-center gap-0.5"><MdPhone size={11} /> {inq.phone}</span>
                                                     <span className="flex items-center gap-0.5"><MdFlag size={11} /> {inq.nationality}</span>
+                                                    {inq.nic && <span className="flex items-center gap-1 font-bold text-teal-650 dark:text-teal-400">🪪 NIC: {inq.nic}</span>}
+                                                    {inq.passportId && <span className="flex items-center gap-1 font-bold text-indigo-600 dark:text-indigo-400">🛂 Passport: {inq.passportId}</span>}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
@@ -454,32 +551,57 @@ export default function TourBookings() {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex gap-2">
-                                                    {inq.status === "pending" ? (
-                                                        <>
-                                                            <button
-                                                                onClick={() => handleAccept(inq.id)}
-                                                                className="p-1.5 border border-emerald-200 hover:bg-emerald-50 text-emerald-500 rounded-lg cursor-pointer transition"
-                                                                title="Accept Booking"
-                                                            >
-                                                                <MdCheck size={14} />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => {
-                                                                    setRejectingInquiry(inq);
-                                                                    setRejectionReason("");
-                                                                }}
-                                                                className="p-1.5 border border-rose-200 hover:bg-rose-50 text-rose-500 rounded-lg cursor-pointer transition"
-                                                                title="Reject Booking"
-                                                            >
-                                                                <MdClose size={14} />
-                                                            </button>
-                                                        </>
-                                                    ) : (
-                                                        <span className="text-slate-400 italic text-[10px]">Processed</span>
-                                                    )}
-                                                </div>
-                                            </td>
+                                                 {(() => {
+                                                     const { tourPrice, extraPrice, totalPrice } = getRowPriceParts(inq);
+                                                     return (
+                                                         <div className="flex flex-col gap-0.5 text-[10px] text-slate-500 font-medium min-w-[120px] text-left">
+                                                             <span className="flex justify-between gap-4">
+                                                                 <span>Tour:</span>
+                                                                 <span className="font-semibold text-slate-700 dark:text-slate-350">LKR {tourPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                             </span>
+                                                             {extraPrice > 0 && (
+                                                                 <span className="flex justify-between gap-4 text-teal-650 dark:text-teal-400">
+                                                                     <span>Extra:</span>
+                                                                     <span className="font-semibold">+ LKR {extraPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                                 </span>
+                                                             )}
+                                                             <div className="border-t border-slate-200 dark:border-slate-800 my-0.5"></div>
+                                                             <span className="flex justify-between gap-4 font-black text-slate-900 dark:text-white text-xs">
+                                                                 <span>Total:</span>
+                                                                 <span className={currentAccent.text}>LKR {totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                             </span>
+                                                         </div>
+                                                     );
+                                                 })()}
+                                             </td>
+                                             <td className="px-6 py-4">
+                                                 <div className="flex gap-2">
+                                                     {inq.status !== "rejected" ? (
+                                                         <>
+                                                             <button
+                                                                 onClick={() => {
+                                                                     setEditingPaxInquiry(inq);
+                                                                     setEditAdults(inq.numberOfAdults);
+                                                                     setEditChildren(inq.numberOfChildren);
+                                                                 }}
+                                                                 className="p-1.5 border border-indigo-200 dark:border-slate-800 hover:bg-indigo-50 dark:hover:bg-slate-800 text-indigo-600 dark:text-indigo-400 rounded-lg cursor-pointer transition shadow-sm bg-white dark:bg-slate-900"
+                                                                 title="Edit Pax Count"
+                                                             >
+                                                                 <MdEdit size={14} />
+                                                             </button>
+                                                             <button
+                                                                 onClick={() => handleCancelBooking(inq.id)}
+                                                                 className="p-1.5 border border-rose-200 dark:border-slate-800 hover:bg-rose-50 dark:hover:bg-slate-800 text-rose-500 rounded-lg cursor-pointer transition shadow-sm bg-white dark:bg-slate-900"
+                                                                 title="Cancel Booking"
+                                                             >
+                                                                 <MdCancel size={14} />
+                                                             </button>
+                                                         </>
+                                                     ) : (
+                                                         <span className="text-slate-400 italic text-[10px]">No Actions</span>
+                                                     )}
+                                                 </div>
+                                             </td>
                                         </tr>
                                     );
                                 })}
@@ -492,9 +614,8 @@ export default function TourBookings() {
             {/* TOUR REJECTION MODAL */}
             {rejectingInquiry && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn">
-                    <form onSubmit={handleReject} className={`w-full max-w-md rounded-2xl p-6 shadow-2xl border ${
-                        theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
-                    }`}>
+                    <form onSubmit={handleReject} className={`w-full max-w-md rounded-2xl p-6 shadow-2xl border ${theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
+                        }`}>
                         <div className="flex justify-between items-center mb-4 border-b pb-3 dark:border-slate-800 border-slate-100">
                             <h2 className="text-lg font-black uppercase tracking-wide">Reject Tour Inquiry</h2>
                             <button type="button" onClick={() => setRejectingInquiry(null)} className="cursor-pointer">
@@ -530,9 +651,8 @@ export default function TourBookings() {
             {/* TOUR BOOKING CREATE MODAL */}
             {showForm && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 overflow-y-auto">
-                    <form onSubmit={handleCreateInquiry} className={`my-8 w-full max-w-lg rounded-2xl p-6 shadow-2xl border flex flex-col max-h-[90vh] ${
-                        theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
-                    }`}>
+                    <form onSubmit={handleCreateInquiry} className={`my-8 w-full max-w-2xl rounded-2xl p-6 shadow-2xl border flex flex-col max-h-[90vh] ${theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
+                        }`}>
                         <div className="flex justify-between items-center mb-4 border-b pb-3 dark:border-slate-800 border-slate-100 flex-shrink-0">
                             <h2 className="text-lg font-black uppercase tracking-wide">Book Excursion / Tour</h2>
                             <button type="button" onClick={() => setShowForm(false)} className="cursor-pointer">
@@ -593,17 +713,79 @@ export default function TourBookings() {
                                         className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none"
                                     />
                                 </div>
-                                <div>
-                                    <label className="block font-bold uppercase text-slate-500 mb-2">Nationality *</label>
+                            </div>
+                            
+                            <div className="bg-slate-50/50 dark:bg-slate-900/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800/80">
+                                <label className="flex items-center gap-2 font-bold uppercase text-slate-500 cursor-pointer select-none">
                                     <input
-                                        type="text"
-                                        required
-                                        placeholder="e.g. Sri Lankan, British"
-                                        value={newInquiry.nationality}
-                                        onChange={(e) => setNewInquiry({ ...newInquiry, nationality: e.target.value })}
-                                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none"
+                                        type="checkbox"
+                                        checked={isLocalGuest}
+                                        onChange={(e) => {
+                                            const checked = e.target.checked;
+                                            setIsLocalGuest(checked);
+                                            setNewInquiry(prev => ({
+                                                ...prev,
+                                                nationality: checked ? "Sri Lankan" : "",
+                                                nic: checked ? prev.nic : "",
+                                                passportId: checked ? "" : prev.passportId
+                                            }));
+                                        }}
+                                        className="rounded border-slate-350 accent-indigo-650 w-4 h-4 cursor-pointer"
                                     />
-                                </div>
+                                    <span className="text-slate-700 dark:text-slate-300 text-xs">Local Guest (Sri Lankan)</span>
+                                </label>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                {isLocalGuest ? (
+                                    <>
+                                        <div>
+                                            <label className="block font-bold uppercase text-slate-500 mb-2">Nationality</label>
+                                            <input
+                                                type="text"
+                                                readOnly
+                                                value="Sri Lankan"
+                                                className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-850 rounded-xl p-3 outline-none text-slate-500 font-bold cursor-not-allowed"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold uppercase text-slate-500 mb-2">NIC Number *</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                placeholder="NIC number (e.g. 199912345678)"
+                                                value={newInquiry.nic}
+                                                onChange={(e) => setNewInquiry(prev => ({ ...prev, nic: e.target.value }))}
+                                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none font-bold"
+                                            />
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div>
+                                            <label className="block font-bold uppercase text-slate-500 mb-2">Nationality *</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                placeholder="e.g. British, French"
+                                                value={newInquiry.nationality}
+                                                onChange={(e) => setNewInquiry(prev => ({ ...prev, nationality: e.target.value }))}
+                                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none font-bold"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold uppercase text-slate-500 mb-2">Passport ID *</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                placeholder="Passport ID (e.g. N1234567)"
+                                                value={newInquiry.passportId}
+                                                onChange={(e) => setNewInquiry(prev => ({ ...prev, passportId: e.target.value }))}
+                                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none font-bold"
+                                            />
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                             <div className="grid grid-cols-3 gap-3">
@@ -709,6 +891,52 @@ export default function TourBookings() {
                                 className={`w-full text-white py-3.5 rounded-xl flex items-center justify-center gap-1.5 font-extrabold cursor-pointer transition shadow-md ${currentAccent.bg}`}
                             >
                                 <MdCheckCircle size={18} /> Submit Tour Inquiry
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {/* EDIT PAX MODAL */}
+            {editingPaxInquiry && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <form onSubmit={handleUpdatePaxSubmit} className={`w-full max-w-sm rounded-2xl p-6 shadow-2xl border text-left ${
+                        theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
+                    }`}>
+                        <div className="flex justify-between items-center mb-4 border-b pb-3 dark:border-slate-800 border-slate-100">
+                            <h2 className="text-md font-black uppercase tracking-wide">Update Pax Count</h2>
+                            <button type="button" onClick={() => setEditingPaxInquiry(null)} className="cursor-pointer">
+                                <MdClose size={22} className={theme.mode === "dark" ? "text-white" : "text-slate-600"} />
+                            </button>
+                        </div>
+                        <div className="space-y-4 text-xs font-bold">
+                            <div>
+                                <label className="block text-slate-500 mb-2">Adults *</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    required
+                                    value={editAdults}
+                                    onChange={(e) => setEditAdults(parseInt(e.target.value) || 1)}
+                                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-slate-500 mb-2">Children *</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    required
+                                    value={editChildren}
+                                    onChange={(e) => setEditChildren(parseInt(e.target.value) || 0)}
+                                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none"
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                className={`w-full text-white py-3 rounded-xl flex items-center justify-center gap-1.5 font-bold cursor-pointer transition shadow-md ${currentAccent.bg}`}
+                            >
+                                Save Changes
                             </button>
                         </div>
                     </form>

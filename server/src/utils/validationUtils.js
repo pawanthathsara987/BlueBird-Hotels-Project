@@ -31,12 +31,8 @@ export const validatePhone = (phone) => {
  */
 export const validateTourDate = (startDate) => {
   const tourDate = new Date(startDate);
-  tourDate.setHours(0, 0, 0, 0);
-
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const fourDaysLater = new Date(today);
+  const fourDaysLater = new Date();
   fourDaysLater.setDate(fourDaysLater.getDate() + 4);
 
   return tourDate >= fourDaysLater;

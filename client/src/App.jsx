@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import HomePage from "./pages/homePage";
 import ReceptionistLogin from "./pages/admin/ReceptionistLogin";
 import ManagerLogin from "./pages/admin/ManagerLogin";
@@ -36,10 +37,21 @@ import CustomerDetailsPage from "./pages/client/booking/roombooking/CustomerDeta
 import RoomTypeDetails from "./pages/client/RoomTypeDetails";
 import FaqPage from "./pages/Faq";
 
+function ScrollToTop() {
+    const { pathname } = useLocation();
+
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [pathname]);
+
+    return null;
+}
+
 export default function App() {
     return (
         <GoogleOAuthProvider clientId="495378641753-0pjhi48q54fugb1l0phuvjk447oi5mol.apps.googleusercontent.com">
             <BrowserRouter>
+                <ScrollToTop />
                 <Toaster position="top-right" reverseOrder={false} />
                 <div className="w-full h-screen">
                     <Routes>

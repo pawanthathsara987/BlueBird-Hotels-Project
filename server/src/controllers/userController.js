@@ -2,6 +2,8 @@ import { Op } from "sequelize";
 import StaffMember from "../models/User/StaffMember.js";
 import UserRegisterModel from "../models/User/UserRegisterModel.js";
 import Otp from "../models/User/Otp.js";
+import QRCode from "qrcode";
+import crypto from "crypto";
 import { sendEmail } from "../services/emailService.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -11,7 +13,6 @@ import sequelize from "../config/database.js";
 import Role from "../models/User/Role.js";
 import DeletedStaffMember from "../models/User/DeletedStaffMember.js";
 import supabase from "../config/supabaseClient.js";
-import { generateQRCode } from "../utils/qrCodeGenerator.js";
 dotenv.config();
 
 export async function userLogin(req, res) {
@@ -112,6 +113,32 @@ export async function registerUser(req, res) {
 
         console.log(req.body);
 
+        // Check if there is an active staff member with same email, userName, or nicNumber
+        const orConditions = [
+            { email: data.email.trim() },
+            { userName: data.userName.trim() }
+        ];
+        if (data.nicNumber && data.nicNumber.trim() !== "") {
+            orConditions.push({ nicNumber: data.nicNumber.trim() });
+        }
+
+        const existingStaff = await StaffMember.findOne({
+            where: {
+                [Op.or]: orConditions
+            }
+        });
+
+        if (existingStaff) {
+            let conflictField = "email, username, or NIC";
+            if (existingStaff.email.toLowerCase() === data.email.trim().toLowerCase()) conflictField = "Email";
+            else if (existingStaff.userName.toLowerCase() === data.userName.trim().toLowerCase()) conflictField = "Username";
+            else if (data.nicNumber && existingStaff.nicNumber && existingStaff.nicNumber.toLowerCase() === data.nicNumber.trim().toLowerCase()) conflictField = "NIC Number";
+
+            return res.status(400).json({
+                message: `${conflictField} is already in use by an active staff member.`
+            });
+        }
+
         let imageUrl = null;
         if (req.file) {
             imageUrl = await uploadImageToSupabase(req.file);
@@ -132,11 +159,6 @@ export async function registerUser(req, res) {
 
         // Reload to get trigger-generated staffId
         await staffMember.reload();
-
-        // Generate and save QR code
-        const qrCodeUrl = await generateQRCode(staffMember.staffId);
-        staffMember.qrCodeUrl = qrCodeUrl;
-        await staffMember.save();
 
         res.json({
             message: "User registered successfully",
@@ -164,6 +186,40 @@ export async function registerStaffMember(req, res) {
             return res.status(400).json({
                 message: "Password do not match"
             });
+        }
+
+        // Verify if this email actually belongs to a valid staff member
+        const staffMember = await StaffMember.findOne({ where: { email: data.email.trim() } });
+        if (!staffMember) {
+            return res.status(400).json({
+                message: "This email is not authorized as a staff member."
+            });
+        }
+
+        // Verify OTP if the registering role is receptionist, admin, or manager
+        if (["receptionist", "admin", "manager"].includes(data.role)) {
+            if (!data.otp) {
+                return res.status(400).json({
+                    message: "Verification code is required"
+                });
+            }
+
+            const otpRecord = await Otp.findOne({
+                where: {
+                    email: data.email.trim(),
+                    otp: data.otp.trim(),
+                    expiresAt: { [Op.gt]: new Date() }
+                }
+            });
+
+            if (!otpRecord) {
+                return res.status(400).json({
+                    message: "Invalid or expired verification code"
+                });
+            }
+
+            // OTP is valid, destroy it so it cannot be reused
+            await Otp.destroy({ where: { email: data.email.trim() } });
         }
 
         const hashedPassword = bcrypt.hashSync(data.password, 10);
@@ -213,7 +269,44 @@ export async function updateUser(req, res) {
     const userId = req.params.id;
 
     try {
+        const staffToUpdate = await StaffMember.findByPk(userId, { include: [Role] });
+        if (!staffToUpdate) {
+            return res.status(404).json({ message: "Staff member not found" });
+        }
+
         const data = req.body;
+
+        if (staffToUpdate.Role?.roleName === 'admin' && data.roleId && parseInt(data.roleId) !== parseInt(staffToUpdate.roleId)) {
+            return res.status(403).json({ message: "Admin role cannot be changed" });
+        }
+
+        // Check if another active staff member already uses the same email, userName, or nicNumber
+        const orConditions = [
+            { email: data.email.trim() },
+            { userName: data.userName.trim() }
+        ];
+        if (data.nicNumber && data.nicNumber.trim() !== "") {
+            orConditions.push({ nicNumber: data.nicNumber.trim() });
+        }
+
+        const existingStaff = await StaffMember.findOne({
+            where: {
+                [Op.or]: orConditions,
+                userId: { [Op.ne]: userId }
+            }
+        });
+
+        if (existingStaff) {
+            let conflictField = "email, username, or NIC";
+            if (existingStaff.email.toLowerCase() === data.email.trim().toLowerCase()) conflictField = "Email";
+            else if (existingStaff.userName.toLowerCase() === data.userName.trim().toLowerCase()) conflictField = "Username";
+            else if (data.nicNumber && existingStaff.nicNumber && existingStaff.nicNumber.toLowerCase() === data.nicNumber.trim().toLowerCase()) conflictField = "NIC Number";
+
+            return res.status(400).json({
+                message: `Another active staff member is already using this ${conflictField}.`
+            });
+        }
+
         let imageUrl = data.imageUrl;
 
         if (req.file) {
@@ -261,30 +354,12 @@ export async function deleteUser(req, res) {
         const deletedCount = await sequelize.transaction(async (transaction) => {
             const staffMember = await StaffMember.findOne({
                 where: { userId: userId },
-                include: [
-                    {
-                        model: Role,
-                        attributes: ['roleId', 'roleName']
-                    }
-                ],
                 transaction
             });
 
             if (!staffMember) {
                 return null;
             }
-
-            await DeletedStaffMember.create({
-                name: staffMember.name,
-                userName: staffMember.userName,
-                email: staffMember.email,
-                roleId: staffMember.Role.roleId,
-                roleName: staffMember.Role.roleName,
-                phoneNumber: staffMember.phoneNumber,
-                nicNumber: staffMember.nicNumber,
-                address: staffMember.address,
-                imageUrl: staffMember.imageUrl
-            }, { transaction });
 
             await UserRegisterModel.destroy({
                 where: { email: staffMember.email },
@@ -389,6 +464,39 @@ export async function verifyEmail(req, res) {
             return res.json({
                 showLogin: true,
                 showRegister: false
+            });
+        }
+
+        if (["receptionist", "admin", "manager"].includes(targetRole)) {
+            const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+            const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiration
+
+            await Otp.destroy({ where: { email: email.trim() } });
+            await Otp.create({
+                email: email.trim(),
+                otp: otpCode,
+                expiresAt
+            });
+
+            const roleCapitalized = targetRole.charAt(0).toUpperCase() + targetRole.slice(1);
+            try {
+                await sendEmail({
+                    to: email.trim(),
+                    subject: `BlueBird Hotels - ${roleCapitalized} Portal Verification Code`,
+                    text: `Your verification code is: ${otpCode}. Please use this code to register your password and log in.`
+                });
+            } catch (err) {
+                console.error("Failed to send verification code email:", err);
+                return res.status(500).json({
+                    message: "Failed to send verification code email. Please check server logs or email configuration.",
+                    error: err.message
+                });
+            }
+
+            return res.json({
+                showLogin: false,
+                showRegister: true,
+                message: "A verification code has been sent to your email. Please enter it to complete registration."
             });
         }
 
@@ -534,19 +642,34 @@ export async function searchDeletedUsers(req, res) {
 
     try {
 
-        const users = await DeletedStaffMember.findAll({
+        const users = await StaffMember.findAll({
             where: {
+                deletedAt: { [Op.ne]: null },
                 [Op.or]: [
                     { name: { [Op.like]: `%${query}%` } },
                     { userName: { [Op.like]: `%${query}%` } },
                     { email: { [Op.like]: `%${query}%` } },
-                    { phoneNumber: { [Op.like]: `%${query}%` } },
-                    { roleName: { [Op.like]: `%${query}%` } }
+                    { phoneNumber: { [Op.like]: `%${query}%` } }
                 ]
-            }
+            },
+            include: [
+                {
+                    model: Role,
+                    attributes: ['roleId', 'roleName']
+                }
+            ],
+            paranoid: false
         });
 
-        res.json(users);
+        const formattedUsers = users.map(user => {
+            const u = user.toJSON();
+            return {
+                ...u,
+                roleName: user.Role ? user.Role.roleName : "Staff"
+            };
+        });
+
+        res.json(formattedUsers);
 
     } catch (error) {
 
@@ -559,12 +682,99 @@ export async function searchDeletedUsers(req, res) {
 
 export async function getAllDeletedUsers(req, res) {
     try {
-        const users = await DeletedStaffMember.findAll();
-        res.json(users);
+        const users = await StaffMember.findAll({
+            where: {
+                deletedAt: { [Op.ne]: null }
+            },
+            include: [
+                {
+                    model: Role,
+                    attributes: ['roleId', 'roleName']
+                }
+            ],
+            paranoid: false
+        });
+
+        const formattedUsers = users.map(user => {
+            const u = user.toJSON();
+            return {
+                ...u,
+                roleName: user.Role ? user.Role.roleName : "Staff"
+            };
+        });
+
+        res.json(formattedUsers);
     } catch (error) {
         res.status(500).json({
             message: "Failed to fetch deleted users",
             error: error.message
         });
+    }
+}
+
+export async function getStaffQRCode(req, res) {
+    try {
+        const { staffId } = req.params;
+
+        const staff = await StaffMember.findOne({ where: { staffId } });
+        if (!staff) {
+            return res.status(404).json({ success: false, message: "Staff member not found" });
+        }
+
+        const payload = {
+            staffId,
+            type: "attendance",
+            version: 1
+        };
+
+        const signature = crypto
+            .createHmac("sha256", process.env.QR_SECRET || "default_qr_secret_key_123456")
+            .update(JSON.stringify(payload))
+            .digest("hex");
+
+        const qrData = JSON.stringify({
+            ...payload,
+            signature
+        });
+
+        // Generate QR code as a PNG Buffer in-memory
+        const qrBuffer = await QRCode.toBuffer(qrData, {
+            width: 400,
+            margin: 2
+        });
+
+        // Set response headers and return PNG buffer directly
+        res.setHeader("Content-Type", "image/png");
+        res.setHeader("Cache-Control", "public, max-age=86400"); // Cache for 24h
+        return res.send(qrBuffer);
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+}
+
+export async function changePassword(req, res) {
+    try {
+        const { email, currentPassword, newPassword } = req.body;
+
+        if (!email || !currentPassword || !newPassword) {
+            return res.status(400).json({ message: "Please fill in all fields" });
+        }
+
+        const user = await UserRegisterModel.findOne({ where: { email } });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const passwordMatch = bcrypt.compareSync(currentPassword, user.password);
+        if (!passwordMatch) {
+            return res.status(401).json({ message: "Incorrect current password" });
+        }
+
+        const hashedPassword = bcrypt.hashSync(newPassword, 10);
+        await user.update({ password: hashedPassword });
+
+        res.json({ message: "Password updated successfully" });
+    } catch (error) {
+        res.status(500).json({ message: "Failed to update password", error: error.message });
     }
 }

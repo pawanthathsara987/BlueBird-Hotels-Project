@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { Plus, Edit, Trash2, DollarSign, X, Layers, Users, Sparkles, SlidersHorizontal } from "lucide-react";
+import Loader from "../../../components/Loader";
 
 export default function RoomPriceView() {
     const [prices, setPrices] = useState([]);
@@ -289,9 +290,7 @@ export default function RoomPriceView() {
             {/* List Pricing Table */}
             {isLoading ? (
                 <div className="py-16 text-center">
-                    <div className="flex justify-center items-center">
-                        <span className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></span>
-                    </div>
+                    <Loader />
                 </div>
             ) : filteredPrices.length === 0 ? (
                 <div className="text-center py-16 border border-dashed border-slate-200 rounded-2xl bg-slate-50/30">
