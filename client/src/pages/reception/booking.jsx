@@ -1,7 +1,9 @@
 import React, { useState, useMemo, useEffect } from "react";
 import axios from "axios";
 import { useLocation } from "react-router-dom";
-import { MdCalendarToday, MdSearch, MdChevronLeft, MdChevronRight, MdList, MdAdd } from "react-icons/md";
+import { MdCalendarToday, MdSearch, MdChevronLeft, MdChevronRight, MdList, MdAdd, MdClose } from "react-icons/md";
+import { Eye, FileText, Receipt, XCircle } from "lucide-react";
+import { toast } from "react-hot-toast";
 import NewBookingFlow from "./NewBookingFlow";
 
 export default function Booking() {
@@ -9,6 +11,7 @@ export default function Booking() {
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
     const [searchTerm, setSearchTerm] = useState("");
     const [allBookings, setAllBookings] = useState([]);
+    const [selectedBooking, setSelectedBooking] = useState(null);
 
     const location = useLocation();
 
@@ -73,6 +76,8 @@ export default function Booking() {
                                 status: statusStr || "Pending",
                                 price: res.total_price ? `Rs. ${res.total_price}` : 'N/A',
                                 phone: res.Customer ? res.Customer.phoneNumber : 'N/A',
+                                raw: res,
+                                rawBookedRoom: br
                             });
                         });
                     }
@@ -91,6 +96,192 @@ export default function Booking() {
             fetchBookings();
         }
     }, [activeTab]);
+
+    // Cancel room booking reservation
+    const handleCancelBooking = async (bookingId) => {
+        if (!window.confirm("Are you sure you want to cancel this room booking?\nThis will mark the room booking status as Cancelled.")) {
+            return;
+        }
+        try {
+            const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/roombook/booking/${bookingId}`, { status: "cancelled" });
+            if (res.data.success || res.data.message === "Updated") {
+                toast.success("Room booking reservation cancelled successfully!");
+                fetchBookings();
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error(error.response?.data?.message || "Failed to cancel room booking.");
+        }
+    };
+
+    // Print Invoice layout for Room stays
+    const handlePrintInvoice = (booking) => {
+        const printWindow = window.open("", "_blank");
+        if (!printWindow) {
+            toast.error("Popup blocked! Please allow popups to print invoices.");
+            return;
+        }
+        
+        const customer = booking.raw?.Customer || {};
+        const guestName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || booking.guestName;
+        const checkIn = booking.checkInDate || booking.rawBookedRoom?.checkIn;
+        const checkOut = booking.checkOutDate || booking.rawBookedRoom?.checkOut;
+        const roomNo = booking.roomNumber || booking.rawBookedRoom?.Room?.roomNumber || 'N/A';
+        const roomType = booking.roomType || 'Standard';
+        const priceText = booking.price || `Rs. ${booking.raw?.total_price || 0}`;
+        const bookingNo = booking.raw?.bookingNo || `RES-${booking.raw?.id || 'N/A'}`;
+        
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Stays Invoice - ${bookingNo}</title>
+                <style>
+                    body { font-family: 'Segoe UI', Roboto, sans-serif; color: #333; margin: 40px; line-height: 1.5; }
+                    .header { display: flex; justify-content: space-between; border-bottom: 2px solid #3b82f6; padding-bottom: 20px; }
+                    .logo { font-size: 24px; font-weight: 900; color: #1e3a8a; letter-spacing: 1px; }
+                    .title { font-size: 28px; font-weight: 850; text-align: right; color: #1e293b; }
+                    .details { display: flex; justify-content: space-between; margin-top: 30px; }
+                    .section-title { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+                    .info-block { flex: 1; }
+                    .invoice-table { width: 100%; border-collapse: collapse; margin-top: 40px; }
+                    .invoice-table th { background: #f8fafc; border-bottom: 2px solid #e2e8f0; padding: 12px; text-align: left; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; }
+                    .invoice-table td { padding: 16px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; }
+                    .totals { width: 40%; margin-left: auto; margin-top: 30px; font-size: 13px; }
+                    .total-row { display: flex; justify-content: space-between; padding: 8px 0; }
+                    .grand-total { font-weight: 900; font-size: 16px; color: #1e3a8a; border-top: 2px solid #e2e8f0; padding-top: 12px; margin-top: 8px; }
+                    .footer { text-align: center; margin-top: 60px; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <div>
+                        <div class="logo">BLUEBIRD HOTELS</div>
+                        <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Negombo Shoreline Resort, Sri Lanka</div>
+                    </div>
+                    <div>
+                        <div class="title">HOTEL STAY INVOICE</div>
+                        <div style="font-size: 12px; font-weight: bold; color: #64748b; text-align: right; margin-top: 4px;"># ${bookingNo}</div>
+                    </div>
+                </div>
+                
+                <div class="details">
+                    <div class="info-block">
+                        <div class="section-title">Billed To</div>
+                        <div style="font-weight: bold; font-size: 15px; color: #1e293b;">${guestName}</div>
+                        <div style="font-size: 12px; color: #475569; margin-top: 2px;">Email: ${customer.email || 'N/A'}</div>
+                        <div style="font-size: 12px; color: #475569;">Phone: ${customer.phoneNumber || booking.phone || 'N/A'}</div>
+                    </div>
+                    <div class="info-block" style="text-align: right;">
+                        <div class="section-title">Stay Information</div>
+                        <div style="font-size: 12px; color: #475569;">Check-In: ${checkIn}</div>
+                        <div style="font-size: 12px; color: #475569;">Check-Out: ${checkOut}</div>
+                        <div style="font-size: 12px; color: #475569;">Room Assigned: Room ${roomNo} (${roomType})</div>
+                    </div>
+                </div>
+                
+                <table class="invoice-table">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Stay Period</th>
+                            <th style="text-align: right;">Total Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <strong>Luxury Room Accommodation</strong><br/>
+                                <span style="font-size: 11px; color: #64748b;">Type: ${roomType} | Room No: ${roomNo}</span>
+                            </td>
+                            <td>${checkIn} to ${checkOut}</td>
+                            <td style="text-align: right; font-weight: bold;">${priceText}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="totals">
+                    <div class="total-row grand-total">
+                        <span>Stay Total:</span>
+                        <span>${priceText}</span>
+                    </div>
+                </div>
+                
+                <div class="footer">
+                    <p>Thank you for staying at BlueBird Hotels. We look forward to welcoming you again!</p>
+                    <p style="font-size: 9px; margin-top: 10px;">This is a system generated invoice copy and requires no physical signature.</p>
+                </div>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    };
+
+    // Print Receipt layout for Room stays
+    const handlePrintReceipt = (booking) => {
+        const printWindow = window.open("", "_blank");
+        if (!printWindow) {
+            toast.error("Popup blocked! Please allow popups to print receipts.");
+            return;
+        }
+        
+        const customer = booking.raw?.Customer || {};
+        const guestName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || booking.guestName;
+        const roomNo = booking.roomNumber || 'N/A';
+        const priceText = booking.price || `Rs. ${booking.raw?.total_price || 0}`;
+        const bookingNo = booking.raw?.bookingNo || `RES-${booking.raw?.id || 'N/A'}`;
+        
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Stays Receipt - ${bookingNo}</title>
+                <style>
+                    body { font-family: 'Segoe UI', Roboto, sans-serif; color: #333; margin: 40px; line-height: 1.5; }
+                    .receipt-container { max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); }
+                    .header { text-align: center; border-bottom: 2px dashed #3b82f6; padding-bottom: 20px; margin-bottom: 20px; }
+                    .logo { font-size: 20px; font-weight: 900; color: #1e3a8a; letter-spacing: 1px; }
+                    .title { font-size: 22px; font-weight: 850; color: #1e293b; margin-top: 10px; }
+                    .receipt-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+                    .receipt-row.total { font-size: 18px; font-weight: 900; color: #1e3a8a; border-top: 2px solid #e2e8f0; border-bottom: none; padding-top: 15px; margin-top: 10px; }
+                    .footer { text-align: center; margin-top: 30px; font-size: 11px; color: #94a3b8; }
+                </style>
+            </head>
+            <body>
+                <div class="receipt-container">
+                    <div class="header">
+                        <div class="logo">BLUEBIRD HOTELS</div>
+                        <div class="title">ROOM STAY PAYMENT RECEIPT</div>
+                        <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Ref #: ${bookingNo}</div>
+                    </div>
+                    
+                    <div class="receipt-row">
+                        <span>Customer Name:</span>
+                        <span style="font-weight: bold;">${guestName}</span>
+                    </div>
+                    <div class="receipt-row">
+                        <span>Room Number:</span>
+                        <span style="font-weight: bold;">Room ${roomNo}</span>
+                    </div>
+                    <div class="receipt-row">
+                        <span>Payment Date & Time:</span>
+                        <span style="font-weight: bold;">${new Date().toLocaleString()}</span>
+                    </div>
+                    <div class="receipt-row total">
+                        <span>Total Paid Amount:</span>
+                        <span>${priceText}</span>
+                    </div>
+                    
+                    <div class="footer">
+                        <p>Thank you for your payment!</p>
+                        <p>BlueBird Hotels - Negombo Shoreline Resort</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    };
 
     // Filter bookings by date
     const filteredBookings = useMemo(() => {
@@ -196,6 +387,26 @@ export default function Booking() {
                 <NewBookingFlow onBookingSuccess={() => setActiveTab("list")} />
             ) : (
                 <>
+                    {/* Statistics Row */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        <div className={`rounded-2xl border p-4 md:p-5 shadow-sm ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}>
+                            <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Total Bookings</p>
+                            <h3 className={`text-2xl font-black mt-1 ${theme.mode === "dark" ? "text-white" : "text-slate-800"}`}>{isLoading ? "..." : allBookings.length}</h3>
+                        </div>
+                        <div className={`rounded-2xl border p-4 md:p-5 shadow-sm ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}>
+                            <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Checked In</p>
+                            <h3 className="text-2xl font-black text-emerald-500 mt-1">{isLoading ? "..." : filteredBookings.filter(b => b.status === "Checked In").length}</h3>
+                        </div>
+                        <div className={`rounded-2xl border p-4 md:p-5 shadow-sm ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}>
+                            <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Pending</p>
+                            <h3 className="text-2xl font-black text-amber-500 mt-1">{isLoading ? "..." : filteredBookings.filter(b => b.status === "Pending").length}</h3>
+                        </div>
+                        <div className={`rounded-2xl border p-4 md:p-5 shadow-sm ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}>
+                            <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Confirmed</p>
+                            <h3 className="text-2xl font-black text-blue-500 mt-1">{isLoading ? "..." : filteredBookings.filter(b => b.status === "Confirmed").length}</h3>
+                        </div>
+                    </div>
+
                     {/* Filter Section */}
                     <div className={`rounded-2xl border p-4 md:p-6 mb-6 shadow-sm ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
                         }`}>
@@ -289,6 +500,9 @@ export default function Booking() {
                                                 <th className={`px-4 lg:px-6 py-4 text-left text-xs font-black uppercase tracking-wider ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
                                                     Phone
                                                 </th>
+                                                <th className={`px-4 lg:px-6 py-4 text-left text-xs font-black uppercase tracking-wider ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
+                                                    Actions
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
@@ -326,6 +540,40 @@ export default function Booking() {
                                                     </td>
                                                     <td className={`px-4 lg:px-6 py-4 text-xs md:text-sm ${theme.mode === "dark" ? "text-slate-400" : "text-slate-600"}`}>
                                                         {booking.phone}
+                                                    </td>
+                                                    <td className="px-4 lg:px-6 py-4">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <button
+                                                                onClick={() => setSelectedBooking(booking)}
+                                                                title="View stays details"
+                                                                className="p-1.5 bg-slate-50 border border-slate-200 dark:bg-slate-900/60 dark:border-slate-800 rounded-lg text-slate-650 hover:text-slate-850 dark:text-slate-300 dark:hover:text-white transition cursor-pointer shadow-2xs"
+                                                            >
+                                                                <Eye size={13} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handlePrintInvoice(booking)}
+                                                                title="Print stay invoice"
+                                                                className="p-1.5 bg-blue-50 border border-blue-100 dark:bg-blue-950/20 dark:border-blue-900/30 rounded-lg text-blue-650 dark:text-blue-400 hover:text-blue-800 transition cursor-pointer shadow-2xs"
+                                                            >
+                                                                <FileText size={13} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handlePrintReceipt(booking)}
+                                                                title="Print stay receipt"
+                                                                className="p-1.5 bg-cyan-50 border border-cyan-100 dark:bg-cyan-950/20 dark:border-cyan-900/30 rounded-lg text-cyan-700 dark:text-cyan-450 hover:text-cyan-900 transition cursor-pointer shadow-2xs"
+                                                            >
+                                                                <Receipt size={13} />
+                                                            </button>
+                                                            {booking.status !== "Cancelled" && booking.status !== "Checked Out" ? (
+                                                                <button
+                                                                    onClick={() => handleCancelBooking(booking.raw?.id)}
+                                                                    title="Cancel reservation"
+                                                                    className="p-1.5 bg-rose-50 border border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/30 rounded-lg text-rose-650 dark:text-rose-450 hover:text-rose-800 transition cursor-pointer shadow-2xs"
+                                                                >
+                                                                    <XCircle size={13} />
+                                                                </button>
+                                                            ) : null}
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -381,37 +629,138 @@ export default function Booking() {
                         )}
                     </div>
 
-                    {/* Summary statistics */}
-                    {filteredBookings.length > 0 && (
-                        <div className={`mt-6 rounded-2xl border p-4 md:p-6 shadow-sm ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
-                            }`}>
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-                                <div className="border-l-4 border-blue-500 pl-3 md:pl-4">
-                                    <p className="text-slate-500 text-xs md:text-sm font-bold uppercase tracking-wider">Total Bookings</p>
-                                    <p className={`text-2xl md:text-3xl font-black mt-1 ${theme.mode === "dark" ? "text-white" : "text-slate-800"}`}>{filteredBookings.length}</p>
+                </>
+            )}
+
+            {/* ROOM BOOKING DETAILS VIEW MODAL */}
+            {selectedBooking && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <div className={`w-full max-w-2xl rounded-2xl shadow-2xl border overflow-hidden max-h-[90vh] flex flex-col ${
+                        theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
+                    }`}>
+                        {/* Modal Header */}
+                        <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+                            <div>
+                                <h3 className="text-base font-black tracking-tight flex items-center gap-1.5">
+                                    🏨 Room Reservation Details
+                                </h3>
+                                <p className="text-[10px] font-bold text-blue-500 mt-0.5">Booking Ref: {selectedBooking.raw?.bookingNo || `RES-${selectedBooking.raw?.id || 'N/A'}`}</p>
+                            </div>
+                            <button
+                                onClick={() => setSelectedBooking(null)}
+                                className="p-1 text-slate-400 hover:text-slate-650 dark:hover:text-white rounded-lg transition cursor-pointer"
+                            >
+                                <MdClose size={20} />
+                            </button>
+                        </div>
+
+                        {/* Modal Content - Scrollable */}
+                        <div className="p-6 overflow-y-auto space-y-6 text-xs text-left">
+                            {/* Stay Summary Card */}
+                            <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-950/40 border border-slate-200/50 dark:border-slate-800/80">
+                                <div>
+                                    <span className="text-[10px] text-slate-450 uppercase block">Room Details</span>
+                                    <span className="font-extrabold text-slate-850 dark:text-slate-100 mt-1 block">
+                                        Room {selectedBooking.roomNumber} ({selectedBooking.roomType})
+                                    </span>
+                                    <span className="text-[10px] text-slate-450 block mt-0.5">Check-in: {selectedBooking.checkInDate} | Check-out: {selectedBooking.checkOutDate}</span>
                                 </div>
-                                <div className="border-l-4 border-emerald-500 pl-3 md:pl-4">
-                                    <p className="text-slate-500 text-xs md:text-sm font-bold uppercase tracking-wider">Checked In</p>
-                                    <p className="text-2xl md:text-3xl font-black text-emerald-500 mt-1">
-                                        {filteredBookings.filter((b) => b.status === "Checked In").length}
-                                    </p>
+                                <div>
+                                    <span className="text-[10px] text-slate-450 uppercase block">Booking Status</span>
+                                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider mt-1 ${getStatusColor(selectedBooking.status)}`}>
+                                        {selectedBooking.status}
+                                    </span>
                                 </div>
-                                <div className="border-l-4 border-amber-500 pl-3 md:pl-4">
-                                    <p className="text-slate-500 text-xs md:text-sm font-bold uppercase tracking-wider">Pending</p>
-                                    <p className="text-2xl md:text-3xl font-black text-amber-500 mt-1">
-                                        {filteredBookings.filter((b) => b.status === "Pending").length}
-                                    </p>
+                            </div>
+
+                            {/* Guest Details */}
+                            <div>
+                                <h4 className="font-black text-slate-900 dark:text-white border-b dark:border-slate-800 pb-2 mb-3 uppercase tracking-wider text-[10px]">
+                                    👤 Guest Information
+                                </h4>
+                                <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+                                    <div>
+                                        <span className="text-[10px] text-slate-450 block font-bold">Full Name</span>
+                                        <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">
+                                            {selectedBooking.raw?.Customer ? `${selectedBooking.raw.Customer.firstName} ${selectedBooking.raw.Customer.lastName}` : selectedBooking.guestName}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-slate-450 block font-bold">Email Address</span>
+                                        <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{selectedBooking.raw?.Customer?.email || 'N/A'}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-slate-455 block font-bold">Phone Number</span>
+                                        <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{selectedBooking.raw?.Customer?.phoneNumber || selectedBooking.phone || 'N/A'}</span>
+                                    </div>
                                 </div>
-                                <div className="border-l-4 border-blue-600 pl-3 md:pl-4">
-                                    <p className="text-slate-500 text-xs md:text-sm font-bold uppercase tracking-wider">Confirmed</p>
-                                    <p className="text-2xl md:text-3xl font-black text-blue-500 mt-1">
-                                        {filteredBookings.filter((b) => b.status === "Confirmed").length}
-                                    </p>
+                            </div>
+
+                            {/* Booking Stays Dates */}
+                            <div>
+                                <h4 className="font-black text-slate-900 dark:text-white border-b dark:border-slate-800 pb-2 mb-3 uppercase tracking-wider text-[10px]">
+                                    📅 Accommodation Schedule
+                                </h4>
+                                <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 block">Check-In Date</span>
+                                        <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{selectedBooking.checkInDate}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 block">Check-Out Date</span>
+                                        <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{selectedBooking.checkOutDate}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Pricing & Bill Breakdown */}
+                            <div>
+                                <h4 className="font-black text-slate-900 dark:text-white border-b dark:border-slate-800 pb-2 mb-3 uppercase tracking-wider text-[10px]">
+                                    💵 Billing Summary
+                                </h4>
+                                <div className="space-y-2 max-w-md">
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-450">Room Accommodation Charge:</span>
+                                        <span className="font-bold">{selectedBooking.price}</span>
+                                    </div>
+                                    {selectedBooking.raw?.airportPickup === 1 && (
+                                        <div className="flex justify-between text-teal-650 dark:text-teal-400">
+                                            <span>Airport Pickup Surcharge:</span>
+                                            <span className="font-bold">+ LKR {parseFloat(selectedBooking.raw?.airportPickupSurcharge || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                    )}
+                                    <div className="border-t border-slate-200 dark:border-slate-800 my-1"></div>
+                                    <div className="flex justify-between text-sm font-black text-slate-900 dark:text-white">
+                                        <span>Total Stay Value:</span>
+                                        <span className={currentAccent.text}>{selectedBooking.price}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    )}
-                </>
+
+                        {/* Modal Footer */}
+                        <div className="flex justify-end p-4 bg-slate-50 dark:bg-slate-950/40 border-t border-slate-100 dark:border-slate-800 gap-2">
+                            <button
+                                onClick={() => handlePrintInvoice(selectedBooking)}
+                                className="flex items-center gap-1 px-4 py-2 text-xs font-bold border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer text-slate-755 dark:text-slate-250 bg-white dark:bg-slate-900"
+                            >
+                                <FileText size={14} /> Print Invoice
+                            </button>
+                            <button
+                                onClick={() => handlePrintReceipt(selectedBooking)}
+                                className="flex items-center gap-1 px-4 py-2 text-xs font-bold border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer text-slate-755 dark:text-slate-250 bg-white dark:bg-slate-900"
+                            >
+                                <Receipt size={14} /> Print Receipt
+                            </button>
+                            <button
+                                onClick={() => setSelectedBooking(null)}
+                                className={`px-5 py-2 text-xs font-bold text-white rounded-xl cursor-pointer transition shadow-xs ${currentAccent.bg}`}
+                            >
+                                Close View
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
