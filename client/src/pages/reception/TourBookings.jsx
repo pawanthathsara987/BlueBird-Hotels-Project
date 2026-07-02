@@ -19,10 +19,12 @@ import {
 } from "react-icons/md";
 import { toast } from "react-hot-toast";
 import { useLocation } from "react-router-dom";
+import { Eye, FileText, Receipt, XCircle, Edit } from "lucide-react";
 
 export default function TourBookings() {
     const [inquiries, setInquiries] = useState([]);
     const [tours, setTours] = useState([]);
+    const [selectedInquiry, setSelectedInquiry] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
@@ -315,6 +317,209 @@ export default function TourBookings() {
         }
     };
 
+    // Helper to format date nicely
+    const formatDate = (dateStr) => {
+        try {
+            return new Date(dateStr).toLocaleDateString();
+        } catch {
+            return dateStr;
+        }
+    };
+
+    // Print Invoice layout for Tours
+    const handlePrintInvoice = (inquiry) => {
+        const printWindow = window.open("", "_blank");
+        if (!printWindow) {
+            toast.error("Popup blocked! Please allow popups to print invoices.");
+            return;
+        }
+        
+        const tourName = tours.find(t => t.id === inquiry.tourId)?.packageName || "Custom Excursion";
+        const guestName = inquiry.fullName || "Guest";
+        const guestEmail = inquiry.email || "N/A";
+        const guestPhone = inquiry.phone || "N/A";
+        const nationality = inquiry.nationality || "N/A";
+        
+        const { tourPrice, extraPrice, totalPrice } = getRowPriceParts(inquiry);
+        
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Tour Invoice - ${inquiry.inquiryRef}</title>
+                <style>
+                    body { font-family: 'Segoe UI', Roboto, sans-serif; color: #333; margin: 40px; line-height: 1.5; }
+                    .header { display: flex; justify-content: space-between; border-bottom: 2px solid #047857; padding-bottom: 20px; }
+                    .logo { font-size: 24px; font-weight: 900; color: #047857; letter-spacing: 1px; }
+                    .title { font-size: 28px; font-weight: 850; text-align: right; color: #1e293b; }
+                    .details { display: flex; justify-content: space-between; margin-top: 30px; }
+                    .section-title { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+                    .info-block { flex: 1; }
+                    .invoice-table { width: 100%; border-collapse: collapse; margin-top: 40px; }
+                    .invoice-table th { background: #f8fafc; border-bottom: 2px solid #e2e8f0; padding: 12px; text-align: left; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; }
+                    .invoice-table td { padding: 16px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; }
+                    .totals { width: 40%; margin-left: auto; margin-top: 30px; font-size: 13px; }
+                    .total-row { display: flex; justify-content: space-between; padding: 8px 0; }
+                    .grand-total { font-weight: 900; font-size: 16px; color: #047857; border-top: 2px solid #e2e8f0; padding-top: 12px; margin-top: 8px; }
+                    .footer { text-align: center; margin-top: 60px; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <div>
+                        <div class="logo">BLUEBIRD HOTELS</div>
+                        <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Negombo Shoreline Resort, Sri Lanka</div>
+                    </div>
+                    <div>
+                        <div class="title">EXCURSION INVOICE</div>
+                        <div style="font-size: 12px; font-weight: bold; color: #64748b; text-align: right; margin-top: 4px;"># ${inquiry.inquiryRef}</div>
+                    </div>
+                </div>
+                
+                <div class="details">
+                    <div class="info-block">
+                        <div class="section-title">Billed To</div>
+                        <div style="font-weight: bold; font-size: 15px; color: #1e293b;">${guestName}</div>
+                        <div style="font-size: 12px; color: #475569; margin-top: 2px;">Email: ${guestEmail}</div>
+                        <div style="font-size: 12px; color: #475569;">Phone: ${guestPhone}</div>
+                        <div style="font-size: 12px; color: #475569;">Nationality: ${nationality}</div>
+                    </div>
+                    <div class="info-block" style="text-align: right;">
+                        <div class="section-title">Tour Information</div>
+                        <div style="font-size: 12px; color: #475569;">Schedule Date: ${inquiry.startDate}</div>
+                        <div style="font-size: 12px; color: #475569;">Guest Count: ${inquiry.numberOfAdults} Adult(s), ${inquiry.numberOfChildren} Child(ren)</div>
+                        <div style="font-size: 12px; color: #475569;">Pickup Location: ${inquiry.pickupLocation}</div>
+                    </div>
+                </div>
+                
+                <table class="invoice-table">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Base Rate</th>
+                            <th>Quantity (Pax)</th>
+                            <th style="text-align: right;">Line Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <strong>Tour Package Excursion</strong><br/>
+                                <span style="font-size: 11px; color: #64748b;">${tourName}</span>
+                            </td>
+                            <td>LKR ${tourPrice.toLocaleString()}</td>
+                            <td>${inquiry.numberOfAdults} Ad, ${inquiry.numberOfChildren} Ch</td>
+                            <td style="text-align: right; font-weight: bold;">LKR ${tourPrice.toLocaleString()}</td>
+                        </tr>
+                        ${extraPrice > 0 ? `
+                        <tr>
+                            <td>
+                                <strong>Custom Special Requests & Fees</strong><br/>
+                                <span style="font-size: 11px; color: #64748b;">${inquiry.specialRequests || 'Additional Custom requests'}</span>
+                            </td>
+                            <td>LKR ${extraPrice.toLocaleString()}</td>
+                            <td>1 Unit</td>
+                            <td style="text-align: right; font-weight: bold;">LKR ${extraPrice.toLocaleString()}</td>
+                        </tr>
+                        ` : ''}
+                    </tbody>
+                </table>
+                
+                <div class="totals">
+                    <div class="total-row">
+                        <span style="color: #64748b;">Excursion Subtotal:</span>
+                        <span style="font-weight: bold;">LKR ${tourPrice.toLocaleString()}</span>
+                    </div>
+                    ${extraPrice > 0 ? `
+                    <div class="total-row">
+                        <span style="color: #64748b;">Additional Services:</span>
+                        <span style="font-weight: bold;">LKR ${extraPrice.toLocaleString()}</span>
+                    </div>
+                    ` : ''}
+                    <div class="total-row grand-total">
+                        <span>Invoice Total:</span>
+                        <span>LKR ${totalPrice.toLocaleString()}</span>
+                    </div>
+                </div>
+                
+                <div class="footer">
+                    <p>Thank you for choosing BlueBird Hotels. Have a wonderful tour excursion!</p>
+                    <p style="font-size: 9px; margin-top: 10px;">This is a system generated invoice copy and requires no physical signature.</p>
+                </div>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    };
+
+    // Print Receipt layout for Tours
+    const handlePrintReceipt = (inquiry) => {
+        const printWindow = window.open("", "_blank");
+        if (!printWindow) {
+            toast.error("Popup blocked! Please allow popups to print receipts.");
+            return;
+        }
+        
+        const tourName = tours.find(t => t.id === inquiry.tourId)?.packageName || "Custom Excursion";
+        const guestName = inquiry.fullName || "Guest";
+        const { totalPrice } = getRowPriceParts(inquiry);
+        
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Excursion Receipt - ${inquiry.inquiryRef}</title>
+                <style>
+                    body { font-family: 'Segoe UI', Roboto, sans-serif; color: #333; margin: 40px; line-height: 1.5; }
+                    .receipt-container { max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); }
+                    .header { text-align: center; border-bottom: 2px dashed #047857; padding-bottom: 20px; margin-bottom: 20px; }
+                    .logo { font-size: 20px; font-weight: 900; color: #047857; letter-spacing: 1px; }
+                    .title { font-size: 22px; font-weight: 850; color: #1e293b; margin-top: 10px; }
+                    .receipt-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+                    .receipt-row.total { font-size: 18px; font-weight: 900; color: #047857; border-top: 2px solid #e2e8f0; border-bottom: none; padding-top: 15px; margin-top: 10px; }
+                    .footer { text-align: center; margin-top: 30px; font-size: 11px; color: #94a3b8; }
+                </style>
+            </head>
+            <body>
+                <div class="receipt-container">
+                    <div class="header">
+                        <div class="logo">BLUEBIRD HOTELS</div>
+                        <div class="title">EXCURSION RECEIPT</div>
+                        <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Ref #: ${inquiry.inquiryRef}</div>
+                    </div>
+                    
+                    <div class="receipt-row">
+                        <span>Customer Name:</span>
+                        <span style="font-weight: bold;">${guestName}</span>
+                    </div>
+                    <div class="receipt-row">
+                        <span>Excursion Details:</span>
+                        <span style="font-weight: bold;">${tourName}</span>
+                    </div>
+                    <div class="receipt-row">
+                        <span>Guest Count:</span>
+                        <span style="font-weight: bold;">${inquiry.numberOfAdults} Ad, ${inquiry.numberOfChildren} Ch</span>
+                    </div>
+                    <div class="receipt-row">
+                        <span>Transaction Date:</span>
+                        <span style="font-weight: bold;">${new Date().toLocaleString()}</span>
+                    </div>
+                    <div class="receipt-row total">
+                        <span>Paid Amount:</span>
+                        <span>LKR ${totalPrice.toLocaleString()}</span>
+                    </div>
+                    
+                    <div class="footer">
+                        <p>Thank you for your payment!</p>
+                        <p>BlueBird Hotels - Negombo Shoreline Resort</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    };
+
     // Filters
     const filteredInquiries = inquiries.filter((inq) => {
         const matchesSearch = inq.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -575,7 +780,28 @@ export default function TourBookings() {
                                                  })()}
                                              </td>
                                              <td className="px-6 py-4">
-                                                 <div className="flex gap-2">
+                                                 <div className="flex items-center gap-1.5">
+                                                     <button
+                                                         onClick={() => setSelectedInquiry(inq)}
+                                                         title="View tour details"
+                                                         className="p-1.5 bg-slate-50 border border-slate-200 dark:bg-slate-900/60 dark:border-slate-800 rounded-lg text-slate-650 hover:text-slate-850 dark:text-slate-300 dark:hover:text-white transition cursor-pointer shadow-2xs"
+                                                     >
+                                                         <Eye size={13} />
+                                                     </button>
+                                                     <button
+                                                         onClick={() => handlePrintInvoice(inq)}
+                                                         title="Print tour invoice"
+                                                         className="p-1.5 bg-blue-50 border border-blue-100 dark:bg-blue-950/20 dark:border-blue-900/30 rounded-lg text-blue-650 dark:text-blue-400 hover:text-blue-800 transition cursor-pointer shadow-2xs"
+                                                     >
+                                                         <FileText size={13} />
+                                                     </button>
+                                                     <button
+                                                         onClick={() => handlePrintReceipt(inq)}
+                                                         title="Print tour receipt"
+                                                         className="p-1.5 bg-cyan-50 border border-cyan-100 dark:bg-cyan-950/20 dark:border-cyan-900/30 rounded-lg text-cyan-700 dark:text-cyan-450 hover:text-cyan-900 transition cursor-pointer shadow-2xs"
+                                                     >
+                                                         <Receipt size={13} />
+                                                     </button>
                                                      {inq.status !== "rejected" ? (
                                                          <>
                                                              <button
@@ -584,22 +810,20 @@ export default function TourBookings() {
                                                                      setEditAdults(inq.numberOfAdults);
                                                                      setEditChildren(inq.numberOfChildren);
                                                                  }}
-                                                                 className="p-1.5 border border-indigo-200 dark:border-slate-800 hover:bg-indigo-50 dark:hover:bg-slate-800 text-indigo-600 dark:text-indigo-400 rounded-lg cursor-pointer transition shadow-sm bg-white dark:bg-slate-900"
-                                                                 title="Edit Pax Count"
+                                                                 title="Edit guest count (Pax)"
+                                                                 className="p-1.5 bg-purple-50 border border-purple-100 dark:bg-purple-950/20 dark:border-purple-900/30 rounded-lg text-purple-600 dark:text-purple-400 hover:text-purple-800 transition cursor-pointer shadow-2xs"
                                                              >
-                                                                 <MdEdit size={14} />
+                                                                 <Edit size={13} />
                                                              </button>
                                                              <button
                                                                  onClick={() => handleCancelBooking(inq.id)}
-                                                                 className="p-1.5 border border-rose-200 dark:border-slate-800 hover:bg-rose-50 dark:hover:bg-slate-800 text-rose-500 rounded-lg cursor-pointer transition shadow-sm bg-white dark:bg-slate-900"
-                                                                 title="Cancel Booking"
+                                                                 title="Cancel reservation"
+                                                                 className="p-1.5 bg-rose-50 border border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/30 rounded-lg text-rose-650 dark:text-rose-450 hover:text-rose-800 transition cursor-pointer shadow-2xs"
                                                              >
-                                                                 <MdCancel size={14} />
+                                                                 <XCircle size={13} />
                                                              </button>
                                                          </>
-                                                     ) : (
-                                                         <span className="text-slate-400 italic text-[10px]">No Actions</span>
-                                                     )}
+                                                     ) : null}
                                                  </div>
                                              </td>
                                         </tr>
@@ -940,6 +1164,172 @@ export default function TourBookings() {
                             </button>
                         </div>
                     </form>
+                </div>
+            )}
+
+            {/* TOUR DETAILS VIEW MODAL */}
+            {selectedInquiry && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <div className={`w-full max-w-2xl rounded-2xl shadow-2xl border overflow-hidden max-h-[90vh] flex flex-col ${
+                        theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
+                    }`}>
+                        {/* Modal Header */}
+                        <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+                            <div>
+                                <h3 className="text-base font-black tracking-tight flex items-center gap-1.5">
+                                    🌲 Excursion Inquiry Details
+                                </h3>
+                                <p className="text-[10px] font-bold text-blue-500 mt-0.5">Reference No: {selectedInquiry.inquiryRef}</p>
+                            </div>
+                            <button
+                                onClick={() => setSelectedInquiry(null)}
+                                className="p-1 text-slate-400 hover:text-slate-650 dark:hover:text-white rounded-lg transition cursor-pointer"
+                            >
+                                <MdClose size={20} />
+                            </button>
+                        </div>
+
+                        {/* Modal Content - Scrollable */}
+                        <div className="p-6 overflow-y-auto space-y-6 text-xs text-left">
+                            {/* Summary Card */}
+                            <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-950/40 border border-slate-200/50 dark:border-slate-800/80">
+                                <div>
+                                    <span className="text-[10px] text-slate-450 uppercase block">Tour Package</span>
+                                    <span className="font-extrabold text-slate-850 dark:text-slate-100 mt-1 block">
+                                        {tours.find(t => t.id === selectedInquiry.tourId)?.packageName || "Custom Excursion"}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 block mt-0.5">Date: {selectedInquiry.startDate}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] text-slate-450 uppercase block">Status</span>
+                                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider mt-1 ${getStatusColor(selectedInquiry.status)}`}>
+                                        {selectedInquiry.status}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Guest Details */}
+                            <div>
+                                <h4 className="font-black text-slate-900 dark:text-white border-b dark:border-slate-800 pb-2 mb-3 uppercase tracking-wider text-[10px]">
+                                    👤 Guest Information
+                                </h4>
+                                <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 block">Full Name</span>
+                                        <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{selectedInquiry.fullName}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 block">Email Address</span>
+                                        <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{selectedInquiry.email}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 block">Phone Number</span>
+                                        <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{selectedInquiry.phone}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 block">Nationality</span>
+                                        <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{selectedInquiry.nationality}</span>
+                                    </div>
+                                    {selectedInquiry.nic && (
+                                        <div>
+                                            <span className="text-[10px] text-slate-400 block">NIC (Local National ID)</span>
+                                            <span className="font-bold text-teal-650 dark:text-teal-400 mt-0.5 block">{selectedInquiry.nic}</span>
+                                        </div>
+                                    )}
+                                    {selectedInquiry.passportId && (
+                                        <div>
+                                            <span className="text-[10px] text-slate-400 block">Passport Number</span>
+                                            <span className="font-bold text-indigo-600 dark:text-indigo-400 mt-0.5 block">{selectedInquiry.passportId}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Schedule & Pax */}
+                            <div>
+                                <h4 className="font-black text-slate-900 dark:text-white border-b dark:border-slate-800 pb-2 mb-3 uppercase tracking-wider text-[10px]">
+                                    🌲 Excursion Details
+                                </h4>
+                                <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 block">Scheduled Date</span>
+                                        <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{selectedInquiry.startDate}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 block">Guest Count (Pax)</span>
+                                        <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{selectedInquiry.numberOfAdults} Adult(s), {selectedInquiry.numberOfChildren} Child(ren)</span>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <span className="text-[10px] text-slate-400 block">Pickup Location</span>
+                                        <span className="font-semibold text-slate-850 dark:text-slate-200 mt-0.5 block">{selectedInquiry.pickupLocation}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Pricing Breakdown */}
+                            <div>
+                                <h4 className="font-black text-slate-900 dark:text-white border-b dark:border-slate-800 pb-2 mb-3 uppercase tracking-wider text-[10px]">
+                                    💵 Cost & Payments
+                                </h4>
+                                {(() => {
+                                    const { tourPrice, extraPrice, totalPrice } = getRowPriceParts(selectedInquiry);
+                                    return (
+                                        <div className="space-y-2 max-w-md">
+                                            <div className="flex justify-between">
+                                                <span className="text-slate-450">Base Tour Price:</span>
+                                                <span className="font-bold">LKR {tourPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            </div>
+                                            {extraPrice > 0 && (
+                                                <div className="flex justify-between text-teal-650 dark:text-teal-400">
+                                                    <span>Special Requirements Fee:</span>
+                                                    <span className="font-bold">+ LKR {extraPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                            )}
+                                            <div className="border-t border-slate-200 dark:border-slate-800 my-1"></div>
+                                            <div className="flex justify-between text-sm font-black text-slate-900 dark:text-white">
+                                                <span>Estimated Total:</span>
+                                                <span className={currentAccent.text}>LKR {totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+
+                            {/* Special Requirements */}
+                            {selectedInquiry.specialRequests && (
+                                <div>
+                                    <h4 className="font-black text-slate-900 dark:text-white border-b dark:border-slate-800 pb-2 mb-2 uppercase tracking-wider text-[10px]">
+                                        📝 Special Notes & Requests
+                                    </h4>
+                                    <p className="p-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200/50 dark:border-slate-800/80 rounded-xl leading-relaxed italic text-slate-700 dark:text-slate-350">
+                                        {selectedInquiry.specialRequests}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="flex justify-end p-4 bg-slate-50 dark:bg-slate-950/40 border-t border-slate-100 dark:border-slate-800 gap-2">
+                            <button
+                                onClick={() => handlePrintInvoice(selectedInquiry)}
+                                className="flex items-center gap-1 px-4 py-2 text-xs font-bold border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer text-slate-755 dark:text-slate-250 bg-white dark:bg-slate-900"
+                            >
+                                <FileText size={14} /> Print Invoice
+                            </button>
+                            <button
+                                onClick={() => handlePrintReceipt(selectedInquiry)}
+                                className="flex items-center gap-1 px-4 py-2 text-xs font-bold border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer text-slate-755 dark:text-slate-250 bg-white dark:bg-slate-900"
+                            >
+                                <Receipt size={14} /> Print Receipt
+                            </button>
+                            <button
+                                onClick={() => setSelectedInquiry(null)}
+                                className={`px-5 py-2 text-xs font-bold text-white rounded-xl cursor-pointer transition shadow-xs ${currentAccent.bg}`}
+                            >
+                                Close View
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

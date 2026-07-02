@@ -1,6 +1,6 @@
 import express from 'express';
 import { getAvailableRooms, todayCheckIns, todayCheckOuts, getOccupiedRooms, recentCheckins, recentCheckouts, recentBookings, getAnalyticsSummary, getDailyReport, getMonthlyReport } from '../controllers/reception/dashboardController.js';
-import { setCheckIn, setCheckOut, getPendingCheckins, getPendingCheckOuts, getAirportPickups, updateAirportPickupStatus, createAirportPickup, getPickupAlerts } from '../controllers/reception/receptionBookingController.js';
+import { setCheckIn, setCheckOut, getPendingCheckins, getPendingCheckOuts, getAirportPickups, updateAirportPickupStatus, createAirportPickup, getPickupAlerts, getCheckInDetails, recordManualPayment } from '../controllers/reception/receptionBookingController.js';
 import { requireAuth, requireRole } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -26,6 +26,10 @@ router.post('/check-in/:reservation_id', setCheckIn);
 router.get("/pending-checkouts", getPendingCheckOuts);
 router.patch("/bookings/:id/checkout", setCheckOut);
 
+// Check-In Details & Manual Payment
+router.get('/checkin-details/:bookingId', getCheckInDetails);
+router.post('/checkin-details/:bookingId/pay', recordManualPayment);
+
 import { getDrivers } from '../controllers/manager/driverController.js';
 import { getVehicles } from '../controllers/manager/vehicleController.js';
 
@@ -40,11 +44,13 @@ router.get('/drivers', getDrivers);
 router.get('/vehicles', getVehicles);
 
 // Vehicle Rentals (Reception side)
-import { getReceptionVehicleBookings, createReceptionVehicleBooking, cancelReceptionVehicleBooking, getDriverPricing } from '../controllers/reception/receptionVehicleBookingController.js';
+import { getReceptionVehicleBookings, createReceptionVehicleBooking, cancelReceptionVehicleBooking, getDriverPricing, checkVehicleAvailability, getReceptionVehiclePolicy } from '../controllers/reception/receptionVehicleBookingController.js';
 router.get('/vehicle-bookings', getReceptionVehicleBookings);
 router.post('/vehicle-bookings', createReceptionVehicleBooking);
 router.put('/vehicle-bookings/:id/cancel', cancelReceptionVehicleBooking);
 router.get('/driver-pricing', getDriverPricing);
+router.get('/vehicle-bookings/check-availability', checkVehicleAvailability);
+router.get('/vehicle-policy', getReceptionVehiclePolicy);
 
 // Tours and Tour Inquiries
 import { getAllTours } from '../controllers/manager/tourController.js';
