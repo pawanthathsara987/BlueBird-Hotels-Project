@@ -17,8 +17,30 @@ import leaveRoutes from './routes/leaveRoutes.js';
 
 const app = express();
 
+const allowedOrigins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://booking.bluebirdhotels.lk",
+    "https://admin.bluebirdhotels.lk",
+    "https://manager.bluebirdhotels.lk",
+    "https://reception.bluebirdhotels.lk",
+    "https://auth.bluebirdhotels.lk",
+];
+
 app.use(cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        
+        const isLocalhost = origin.includes("localhost") || origin.includes("127.0.0.1");
+        const isBluebirdSubdomain = origin.endsWith(".bluebirdhotels.lk") || origin === "https://bluebirdhotels.lk" || origin === "http://bluebirdhotels.lk";
+        const isConfigured = process.env.CLIENT_URL && origin === process.env.CLIENT_URL;
+
+        if (isLocalhost || isBluebirdSubdomain || isConfigured || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error(`Origin ${origin} not allowed by CORS`));
+        }
+    },
     credentials: true
 }));
 app.use(cookieParser());
