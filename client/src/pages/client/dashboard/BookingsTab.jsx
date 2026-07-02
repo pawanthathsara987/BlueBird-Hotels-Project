@@ -1232,7 +1232,7 @@ export default function BookingsTab({
                             <div className="flex justify-between text-[10px] text-slate-400 mt-0.5">
                               <span>{new Date(room.checkIn).toLocaleDateString()} - {new Date(room.checkOut).toLocaleDateString()} ({room.nights} Night(s))</span>
                               {room.penaltyApplied ? (
-                                <span className="text-rose-605 font-bold">Late Cancel Penalty: 1-night stay rate deducted</span>
+                                <span className="text-rose-605 font-bold">Late Cancel Penalty: 50% deposit retained</span>
                               ) : (
                                 <span className="text-emerald-650 font-bold">Free cancellation (100% refundable)</span>
                               )}

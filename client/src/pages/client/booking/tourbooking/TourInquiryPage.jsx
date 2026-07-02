@@ -6,7 +6,7 @@ import { jwtDecode } from 'jwt-decode';
 import Header from '../../../../components/header';
 import Footer from '../../../../components/footer';
 
-function Stepper({ label, value, onChange, min = 0 }) {
+function Stepper({ label, value, onChange, min = 0, max = Infinity }) {
   return (
     <div>
       <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1.5">{label}</label>
@@ -21,8 +21,13 @@ function Stepper({ label, value, onChange, min = 0 }) {
         <span className="flex-1 text-center font-bold text-gray-800 border-x border-gray-200 leading-10 text-sm">{value}</span>
         <button
           type="button"
-          onClick={() => onChange(value + 1)}
-          className="w-10 h-10 flex items-center justify-center text-lg text-blue-700 hover:bg-gray-200 transition-colors font-semibold"
+          onClick={() => onChange(Math.min(max, value + 1))}
+          disabled={value >= max}
+          className={`w-10 h-10 flex items-center justify-center text-lg transition-colors font-semibold ${
+            value >= max 
+              ? 'text-gray-300 bg-gray-100 cursor-not-allowed' 
+              : 'text-blue-700 hover:bg-gray-200'
+          }`}
         >
           +
         </button>
@@ -88,12 +93,17 @@ export default function TourInquiryPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [saveToProfile, setSaveToProfile] = useState(false);
+  const [customerProfile, setCustomerProfile] = useState(null);
 
   const [form, setForm] = useState({
     fullName: '',
     email: '',
     phone: '',
     nationality: '',
+    idType: 'NIC',
+    idNumber: '',
+    address: '',
     numberOfAdults: 1,
     numberOfChildren: 0,
     startDate: '',
@@ -118,8 +128,38 @@ export default function TourInquiryPage() {
       return;
     }
 
-    setAuthChecked(true);
-  }, [location.pathname, location.search, navigate]);
+    const fetchProfile = async () => {
+      try {
+        const res = await axios.get(`${backendBaseUrl}/customers/profile`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const pData = res.data.data;
+        if (pData) {
+          setCustomerProfile(pData);
+          setForm(prev => {
+            const fetchedNat = prev.nationality || pData.country || '';
+            const isSriLanka = fetchedNat.trim().toLowerCase() === 'sri lanka' || fetchedNat.trim().toLowerCase() === 'srilanka';
+            return {
+              ...prev,
+              fullName: prev.fullName || `${pData.firstName || ''} ${pData.lastName || ''}`.trim(),
+              email: prev.email || pData.email || '',
+              phone: prev.phone || pData.phoneNumber || '',
+              nationality: fetchedNat,
+              idType: prev.idType || pData.idType || (isSriLanka ? 'NIC' : 'PASSPORT'),
+              idNumber: prev.idNumber || pData.idNumber || '',
+              address: prev.address || pData.address || '',
+            };
+          });
+        }
+      } catch (e) {
+        console.error("Failed to fetch profile", e);
+      } finally {
+        setAuthChecked(true);
+      }
+    };
+
+    fetchProfile();
+  }, [location.pathname, location.search, navigate, backendBaseUrl]);
 
   useEffect(() => {
     if (selectedTour) {
@@ -152,7 +192,19 @@ export default function TourInquiryPage() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((p) => ({ ...p, [name]: value }));
+    
+    // Automatically update ID type based on Nationality
+    if (name === 'nationality') {
+      const isSriLanka = value.trim().toLowerCase() === 'sri lanka' || value.trim().toLowerCase() === 'srilanka';
+      setForm((p) => ({ 
+        ...p, 
+        nationality: value,
+        idType: isSriLanka ? 'NIC' : 'PASSPORT'
+      }));
+    } else {
+      setForm((p) => ({ ...p, [name]: value }));
+    }
+
     if (errors[name]) setErrors((p) => ({ ...p, [name]: '' }));
   };
 
@@ -163,6 +215,9 @@ export default function TourInquiryPage() {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) nextErrors.email = 'Invalid email';
     if (!form.phone.trim()) nextErrors.phone = 'Phone is required';
     if (!form.nationality.trim()) nextErrors.nationality = 'Nationality is required';
+    if (!form.idType) nextErrors.idType = 'ID Type is required';
+    if (!form.idNumber.trim()) nextErrors.idNumber = 'ID Number is required';
+    if (!form.address.trim()) nextErrors.address = 'Address is required';
     if (!form.startDate) nextErrors.startDate = 'Start date is required';
     else if (form.startDate < minStartDate) nextErrors.startDate = 'Start date must be at least 4 days from today';
     if (!form.pickupLocation.trim()) nextErrors.pickupLocation = 'Pickup location is required';
@@ -177,6 +232,9 @@ export default function TourInquiryPage() {
       email: '',
       phone: '',
       nationality: '',
+      idType: 'NIC',
+      idNumber: '',
+      address: '',
       numberOfAdults: 1,
       numberOfChildren: 0,
       startDate: '',
@@ -213,6 +271,30 @@ export default function TourInquiryPage() {
     if (!validate()) return;
 
     setIsSubmitting(true);
+    
+    // Attempt to update profile if requested
+    if (saveToProfile) {
+      try {
+        const names = form.fullName.trim().split(' ');
+        const firstName = names[0];
+        const lastName = names.slice(1).join(' ');
+        await axios.put(`${backendBaseUrl}/customers/update-profile`, {
+          firstName,
+          lastName,
+          phoneNumber: form.phone,
+          country: form.nationality,
+          idType: form.idType,
+          idNumber: form.idNumber,
+          address: form.address,
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (e) {
+        console.error("Failed to update profile", e);
+        // We continue with the inquiry even if profile update fails
+      }
+    }
+
     try {
       const res = await axios.post(
         `${backendBaseUrl}/tour-inquiry`,
@@ -337,16 +419,63 @@ export default function TourInquiryPage() {
                   <input name="phone" type="tel" value={form.phone} onChange={handleChange} placeholder="+94 77 000 0000" className={inputCls(errors.phone)} />
                 </Field>
               </div>
-              <Field label="Nationality *" error={errors.nationality}>
-                <input name="nationality" value={form.nationality} onChange={handleChange} placeholder="e.g. British" className={inputCls(errors.nationality)} />
-              </Field>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Nationality *" error={errors.nationality}>
+                  <input name="nationality" value={form.nationality} onChange={handleChange} placeholder="e.g. British" className={inputCls(errors.nationality)} />
+                </Field>
+                <Field label="Address *" error={errors.address}>
+                  <input name="address" value={form.address} onChange={handleChange} placeholder="Your residential address" className={inputCls(errors.address)} />
+                </Field>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="ID Type *" error={errors.idType}>
+                  <select name="idType" value={form.idType} onChange={handleChange} className={inputCls(errors.idType)}>
+                    <option value="NIC">National Identity Card (NIC)</option>
+                    <option value="PASSPORT">Passport</option>
+                  </select>
+                </Field>
+                <Field label="ID Number *" error={errors.idNumber}>
+                  <input name="idNumber" value={form.idNumber} onChange={handleChange} placeholder="ID Document Number" className={inputCls(errors.idNumber)} />
+                </Field>
+              </div>
+              <div className="flex items-center gap-2 pt-2">
+                <input
+                  type="checkbox"
+                  id="saveToProfile"
+                  checked={saveToProfile}
+                  onChange={(e) => setSaveToProfile(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                />
+                <label htmlFor="saveToProfile" className="text-sm text-gray-600 cursor-pointer select-none">
+                  Save these contact details to my customer profile
+                </label>
+              </div>
             </div>
 
             <div className="space-y-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100 pb-2">Guests</p>
+              <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Guests</p>
+                {tour?.groupSize && (
+                  <p className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                    Max Group Size: {tour.groupSize}
+                  </p>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-4">
-                <Stepper label="Adults *" value={form.numberOfAdults} min={1} onChange={(v) => setForm((p) => ({ ...p, numberOfAdults: v }))} />
-                <Stepper label="Children" value={form.numberOfChildren} min={0} onChange={(v) => setForm((p) => ({ ...p, numberOfChildren: v }))} />
+                <Stepper 
+                  label="Adults *" 
+                  value={form.numberOfAdults} 
+                  min={1} 
+                  max={tour?.groupSize ? tour.groupSize - form.numberOfChildren : Infinity}
+                  onChange={(v) => setForm((p) => ({ ...p, numberOfAdults: v }))} 
+                />
+                <Stepper 
+                  label="Children" 
+                  value={form.numberOfChildren} 
+                  min={0} 
+                  max={tour?.groupSize ? tour.groupSize - form.numberOfAdults : Infinity}
+                  onChange={(v) => setForm((p) => ({ ...p, numberOfChildren: v }))} 
+                />
               </div>
             </div>
 

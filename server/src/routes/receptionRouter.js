@@ -39,6 +39,13 @@ router.post('/airport-pickups', createAirportPickup);
 router.get('/drivers', getDrivers);
 router.get('/vehicles', getVehicles);
 
+// Vehicle Rentals (Reception side)
+import { getReceptionVehicleBookings, createReceptionVehicleBooking, cancelReceptionVehicleBooking, getDriverPricing } from '../controllers/reception/receptionVehicleBookingController.js';
+router.get('/vehicle-bookings', getReceptionVehicleBookings);
+router.post('/vehicle-bookings', createReceptionVehicleBooking);
+router.put('/vehicle-bookings/:id/cancel', cancelReceptionVehicleBooking);
+router.get('/driver-pricing', getDriverPricing);
+
 // Tours and Tour Inquiries
 import { getAllTours } from '../controllers/manager/tourController.js';
 import { createTourInquiry, getAllInquiries, acceptInquiry, rejectInquiry, cancelInquiry, updatePax } from '../controllers/reception/receptionTourController.js';

@@ -16,6 +16,7 @@ export default function TourDetailsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const selectedTour = location.state?.tour || null;
+  const inquiry = location.state?.inquiry || null;
   const tourIdFromQuery = new URLSearchParams(location.search).get('tourId');
   const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3002/api').replace(/\/$/, '');
 
@@ -61,9 +62,14 @@ export default function TourDetailsPage() {
       } finally { setLoading(false); }
     })();
   }, [backendBaseUrl, selectedTour, tourIdFromQuery]);
+
   const handleSendInquiry = () => {
     const query = tour?.id ? `?tourId=${tour.id}` : '';
     navigate(`/booking/tour-inquiry${query}`, { state: { tour } });
+  };
+
+  const handleProceedToPayment = () => {
+    navigate('/booking/tour-payment', { state: { tour, inquiry } });
   };
 
   const tourPrice = Number(tour?.price || 0);
@@ -395,7 +401,6 @@ export default function TourDetailsPage() {
 
             {/* Body */}
             <div className="bg-white px-6 py-5 space-y-5">
-
               {/* Price breakdown */}
               <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 space-y-2.5">
                 <div className="flex justify-between text-sm text-gray-500">
@@ -413,14 +418,16 @@ export default function TourDetailsPage() {
                   <span className="text-2xl font-bold text-blue-800">{import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {Number(total).toLocaleString()}</span>
                 </div>
 
-                <div className="mt-3">
-                  <button
-                    onClick={() => setShowAvailabilityModal(true)}
-                    type="button"
-                    className="w-full py-2.5 rounded-lg text-sm font-bold tracking-wide bg-blue-700 hover:bg-blue-600 text-white transition-all shadow-md"
-                  >
-                    🔎 Check Availability
-                  </button>
+                <div className="mt-3 space-y-2">
+                  {inquiry && inquiry.rawStatus === 'progress' && (
+                    <button
+                      onClick={handleProceedToPayment}
+                      type="button"
+                      className="w-full py-3 rounded-lg text-sm font-bold tracking-wide bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white transition-all shadow-md"
+                    >
+                      💳 Pay 50% Advance
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -458,11 +465,6 @@ export default function TourDetailsPage() {
                   </div>
                 ))}
               </div>
-
-                {/* Inquiry flow handled above */}
-                <div className="space-y-2.5 border-t border-gray-200 pt-4">
-                
-                </div>
             </div>
           </div>
         </div>

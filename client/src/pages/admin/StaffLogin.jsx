@@ -305,6 +305,7 @@ export default function StaffLogin() {
                                         type={showPassword ? "text" : "password"}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') register(); }}
                                         placeholder="Create password"
                                         className={`w-full border border-slate-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200 ${theme.focusRing}`}
                                     />
@@ -324,6 +325,7 @@ export default function StaffLogin() {
                                         type={showConfirmPassword ? "text" : "password"}
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') register(); }}
                                         placeholder="Confirm password"
                                         className={`w-full border border-slate-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200 ${theme.focusRing}`}
                                     />
@@ -368,6 +370,7 @@ export default function StaffLogin() {
                                         type={showPassword ? "text" : "password"}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') handleLogin(); }}
                                         placeholder="Enter your password"
                                         className={`w-full border border-slate-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 bg-slate-50/50 placeholder-slate-400 font-medium transition duration-200 ${theme.focusRing}`}
                                     />

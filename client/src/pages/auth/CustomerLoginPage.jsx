@@ -27,6 +27,15 @@ export default function CustomerLoginPage() {
     const sliderImages = [bgFront, bgSlider2, bgSlider3, bgSlider4, bgRestaurant];
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+    // Restore remembered email on mount
+    useEffect(() => {
+        const savedEmail = localStorage.getItem("rememberMeEmail");
+        if (savedEmail) {
+            setEmail(savedEmail);
+            setRememberMe(true);
+        }
+    }, []);
+
     // Rotate background every 5 seconds
     useEffect(() => {
         const interval = setInterval(() => {
@@ -80,8 +89,17 @@ export default function CustomerLoginPage() {
 
             const token = res.data.token;
 
+            // Always store token in both storages so all pages that read either one work correctly
             localStorage.setItem("customerToken", token);
             sessionStorage.setItem("customerToken", token);
+
+            if (rememberMe) {
+                // Save email so it is pre-filled on the next visit
+                localStorage.setItem("rememberMeEmail", email.trim());
+            } else {
+                // Clear any previously saved email
+                localStorage.removeItem("rememberMeEmail");
+            }
 
             const from = location.state?.from || "/";
             const targetRoute = (from === "/booking-details" && location.state?.selectedRooms) ? "/payment" : from;
@@ -143,6 +161,7 @@ export default function CustomerLoginPage() {
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleLogin(); }}
                             placeholder="Your registered email"
                             disabled={loading}
                             className="w-full pl-11 pr-4 py-3.5 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-4 focus:ring-amber-500/20 focus:border-amber-400/80 focus:bg-white/10 transition-all text-sm text-white placeholder-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -161,6 +180,7 @@ export default function CustomerLoginPage() {
                             type={showPassword ? "text" : "password"}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleLogin(); }}
                             placeholder="Your account password"
                             disabled={loading}
                             className="w-full pl-11 pr-16 py-3.5 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-4 focus:ring-amber-500/20 focus:border-amber-400/80 focus:bg-white/10 transition-all text-sm text-white placeholder-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
