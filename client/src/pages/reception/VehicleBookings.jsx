@@ -30,6 +30,7 @@ export default function VehicleBookings() {
 
     // Booking form modal state
     const [showForm, setShowForm] = useState(false);
+    const [availabilityError, setAvailabilityError] = useState("");
     const [newBooking, setNewBooking] = useState({
         vehicleId: "",
         fullName: "",
@@ -69,6 +70,56 @@ export default function VehicleBookings() {
             window.removeEventListener("storage", updateTheme);
         };
     }, []);
+
+    // Real-time availability check
+    useEffect(() => {
+        const checkAvailability = async () => {
+            if (!newBooking.vehicleId || !newBooking.pickupDatetime || !newBooking.returnDatetime) {
+                setAvailabilityError("");
+                return;
+            }
+            // Simple validation
+            const pickup = new Date(newBooking.pickupDatetime);
+            const ret = new Date(newBooking.returnDatetime);
+            if (isNaN(pickup.getTime()) || isNaN(ret.getTime()) || ret <= pickup) {
+                setAvailabilityError("");
+                return;
+            }
+
+            try {
+                const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/vehicle-bookings/check-availability`, {
+                    params: {
+                        vehicleId: newBooking.vehicleId,
+                        pickupDatetime: newBooking.pickupDatetime,
+                        returnDatetime: newBooking.returnDatetime
+                    }
+                });
+                if (res.data.success) {
+                    if (!res.data.available) {
+                         setAvailabilityError("Vehicle is no longer available for the selected date range");
+                    } else {
+                         setAvailabilityError("");
+                    }
+                }
+            } catch (error) {
+                console.error("Availability check failed:", error);
+                setAvailabilityError("");
+            }
+        };
+
+        const delayDebounceFn = setTimeout(() => {
+            checkAvailability();
+        }, 300);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [newBooking.vehicleId, newBooking.pickupDatetime, newBooking.returnDatetime]);
+
+    // Reset availability error when modal opens/closes
+    useEffect(() => {
+        if (!showForm) {
+            setAvailabilityError("");
+        }
+    }, [showForm]);
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -124,7 +175,8 @@ export default function VehicleBookings() {
         const pickupDate = new Date(newBooking.pickupDatetime);
         const returnDate = new Date(newBooking.returnDatetime);
         const diffMs = returnDate - pickupDate;
-        const numDays = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+        const diffHours = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60)));
+        const numDays = Math.max(1, Math.ceil(diffHours / 24));
 
         const vehicleRate = parseFloat(selectedVehicle.pricePerDay || 0);
         const driverRate = newBooking.hireType === "with_driver" ? driverPrice : 0;
@@ -136,6 +188,7 @@ export default function VehicleBookings() {
 
         return {
             numDays,
+            diffHours,
             vehicleRate,
             driverRate,
             subtotal,
@@ -185,7 +238,7 @@ export default function VehicleBookings() {
 
         const confirmMsg = `Confirm Vehicle Booking?\n\n` +
             `🚗 Vehicle: ${priceDetails.brand} ${priceDetails.model} (${priceDetails.plateNo})\n` +
-            `📅 Duration: ${priceDetails.numDays} day(s)\n` +
+            `📅 Duration: ${priceDetails.diffHours} hour(s) (${priceDetails.numDays} day(s))\n` +
             `👤 Guest: ${newBooking.fullName}\n` +
             `📞 Phone: ${newBooking.phone}\n` +
             `💵 Estimated Total: LKR ${priceDetails.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}\n\n` +
@@ -508,7 +561,7 @@ export default function VehicleBookings() {
                                         <div className="space-y-2 py-2 border-b dark:border-slate-800/80 border-slate-200/80">
                                             <div className="flex justify-between text-slate-500">
                                                 <span>Duration:</span>
-                                                <span>{priceDetails.numDays} day(s)</span>
+                                                <span>{priceDetails.diffHours} hour(s) ({priceDetails.numDays} day(s))</span>
                                             </div>
                                             <div className="flex justify-between text-slate-600 dark:text-slate-350">
                                                 <span>Vehicle Total:</span>
@@ -727,6 +780,14 @@ export default function VehicleBookings() {
 
 
 
+                                {/* Availability warning banner */}
+                                {availabilityError && (
+                                    <div className="flex items-center gap-2 p-4 bg-rose-500/10 text-rose-500 border border-rose-500/25 rounded-xl font-bold text-xs animate-pulse">
+                                        <MdWarning size={16} className="flex-shrink-0" />
+                                        <span>{availabilityError}</span>
+                                    </div>
+                                )}
+
                                 {/* Form Action Buttons */}
                                 <div className="flex justify-end gap-3 pt-4 border-t dark:border-slate-800 border-slate-100 flex-shrink-0">
                                     <button
@@ -738,7 +799,12 @@ export default function VehicleBookings() {
                                     </button>
                                     <button
                                         type="submit"
-                                        className={`px-6 py-3 text-white rounded-xl flex items-center gap-1.5 font-black cursor-pointer transition shadow-md ${currentAccent.bg}`}
+                                        disabled={!!availabilityError}
+                                        className={`px-6 py-3 text-white rounded-xl flex items-center gap-1.5 font-black transition shadow-md ${
+                                            availabilityError 
+                                                ? "bg-slate-400 dark:bg-slate-850 cursor-not-allowed opacity-60 shadow-none text-slate-500 dark:text-slate-400" 
+                                                : currentAccent.bg + " cursor-pointer"
+                                        }`}
                                     >
                                         <MdCheckCircle size={16} /> Confirm Hire Booking
                                     </button>
