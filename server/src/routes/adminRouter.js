@@ -1,5 +1,5 @@
 import express from 'express';
-
+import { requireAuth, requireRole } from '../middleware/authMiddleware.js';
 import {
     addAmenitie, getAllAmenities, updateAmenitie, deleteAmenitie,
     AmenitieswithAssignRoom
@@ -16,52 +16,60 @@ import { getAllShopItems, getShopItemById, createShopItem, updateShopItem, delet
 
 const router = express.Router();
 
-console.log("✅ Admin routes loaded");
+// ── Auth Strategy ─────────────────────────────────────────────────────────────
+// Some GET endpoints are intentionally PUBLIC because they serve the customer-
+// facing booking pages (home carousel, room details, shop display).
+// All write operations (POST/PUT/DELETE) and admin-only reads are PROTECTED.
+// ─────────────────────────────────────────────────────────────────────────────
 
-// Amenities routes
+// ── PUBLIC read-only endpoints (no token required) ───────────────────────────
+// Used by: RoomTypeCarousel (home page), RoomTypeDetails, booking flow
+router.get('/room-types',            getAllRoomTypes);
+router.get('/room-type/:id',         getRoomTypeById);
+router.get('/room-prices',           getAllRoomPrices);
+router.get('/room-prices/metadata',  getRoomPriceMetadata);
+router.get('/occupancy-types',       getAllOccupancyTypes);
+router.get('/board-types',           getAllBoardTypes);
+router.get('/shop-items',            getAllShopItems);
+router.get('/shop-items/:id',        getShopItemById);
+
+// ── All routes below require a valid admin JWT ────────────────────────────────
+router.use(requireAuth);
+router.use(requireRole('admin'));
+
+// Amenities routes (admin only)
 router.post('/amenitie', addAmenitie);
 router.get('/amenities', getAllAmenities);
 router.get('/amenitiesroom', AmenitieswithAssignRoom);
 router.put('/amenitie/:id', updateAmenitie);
 router.delete('/amenitie/:id', deleteAmenitie);
 
-// Room Type routes
-router.get('/room-types', getAllRoomTypes);
-router.get('/room-type/:id', getRoomTypeById);
+// Room Type routes (write operations — admin only)
 router.post('/room-type', upload.array("images"), createRoomType);
 router.put('/room-type/:id', upload.array("images"), updateRoomType);
 router.delete('/room-type/:id', deleteRoomType);
 router.delete('/room-type/:id/image', deleteRoomTypeImage);
 
-// Occupancy Type routes
-router.get('/occupancy-types', getAllOccupancyTypes);
-
-// Board Type routes
-router.get('/board-types', getAllBoardTypes);
-
-// Rooms routes
+// Rooms routes (admin only)
 router.get('/rooms', getAllRooms);
 router.get('/rooms/search/:query', searchRooms);
 router.post('/rooms', addRoom);
 router.put('/rooms/:id', updateRoom);
 router.delete('/rooms/:id', deleteRoom);
 
-// Room Price routes
-router.get('/room-prices', getAllRoomPrices);
-router.get('/room-prices/metadata', getRoomPriceMetadata);
+// Room Price routes (write operations — admin only)
 router.post('/room-prices', createRoomPrice);
 router.put('/room-prices/:id', updateRoomPrice);
 router.delete('/room-prices/:id', deleteRoomPrice);
 
-// Service Charge routes
+// Service Charge routes (admin only)
 router.get('/service-charges', getAllServiceCharges);
 router.put('/service-charges/:id', updateServiceCharge);
 
-// Shop Items routes
-router.get('/shop-items', getAllShopItems);
-router.get('/shop-items/:id', getShopItemById);
+// Shop Items routes (write operations — admin only)
 router.post('/shop-items', upload.array('images'), createShopItem);
 router.put('/shop-items/:id', upload.array('images'), updateShopItem);
 router.delete('/shop-items/:id', deleteShopItem);
+
 
 export default router;
