@@ -110,7 +110,8 @@ export async function loginCustomer(req, res) {
             idType: customer.idType,
             idNumber: customer.idNumber,
             address: customer.address,
-            googleAuth: customer.googleAuth
+            googleAuth: customer.googleAuth,
+            role: "customer"
         };
 
         const accessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "30m" });
@@ -166,7 +167,8 @@ export async function refreshToken(req, res) {
                 idType: customer.idType,
                 idNumber: customer.idNumber,
                 address: customer.address,
-                googleAuth: customer.googleAuth
+                googleAuth: customer.googleAuth,
+                role: "customer"
             };
 
             const newAccessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "15m" });
@@ -335,7 +337,8 @@ export async function googleLogin(req, res) {
             idType: activeUser.idType,
             idNumber: activeUser.idNumber,
             address: activeUser.address,
-            googleAuth: activeUser.googleAuth
+            googleAuth: activeUser.googleAuth,
+            role: "customer"
         };
 
         const accessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "15m" });
@@ -395,7 +398,8 @@ export async function updateCustomerProfile(req, res) {
             idType: customer.idType,
             idNumber: customer.idNumber,
             address: customer.address,
-            googleAuth: customer.googleAuth
+            googleAuth: customer.googleAuth,
+            role: "customer"
         };
 
         const accessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "15m" });
