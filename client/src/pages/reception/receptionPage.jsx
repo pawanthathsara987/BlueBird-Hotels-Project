@@ -99,19 +99,19 @@ export default function ReceptionPage() {
     useEffect(() => {
         const token = localStorage.getItem("token");
         if (!token) {
-            navigate("/receptionistLogin");
+            navigate("/staffLogin");
             return;
         }
         try {
             const decoded = jwtDecode(token);
             if (!decoded || decoded.role !== "receptionist") {
-                navigate("/receptionistLogin");
+                navigate("/staffLogin");
             } else {
                 setAuthorized(true);
             }
         } catch (e) {
             localStorage.removeItem("token");
-            navigate("/receptionistLogin");
+            navigate("/staffLogin");
         }
     }, [navigate]);
 
@@ -243,7 +243,7 @@ export default function ReceptionPage() {
                                 localStorage.removeItem("token");
                                 localStorage.removeItem("user");
                                 delete axios.defaults.headers.common["Authorization"];
-                                navigate("/receptionistLogin");
+                                navigate("/staffLogin");
                             }}
                             className="flex items-center w-full text-left gap-3 px-4 py-3 text-sm md:text-base rounded-xl transition-all duration-300 font-semibold text-red-500 hover:bg-red-500/10 hover:text-red-650 cursor-pointer"
                         >
