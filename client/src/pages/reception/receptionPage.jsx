@@ -10,6 +10,7 @@ import CheckOut from "./CheckOut";
 import Reports from "./Reports";
 import AirportPickups from "./AirportPickups";
 import TourBookings from "./TourBookings";
+import VehicleBookings from "./VehicleBookings";
 import RefundRequests from "./RefundRequests";
 
 export default function ReceptionPage() {
@@ -99,19 +100,19 @@ export default function ReceptionPage() {
     useEffect(() => {
         const token = localStorage.getItem("token");
         if (!token) {
-            navigate("/receptionistLogin");
+            navigate("/staffLogin");
             return;
         }
         try {
             const decoded = jwtDecode(token);
             if (!decoded || decoded.role !== "receptionist") {
-                navigate("/receptionistLogin");
+                navigate("/staffLogin");
             } else {
                 setAuthorized(true);
             }
         } catch (e) {
             localStorage.removeItem("token");
-            navigate("/receptionistLogin");
+            navigate("/staffLogin");
         }
     }, [navigate]);
 
@@ -232,6 +233,7 @@ export default function ReceptionPage() {
                     <Link to="/reception/checkout" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/checkout")}><MdCheckCircle className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Check-Out</span></Link>
                     <Link to="/reception/bookings" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/bookings")}><MdOutlineBookOnline className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Bookings</span></Link>
                     <Link to="/reception/pickups" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/pickups")}><MdLocalTaxi className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Airport Pickups</span></Link>
+                    <Link to="/reception/vehicles" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/vehicles")}><MdLocalTaxi className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Vehicle Bookings</span></Link>
                     <Link to="/reception/tours" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/tours")}><MdTerrain className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Tour Bookings</span></Link>
                     <Link to="/reception/reports" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/reports")}><MdBarChart className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Reports</span></Link>
                     <Link to="/reception/refunds" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/refunds")}><MdOutlineBookOnline className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Refunds Approval</span></Link>
@@ -243,7 +245,7 @@ export default function ReceptionPage() {
                                 localStorage.removeItem("token");
                                 localStorage.removeItem("user");
                                 delete axios.defaults.headers.common["Authorization"];
-                                navigate("/receptionistLogin");
+                                navigate("/staffLogin");
                             }}
                             className="flex items-center w-full text-left gap-3 px-4 py-3 text-sm md:text-base rounded-xl transition-all duration-300 font-semibold text-red-500 hover:bg-red-500/10 hover:text-red-650 cursor-pointer"
                         >
@@ -410,6 +412,7 @@ export default function ReceptionPage() {
                         <Route path="/checkout" element={<CheckOut />} />
                         <Route path="/bookings" element={<Booking />} />
                         <Route path="/pickups" element={<AirportPickups />} />
+                        <Route path="/vehicles" element={<VehicleBookings />} />
                         <Route path="/tours" element={<TourBookings />} />
                         <Route path="/reports" element={<Reports />} />
                         <Route path="/refunds" element={<RefundRequests />} />

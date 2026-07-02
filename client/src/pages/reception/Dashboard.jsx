@@ -178,7 +178,7 @@ export default function Dashboard() {
             if (error.response?.status === 401) {
                 localStorage.removeItem("token");
                 toast.error("Session expired. Please log in again.");
-                window.location.href = "/receptionistLogin";
+                window.location.href = "/staffLogin";
             } else {
                 toast.error("Failed to load live dashboard statistics.");
             }

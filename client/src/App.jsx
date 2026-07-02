@@ -1,17 +1,56 @@
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import HomePage from "./pages/homePage";
-import ReceptionistLogin from "./pages/admin/ReceptionistLogin";
-import ManagerLogin from "./pages/admin/ManagerLogin";
-import AdminLogin from "./pages/admin/AdminLogin";
+import StaffLogin from "./pages/admin/StaffLogin";
 import CustomerLoginPage from "./pages/auth/CustomerLoginPage";
 import axios from "axios";
 
-// Automatically attach stored token to requests on app startup
+// ── Token Setup ───────────────────────────────────────────────────────────────
+// On every page load, re-attach the stored token to all Axios requests so the
+// user does not need to log in again after a browser refresh.
 const token = localStorage.getItem("token");
 if (token) {
     axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 }
+
+// ── 401 Interceptor (role-aware) ──────────────────────────────────────────────
+// When any API call returns 401 (no token / expired token / invalid token),
+// clear the stored token and redirect the user to the correct login page based
+// on the role that was previously decoded from the JWT.
+const ROLE_LOGIN_MAP = {
+    admin:        "/staffLogin",
+    manager:      "/staffLogin",
+    receptionist: "/staffLogin",
+    customer:     "/customerLogin",
+};
+
+axios.interceptors.response.use(
+    (response) => response,                       // pass successful responses through
+    (error) => {
+        if (error.response?.status === 401) {
+            // Find out which login page to send the user to
+            let redirectTo = "/";
+            try {
+                const storedToken = localStorage.getItem("token");
+                if (storedToken) {
+                    // Inline decode – avoids an extra import at module level
+                    const payload = JSON.parse(atob(storedToken.split(".")[1]));
+                    redirectTo = ROLE_LOGIN_MAP[payload?.role] || "/";
+                }
+            } catch {
+                // Malformed token — fall back to home
+            }
+
+            // Clean up stale credentials
+            localStorage.removeItem("token");
+            delete axios.defaults.headers.common["Authorization"];
+
+            window.location.href = redirectTo;
+        }
+        return Promise.reject(error);
+    }
+);
+// ─────────────────────────────────────────────────────────────────────────────
 import CustomerRegister from "./pages/auth/CustomerRegister";
 import AdminPage from "./pages/admin/AdminPage";
 import AttendanceScanner from "./pages/admin/Attendance/AttendanceScanner";
@@ -68,9 +107,10 @@ export default function App() {
                         <Route path="/booking/tour-inquiry" element={<TourInquiryPage />} />
                         <Route path="/booking/tour-payment" element={<TourPaymentPage />} />
                         <Route path="/payment" element={<RoomPaymentPage />} />
-                        <Route path="/receptionistLogin" element={<ReceptionistLogin />} />
-                        <Route path="/managerLogin" element={<ManagerLogin />} />
-                        <Route path="/adminLogin" element={<AdminLogin />} />
+                        <Route path="/receptionistLogin" element={<StaffLogin />} />
+                        <Route path="/managerLogin" element={<StaffLogin />} />
+                        <Route path="/adminLogin" element={<StaffLogin />} />
+                        <Route path="/staffLogin" element={<StaffLogin />} />
                         <Route path="/registerCustomer" element={<CustomerRegister />} />
                         <Route path="/customerLogin" element={<CustomerLoginPage />} />
                         <Route path="/customer-reset-password" element={<CustomerPasswordResetPage />} />

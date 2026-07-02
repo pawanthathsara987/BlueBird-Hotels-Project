@@ -41,4 +41,3 @@ async function startServer() {
 }
 
 startServer();
-// Reload trigger comment
