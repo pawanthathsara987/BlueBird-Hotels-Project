@@ -751,3 +751,30 @@ export async function getStaffQRCode(req, res) {
         res.status(500).json({ success: false, message: error.message });
     }
 }
+
+export async function changePassword(req, res) {
+    try {
+        const { email, currentPassword, newPassword } = req.body;
+
+        if (!email || !currentPassword || !newPassword) {
+            return res.status(400).json({ message: "Please fill in all fields" });
+        }
+
+        const user = await UserRegisterModel.findOne({ where: { email } });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const passwordMatch = bcrypt.compareSync(currentPassword, user.password);
+        if (!passwordMatch) {
+            return res.status(401).json({ message: "Incorrect current password" });
+        }
+
+        const hashedPassword = bcrypt.hashSync(newPassword, 10);
+        await user.update({ password: hashedPassword });
+
+        res.json({ message: "Password updated successfully" });
+    } catch (error) {
+        res.status(500).json({ message: "Failed to update password", error: error.message });
+    }
+}

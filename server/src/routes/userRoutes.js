@@ -1,5 +1,5 @@
 import express from "express";
-import { registerUser, getAllUsers, updateUser, deleteUser, searchUsers, verifyEmail, registerStaffMember, sendOtp, verifyOtpAndResetPassword, userLogin, addUserRoles, getAllRoles, searchDeletedUsers, getAllDeletedUsers, getStaffQRCode } from "../controllers/userController.js";
+import { registerUser, getAllUsers, updateUser, deleteUser, searchUsers, verifyEmail, registerStaffMember, sendOtp, verifyOtpAndResetPassword, userLogin, addUserRoles, getAllRoles, searchDeletedUsers, getAllDeletedUsers, getStaffQRCode, changePassword } from "../controllers/userController.js";
 import { requireAuth, requireRole } from "../middleware/authMiddleware.js";
 import { upload } from "../middleware/uploadMiddleware.js";
 
@@ -20,4 +20,5 @@ userRouter.post("/reset-password", verifyOtpAndResetPassword);
 userRouter.post("/login", userLogin);
 userRouter.get("/getAll-deleted", getAllDeletedUsers);
 userRouter.get("/staff/:staffId/qr-code", getStaffQRCode);
+userRouter.post("/change-password", changePassword);
 export default userRouter;

@@ -15,6 +15,7 @@ import ServiceChargeView from "./rooms/ServiceChargeView";
 import ShopManagement from "./shop/ShopManagement";
 import AttendanceRecords from "./Attendance/AttendanceRecords";
 import LeaveManagement from "./leave/LeaveManagement";
+import AdminProfileSettings from "./AdminProfileSettings";
 
 
 export default function AdminPage() {
@@ -117,7 +118,7 @@ export default function AdminPage() {
                         <div className="space-y-1">
                             <NavLink to="/admin/settings" onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}>
                                 <MdSettings className="text-xl" />
-                                <span>Settings</span>
+                                <span>Profile Settings</span>
                             </NavLink>
                         </div>
                     </div>
@@ -166,7 +167,7 @@ export default function AdminPage() {
                     <Route path="/leave-management" element={<LeaveManagement />} />
                     <Route path="/extra-charges" element={<ServiceChargeView />} />
                     <Route path="/shop-items" element={<ShopManagement />} />
-                    <Route path="/settings" element={<h1 className="p-5">Settings</h1>} />
+                    <Route path="/settings" element={<AdminProfileSettings />} />
                 </Routes>
             </div>
         </div>
