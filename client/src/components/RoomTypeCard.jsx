@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Users, ArrowRight } from "lucide-react";
 
 export default function RoomTypeCard({ id, name, image, price, occupancyType }) {
-    const currencyType = process.env.CURRENCY_TYPE || "LKR";
+    const currencyType = import.meta.env.VITE_CURRENCY_TYPE || "LKR";
 
     return (
         <Link to={`/room-type/${id}`} className="group h-[450px] bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col block">

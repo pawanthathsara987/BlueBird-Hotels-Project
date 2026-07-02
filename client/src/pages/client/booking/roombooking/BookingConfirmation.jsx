@@ -4,7 +4,7 @@ import { CheckCircle, ArrowLeft, Home, Calendar, Users } from "lucide-react";
 import { format } from "date-fns";
 
 const BookingConfirmation = () => {
-  const CURRENCY = process.env.CURRENCY_TYPE || "LKR";
+  const CURRENCY = import.meta.env.VITE_CURRENCY_TYPE || "LKR";
   const location = useLocation();
   const navigate = useNavigate();
 

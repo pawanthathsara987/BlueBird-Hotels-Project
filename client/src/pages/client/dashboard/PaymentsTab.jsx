@@ -98,9 +98,9 @@ function generateReceipt(pay) {
           <tr><td>Booking Ref</td><td>${pay.bookingRef || "—"}</td></tr>
           <tr><td>Payment Method</td><td>${(pay.method||"").replace("_"," ").toUpperCase()}</td></tr>
           <tr><td>Date</td><td>${fmtDate(pay.date)} ${fmtTime(pay.date)}</td></tr>
-          <tr><td>Currency</td><td>${pay.currency || process.env.CURRENCY_TYPE || "LKR"}</td></tr>
+          <tr><td>Currency</td><td>${pay.currency || import.meta.env.VITE_CURRENCY_TYPE || "LKR"}</td></tr>
           ${pay.notes ? `<tr><td>Notes</td><td>${pay.notes}</td></tr>` : ""}
-          <tr class="total-row"><td>Amount</td><td>${pay.isRefund ? "- " : ""}${pay.currency || process.env.CURRENCY_TYPE || "LKR"} ${fmt(pay.amount)}</td></tr>
+          <tr class="total-row"><td>Amount</td><td>${pay.isRefund ? "- " : ""}${pay.currency || import.meta.env.VITE_CURRENCY_TYPE || "LKR"} ${fmt(pay.amount)}</td></tr>
         </table>
         <div class="footer">BlueBird Hotels &amp; Resorts &nbsp;·&nbsp; This is a system-generated receipt<br/>For queries contact: billing@bluebird.lk</div>
       </div>
@@ -184,7 +184,7 @@ export default function PaymentsTab({ payments, paymentSummary = {}, isEmptyStat
         {[
           {
             label: "Total Paid",
-            value: `${process.env.CURRENCY_TYPE || 'LKR'} ${fmt(summary.totalPaid)}`,
+            value: `${import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} ${fmt(summary.totalPaid)}`,
             icon: <TrendingUp size={18} />,
             bg: "from-emerald-50 to-teal-50",
             border: "border-emerald-100",
@@ -193,7 +193,7 @@ export default function PaymentsTab({ payments, paymentSummary = {}, isEmptyStat
           },
           {
             label: "Refunded",
-            value: `${process.env.CURRENCY_TYPE || 'LKR'} ${fmt(summary.totalRefunded)}`,
+            value: `${import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} ${fmt(summary.totalRefunded)}`,
             icon: <TrendingDown size={18} />,
             bg: "from-purple-50 to-violet-50",
             border: "border-purple-100",
@@ -202,7 +202,7 @@ export default function PaymentsTab({ payments, paymentSummary = {}, isEmptyStat
           },
           {
             label: "Pending",
-            value: `${process.env.CURRENCY_TYPE || 'LKR'} ${fmt(summary.totalPending)}`,
+            value: `${import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} ${fmt(summary.totalPending)}`,
             icon: <Clock size={18} />,
             bg: "from-amber-50 to-orange-50",
             border: "border-amber-100",
@@ -339,7 +339,7 @@ export default function PaymentsTab({ payments, paymentSummary = {}, isEmptyStat
                   {/* Amount */}
                   <td className="py-3.5 px-5 text-right">
                     <span className={`text-sm font-bold font-serif ${pay.isRefund ? "text-purple-700" : pay.status === "Failed" ? "text-rose-600" : "text-blue-950"}`}>
-                      {pay.isRefund ? "- " : ""}{pay.currency || process.env.CURRENCY_TYPE || "LKR"} {fmt(pay.amount)}
+                      {pay.isRefund ? "- " : ""}{pay.currency || import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {fmt(pay.amount)}
                     </span>
                   </td>
                   {/* Status */}

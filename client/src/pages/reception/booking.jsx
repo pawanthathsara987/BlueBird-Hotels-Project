@@ -71,7 +71,7 @@ export default function Booking() {
                                 checkInDate: br.checkIn,
                                 checkOutDate: br.checkOut,
                                 status: statusStr || "Pending",
-                                price: res.total_price ? `Rs. ${res.total_price}` : 'N/A',
+                                price: res.total_price ? `${import.meta.env.VITE_CURRENCY_TYPE || "LKR"} ${res.total_price}` : 'N/A',
                                 phone: res.Customer ? res.Customer.phoneNumber : 'N/A',
                             });
                         });

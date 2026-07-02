@@ -4,7 +4,7 @@ import { ArrowLeft, Calendar, Users, DollarSign, Car, Sparkles, Clock } from 'lu
 import { useState } from 'react';
 
 const BookingSummary = () => {
-    const CURRENCY = process.env.CURRENCY_TYPE || "LKR";
+    const CURRENCY = import.meta.env.VITE_CURRENCY_TYPE || "LKR";
     const location = useLocation();
     const navigate = useNavigate();
     const [isProcessing, setIsProcessing] = useState(false);

@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Users, Fuel, Gauge, MapPin, ArrowRight } from "lucide-react";
 
 export default function VehiclePackageCard({ vehicle }) {
-    const currencyType = process.env.CURRENCY_TYPE || "LKR";
+    const currencyType = import.meta.env.VITE_CURRENCY_TYPE || "LKR";
 
     const formatMoney = (value) => {
         const amount = Number(value);
