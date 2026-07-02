@@ -295,20 +295,29 @@ export default function CustomerDashboard() {
         const mappedTours = rawTours.map(t => {
           const notes = t.specialRequests || "No special requests submitted.";
           const reply = t.status === "accepted" 
-            ? "Your excursion request has been accepted. We have locked details in your itinerary." 
-            : t.status === "rejected" 
-              ? `We regret that we cannot fulfill this excursion: ${t.rejectionReason || "Slot unavailable"}`
-              : "We are currently reviewing your custom excursion request with our ground guide team.";
+            ? "Your excursion request has been accepted and paid. We have locked details in your itinerary." 
+            : t.status === "progress"
+              ? "Your excursion has been reviewed and approved. Please complete the advance payment to lock your itinerary."
+              : t.status === "rejected" 
+                ? `We regret that we cannot fulfill this excursion: ${t.rejectionReason || "Slot unavailable"}`
+                : "We are currently reviewing your custom excursion request with our ground guide team.";
 
           return {
             id: t.inquiryRef || `BB-TOUR-${t.id}`,
             realId: t.id,
+            tourId: t.tourId,
             destination: t.Tour?.packageName || "Curated Excursion",
             location: t.Tour?.location || "Sri Lanka Coastline",
             requestedDate: t.startDate,
             groupSize: `${t.numberOfAdults} Adults` + (t.numberOfChildren > 0 ? `, ${t.numberOfChildren} Kids` : ""),
-            status: t.status === "accepted" ? "Approved" : t.status === "rejected" ? "Declined" : "Pending Review",
+            status: t.status === "accepted" ? "Approved" : t.status === "progress" ? "Awaiting Payment" : t.status === "rejected" ? "Declined" : "Pending Review",
+            rawStatus: t.status,
+            adults: t.numberOfAdults || 1,
             price: parseFloat(t.Tour?.price || 0),
+            fullName: t.fullName || "",
+            email: t.email || "",
+            phone: t.phone || "",
+            address: t.address || "",
             conciergeNotes: reply,
             lastUpdated: new Date(t.updatedAt).toLocaleDateString()
           };

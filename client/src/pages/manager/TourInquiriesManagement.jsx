@@ -68,7 +68,7 @@ export default function TourInquiriesManagement() {
   };
 
   const statusCounts = useMemo(() => {
-    const counts = { pending: 0, accepted: 0, rejected: 0 };
+    const counts = { pending: 0, progress: 0, accepted: 0, rejected: 0 };
     allInquiries.forEach((inq) => {
       if (counts[inq.status] !== undefined) {
         counts[inq.status] += 1;
@@ -108,6 +108,7 @@ export default function TourInquiriesManagement() {
   useEffect(() => {
     const filtered = allInquiries.filter((inq) => {
       if (filter === 'pending') return inq.status === 'pending';
+      if (filter === 'progress') return inq.status === 'progress';
       if (filter === 'accepted') return inq.status === 'accepted';
       if (filter === 'rejected') return inq.status === 'rejected';
       return true;
@@ -238,7 +239,8 @@ export default function TourInquiriesManagement() {
   const getStatusBadge = (status) => {
     const badges = {
       pending: 'bg-yellow-100 text-yellow-800 border border-yellow-300',
-      accepted: 'bg-green-100 text-green-800 border border-green-300',
+      progress: 'bg-emerald-100 text-emerald-800 border border-emerald-300',
+      accepted: 'bg-blue-100 text-blue-800 border border-blue-300',
       rejected: 'bg-red-100 text-red-800 border border-red-300',
     };
     return badges[status] || badges.pending;
@@ -277,7 +279,8 @@ export default function TourInquiriesManagement() {
               {[
                 { label: 'Total', value: allInquiries.length, accent: 'from-sky-500 to-cyan-400' },
                 { label: 'Pending', value: statusCounts.pending, accent: 'from-amber-500 to-orange-400' },
-                { label: 'Accepted', value: statusCounts.accepted, accent: 'from-emerald-500 to-teal-400' },
+                { label: 'In Progress', value: statusCounts.progress, accent: 'from-emerald-500 to-teal-400' },
+                { label: 'Confirmed', value: statusCounts.accepted, accent: 'from-blue-500 to-indigo-400' },
                 { label: 'Rejected', value: statusCounts.rejected, accent: 'from-rose-500 to-pink-400' },
               ].map((item) => (
                 <div key={item.label} className="rounded-2xl border border-white/10 bg-white/10 p-4 shadow-lg backdrop-blur-sm">
@@ -294,22 +297,24 @@ export default function TourInquiriesManagement() {
       <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 md:py-10">
         <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap gap-2">
-            {['pending', 'accepted', 'rejected'].map(status => (
+            {['pending', 'progress', 'accepted', 'rejected'].map(status => (
               <button
                 key={status}
                 onClick={() => setFilter(status)}
-                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                className={`relative rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
                   filter === status
                     ? status === 'pending'
-                      ? 'bg-amber-500 text-white shadow-md shadow-amber-200'
+                      ? 'bg-amber-100 text-amber-800 shadow-inner'
+                      : status === 'progress'
+                      ? 'bg-emerald-100 text-emerald-800 shadow-inner'
                       : status === 'accepted'
-                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-200'
-                        : 'bg-rose-600 text-white shadow-md shadow-rose-200'
+                      ? 'bg-blue-100 text-blue-800 shadow-inner'
+                      : 'bg-rose-100 text-rose-800 shadow-inner'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
-                {status === 'pending' ? 'Pending' : status === 'accepted' ? 'Accepted' : 'Rejected'}
-                <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${filter === status ? 'bg-white/20 text-white' : 'bg-white text-slate-700'}`}>
+                {status === 'pending' ? 'Pending' : status === 'progress' ? 'In Progress' : status === 'accepted' ? 'Confirmed' : 'Rejected'}
+                <span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-bold ${filter === status ? 'bg-black/10 text-slate-900' : 'bg-slate-200 text-slate-700'}`}>
                   {statusCounts[status]}
                 </span>
               </button>
@@ -358,7 +363,7 @@ export default function TourInquiriesManagement() {
                           <span className={`rounded-full px-3 py-1 text-xs font-bold ${getStatusBadge(inquiry.status)}`}>
                             {inquiry.status.charAt(0).toUpperCase() + inquiry.status.slice(1)}
                           </span>
-                          {inquiry.status === 'accepted' && hasAcceptedEmailSent(inquiry) && (
+                          {inquiry.status === 'progress' && hasAcceptedEmailSent(inquiry) && (
                             <span className="rounded-full border border-sky-300 bg-sky-100 px-3 py-1 text-xs font-bold text-sky-800">
                               Email Sent
                             </span>
@@ -435,7 +440,7 @@ export default function TourInquiriesManagement() {
                               <MapPin className="h-4 w-4 text-slate-500" />
                               <span><strong className="text-slate-900">Pickup:</strong> {inquiry.pickupLocation}</span>
                             </div>
-                            {inquiry.status === 'accepted' && (
+                            {inquiry.status === 'progress' && (
                               <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2">
                                 <Mail className="h-4 w-4 text-slate-500" />
                                 <span>
@@ -497,7 +502,7 @@ export default function TourInquiriesManagement() {
                         </div>
                       )}
 
-                      {inquiry.status === 'accepted' && (
+                      {inquiry.status === 'progress' && (
                         <div className="space-y-4">
                           {emailingInquiryId !== inquiry.id ? (
                             <button

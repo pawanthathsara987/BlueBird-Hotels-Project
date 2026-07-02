@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { Compass, MapPin } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 export default function ToursTab({
   tours,
@@ -8,6 +9,20 @@ export default function ToursTab({
   isEmptyState,
   filterList
 }) {
+  const [processingId, setProcessingId] = useState(null);
+  const navigate = useNavigate();
+
+  const handlePayment = (tour) => {
+    if (!tour.tourId) {
+      toast.error("Cannot find the tour package details.");
+      return;
+    }
+    // Navigate to the tour details page with inquiry info
+    navigate(`/booking/tour-details?tourId=${tour.tourId}`, {
+      state: { inquiry: tour }
+    });
+  };
+
   // Local Empty State Renderer
   const renderEmptyState = (title, message, iconComponent, buttonText, onClickAction) => (
     <div className="flex flex-col items-center justify-center py-16 px-4 bg-white/60 backdrop-blur-md border border-blue-50/50 rounded-3xl text-center space-y-5">
@@ -64,7 +79,7 @@ export default function ToursTab({
                     {tour.location}
                   </p>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-[9px] font-bold tracking-wider uppercase border ${tour.status === "Approved" ? "bg-blue-5 border-blue-100 text-blue-900" : "bg-amber-5 border-amber-100 text-amber-900"}`}>
+                <span className={`px-3 py-1 rounded-full text-[9px] font-bold tracking-wider uppercase border ${tour.rawStatus === "accepted" ? "bg-blue-5 border-blue-100 text-blue-900" : tour.rawStatus === "progress" ? "bg-emerald-5 border-emerald-100 text-emerald-900" : "bg-amber-5 border-amber-100 text-amber-900"}`}>
                   {tour.status}
                 </span>
               </div>
@@ -108,16 +123,23 @@ export default function ToursTab({
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2.5 pt-2">
-                <button
-                  onClick={() => {
-                    toast.success("Excursion confirmed! Added directly to billing file.");
-                    setTours(prev => prev.map(t => t.id === tour.id ? { ...t, status: "Confirmed" } : t));
-                  }}
-                  className="px-5 py-2 bg-gradient-to-r from-blue-950 to-cyan-800 hover:from-blue-900 text-white font-semibold text-xs rounded-xl transition-all"
-                >
-                  Approve Details &amp; Pay
-                </button>
+              <div className="flex flex-wrap justify-end gap-2.5 pt-2">
+                {tour.rawStatus === "progress" ? (
+                  <button
+                    onClick={() => handlePayment(tour)}
+                    disabled={processingId === tour.id}
+                    className="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white font-semibold text-xs rounded-xl transition-all shadow-sm disabled:opacity-50"
+                  >
+                    {processingId === tour.id ? "Processing..." : "Pay 50% Advance"}
+                  </button>
+                ) : tour.rawStatus === "pending" ? (
+                  <button
+                    disabled
+                    className="px-5 py-2 bg-slate-100 text-slate-400 font-semibold text-xs rounded-xl cursor-not-allowed border border-slate-200"
+                  >
+                    Awaiting Manager Approval for Payment
+                  </button>
+                ) : null}
                 <button
                   onClick={() => {
                     toast.success("Modification request submitted. Our coordinator will contact you.", {
