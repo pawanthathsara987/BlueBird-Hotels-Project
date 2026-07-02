@@ -74,15 +74,8 @@ function PasswordResetPage() {
       setOtp("");
       setNewPassword("");
 
-      // Redirect to receptionist, manager, or admin login portal based on user's registered role
-      const userRole = response?.data?.role;
-      if (userRole === "manager") {
-        navigate("/managerLogin");
-      } else if (userRole === "admin") {
-        navigate("/adminLogin");
-      } else {
-        navigate("/receptionistLogin");
-      }
+      // Redirect to unified staff login portal
+      navigate("/staffLogin");
     } catch (error) {
       toast.error(error?.response?.data?.message || "Reset failed");
     } finally {
