@@ -334,7 +334,7 @@ export const acceptInquiry = async (req, res) => {
 
     // Update inquiry status
     await inquiry.update({
-      status: "accepted",
+      status: "progress",
     });
 
     res.status(200).json({
@@ -380,7 +380,7 @@ export const sendAcceptedInquiryEmail = async (req, res) => {
       });
     }
 
-    if (inquiry.status !== "accepted") {
+    if (inquiry.status !== "progress" && inquiry.status !== "accepted") {
       return res.status(400).json({
         success: false,
         message: "Only accepted inquiries can send quote emails",
@@ -576,6 +576,7 @@ export const getInquiryStats = async (req, res) => {
     const stats = {
       total: await TourInquiry.count(),
       pending: await TourInquiry.count({ where: { status: "pending" } }),
+      progress: await TourInquiry.count({ where: { status: "progress" } }),
       accepted: await TourInquiry.count({ where: { status: "accepted" } }),
       rejected: await TourInquiry.count({ where: { status: "rejected" } }),
     };

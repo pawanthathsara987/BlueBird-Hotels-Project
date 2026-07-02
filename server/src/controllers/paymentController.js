@@ -94,33 +94,55 @@ export const handlePayHereNotification = async (req, res) => {
         // 3. Process payment status
         // PayHere Sandbox success code is 2
         if (Number(status_code) === 2) {
-            const booking = await Reservation.findByPk(order_id);
+            const isTour = String(order_id).startsWith("TOUR_");
+            let booking;
+            let expectedAmount;
+            let actualOrderId = order_id;
 
-            if (!booking) {
-                console.warn(`[PAYHERE WARNING] Booking ID #${order_id} not found in database.`);
-                return res.status(404).send("Booking not found");
+            if (isTour) {
+                actualOrderId = String(order_id).replace("TOUR_", "");
+                booking = await TourInquiry.findByPk(actualOrderId, { include: [{ model: Tour }] });
+                if (!booking) {
+                    console.warn(`[PAYHERE WARNING] Tour Inquiry ID #${actualOrderId} not found.`);
+                    return res.status(404).send("Tour Inquiry not found");
+                }
+                expectedAmount = Number((Number(booking.Tour.price) * booking.numberOfAdults * 0.5).toFixed(2));
+            } else {
+                booking = await Reservation.findByPk(actualOrderId);
+                if (!booking) {
+                    console.warn(`[PAYHERE WARNING] Booking ID #${actualOrderId} not found.`);
+                    return res.status(404).send("Booking not found");
+                }
+                expectedAmount = Number((Number(booking.total_price) * 0.5).toFixed(2));
             }
 
             // Verify payment currency matches LKR
             if (payhere_currency !== "LKR") {
-                console.warn(`[PAYHERE WARNING] Currency mismatch for Booking #${order_id}. Expected: LKR, Received: ${payhere_currency}`);
+                console.warn(`[PAYHERE WARNING] Currency mismatch for Order #${order_id}.`);
                 return res.status(400).send("Currency verification failed");
             }
 
-            // Verify payment amount matches 50% of booking total price (advance payment)
-            const expectedAmount = Number((Number(booking.total_price) * 0.5).toFixed(2));
+            // Verify payment amount matches 50% advance
             const receivedAmount = Number(parseFloat(payhere_amount).toFixed(2));
             if (Math.abs(receivedAmount - expectedAmount) > 0.05) {
-                console.warn(`[PAYHERE WARNING] Payment amount mismatch for Booking #${order_id}. Expected: ${expectedAmount}, Received: ${receivedAmount}`);
+                console.warn(`[PAYHERE WARNING] Payment amount mismatch for Order #${order_id}. Expected: ${expectedAmount}, Received: ${receivedAmount}`);
                 return res.status(400).send("Payment amount verification failed");
             }
 
-            // Log successful payment details in RoomPayment model
+            if (isTour) {
+                if (booking.status === "progress") {
+                    console.log(`[PAYHERE SUCCESS] Tour #${actualOrderId} verified. Updating status to accepted.`);
+                    await booking.update({ status: "accepted" });
+                }
+                return res.status(200).send("OK");
+            }
+
+            // Handle Room Payment Log
             try {
                 const existingPayment = await RoomPayment.findOne({ where: { payment_no: payment_id } });
                 if (!existingPayment) {
                     await RoomPayment.create({
-                        booking_id: Number(order_id),
+                        booking_id: Number(actualOrderId),
                         customer_id: booking.customer_id,
                         payment_no: payment_id,
                         amount: parseFloat(payhere_amount),
@@ -129,17 +151,12 @@ export const handlePayHereNotification = async (req, res) => {
                         status: 'success',
                         raw_payload: req.body
                     });
-                    console.log(`[PAYHERE DB] Logged successful payment #${payment_id} for Booking #${order_id}`);
-                } else {
-                    console.log(`[PAYHERE DB] Payment #${payment_id} was already logged.`);
                 }
-            } catch (dbErr) {
-                console.error("[PAYHERE DB ERROR] Failed to log payment in database:", dbErr);
-            }
+            } catch (dbErr) {}
 
             // Only transition and email if currently pending
             if (booking.status === "pending") {
-                console.log(`[PAYHERE SUCCESS] Booking #${order_id} verified. Updating status to confirmed.`);
+                console.log(`[PAYHERE SUCCESS] Booking #${actualOrderId} verified. Updating status to confirmed.`);
                 await booking.update({ status: "confirmed" });
 
                 // Fetch with associations to trigger receipt email
