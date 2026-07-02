@@ -111,6 +111,7 @@ export default function TourInquiriesManagement() {
       if (filter === 'progress') return inq.status === 'progress';
       if (filter === 'accepted') return inq.status === 'accepted';
       if (filter === 'rejected') return inq.status === 'rejected';
+      if (filter === 'canceled') return inq.status === 'canceled';
       return true;
     });
     setInquiries(filtered);
@@ -297,7 +298,7 @@ export default function TourInquiriesManagement() {
       <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 md:py-10">
         <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap gap-2">
-            {['pending', 'progress', 'accepted', 'rejected'].map(status => (
+            {['pending', 'progress', 'accepted', 'rejected', 'canceled'].map(status => (
               <button
                 key={status}
                 onClick={() => setFilter(status)}
@@ -309,13 +310,15 @@ export default function TourInquiriesManagement() {
                       ? 'bg-emerald-100 text-emerald-800 shadow-inner'
                       : status === 'accepted'
                       ? 'bg-blue-100 text-blue-800 shadow-inner'
+                      : status === 'canceled'
+                      ? 'bg-gray-200 text-gray-800 shadow-inner'
                       : 'bg-rose-100 text-rose-800 shadow-inner'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
-                {status === 'pending' ? 'Pending' : status === 'progress' ? 'In Progress' : status === 'accepted' ? 'Confirmed' : 'Rejected'}
+                {status === 'pending' ? 'Pending' : status === 'progress' ? 'In Progress' : status === 'accepted' ? 'Confirmed' : status === 'canceled' ? 'Canceled' : 'Rejected'}
                 <span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-bold ${filter === status ? 'bg-black/10 text-slate-900' : 'bg-slate-200 text-slate-700'}`}>
-                  {statusCounts[status]}
+                  {statusCounts[status] || 0}
                 </span>
               </button>
             ))}

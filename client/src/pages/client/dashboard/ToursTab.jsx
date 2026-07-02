@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Compass, MapPin } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 export default function ToursTab({
   tours,
@@ -21,6 +22,34 @@ export default function ToursTab({
     navigate(`/booking/tour-details?tourId=${tour.tourId}`, {
       state: { inquiry: tour }
     });
+  };
+
+  const handleCancelInquiry = async (tourId) => {
+    if (!window.confirm("Are you sure you want to cancel this inquiry? If you have already paid, our team will process your refund shortly.")) {
+      return;
+    }
+    try {
+      setProcessingId(tourId);
+      const token = sessionStorage.getItem("customerToken") || localStorage.getItem("customerToken");
+      const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3002/api').replace(/\/$/, '');
+      
+      const response = await axios.put(`${backendBaseUrl}/tour-inquiry/${tourId}/cancel`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.success) {
+        toast.success("Inquiry canceled successfully.");
+        // Update the state locally to reflect the cancellation
+        setTours(prevTours => prevTours.map(t => t.id === tourId ? { ...t, status: "Canceled", rawStatus: "canceled" } : t));
+      } else {
+        toast.error("Failed to cancel inquiry.");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.message || "An error occurred while canceling.");
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   // Local Empty State Renderer
@@ -150,6 +179,15 @@ export default function ToursTab({
                 >
                   Modify Excursion Details
                 </button>
+                {["pending", "progress", "accepted"].includes(tour.rawStatus) && (
+                  <button
+                    onClick={() => handleCancelInquiry(tour.id)}
+                    disabled={processingId === tour.id}
+                    className="px-4 py-2 bg-red-50 border border-red-200 text-red-600 font-semibold text-xs rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
+                  >
+                    Cancel Booking
+                  </button>
+                )}
               </div>
             </div>
           ))}
