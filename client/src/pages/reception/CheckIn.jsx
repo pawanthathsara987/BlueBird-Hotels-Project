@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+ï»¿import React, { useState, useEffect } from "react";
 import { MdSearch as MdSearchIcon, MdClose as MdCloseIcon, MdPayment } from "react-icons/md";
 import { LogIn, CheckCircle, AlertCircle, CreditCard, Eye, User, Phone, Mail, MapPin } from "lucide-react";
 import axios from "axios";
@@ -8,6 +8,7 @@ export default function CheckIn() {
     const [searchTerm, setSearchTerm] = useState("");
     const [pendingCheckIns, setPendingCheckIns] = useState([]);
     const [isLoadingList, setIsLoadingList] = useState(true);
+    const [subTab, setSubTab] = useState("today"); // "today" or "upcoming"
 
     const [checkInModal, setCheckInModal] = useState(null);
     const [modalLoading, setModalLoading] = useState(false);
@@ -44,6 +45,18 @@ export default function CheckIn() {
         return name.includes(searchTerm.toLowerCase());
     });
 
+    const getTodayLocalDate = () => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+    const todayStr = getTodayLocalDate();
+
+    const todayCheckInsList = filteredGuests.filter(g => g.checkIn === todayStr);
+    const upcomingCheckInsList = filteredGuests.filter(g => g.checkIn > todayStr);
+
     const openCheckInModal = async (guest) => {
         setModalLoading(true);
         setPaymentVerified(false);
@@ -72,8 +85,8 @@ export default function CheckIn() {
                 toast.success(`LKR ${amt.toLocaleString()} recorded!`);
                 const newSummary = res.data.data.paymentSummary;
                 setCheckInModal(prev => ({ ...prev, data: { ...prev.data, paymentSummary: newSummary, payments: [...(prev.data.payments || []), res.data.data.payment] } }));
-                setPaymentAmount(""); setPaymentNote("");
                 if (newSummary.balanceDue <= 0) setPaymentVerified(true);
+                setPaymentAmount(""); setPaymentNote("");
             }
         } catch (error) { toast.error(error.response?.data?.message || "Failed to record payment."); }
         finally { setPaymentRecording(false); }
@@ -82,9 +95,13 @@ export default function CheckIn() {
     const handleConfirmCheckIn = async () => {
         if (!checkInModal?.reservationId) return;
         try {
-            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/reception/check-in/${checkInModal.reservationId}`);
-            if (res.data.success) { toast.success("Guest checked in successfully!"); setCheckInModal(null); fetchPendingCheckIns(); }
-        } catch (err) { toast.error(err.response?.data?.message || "Failed to complete check-in."); }
+            const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/reception/check-in/${checkInModal.reservationId}`);
+            if (response.data.success) {
+                toast.success("Guest checked in successfully!");
+                setCheckInModal(null);
+                fetchPendingCheckIns();
+            }
+        } catch (error) { toast.error(error.response?.data?.message || "Failed to complete check-in."); }
     };
 
     const dk = theme.mode === "dark";
@@ -93,7 +110,7 @@ export default function CheckIn() {
         <div className={`w-full px-6 py-6 min-h-screen transition-colors duration-300 ${dk ? "bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-800"}`}>
             <div className="mb-6">
                 <h1 className={`text-3xl font-black tracking-tight ${dk ? "text-white" : "text-[#0c325e]"}`}>Check-In Dashboard</h1>
-                <p className={`text-xs md:text-sm font-medium mt-1 ${dk ? "text-slate-400" : "text-slate-500"}`}>Manage today guest arrivals — verify payment before check-in</p>
+                <p className={`text-xs md:text-sm font-medium mt-1 ${dk ? "text-slate-400" : "text-slate-500"}`}>Manage guest arrivals - verify payment before check-in</p>
             </div>
 
             <div className={`p-4 rounded-2xl shadow-sm mb-6 flex items-center gap-3 border ${dk ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-150 text-slate-800"}`}>
@@ -101,16 +118,46 @@ export default function CheckIn() {
                 <input className="w-full outline-none bg-transparent" placeholder="Search guest name..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
 
+            {/* SUB-TABS SELECTOR */}
+            <div className="flex gap-2 mb-6 border-b dark:border-slate-800 border-slate-200 pb-3">
+                <button
+                    onClick={() => setSubTab("today")}
+                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                        subTab === "today"
+                            ? "bg-blue-600 text-white shadow-sm font-bold"
+                            : (dk ? "bg-slate-900 text-slate-400 hover:text-white" : "bg-white text-slate-600 hover:text-slate-950 border border-slate-200")
+                    }`}
+                >
+                    Today's Arrivals ({todayCheckInsList.length})
+                </button>
+                <button
+                    onClick={() => setSubTab("upcoming")}
+                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                        subTab === "upcoming"
+                            ? "bg-blue-600 text-white shadow-sm font-bold"
+                            : (dk ? "bg-slate-900 text-slate-400 hover:text-white" : "bg-white text-slate-600 hover:text-slate-950 border border-slate-200")
+                    }`}
+                >
+                    Upcoming Arrivals ({upcomingCheckInsList.length})
+                </button>
+            </div>
+
             {isLoadingList ? (
                 <div className="flex items-center justify-center py-20"><span className="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></span></div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {filteredGuests.map((guest) => (
+                    {(subTab === "today" ? todayCheckInsList : upcomingCheckInsList).map((guest) => (
                         <div key={guest.reservation_id} className={`rounded-2xl shadow-sm hover:shadow-md transition p-5 border ${dk ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-150 text-slate-800"}`}>
                             <div className="flex justify-between items-start">
                                 <div>
                                     <h2 className={`text-lg font-bold ${dk ? "text-white" : "text-slate-800"}`}>{guest.firstName} {guest.lastName}</h2>
-                                    <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-200 dark:border-amber-900/40">Pending Check-In</span>
+                                    <span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                                        guest.checkIn === todayStr
+                                            ? "bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-200 dark:border-amber-900/40"
+                                            : "bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200 dark:border-blue-900/40"
+                                    }`}>
+                                        {guest.checkIn === todayStr ? "Arriving Today" : "Upcoming Arrival"}
+                                    </span>
                                 </div>
                             </div>
                             <div className="mt-4">
@@ -138,8 +185,10 @@ export default function CheckIn() {
                 </div>
             )}
 
-            {!isLoadingList && filteredGuests.length === 0 && (
-                <div className={`text-center mt-10 font-bold ${dk ? "text-slate-500" : "text-slate-400"}`}>No pending check-ins found for today</div>
+            {!isLoadingList && (subTab === "today" ? todayCheckInsList : upcomingCheckInsList).length === 0 && (
+                <div className={`text-center mt-10 font-bold ${dk ? "text-slate-500" : "text-slate-400"}`}>
+                    {subTab === "today" ? "No arrivals expected for today" : "No upcoming arrivals scheduled"}
+                </div>
             )}
 
             {checkInModal && (
@@ -150,7 +199,7 @@ export default function CheckIn() {
                                 <div className="w-9 h-9 rounded-xl bg-emerald-500/20 flex items-center justify-center"><LogIn size={18} className="text-emerald-500" /></div>
                                 <div>
                                     <h3 className="text-sm font-black tracking-tight">Guest Check-In Verification</h3>
-                                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{checkInModal.guestName} — Verify payment and details before check-in</p>
+                                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{checkInModal.guestName} - Verify payment and details before check-in</p>
                                 </div>
                             </div>
                             <button onClick={() => setCheckInModal(null)} className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg transition cursor-pointer"><MdCloseIcon size={20} /></button>
@@ -178,11 +227,11 @@ export default function CheckIn() {
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40">
-                                            <AlertCircle size={18} className="text-amber-500 flex-shrink-0" />
+                                        <div className="flex items-center gap-3 p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40">
+                                            <AlertCircle size={18} className="text-red-500 flex-shrink-0" />
                                             <div>
-                                                <p className="text-xs font-black text-amber-700 dark:text-amber-400">Balance Due: LKR {balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                                                <p className="text-[10px] text-amber-600 dark:text-amber-500">Collect remaining payment before completing check-in.</p>
+                                                <p className="text-xs font-black text-red-700 dark:text-red-400">Outstanding Balance: LKR {balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                                <p className="text-[10px] text-red-600 dark:text-red-500">Please collect remaining payment or get confirmation before checking in the guest.</p>
                                             </div>
                                         </div>
                                     )}
@@ -206,15 +255,15 @@ export default function CheckIn() {
                                                 <div className="flex justify-between"><span className="text-slate-500">Booking Ref</span><span className="font-bold text-blue-500">{bk.bookingNo || `RES-${bk.id}`}</span></div>
                                                 <div className="flex justify-between"><span className="text-slate-500">Status</span><span className="font-bold capitalize">{bk.status}</span></div>
                                                 <div className="flex justify-between"><span className="text-slate-500">Payment</span>
-                                                    <span className={`font-bold text-[10px] px-2 py-0.5 rounded-full ${bk.payment_status === "FULLY_PAID" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400" : bk.payment_status === "PAY_AT_CHECKIN" ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400" : "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400"}`}>{bk.payment_status?.replace(/_/g, " ")}</span>
+                                                    <span className={`font-bold text-[10px] px-2 py-0.5 rounded-full ${bk.payment_status === "FULLY_PAID" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400" : "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400"}`}>{bk.payment_status?.replace(/_/g, " ")}</span>
                                                 </div>
                                                 {bookedRooms && bookedRooms.map(br => (
                                                     <div key={br.id} className={`p-2 rounded-lg border ${dk ? "bg-slate-900/40 border-slate-700" : "bg-white border-slate-200"}`}>
                                                         <div className="flex justify-between font-bold"><span>Room {br.Room?.roomNumber || br.room_id}</span><span className="text-emerald-600 dark:text-emerald-400">LKR {parseFloat(br.price).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
                                                         <div className="text-[10px] text-slate-500 mt-0.5">{br.checkIn} to {br.checkOut} - {br.board_type} - {br.adults} Adults, {br.kids} Kids</div>
+                                                        <div className={`text-[10px] mt-0.5 font-bold ${br.status === "checked_in" ? "text-blue-500" : br.status === "checked_out" ? "text-emerald-500" : "text-slate-400"}`}>Status: {br.status}</div>
                                                     </div>
                                                 ))}
-                                                {bk.note && <div className="flex justify-between gap-2"><span className="text-slate-500 flex-shrink-0">Note</span><span className="font-medium text-right">{bk.note}</span></div>}
                                             </div>
                                         </div>
                                     </div>
@@ -224,7 +273,7 @@ export default function CheckIn() {
                                         <div className="grid grid-cols-3 gap-3 mb-3">
                                             <div className="text-center"><p className="text-[10px] text-slate-500 font-bold uppercase">Total Charge</p><p className="text-base font-black mt-0.5">LKR {paymentSummary.totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p></div>
                                             <div className="text-center"><p className="text-[10px] text-slate-500 font-bold uppercase">Paid</p><p className="text-base font-black text-emerald-500 mt-0.5">LKR {paymentSummary.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p></div>
-                                            <div className="text-center"><p className="text-[10px] text-slate-500 font-bold uppercase">Balance Due</p><p className={`text-base font-black mt-0.5 ${balanceDue > 0 ? "text-amber-500" : "text-emerald-500"}`}>LKR {balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p></div>
+                                            <div className="text-center"><p className="text-[10px] text-slate-500 font-bold uppercase">Balance Due</p><p className={`text-base font-black mt-0.5 ${balanceDue > 0 ? "text-red-500" : "text-emerald-500"}`}>LKR {balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p></div>
                                         </div>
                                         {payments && payments.length > 0 && (
                                             <div className="mt-2">
