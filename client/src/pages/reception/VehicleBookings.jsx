@@ -50,7 +50,7 @@ export default function VehicleBookings() {
     // Theme state
     const [theme, setTheme] = useState(() => {
         try {
-            return JSON.parse(localStorage.getItem("reception_theme") || '{"mode":"dark","accent":"teal"}');
+            return JSON.parse(localStorage.getItem("saas_dashboard_theme") || '{"mode":"dark","accent":"teal"}');
         } catch {
             return { mode: "dark", accent: "teal" };
         }
@@ -58,13 +58,16 @@ export default function VehicleBookings() {
 
     useEffect(() => {
         fetchData();
-        const handleThemeChange = () => {
-            try {
-                setTheme(JSON.parse(localStorage.getItem("reception_theme") || '{"mode":"dark","accent":"teal"}'));
-            } catch {}
+        const updateTheme = () => {
+            const saved = localStorage.getItem("saas_dashboard_theme");
+            if (saved) setTheme(JSON.parse(saved));
         };
-        window.addEventListener("storage", handleThemeChange);
-        return () => window.removeEventListener("storage", handleThemeChange);
+        window.addEventListener("theme_changed", updateTheme);
+        window.addEventListener("storage", updateTheme);
+        return () => {
+            window.removeEventListener("theme_changed", updateTheme);
+            window.removeEventListener("storage", updateTheme);
+        };
     }, []);
 
     const fetchData = async () => {
@@ -283,7 +286,7 @@ export default function VehicleBookings() {
 
     return (
         <div className={`w-full px-6 py-6 min-h-screen transition-colors duration-300 ${
-            theme.mode === "dark" ? "bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-800"
+            theme.mode === "dark" ? "dark bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-800"
         }`}>
             {/* Header Block */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
@@ -664,7 +667,11 @@ export default function VehicleBookings() {
 
                                 {/* License details (WITHOUT driver only) */}
                                 {newBooking.hireType === "without_driver" && (
-                                    <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200/50 dark:border-slate-850">
+                                    <div className={`grid grid-cols-2 gap-3 p-4 rounded-xl border ${
+                                        theme.mode === "dark"
+                                            ? "bg-slate-950/40 border-slate-850"
+                                            : "bg-slate-50 border-slate-200/50"
+                                    }`}>
                                         <div>
                                             <label className="block text-slate-550 mb-2">Driver License Number *</label>
                                             <input
@@ -673,7 +680,11 @@ export default function VehicleBookings() {
                                                 placeholder="License card number"
                                                 value={newBooking.customerLicenseNo}
                                                 onChange={(e) => setNewBooking({ ...newBooking, customerLicenseNo: e.target.value })}
-                                                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none"
+                                                className={`w-full border rounded-xl p-3 outline-none ${
+                                                    theme.mode === "dark"
+                                                        ? "bg-slate-900 border-slate-800 text-white"
+                                                        : "bg-white border-slate-200 text-slate-800"
+                                                }`}
                                             />
                                         </div>
                                         <div>
@@ -684,7 +695,11 @@ export default function VehicleBookings() {
                                                 style={{ colorScheme: theme.mode }}
                                                 value={newBooking.customerLicenseExpiry}
                                                 onChange={(e) => setNewBooking({ ...newBooking, customerLicenseExpiry: e.target.value })}
-                                                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none"
+                                                className={`w-full border rounded-xl p-3 outline-none ${
+                                                    theme.mode === "dark"
+                                                        ? "bg-slate-900 border-slate-800 text-white"
+                                                        : "bg-white border-slate-200 text-slate-800"
+                                                }`}
                                             />
                                         </div>
                                     </div>

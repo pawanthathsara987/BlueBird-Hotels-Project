@@ -4,6 +4,7 @@ import VehicleBooking from "../../models/vehicle/VehicleBookingModel.js";
 import Vehicle from "../../models/vehicle/vehicleModel.js";
 import Customer from "../../models/User/Customer.js";
 import DriverPricingSetting from "../../models/vehicle/driverPricingModel.js";
+import StaffMember from "../../models/User/StaffMember.js";
 
 const BLOCKING_BOOKING_STATUSES = [
   "pending_payment",
@@ -194,7 +195,23 @@ export const createReceptionVehicleBooking = async (req, res) => {
 
     const depositPaidAt = new Date();
     const balancePaidAt = new Date();
-    const balanceCollectedBy = req.user?.id || null;
+
+    let balanceCollectedBy = null;
+    if (req.user?.id) {
+      const staffObj = await StaffMember.findOne({
+        where: {
+          [Op.or]: [
+            { userId: req.user.id },
+            { email: req.user.email }
+          ]
+        },
+        transaction: t
+      });
+      if (staffObj) {
+        balanceCollectedBy = staffObj.userId;
+      }
+    }
+
     const status = "balance_paid";
 
     const booking = await VehicleBooking.create({
@@ -237,6 +254,12 @@ export const createReceptionVehicleBooking = async (req, res) => {
   } catch (error) {
     await t.rollback();
     console.error("Error creating vehicle booking in reception:", error);
+    try {
+      const fs = await import("fs");
+      fs.appendFileSync("error_debug.log", `${new Date().toISOString()} - ERROR: ${error.message}\nSTACK: ${error.stack}\n\n`);
+    } catch (e) {
+      console.error("Failed to write to error_debug.log:", e);
+    }
     res.status(500).json({
       success: false,
       message: "Error creating vehicle booking",
