@@ -1,16 +1,17 @@
 import nodemailer from 'nodemailer';
-import { RoomPayment, AirPortPickup, Policy } from '../models/index.js';
+import { RoomPayment, AirPortPickup, Policy, BookedRoom } from '../models/index.js';
 
 // Configure Nodemailer transporter
+const smtpPort = parseInt(process.env.SMTP_PORT) || 587;
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true, // Use SSL/TLS
+  host: process.env.SMTP_SERVER,
+  port: smtpPort,
+  secure: smtpPort === 465,
   auth: {
-    user: process.env.EMAIL_USER || process.env.GMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD || process.env.GMAIL_APP_PASSWORD,
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
-  tls: {
+  tls: {  
     rejectUnauthorized: false
   }
 });
@@ -21,7 +22,7 @@ const getCurrencyType = () => process.env.CURRENCY_TYPE || 'LKR';
 export const sendEmail = async ({ to, subject, html, text }) => {
   try {
     const mailOptions = {
-      from: process.env.EMAIL_USER || process.env.GMAIL_USER,
+      from: `"${process.env.EMAIL_SENDER_NAME}" <${process.env.EMAIL_SENDER}>`,
       to,
       subject: subject,
       html,
@@ -133,7 +134,7 @@ export const sendBookingConfirmationEmail = async (booking) => {
 
     const airportPickup = await AirPortPickup.findOne({ where: { booking_id: booking.id } });
     const policy = await Policy.findOne({ where: { status: true } });
-    const cancellationPolicyLink = process.env.CLIENT_URL ? `${process.env.CLIENT_URL}/policies` : 'https://bluebird-hotels.com/policies';
+    const cancellationPolicyLink = process.env.CLIENT_URL ? `${process.env.CLIENT_URL}/return-policy` : 'https://bluebird-hotels.com/return-policy';
     const cancellationPolicyText = policy ? policy.cancellation_policy : 'Cancellations must be made at least 24 hours prior to check-in for a full refund.';
 
     // Construct room details row using standard table layout
@@ -337,7 +338,7 @@ export const sendBookingConfirmationEmail = async (booking) => {
             <div class="footer">
               <p style="margin: 0 0 8px; font-weight: bold; color: #1f2937;">Need Assistance or Support?</p>
               <p style="margin: 4px 0;"><strong>Phone Support Contact:</strong> ${process.env.SUPPORT_CONTACT}</p>
-              <p style="margin: 4px 0;"><strong>Email Support Contact:</strong> <a href="mailto:${process.env.SUPPORT_EMAIL}" style="color: #0f766e; text-decoration: none;">support@bluebird-hotels.com</a></p>
+              <p style="margin: 4px 0;"><strong>Email Support Contact:</strong> <a href="mailto:${process.env.SUPPORT_EMAIL}" style="color: #0f766e; text-decoration: none;">${process.env.SUPPORT_EMAIL}</a></p>
               <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;">
               <p style="margin: 0; font-size: 11px;">Please keep this receipt as proof of payment. We look forward to welcoming you.</p>
               <p style="margin: 4px 0 0; font-size: 11px;">&copy; ${new Date().getFullYear()} BlueBird Hotels. All rights reserved.</p>
@@ -760,6 +761,18 @@ export const sendPersonalRequestEmail = async (customer, booking, personalReques
     const customerEmail = customer ? customer.email : "N/A";
     const customerPhone = customer ? customer.phoneNumber : "N/A";
 
+    let checkIn = checkInDate;
+    if (!checkIn || isNaN(new Date(checkIn).getTime())) {
+      if (booking.bookedRooms && booking.bookedRooms.length > 0) {
+        checkIn = booking.bookedRooms[0].checkIn;
+      } else {
+        const bookedRoom = await BookedRoom.findOne({ where: { booking_id: booking.id } });
+        if (bookedRoom) {
+          checkIn = bookedRoom.checkIn;
+        }
+      }
+    }
+
     const subject = `Special Personal Request from ${customerName} (Booking #${booking.id})`;
 
     const emailBody = `
@@ -827,7 +840,7 @@ export const sendPersonalRequestEmail = async (customer, booking, personalReques
                     </tr>
                     <tr>
                       <td style="padding: 10px 0; color: #6b7280; font-weight: 550; text-align: left;">Check-in Date</td>
-                      <td style="padding: 10px 0; font-weight: 600; color: #1e293b; text-align: right;">${new Date(checkInDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</td>
+                      <td style="padding: 10px 0; font-weight: 600; color: #1e293b; text-align: right;">${checkIn ? new Date(checkIn).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}</td>
                     </tr>
                   </table>
                 </div>
