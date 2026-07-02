@@ -1,4 +1,5 @@
 import express from 'express';
+import { requireAuth, requireRole } from '../middleware/authMiddleware.js';
 import {
     createTourItem,
     getAllTourItems,
@@ -57,21 +58,28 @@ import {
 
 const router = express.Router();
 
-console.log("✅ Manager routes loaded");
-
-// Tour Items routes
-router.post('/tour-items', createTourItem);
-router.get('/tour-items', getAllTourItems);
+// ── PUBLIC read-only endpoints (no token required) ────────────────────────────
+// Used by: TourViewing (customer booking page), TourDetailsPage
+router.get('/tours',            getAllTours);
+router.get('/tours/:id',        getTourById);
+router.get('/tour-items',       getAllTourItems);
 router.get('/tour-items/:itemId', getTourItem);
+
+// ── All routes below require a valid manager JWT ──────────────────────────────
+router.use(requireAuth);
+router.use(requireRole('manager'));
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Tour Items routes (write operations — manager only)
+router.post('/tour-items', createTourItem);
 router.put('/tour-items/:itemId', updateTourItem);
 router.delete('/tour-items/:itemId', deleteTourItem);
 
-// Tours routes
+// Tours routes (write operations — manager only)
 router.post('/tours', tourUpload.single('image'), createTour);
-router.get('/tours', getAllTours);
-router.get('/tours/:id', getTourById);
 router.put('/tours/:id', tourUpload.single('image'), updateTour);
 router.delete('/tours/:id', deleteTour);
+
 
 // Airport pickup requests
 router.get('/airport-pickups', getAirportPickupRequests);
