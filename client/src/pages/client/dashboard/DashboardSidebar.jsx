@@ -45,6 +45,8 @@ export default function DashboardSidebar({
     }
     localStorage.removeItem("customerToken");
     sessionStorage.removeItem("customerToken");
+    // Also clear the global Axios header to ensure no stale token leaks
+    delete axios.defaults.headers.common["Authorization"];
     toast.success("Successfully logged out!");
     setTimeout(() => {
       window.location.href = "/";

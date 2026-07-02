@@ -25,24 +25,44 @@ const ROLE_LOGIN_MAP = {
     customer:     () => "/customerLogin",
 };
 
+// Endpoints that can legitimately return 401 for wrong credentials.
+// These are NOT session-expiry errors — the caller handles their own errors.
+const AUTH_ENDPOINTS = [
+    "/users/login",
+    "/users/verify-email",
+    "/users/registerStaffMember",
+    "/customers/login",
+    "/customers/google-login",
+    "/customers/register",
+    "/customers/reset-password",
+    "/customers/send-otp",
+    "/customers/refresh",
+];
+
 axios.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
+            // If this 401 came from a login/auth endpoint, let the
+            // calling code handle it (it will show its own error toast).
+            const requestUrl = error.config?.url || "";
+            const isAuthEndpoint = AUTH_ENDPOINTS.some((path) => requestUrl.includes(path));
+            if (isAuthEndpoint) {
+                return Promise.reject(error);
+            }
+
+            // For all other 401s (expired/invalid session token):
+            // find out which login page to send the user to.
             let redirectTo = "/";
             try {
-                const storedToken = localStorage.getItem("token");
-                if (storedToken) {
-                    const payload = JSON.parse(atob(storedToken.split(".")[1]));
-                    const redirectValue = ROLE_LOGIN_MAP[payload?.role];
-                    redirectTo = typeof redirectValue === "function" ? redirectValue() : redirectValue || "/";
-                } else {
-                    const currentSubdomain = getSubdomain();
-                    if (["admin", "manager", "reception"].includes(currentSubdomain)) {
-                        redirectTo = getSubdomainUrl("auth", "/staffLogin");
-                    } else {
-                        redirectTo = "/customerLogin";
-                    }
+                const staffToken = localStorage.getItem("token");
+                const customerToken = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
+                if (staffToken) {
+                    // Inline decode — avoids an extra import at module level
+                    const payload = JSON.parse(atob(staffToken.split(".")[1]));
+                    redirectTo = ROLE_LOGIN_MAP[payload?.role] || "/";
+                } else if (customerToken) {
+                    redirectTo = "/customerLogin";
                 }
             } catch {
                 const currentSubdomain = getSubdomain();
@@ -53,8 +73,10 @@ axios.interceptors.response.use(
                 }
             }
 
-            // Clean up stale credentials
+            // Clean up ALL stale credentials (staff + customer)
             localStorage.removeItem("token");
+            localStorage.removeItem("customerToken");
+            sessionStorage.removeItem("customerToken");
             localStorage.removeItem("user");
             localStorage.removeItem("adminName");
             localStorage.removeItem("adminEmail");
