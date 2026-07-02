@@ -5,6 +5,7 @@ import Vehicle from "../../models/vehicle/vehicleModel.js";
 import Customer from "../../models/User/Customer.js";
 import DriverPricingSetting from "../../models/vehicle/driverPricingModel.js";
 import StaffMember from "../../models/User/StaffMember.js";
+import VehicleRentalPolicy from "../../models/vehicle/vehicleRentalPolicyModel.js";
 
 const BLOCKING_BOOKING_STATUSES = [
   "pending_payment",
@@ -161,9 +162,16 @@ export const createReceptionVehicleBooking = async (req, res) => {
     const driverSetting = await DriverPricingSetting.findByPk(1, { transaction: t });
     const driverRatePerDay = withDriver ? parseFloat(driverSetting?.driverPricePerDay || 0) : null;
 
+    const [policy] = await VehicleRentalPolicy.findOrCreate({
+      where: { id: 1 },
+      defaults: { id: 1 },
+      transaction: t
+    });
+    const securityDepositAmount = parseFloat(policy?.securityDepositAmount || 0);
+
     const subtotal = (vehicleRatePerDay + (driverRatePerDay || 0)) * numDays;
     const discount = 0.0;
-    const totalPayable = subtotal - discount;
+    const totalPayable = subtotal - discount + securityDepositAmount;
     const depositPercentage = 100;
     const depositAmount = totalPayable;
     const balanceAmount = 0.00;
@@ -239,6 +247,8 @@ export const createReceptionVehicleBooking = async (req, res) => {
       balancePaidAt,
       balancePaymentMethod: paymentMethod || "cash",
       balanceCollectedBy,
+      securityDepositCollected: securityDepositAmount,
+      securityDepositPaidAt: new Date(),
       status,
       specialRequirements
     }, { transaction: t });
@@ -319,6 +329,99 @@ export const getDriverPricing = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error fetching driver pricing setting"
+    });
+  }
+};
+
+// 5. Check vehicle availability (real-time check)
+export const checkVehicleAvailability = async (req, res) => {
+  try {
+    const { vehicleId, pickupDatetime, returnDatetime } = req.query;
+
+    if (!vehicleId || !pickupDatetime || !returnDatetime) {
+      return res.status(400).json({
+        success: false,
+        message: "vehicleId, pickupDatetime, and returnDatetime are required"
+      });
+    }
+
+    const pickupDate = new Date(pickupDatetime);
+    const returnDate = new Date(returnDatetime);
+
+    if (isNaN(pickupDate.getTime()) || isNaN(returnDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid dates provided"
+      });
+    }
+
+    if (returnDate <= pickupDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Return date must be after pickup date"
+      });
+    }
+
+    const pickupDateWithBuffer = new Date(pickupDate.getTime() - 24 * 60 * 60 * 1000);
+
+    const overlappingBooking = await VehicleBooking.findOne({
+      where: {
+        vehicleId,
+        status: { [Op.in]: BLOCKING_BOOKING_STATUSES },
+        pickupDatetime: { [Op.lt]: returnDate },
+        returnDatetime: { [Op.gt]: pickupDateWithBuffer },
+      }
+    });
+
+    if (overlappingBooking) {
+      return res.status(200).json({
+        success: true,
+        available: false,
+        message: "Vehicle is no longer available for the selected date range"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      available: true,
+      message: "Vehicle is available"
+    });
+
+  } catch (error) {
+    console.error("Error checking vehicle availability:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error checking vehicle availability",
+      error: error.message
+    });
+  }
+};
+
+// 6. Get vehicle rental policy for reception forms
+export const getReceptionVehiclePolicy = async (req, res) => {
+  try {
+    const [policy] = await VehicleRentalPolicy.findOrCreate({
+      where: { id: 1 },
+      defaults: {
+        id: 1,
+        lateReturnGraceHours: 4,
+        lateReturnFeePerHour: 4.0,
+        lateReturnFullDayAfterHours: 4,
+        securityDepositAmount: 200.0,
+        includedKilometersPerDay: 100,
+        extraMileageFee: 120.0,
+        extraMileageCurrency: 'LKR'
+      }
+    });
+    res.status(200).json({
+      success: true,
+      data: policy
+    });
+  } catch (error) {
+    console.error("Error fetching vehicle rental policy in reception:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching vehicle rental policy"
     });
   }
 };
