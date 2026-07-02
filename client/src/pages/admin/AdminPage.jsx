@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, Routes, Route } from "react-router-dom";
-import { MdAdminPanelSettings, MdDashboard, MdBedroomParent, MdBookOnline, MdPeople, MdSettings, MdLogout, MdMenu, MdClose, MdShoppingBag, MdCoPresent } from "react-icons/md";
+import { MdAdminPanelSettings, MdDashboard, MdBedroomParent, MdBookOnline, MdPeople, MdSettings, MdLogout, MdMenu, MdClose, MdShoppingBag, MdCoPresent, MdEventNote } from "react-icons/md";
 import RoomManagement from "./rooms/roomManagement";
 import AmenitiesForm from "./rooms/AmenitiesForm";
 import RoomForm from "./rooms/RoomForm";
@@ -14,6 +14,8 @@ import AdminDashboard from "./AdminDashboard";
 import ServiceChargeView from "./rooms/ServiceChargeView";
 import ShopManagement from "./shop/ShopManagement";
 import AttendanceRecords from "./Attendance/AttendanceRecords";
+import LeaveManagement from "./leave/LeaveManagement";
+import AdminProfileSettings from "./AdminProfileSettings";
 
 
 export default function AdminPage() {
@@ -95,6 +97,10 @@ export default function AdminPage() {
                                 <MdCoPresent className="text-xl" />
                                 <span>Attendance Logs</span>
                             </NavLink>
+                            <NavLink to="/admin/leave-management" onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}>
+                                <MdEventNote className="text-xl" />
+                                <span>Leave Management</span>
+                            </NavLink>
                             <NavLink to="/admin/extra-charges" onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}>
                                 <MdBookOnline className="text-xl" />
                                 <span>Extra Charges</span>
@@ -112,7 +118,7 @@ export default function AdminPage() {
                         <div className="space-y-1">
                             <NavLink to="/admin/settings" onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}>
                                 <MdSettings className="text-xl" />
-                                <span>Settings</span>
+                                <span>Profile Settings</span>
                             </NavLink>
                         </div>
                     </div>
@@ -158,9 +164,10 @@ export default function AdminPage() {
                     <Route path="/users/updateStaffMember" element={<UpdateStaffMember />} />
                     <Route path="/users/viewDeletedStaff" element={<ViewDeletedStaff />} />
                     <Route path="/attendance-records" element={<AttendanceRecords />} />
+                    <Route path="/leave-management" element={<LeaveManagement />} />
                     <Route path="/extra-charges" element={<ServiceChargeView />} />
                     <Route path="/shop-items" element={<ShopManagement />} />
-                    <Route path="/settings" element={<h1 className="p-5">Settings</h1>} />
+                    <Route path="/settings" element={<AdminProfileSettings />} />
                 </Routes>
             </div>
         </div>

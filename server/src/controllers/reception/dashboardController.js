@@ -13,8 +13,8 @@ async function getAvailableRooms(req, res) {
                 FROM booked_rooms br
                 WHERE br.room_id = r.id
                 AND br.status != 'cancelled'
-                AND br.checkIn <= :date
-                AND br.checkOut > :date
+                AND DATE(br.checkIn) <= :date
+                AND DATE(br.checkOut) > :date
             )
         `;
 
@@ -44,7 +44,7 @@ async function getAvailableRooms(req, res) {
 async function todayCheckIns(req, res) {
     try {
         const date = new Date().toISOString().split('T')[0];
-        const query = 'SELECT COUNT(*) AS checkIns FROM booked_rooms WHERE checkIn = :date AND (status != "checked_out" AND status != "cancelled")';
+        const query = 'SELECT COUNT(*) AS checkIns FROM booked_rooms WHERE checkIn = :date AND (status != \'checked_out\' AND status != \'cancelled\')';
 
         const result = await sequelize.query(query, {
             replacements: { date },
@@ -112,8 +112,8 @@ async function getOccupiedRooms(req, res) {
             SELECT COUNT(DISTINCT br.room_id) AS occupiedRooms
             FROM booked_rooms br
             WHERE br.status = 'checked_in'
-            AND br.checkIn <= :date
-            AND br.checkOut > :date
+            AND DATE(br.checkIn) <= :date
+            AND DATE(br.checkOut) > :date
         `;
 
         const result = await sequelize.query(query, {
@@ -491,13 +491,13 @@ async function getAnalyticsSummary(req, res) {
                 SELECT COUNT(DISTINCT room_id) AS activeCount
                 FROM booked_rooms
                 WHERE status != 'cancelled'
-                AND checkIn <= :dateStr
-                AND checkOut > :dateStr
+                AND DATE(checkIn) <= :dateStr
+                AND DATE(checkOut) > :dateStr
             `, {
                 replacements: { dateStr },
                 type: QueryTypes.SELECT
             });
-            const activeCount = activeRoomsRes[0]?.activeCount || 0;
+            const activeCount = Number(activeRoomsRes[0]?.activeCount) || 0;
             const occupancy = totalRooms > 0 ? Math.round((activeCount / totalRooms) * 100) : 0;
 
             const dayBookingsRes = await sequelize.query(`
@@ -509,7 +509,7 @@ async function getAnalyticsSummary(req, res) {
                 replacements: { dateStr },
                 type: QueryTypes.SELECT
             });
-            const bookings = dayBookingsRes[0]?.bookingsCount || 0;
+            const bookings = Number(dayBookingsRes[0]?.bookingsCount) || 0;
 
             weeklyTrend.push({
                 day: dayName,

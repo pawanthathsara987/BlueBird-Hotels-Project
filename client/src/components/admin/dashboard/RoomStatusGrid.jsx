@@ -24,7 +24,7 @@ export default function RoomStatusGrid({ loading, rooms = [], roomTypes = [] }) 
         return rooms.map((room) => {
             let dashboardStatus = "not_booked"; // default white/gray
             const dbStatus = String(room.status || "available").toLowerCase();
-            
+
             if (dbStatus === "occupied") {
                 dashboardStatus = "booked"; // solid green
             } else if (dbStatus === "maintenance") {
@@ -33,7 +33,7 @@ export default function RoomStatusGrid({ loading, rooms = [], roomTypes = [] }) 
                 const hasPendingBooking = room.bookedRooms?.some(
                     (br) => br.booking?.status === "pending" && br.status !== "cancelled"
                 );
-                
+
                 if (hasPendingBooking) {
                     dashboardStatus = "pending"; // orange/amber pending state
                 } else {
@@ -61,10 +61,9 @@ export default function RoomStatusGrid({ loading, rooms = [], roomTypes = [] }) 
     }, [enrichedRooms, selectedFloor, selectedType, selectedStatus]);
 
     return (
-        <div className={`bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm p-6 space-y-6 transition-all duration-300 relative ${
-            isMaximized ? "fixed inset-4 z-50 overflow-y-auto" : ""
-        }`}>
-            
+        <div className={`bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm p-6 space-y-6 transition-all duration-300 relative ${isMaximized ? "fixed inset-4 z-50 overflow-y-auto" : ""
+            }`}>
+
             {/* Widget Header Area */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-5">
                 <div>
@@ -76,16 +75,15 @@ export default function RoomStatusGrid({ loading, rooms = [], roomTypes = [] }) 
                 </div>
 
                 <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end">
-                    
+
                     {/* Filter Button */}
                     <div className="relative">
                         <button
                             onClick={() => setShowFiltersDropdown(!showFiltersDropdown)}
-                            className={`flex items-center justify-center gap-2 px-4 py-2 border rounded-xl text-xs font-extrabold transition-all duration-200 cursor-pointer ${
-                                showFiltersDropdown || selectedFloor !== "all" || selectedType !== "all" || selectedStatus !== "all"
+                            className={`flex items-center justify-center gap-2 px-4 py-2 border rounded-xl text-xs font-extrabold transition-all duration-200 cursor-pointer ${showFiltersDropdown || selectedFloor !== "all" || selectedType !== "all" || selectedStatus !== "all"
                                     ? "bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-950/20 dark:border-blue-900/30"
                                     : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-800 dark:hover:bg-slate-800"
-                            }`}
+                                }`}
                         >
                             <Filter size={14} />
                             <span>Filter</span>
@@ -101,7 +99,7 @@ export default function RoomStatusGrid({ loading, rooms = [], roomTypes = [] }) 
                                 <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-xl p-4 z-20 space-y-3.5 animate-fadeIn">
                                     <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
                                         <span className="text-xs font-black text-slate-700 dark:text-slate-200">Filter Grid</span>
-                                        <button 
+                                        <button
                                             onClick={() => {
                                                 setSelectedFloor("all");
                                                 setSelectedType("all");
@@ -207,7 +205,7 @@ export default function RoomStatusGrid({ loading, rooms = [], roomTypes = [] }) 
                 <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-11 gap-3 md:gap-4 p-1">
                     {filteredRooms.map((room) => {
                         let blockStyle = "bg-slate-50 text-slate-700 hover:bg-slate-100 hover:scale-105 border border-slate-200/50 shadow-inner dark:bg-slate-800 dark:text-slate-200 dark:border-slate-800"; // Not Booked
-                        
+
                         if (room.dashboardStatus === "booked") {
                             blockStyle = "bg-emerald-500 text-white font-bold hover:bg-emerald-600 hover:scale-105 shadow-md shadow-emerald-500/10 border border-transparent";
                         } else if (room.dashboardStatus === "canceled") {
@@ -231,20 +229,19 @@ export default function RoomStatusGrid({ loading, rooms = [], roomTypes = [] }) 
                                 {hoveredRoomId === room.id && (
                                     <div className="absolute bottom-full mb-3.5 left-1/2 -translate-x-1/2 w-64 bg-slate-900/95 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border border-slate-800 z-35 animate-scaleUp pointer-events-none">
                                         <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900/95" />
-                                        
+
                                         <div className="space-y-3 text-left">
                                             <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                                                 <span className="text-xs font-black text-white">Room {displayNum}</span>
-                                                <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
-                                                    room.dashboardStatus === "booked" ? "bg-emerald-500/10 text-emerald-400 border-emerald-400/20" :
-                                                    room.dashboardStatus === "canceled" ? "bg-rose-500/10 text-rose-400 border-rose-400/20" :
-                                                    room.dashboardStatus === "pending" ? "bg-amber-500/10 text-amber-400 border-amber-400/20" :
-                                                    "bg-slate-500/10 text-slate-400 border-slate-400/20"
-                                                }`}>
+                                                <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${room.dashboardStatus === "booked" ? "bg-emerald-500/10 text-emerald-400 border-emerald-400/20" :
+                                                        room.dashboardStatus === "canceled" ? "bg-rose-500/10 text-rose-400 border-rose-400/20" :
+                                                            room.dashboardStatus === "pending" ? "bg-amber-500/10 text-amber-400 border-amber-400/20" :
+                                                                "bg-slate-500/10 text-slate-400 border-slate-400/20"
+                                                    }`}>
                                                     {room.dashboardStatus === "booked" ? "Booked" :
-                                                     room.dashboardStatus === "canceled" ? "Offline" :
-                                                     room.dashboardStatus === "pending" ? "Pending" :
-                                                     "Available"}
+                                                        room.dashboardStatus === "canceled" ? "Offline" :
+                                                            room.dashboardStatus === "pending" ? "Pending" :
+                                                                "Available"}
                                                 </span>
                                             </div>
 

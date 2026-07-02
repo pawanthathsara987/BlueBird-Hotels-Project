@@ -4,7 +4,7 @@ import {
     FaTimes, FaUser, FaEnvelope, FaShieldAlt, FaPhone,
     FaIdCard, FaMapMarkerAlt, FaGlobe, FaDownload,
     FaQrcode, FaCalendarCheck, FaSpinner, FaCheckCircle,
-    FaTimesCircle, FaClock
+    FaTimesCircle, FaClock, FaCalendarTimes
 } from "react-icons/fa";
 
 export default function StaffDetailsModal({ isOpen, member, onClose, status = "Active" }) {
@@ -127,14 +127,14 @@ export default function StaffDetailsModal({ isOpen, member, onClose, status = "A
                                 </h3>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {/* Username */}
+                                    {/* Staff ID */}
                                     <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-slate-100/50 transition-all duration-200">
                                         <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600">
                                             <FaUser className="text-sm" />
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Username</p>
-                                            <p className="text-sm font-semibold text-slate-700 truncate">@{member.userName}</p>
+                                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Staff ID</p>
+                                            <p className="text-sm font-semibold text-slate-700 truncate">{member.staffId}</p>
                                         </div>
                                     </div>
 
@@ -214,7 +214,7 @@ export default function StaffDetailsModal({ isOpen, member, onClose, status = "A
                                                     URL.revokeObjectURL(blobUrl);
                                                 } catch (error) {
                                                     console.error("Failed to download QR code:", error);
-                                                    window.open(member.qrCodeUrl, "_blank");
+                                                    window.open(member.qrCodeUrl.startsWith("http") ? member.qrCodeUrl : `${import.meta.env.VITE_BACKEND_URL}${member.qrCodeUrl}`, "_blank");
                                                 }
                                             }}
                                             className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-semibold shadow-md hover:shadow-lg transition-all duration-200 active:scale-95 cursor-pointer"
@@ -249,7 +249,7 @@ export default function StaffDetailsModal({ isOpen, member, onClose, status = "A
                                         </h3>
                                         <div className="grid grid-cols-2 gap-4">
                                             {/* Days Active */}
-                                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-3">
+                                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-3 col-span-2">
                                                 <div className="p-3 rounded-xl bg-blue-50 text-blue-600">
                                                     <FaCalendarCheck className="text-lg" />
                                                 </div>
@@ -296,6 +296,17 @@ export default function StaffDetailsModal({ isOpen, member, onClose, status = "A
                                                 <div>
                                                     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none">Absent</p>
                                                     <p className="text-lg font-bold text-slate-800 mt-1">{attendanceData?.summary?.absentCount || 0}</p>
+                                                </div>
+                                            </div>
+
+                                            {/* On Leave Count */}
+                                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-3">
+                                                <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600">
+                                                    <FaCalendarTimes className="text-lg" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none">On Leave</p>
+                                                    <p className="text-lg font-bold text-slate-800 mt-1">{attendanceData?.summary?.onLeaveCount || 0}</p>
                                                 </div>
                                             </div>
                                         </div>

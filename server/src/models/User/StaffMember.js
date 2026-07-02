@@ -21,13 +21,11 @@ StaffMember.init(
         },
         userName: {
             type: DataTypes.STRING(50),
-            allowNull: false,
-            unique: true
+            allowNull: false
         },
         email: {
             type: DataTypes.STRING(255),
             allowNull: false,
-            unique: true,
             validate: {
                 isEmail: true
             }
@@ -46,8 +44,7 @@ StaffMember.init(
         },
         nicNumber: {
             type: DataTypes.STRING(20),
-            allowNull: true,
-            unique: true
+            allowNull: true
         },
         address: {
             type: DataTypes.STRING(255),
@@ -59,14 +56,27 @@ StaffMember.init(
         },
         qrCodeUrl: {
             type: DataTypes.STRING,
-            allowNull: true
+            allowNull: true,
+            get() {
+                const staffId = this.getDataValue('staffId');
+                return staffId ? `/users/staff/${staffId}/qr-code` : null;
+            }
         }
     },
     {
         sequelize,
         modelName: 'StaffMember',
         tableName: 'staff_members',
-        timestamps: true
+        timestamps: true,
+        paranoid: true,
+        hooks: {
+            afterCreate: async (staffMember, options) => {
+                if (!staffMember.staffId) {
+                    staffMember.staffId = `STF${staffMember.userId}`;
+                    await staffMember.save({ transaction: options.transaction });
+                }
+            }
+        }
     }
 );
 

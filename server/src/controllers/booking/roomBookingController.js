@@ -404,11 +404,13 @@ const createBooking = async (req, res) => {
                 adults: actualAdults,
                 kids: actualKids,
                 board_type: clientBoardType || "Room Only",
-                status: "reserved"
+                status: "reserved",
+                price: priceDetails.totalPrice
             });
         }
 
         // Add airport pickup surcharge if enabled
+        let pickupPrice = 0;
         if (airportPickup?.enabled) {
             if (!airportPickup.pickupDate || !airportPickup.pickupTime) {
                 throw new Error("Airport pickup date and time are required");
@@ -417,7 +419,7 @@ const createBooking = async (req, res) => {
                 where: { service_Code: "AIRPORT_PICKUP", status: true },
                 transaction: t
             });
-            const pickupPrice = pickupPriceRecord ? parseFloat(pickupPriceRecord.price) : 50.00;
+            pickupPrice = pickupPriceRecord ? parseFloat(pickupPriceRecord.price) : 50.00;
             calculatedTotalPrice += pickupPrice;
         }
 
@@ -464,7 +466,8 @@ const createBooking = async (req, res) => {
                     pickup_time: airportPickup.pickupTime,
                     passenger_count: totalPassengers,
                     pickup_location: "Katunayake Airport",
-                    status: "CONFIRMED"
+                    status: "CONFIRMED",
+                    price: pickupPrice
                 },
                 { transaction: t }
             );
@@ -844,7 +847,7 @@ const getAvailableRoomTypesByDate = async (req, res) => {
         if (policiesList.length === 0) {
             const defaultPolicy = await Policy.create({
                 policy_name: "Default Hotel Policy",
-                cancellation_policy: "Free cancellation up to 48 hours prior to arrival. Cancellations made within 48 hours are subject to a one-night charge.",
+                cancellation_policy: "Free cancellation is allowed up to 7 days (168 hours) before check-in. Cancellations made within 7 days are subject to a 10% penalty fee of the cancelled room stay price.",
                 payment_policy: "No prepayment required. Secure your booking online and pay 50% advance on checkout to hold your luxury stay.",
                 check_in_time: "2:00 PM",
                 check_out_time: "12:00 PM"

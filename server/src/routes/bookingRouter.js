@@ -15,6 +15,15 @@ import {
 
 import { createVisitorBooking, createReceptionCustomer } from '../controllers/reception/visitingBookingController.js';
 import { requireAuth } from '../middleware/authMiddleware.js';
+import {
+   getRefundEligibility,
+   calculateRefund,
+   createRefundRequest,
+   getPendingRefunds,
+   actionRefundRequest,
+   getBookingRefundHistory,
+   getRefundReports
+} from '../controllers/booking/refundController.js';
 
 const router = express.Router();
 
@@ -31,5 +40,14 @@ router.post('/available-rooms', getAvailableRoomAssignForPackage);
 router.get('/pricing-matrix', getPricingMatrix);
 router.post('/check-price', checkBookingPrice);
 router.get('/policy', getActivePolicy);
+
+// Refund routes
+router.get('/refunds/eligibility/:bookingId', requireAuth, getRefundEligibility);
+router.post('/refunds/calculate', requireAuth, calculateRefund);
+router.post('/refunds', requireAuth, createRefundRequest);
+router.get('/refunds/pending', requireAuth, getPendingRefunds);
+router.post('/refunds/:refundId/action', requireAuth, actionRefundRequest);
+router.get('/refunds/history/:bookingId', requireAuth, getBookingRefundHistory);
+router.get('/refunds/reports', requireAuth, getRefundReports);
 
 export default router;

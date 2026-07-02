@@ -117,12 +117,15 @@ export default function Reports() {
 
     return (
         <div className={`p-4 md:p-6 lg:p-8 space-y-6 print:p-0 print:bg-white print:text-black ${theme.mode === "dark" ? "bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-900"} min-h-screen transition-colors duration-300`}>
-            {/* Custom Print Style */}
             <style>{`
                 @media print {
+                    @page {
+                        margin: 0;
+                    }
                     body {
                         background: white !important;
                         color: black !important;
+                        padding: 1.5cm 1cm !important;
                     }
                     .no-print {
                         display: none !important;
@@ -185,21 +188,19 @@ export default function Reports() {
                 <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-fit">
                     <button
                         onClick={() => setReportType("daily")}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer ${
-                            reportType === "daily"
-                                ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm"
-                                : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-                        }`}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer ${reportType === "daily"
+                            ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm"
+                            : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+                            }`}
                     >
                         Daily Report
                     </button>
                     <button
                         onClick={() => setReportType("monthly")}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer ${
-                            reportType === "monthly"
-                                ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm"
-                                : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-                        }`}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer ${reportType === "monthly"
+                            ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm"
+                            : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+                            }`}
                     >
                         Monthly Report
                     </button>
@@ -333,8 +334,8 @@ export default function Reports() {
                                     const heightPct = `${Math.round((day.revenue / maxRev) * 100)}%`;
                                     return (
                                         <div key={idx} className="flex-1 flex flex-col items-center gap-1 group relative">
-                                            <div 
-                                                style={{ height: heightPct }} 
+                                            <div
+                                                style={{ height: heightPct }}
                                                 className={`w-full min-h-[4px] rounded-t transition-all ${currentAccent.bg}`}
                                             />
                                             <span className="text-[8px] text-slate-600 dark:text-slate-400 scale-90 font-bold">

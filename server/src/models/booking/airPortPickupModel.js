@@ -1,7 +1,7 @@
 import { Model, DataTypes } from "sequelize";
 import sequelize from "../../config/database.js";
 
-class AirPortPickup extends Model {}
+class AirPortPickup extends Model { }
 
 AirPortPickup.init(
     {
@@ -41,6 +41,11 @@ AirPortPickup.init(
             type: DataTypes.ENUM("CONFIRMED", "COMPLETED", "CANCELLED"),
             allowNull: false,
             defaultValue: "CONFIRMED",
+        },
+        price: {
+            type: DataTypes.DOUBLE,
+            allowNull: false,
+            defaultValue: 0.00,
         },
     },
     {
