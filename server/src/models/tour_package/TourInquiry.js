@@ -42,6 +42,14 @@ TourInquiry.init(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    nic: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    passportId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     numberOfAdults: {
       type: DataTypes.INTEGER,
       allowNull: false,

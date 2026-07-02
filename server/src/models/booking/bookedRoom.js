@@ -55,6 +55,11 @@ BookedRoom.init(
             allowNull: true,
             defaultValue: "Room Only",
         },
+        price: {
+            type: DataTypes.DOUBLE,
+            allowNull: false,
+            defaultValue: 0.00,
+        },
     },
     {
         sequelize,

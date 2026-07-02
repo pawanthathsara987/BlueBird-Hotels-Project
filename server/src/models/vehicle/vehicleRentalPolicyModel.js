@@ -44,7 +44,7 @@ VehicleRentalPolicy.init(
     extraMileageCurrency: {
       type: DataTypes.STRING(10),
       allowNull: false,
-      defaultValue: process.env.CURRENCY_TYPE || 'LKR',
+      defaultValue: 'USD',
     },
     termsAndConditions: {
       type: DataTypes.TEXT,

@@ -51,7 +51,7 @@ async function seed() {
         if (policiesCount === 0) {
             await Policy.create({
                 policy_name: "Default Hotel Policy",
-                cancellation_policy: "Free cancellation up to 48 hours prior to arrival. Cancellations made within 48 hours are subject to a one-night charge.",
+                cancellation_policy: "Free cancellation is allowed up to 7 days (168 hours) before check-in. Cancellations made within 7 days are subject to a 10% penalty fee of the cancelled room stay price.",
                 payment_policy: "No prepayment required. Secure your booking online and pay 50% advance on checkout to hold your luxury stay.",
                 check_in_time: "2:00 PM",
                 check_out_time: "12:00 PM",

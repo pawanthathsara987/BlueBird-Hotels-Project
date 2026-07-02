@@ -34,6 +34,8 @@ import RoomPayment from "./booking/roomPayment.js";
 import ShopItem from "./shop/ShopItem.js";
 import Attendance from "./attendance/Attendance.js";
 import AttendanceEditLog from "./attendance/AttendanceEditLog.js";
+import BookingRefund from "./booking/bookingRefund.js";
+import BookingRefundItem from "./booking/bookingRefundItem.js";
 import AttendanceSetting from "./attendance/AttendanceSetting.js";
 import LeaveType from "./leave/LeaveType.js";
 import LeaveRequest from "./leave/LeaveRequest.js";
@@ -375,7 +377,50 @@ export function initModels() {
         as: "attendance"
     });
 
-    // Leave Management
+    // Booking -> BookingRefund
+    Booking.hasMany(BookingRefund, {
+        foreignKey: "booking_id",
+        as: "refunds",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE"
+    });
+    BookingRefund.belongsTo(Booking, {
+        foreignKey: "booking_id",
+        as: "booking"
+    });
+
+    // BookingRefund -> BookingRefundItem
+    BookingRefund.hasMany(BookingRefundItem, {
+        foreignKey: "refund_id",
+        as: "items",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE"
+    });
+    BookingRefundItem.belongsTo(BookingRefund, {
+        foreignKey: "refund_id",
+        as: "refund"
+    });
+
+    // BookingRefundItem -> BookedRoom
+    BookingRefundItem.belongsTo(BookedRoom, {
+        foreignKey: "booked_room_id",
+        as: "bookedRoom"
+    });
+
+    // BookingRefundItem -> AirPortPickup
+    BookingRefundItem.belongsTo(AirPortPickup, {
+        foreignKey: "airport_pickup_id",
+        as: "airportPickup"
+    });
+
+    // BookingRefund -> StaffMember
+    BookingRefund.belongsTo(StaffMember, {
+        foreignKey: "processed_by",
+        targetKey: "userId",
+        as: "processedByStaff"
+    });
+
+// Leave Management
     LeaveType.hasMany(LeaveRequest, {
         foreignKey: "leaveTypeId",
         as: "leaveRequests"
@@ -404,6 +449,6 @@ export function initModels() {
         as: "approver"
     });
 
-    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, ServiceCharge, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance, AttendanceEditLog, AttendanceSetting, LeaveType, LeaveRequest };
+    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, ServiceCharge, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance, AttendanceEditLog, BookingRefund, BookingRefundItem };
 }
-export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, ServiceCharge, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance, AttendanceEditLog, AttendanceSetting, LeaveType, LeaveRequest };
+export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, ServiceCharge, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance, AttendanceEditLog, BookingRefund, BookingRefundItem };

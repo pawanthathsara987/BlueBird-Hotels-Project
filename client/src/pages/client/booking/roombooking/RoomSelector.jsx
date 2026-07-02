@@ -1518,9 +1518,9 @@ const RoomSelector = () => {
                             <span>{room.boardType} Add-on:</span>
                             <span>
                               +{process.env.CURRENCY_TYPE || "LKR"} {(() => {
-                                const addons = { "room only": 0, "bed & breakfast": 40, "half board": 90, "full board": 150 };
-                                const normalized = (room.boardType || "Room Only").toLowerCase();
-                                return addons[normalized] !== undefined ? addons[normalized] : 0;
+                                const typeObj = roomTypes.find(t => t.name === room.roomType);
+                                const baseRate = typeObj ? Number(typeObj.price.replace(/[^0-9.]/g, '')) : 0;
+                                return Math.max(0, room.price - baseRate);
                               })()}
                             </span>
                           </div>

@@ -7,7 +7,7 @@ const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:30
 
 const formatMoney = (value) => {
   const amount = Number(value);
-  const currency = process.env.CURRENCY_TYPE || 'LKR';
+  const currency = import.meta.env.VITE_CURRENCY_TYPE || "LKR";
   if (!Number.isFinite(amount)) return `${currency} 0.00`;
   return `${currency} ${amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 };
