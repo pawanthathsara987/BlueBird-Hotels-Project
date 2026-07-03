@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import Header from "../components/header";
 import Footer from "../components/footer";
+import axios from "axios";
+import { toast } from "react-hot-toast";
 
 export default function ContactPage() {
     const [form, setForm] = useState({ name: "", email: "", message: "" });
@@ -10,9 +12,34 @@ export default function ContactPage() {
     const handleChange = (e) =>
         setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (form.name && form.email && form.message) setSubmitted(true);
+        if (!form.name || !form.email || !form.message) {
+            toast.error("Please fill in all fields.");
+            return;
+        }
+
+        const loadingToast = toast.loading("Sending your message...");
+        try {
+            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/customers/contact`, {
+                name: form.name,
+                email: form.email,
+                message: form.message
+            });
+
+            if (res.data.success) {
+                toast.dismiss(loadingToast);
+                toast.success("Message sent successfully!");
+                setSubmitted(true);
+            } else {
+                toast.dismiss(loadingToast);
+                toast.error(res.data.message || "Failed to send message.");
+            }
+        } catch (error) {
+            toast.dismiss(loadingToast);
+            toast.error(error.response?.data?.message || "Something went wrong. Please try again.");
+            console.error("Contact Form Submission Error:", error);
+        }
     };
 
     return (
