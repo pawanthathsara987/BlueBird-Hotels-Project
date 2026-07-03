@@ -1,6 +1,6 @@
 import sequelize from '../../config/database.js';
 import { QueryTypes } from 'sequelize';;
-import { BookedRoom, AirPortPickup, Customer, Booking } from '../../models/index.js';
+import { BookedRoom, AirPortPickup, Customer, Booking, RoomPayment, Room } from '../../models/index.js';
 
 async function setCheckIn(req, res) {
     try {
@@ -353,6 +353,139 @@ async function getPickupAlerts(req, res) {
     }
 }
 
+// Get full check-in details for a booking (customer info + payment breakdown)
+async function getCheckInDetails(req, res) {
+    try {
+        const { bookingId } = req.params;
+
+        const booking = await Booking.findByPk(bookingId, {
+            include: [
+                { model: Customer },
+                {
+                    model: BookedRoom,
+                    as: 'bookedRooms',
+                    include: [{ model: Room }]
+                }
+            ]
+        });
+
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+
+        // Fetch all successful payments for this booking
+        const payments = await RoomPayment.findAll({
+            where: { booking_id: bookingId },
+            order: [['createdAt', 'ASC']]
+        });
+
+        const totalPrice = parseFloat(booking.total_price) || 0;
+        const totalPaid = payments
+            .filter(p => p.status === 'success')
+            .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+        const balanceDue = Math.max(0, totalPrice - totalPaid);
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                booking: {
+                    id: booking.id,
+                    bookingNo: booking.bookingNo,
+                    status: booking.status,
+                    payment_status: booking.payment_status,
+                    total_price: totalPrice,
+                    tax: booking.tax,
+                    tax_percentage: booking.tax_percentage,
+                    note: booking.note,
+                    kids_age: booking.kids_age,
+                    createdAt: booking.createdAt
+                },
+                customer: booking.Customer,
+                bookedRooms: booking.bookedRooms,
+                payments: payments.map(p => ({
+                    id: p.id,
+                    payment_no: p.payment_no,
+                    amount: parseFloat(p.amount),
+                    currency: p.currency,
+                    method: p.method,
+                    status: p.status,
+                    createdAt: p.createdAt
+                })),
+                paymentSummary: {
+                    totalPrice,
+                    totalPaid,
+                    balanceDue
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching check-in details:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+}
+
+// Record a manual (cash/card at reception) payment for a booking
+async function recordManualPayment(req, res) {
+    try {
+        const { bookingId } = req.params;
+        const { amount, method, note } = req.body;
+
+        if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+            return res.status(400).json({ success: false, message: 'Valid payment amount is required' });
+        }
+
+        const booking = await Booking.findByPk(bookingId);
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+
+        // Generate a unique payment number
+        const paymentNo = `RCPT-${bookingId}-${Date.now()}`;
+
+        const payment = await RoomPayment.create({
+            booking_id: parseInt(bookingId),
+            customer_id: booking.customer_id,
+            payment_no: paymentNo,
+            amount: parseFloat(amount),
+            currency: 'LKR',
+            method: method || 'cash',
+            status: 'success',
+            raw_payload: { note: note || 'Recorded by reception at check-in', recorded_by: 'reception' }
+        });
+
+        // Recalculate total paid
+        const payments = await RoomPayment.findAll({
+            where: { booking_id: bookingId, status: 'success' }
+        });
+        const totalPaid = payments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+        const totalPrice = parseFloat(booking.total_price) || 0;
+
+        // Update booking payment_status
+        if (totalPaid >= totalPrice) {
+            booking.payment_status = 'FULLY_PAID';
+        } else {
+            booking.payment_status = 'PARTIALLY_PAID';
+        }
+        await booking.save();
+
+        return res.status(201).json({
+            success: true,
+            message: 'Payment recorded successfully',
+            data: {
+                payment,
+                paymentSummary: {
+                    totalPrice,
+                    totalPaid,
+                    balanceDue: Math.max(0, totalPrice - totalPaid)
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error recording manual payment:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+}
+
 export {
     setCheckIn,
     setCheckOut,
@@ -361,5 +494,7 @@ export {
     getAirportPickups,
     updateAirportPickupStatus,
     createAirportPickup,
-    getPickupAlerts
+    getPickupAlerts,
+    getCheckInDetails,
+    recordManualPayment
 };

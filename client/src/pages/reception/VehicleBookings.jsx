@@ -19,17 +19,21 @@ import {
     MdDateRange
 } from "react-icons/md";
 import { toast } from "react-hot-toast";
+import { Eye, FileText, Receipt, XCircle } from "lucide-react";
 
 export default function VehicleBookings() {
     const [bookings, setBookings] = useState([]);
     const [vehicles, setVehicles] = useState([]);
+    const [selectedBooking, setSelectedBooking] = useState(null);
     const [driverPrice, setDriverPrice] = useState(1500);
+    const [policy, setPolicy] = useState({ securityDepositAmount: 200.0 });
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
 
     // Booking form modal state
     const [showForm, setShowForm] = useState(false);
+    const [availabilityError, setAvailabilityError] = useState("");
     const [newBooking, setNewBooking] = useState({
         vehicleId: "",
         fullName: "",
@@ -70,13 +74,81 @@ export default function VehicleBookings() {
         };
     }, []);
 
+    // Real-time availability check
+    useEffect(() => {
+        const checkAvailability = async () => {
+            if (!newBooking.vehicleId || !newBooking.pickupDatetime || !newBooking.returnDatetime) {
+                setAvailabilityError("");
+                return;
+            }
+
+            // Local Date Validations
+            const pickup = new Date(newBooking.pickupDatetime);
+            const ret = new Date(newBooking.returnDatetime);
+            const now = new Date();
+            // 1-minute buffer to allow selection of "now" without milliseconds ticking past
+            const nowWithBuffer = new Date(now.getTime() - 60000);
+
+            if (isNaN(pickup.getTime())) {
+                setAvailabilityError("Invalid pickup date and time");
+                return;
+            }
+            if (isNaN(ret.getTime())) {
+                setAvailabilityError("Invalid return date and time");
+                return;
+            }
+            if (pickup < nowWithBuffer) {
+                setAvailabilityError("Pickup date & time cannot be in the past");
+                return;
+            }
+            if (ret <= pickup) {
+                setAvailabilityError("Return date & time must be after the pickup date & time");
+                return;
+            }
+
+            try {
+                const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/vehicle-bookings/check-availability`, {
+                    params: {
+                        vehicleId: newBooking.vehicleId,
+                        pickupDatetime: newBooking.pickupDatetime,
+                        returnDatetime: newBooking.returnDatetime
+                    }
+                });
+                if (res.data.success) {
+                    if (!res.data.available) {
+                         setAvailabilityError("Vehicle is no longer available for the selected date range");
+                    } else {
+                         setAvailabilityError("");
+                    }
+                }
+            } catch (error) {
+                console.error("Availability check failed:", error);
+                setAvailabilityError(error.response?.data?.message || "Availability check failed");
+            }
+        };
+
+        const delayDebounceFn = setTimeout(() => {
+            checkAvailability();
+        }, 300);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [newBooking.vehicleId, newBooking.pickupDatetime, newBooking.returnDatetime]);
+
+    // Reset availability error when modal opens/closes
+    useEffect(() => {
+        if (!showForm) {
+            setAvailabilityError("");
+        }
+    }, [showForm]);
+
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            const [bookingsRes, vehiclesRes, driverPriceRes] = await Promise.all([
+            const [bookingsRes, vehiclesRes, driverPriceRes, policyRes] = await Promise.all([
                 axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/vehicle-bookings`),
                 axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/vehicles`),
-                axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/driver-pricing`)
+                axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/driver-pricing`),
+                axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/vehicle-policy`)
             ]);
 
             if (bookingsRes.data.success) {
@@ -90,6 +162,9 @@ export default function VehicleBookings() {
             if (driverPriceRes.data.success) {
                 setDriverPrice(parseFloat(driverPriceRes.data.data?.driverPricePerDay || 1500));
             }
+            if (policyRes?.data?.success) {
+                setPolicy(policyRes.data.data || { securityDepositAmount: 200.0 });
+            }
         } catch (error) {
             console.error("Error loading vehicle bookings:", error);
             toast.error("Failed to load vehicle rentals metadata.");
@@ -100,44 +175,50 @@ export default function VehicleBookings() {
 
     // Date calculations
     const getMinPickupDatetime = () => {
-        const date = new Date();
-        date.setHours(date.getHours() + 1); // at least 1 hour in advance
-        return date.toISOString().slice(0, 16);
+        const now = new Date();
+        const offsetMs = now.getTimezoneOffset() * 60 * 1000;
+        const localTime = new Date(now.getTime() - offsetMs);
+        return localTime.toISOString().slice(0, 16);
     };
 
     const getMinReturnDatetime = () => {
         if (!newBooking.pickupDatetime) return getMinPickupDatetime();
-        const date = new Date(newBooking.pickupDatetime);
-        date.setHours(date.getHours() + 1);
-        return date.toISOString().slice(0, 16);
+        return newBooking.pickupDatetime;
     };
 
     const getCalculatedPrice = () => {
         if (!newBooking.vehicleId || !newBooking.pickupDatetime || !newBooking.returnDatetime) {
-            return { numDays: 0, vehicleRate: 0, driverRate: 0, subtotal: 0, deposit: 0, balance: 0, total: 0 };
+            return { numDays: 0, vehicleRate: 0, driverRate: 0, securityDeposit: 0, subtotal: 0, deposit: 0, balance: 0, total: 0 };
         }
         const selectedVehicle = vehicles.find(v => v.id === parseInt(newBooking.vehicleId));
         if (!selectedVehicle) {
-            return { numDays: 0, vehicleRate: 0, driverRate: 0, subtotal: 0, deposit: 0, balance: 0, total: 0 };
+            return { numDays: 0, vehicleRate: 0, driverRate: 0, securityDeposit: 0, subtotal: 0, deposit: 0, balance: 0, total: 0 };
         }
 
         const pickupDate = new Date(newBooking.pickupDatetime);
         const returnDate = new Date(newBooking.returnDatetime);
+        if (isNaN(pickupDate.getTime()) || isNaN(returnDate.getTime()) || returnDate <= pickupDate) {
+            return { numDays: 0, vehicleRate: 0, driverRate: 0, securityDeposit: 0, subtotal: 0, deposit: 0, balance: 0, total: 0 };
+        }
         const diffMs = returnDate - pickupDate;
-        const numDays = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+        const diffHours = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60)));
+        const numDays = Math.max(1, Math.ceil(diffHours / 24));
 
         const vehicleRate = parseFloat(selectedVehicle.pricePerDay || 0);
         const driverRate = newBooking.hireType === "with_driver" ? driverPrice : 0;
+        const securityDeposit = parseFloat(policy?.securityDepositAmount || 0);
         
         const subtotal = (vehicleRate + driverRate) * numDays;
-        const total = subtotal;
-        const deposit = parseFloat((total * 0.5).toFixed(2));
-        const balance = parseFloat((total - deposit).toFixed(2));
+        const total = subtotal + securityDeposit;
+        const deposit = total;
+        const balance = 0;
 
         return {
             numDays,
+            diffHours,
             vehicleRate,
             driverRate,
+            securityDeposit,
             subtotal,
             deposit,
             balance,
@@ -156,12 +237,15 @@ export default function VehicleBookings() {
         const pickup = new Date(newBooking.pickupDatetime);
         const ret = new Date(newBooking.returnDatetime);
 
-        if (pickup < new Date()) {
-            toast.error("Pickup date must be in the future.");
+        const now = new Date();
+        const nowWithBuffer = new Date(now.getTime() - 60000);
+
+        if (pickup < nowWithBuffer) {
+            toast.error("Pickup date & time cannot be in the past.");
             return;
         }
         if (ret <= pickup) {
-            toast.error("Return date must be after the pickup date.");
+            toast.error("Return date & time must be after the pickup date & time.");
             return;
         }
 
@@ -185,7 +269,8 @@ export default function VehicleBookings() {
 
         const confirmMsg = `Confirm Vehicle Booking?\n\n` +
             `🚗 Vehicle: ${priceDetails.brand} ${priceDetails.model} (${priceDetails.plateNo})\n` +
-            `📅 Duration: ${priceDetails.numDays} day(s)\n` +
+            `📅 Duration: ${priceDetails.diffHours} hour(s) (${priceDetails.numDays} day(s))\n` +
+            `🛡️ Security Deposit (Refundable): LKR ${priceDetails.securityDeposit.toLocaleString(undefined, { minimumFractionDigits: 2 })}\n` +
             `👤 Guest: ${newBooking.fullName}\n` +
             `📞 Phone: ${newBooking.phone}\n` +
             `💵 Estimated Total: LKR ${priceDetails.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}\n\n` +
@@ -240,6 +325,216 @@ export default function VehicleBookings() {
             console.error(error);
             toast.error(error.response?.data?.message || "Failed to cancel booking.");
         }
+    };
+
+    // Helper to format date nicely
+    const formatDate = (dateStr) => {
+        try {
+            return new Date(dateStr).toLocaleString();
+        } catch {
+            return dateStr;
+        }
+    };
+
+    // Print Invoice layout
+    const handlePrintInvoice = (booking) => {
+        const printWindow = window.open("", "_blank");
+        if (!printWindow) {
+            toast.error("Popup blocked! Please allow popups to print invoices.");
+            return;
+        }
+        
+        const vehicleInfo = `${booking.vehicle?.brand || ""} ${booking.vehicle?.model || ""}`;
+        const plateNo = booking.vehicle?.plateNo || "N/A";
+        const guestName = `${booking.customer?.firstName || ""} ${booking.customer?.lastName || ""}` || "Guest";
+        const guestEmail = booking.customer?.email || "N/A";
+        const guestPhone = booking.customer?.phoneNumber || "N/A";
+        
+        const subtotal = parseFloat(booking.subtotal || 0);
+        const securityDeposit = parseFloat(booking.securityDepositCollected || 0);
+        const totalPayable = parseFloat(booking.totalPayable || 0);
+        
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Invoice - ${booking.bookingNo}</title>
+                <style>
+                    body { font-family: 'Segoe UI', Roboto, sans-serif; color: #333; margin: 40px; line-height: 1.5; }
+                    .header { display: flex; justify-content: space-between; border-bottom: 2px solid #0284c7; padding-bottom: 20px; }
+                    .logo { font-size: 24px; font-weight: 900; color: #0284c7; letter-spacing: 1px; }
+                    .title { font-size: 28px; font-weight: 850; text-align: right; color: #1e293b; }
+                    .details { display: flex; justify-content: space-between; margin-top: 30px; }
+                    .section-title { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+                    .info-block { flex: 1; }
+                    .invoice-table { width: 100%; border-collapse: collapse; margin-top: 40px; }
+                    .invoice-table th { background: #f8fafc; border-bottom: 2px solid #e2e8f0; padding: 12px; text-align: left; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; }
+                    .invoice-table td { padding: 16px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; }
+                    .totals { width: 40%; margin-left: auto; margin-top: 30px; font-size: 13px; }
+                    .total-row { display: flex; justify-content: space-between; padding: 8px 0; }
+                    .grand-total { font-weight: 900; font-size: 16px; color: #0284c7; border-top: 2px solid #e2e8f0; padding-top: 12px; margin-top: 8px; }
+                    .footer { text-align: center; margin-top: 60px; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <div>
+                        <div class="logo">BLUEBIRD HOTELS</div>
+                        <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Negombo Shoreline Resort, Sri Lanka</div>
+                    </div>
+                    <div>
+                        <div class="title">RENTAL INVOICE</div>
+                        <div style="font-size: 12px; font-weight: bold; color: #64748b; text-align: right; margin-top: 4px;"># ${booking.bookingNo}</div>
+                    </div>
+                </div>
+                
+                <div class="details">
+                    <div class="info-block">
+                        <div class="section-title">Billed To</div>
+                        <div style="font-weight: bold; font-size: 15px; color: #1e293b;">${guestName}</div>
+                        <div style="font-size: 12px; color: #475569; margin-top: 2px;">Email: ${guestEmail}</div>
+                        <div style="font-size: 12px; color: #475569;">Phone: ${guestPhone}</div>
+                    </div>
+                    <div class="info-block" style="text-align: right;">
+                        <div class="section-title">Rental Information</div>
+                        <div style="font-size: 12px; color: #475569;">Pickup: ${formatDate(booking.pickupDatetime)}</div>
+                        <div style="font-size: 12px; color: #475569;">Return: ${formatDate(booking.returnDatetime)}</div>
+                        <div style="font-size: 12px; color: #475569;">Duration: ${booking.numDays} Day(s)</div>
+                    </div>
+                </div>
+                
+                <table class="invoice-table">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Daily Rate</th>
+                            <th>Duration</th>
+                            <th style="text-align: right;">Line Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <strong>Vehicle Hire</strong><br/>
+                                <span style="font-size: 11px; color: #64748b;">${vehicleInfo} (${plateNo}) - ${booking.hireType.replace('_', ' ')}</span>
+                            </td>
+                            <td>LKR ${parseFloat(booking.vehicleRatePerDay).toLocaleString()}</td>
+                            <td>${booking.numDays} Day(s)</td>
+                            <td style="text-align: right; font-weight: bold;">LKR ${(parseFloat(booking.vehicleRatePerDay) * booking.numDays).toLocaleString()}</td>
+                        </tr>
+                        ${booking.driverRatePerDay > 0 ? `
+                        <tr>
+                            <td>
+                                <strong>Driver Charge</strong><br/>
+                                <span style="font-size: 11px; color: #64748b;">Assigned Professional Chauffeur Service</span>
+                            </td>
+                            <td>LKR ${parseFloat(booking.driverRatePerDay).toLocaleString()}</td>
+                            <td>${booking.numDays} Day(s)</td>
+                            <td style="text-align: right; font-weight: bold;">LKR ${(parseFloat(booking.driverRatePerDay) * booking.numDays).toLocaleString()}</td>
+                        </tr>
+                        ` : ''}
+                    </tbody>
+                </table>
+                
+                <div class="totals">
+                    <div class="total-row">
+                        <span style="color: #64748b;">Rental Subtotal:</span>
+                        <span style="font-weight: bold;">LKR ${subtotal.toLocaleString()}</span>
+                    </div>
+                    <div class="total-row">
+                        <span style="color: #64748b;">Security Deposit (Refundable):</span>
+                        <span style="font-weight: bold;">LKR ${securityDeposit.toLocaleString()}</span>
+                    </div>
+                    <div class="total-row grand-total">
+                        <span>Invoice Total:</span>
+                        <span>LKR ${totalPayable.toLocaleString()}</span>
+                    </div>
+                </div>
+                
+                <div class="footer">
+                    <p>Thank you for choosing BlueBird Hotels. Drive safely!</p>
+                    <p style="font-size: 9px; margin-top: 10px;">This is a system generated invoice copy and requires no physical signature.</p>
+                </div>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    };
+
+    // Print Receipt layout
+    const handlePrintReceipt = (booking) => {
+        const printWindow = window.open("", "_blank");
+        if (!printWindow) {
+            toast.error("Popup blocked! Please allow popups to print receipts.");
+            return;
+        }
+        
+        const vehicleInfo = `${booking.vehicle?.brand || ""} ${booking.vehicle?.model || ""}`;
+        const plateNo = booking.vehicle?.plateNo || "N/A";
+        const guestName = `${booking.customer?.firstName || ""} ${booking.customer?.lastName || ""}` || "Guest";
+        
+        const total = parseFloat(booking.totalPayable || 0);
+        const paidAmount = booking.balancePaidAt ? total : parseFloat(booking.depositAmount || 0);
+        const receiptType = booking.balancePaidAt ? "FULL PAYMENT RECEIPT" : "DEPOSIT RECEIPT";
+        
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Receipt - ${booking.bookingNo}</title>
+                <style>
+                    body { font-family: 'Segoe UI', Roboto, sans-serif; color: #333; margin: 40px; line-height: 1.5; }
+                    .receipt-container { max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); }
+                    .header { text-align: center; border-bottom: 2px dashed #0d9488; padding-bottom: 20px; margin-bottom: 20px; }
+                    .logo { font-size: 20px; font-weight: 900; color: #0d9488; letter-spacing: 1px; }
+                    .title { font-size: 22px; font-weight: 850; color: #1e293b; margin-top: 10px; }
+                    .receipt-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+                    .receipt-row.total { font-size: 18px; font-weight: 900; color: #0d9488; border-top: 2px solid #e2e8f0; border-bottom: none; padding-top: 15px; margin-top: 10px; }
+                    .footer { text-align: center; margin-top: 30px; font-size: 11px; color: #94a3b8; }
+                </style>
+            </head>
+            <body>
+                <div class="receipt-container">
+                    <div class="header">
+                        <div class="logo">BLUEBIRD HOTELS</div>
+                        <div class="title">${receiptType}</div>
+                        <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Ref #: ${booking.bookingNo}</div>
+                    </div>
+                    
+                    <div class="receipt-row">
+                        <span>Customer Name:</span>
+                        <span style="font-weight: bold;">${guestName}</span>
+                    </div>
+                    <div class="receipt-row">
+                        <span>Vehicle Details:</span>
+                        <span style="font-weight: bold;">${vehicleInfo} (${plateNo})</span>
+                    </div>
+                    <div class="receipt-row">
+                        <span>Duration:</span>
+                        <span style="font-weight: bold;">${booking.numDays} Day(s)</span>
+                    </div>
+                    <div class="receipt-row">
+                        <span>Payment Method:</span>
+                        <span style="font-weight: bold; text-transform: uppercase;">${booking.balancePaymentMethod || "Cash"}</span>
+                    </div>
+                    <div class="receipt-row">
+                        <span>Transaction Date:</span>
+                        <span style="font-weight: bold;">${new Date().toLocaleString()}</span>
+                    </div>
+                    <div class="receipt-row total">
+                        <span>Paid Amount:</span>
+                        <span>LKR ${paidAmount.toLocaleString()}</span>
+                    </div>
+                    
+                    <div class="footer">
+                        <p>Thank you for your payment!</p>
+                        <p>BlueBird Hotels - Negombo Shoreline Resort</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
     };
 
     // Filtered bookings
@@ -299,12 +594,20 @@ export default function VehicleBookings() {
                     </p>
                 </div>
 
-                <button
-                    onClick={() => setShowForm(true)}
-                    className={`flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-black text-white shadow-md cursor-pointer transition ${currentAccent.bg}`}
-                >
-                    <MdAdd size={16} /> Book A Vehicle
-                </button>
+                <div className="flex gap-2 flex-shrink-0">
+                    <button
+                        onClick={() => window.open("http://localhost:5173/vehicles", "_blank")}
+                        className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-black border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 rounded-xl transition duration-200 cursor-pointer shadow-sm text-slate-700 dark:text-slate-200"
+                    >
+                        <MdDirectionsCar size={16} className={currentAccent.text} /> View Vehicles Page
+                    </button>
+                    <button
+                        onClick={() => setShowForm(true)}
+                        className={`flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-black text-white shadow-md cursor-pointer transition ${currentAccent.bg}`}
+                    >
+                        <MdAdd size={16} /> Book A Vehicle
+                    </button>
+                </div>
             </div>
 
             {/* Dashboard Cards Grid */}
@@ -450,18 +753,37 @@ export default function VehicleBookings() {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex gap-2">
+                                                <div className="flex items-center gap-1.5">
+                                                    <button
+                                                        onClick={() => setSelectedBooking(b)}
+                                                        title="View rental details"
+                                                        className="p-1.5 bg-slate-50 border border-slate-200 dark:bg-slate-900/60 dark:border-slate-800 rounded-lg text-slate-650 hover:text-slate-850 dark:text-slate-300 dark:hover:text-white transition cursor-pointer shadow-2xs"
+                                                    >
+                                                        <Eye size={13} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handlePrintInvoice(b)}
+                                                        title="Print rental invoice"
+                                                        className="p-1.5 bg-blue-50 border border-blue-100 dark:bg-blue-950/20 dark:border-blue-900/30 rounded-lg text-blue-650 dark:text-blue-400 hover:text-blue-800 transition cursor-pointer shadow-2xs"
+                                                    >
+                                                        <FileText size={13} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handlePrintReceipt(b)}
+                                                        title="Print payment receipt"
+                                                        className="p-1.5 bg-cyan-50 border border-cyan-100 dark:bg-cyan-950/20 dark:border-cyan-900/30 rounded-lg text-cyan-700 dark:text-cyan-450 hover:text-cyan-900 transition cursor-pointer shadow-2xs"
+                                                    >
+                                                        <Receipt size={13} />
+                                                    </button>
                                                     {!["cancelled", "completed", "returned"].includes(b.status) ? (
                                                         <button
                                                             onClick={() => handleCancelBooking(b.id)}
-                                                            className="p-1.5 border border-rose-200 dark:border-slate-800 hover:bg-rose-50 dark:hover:bg-slate-800 text-rose-500 rounded-lg cursor-pointer transition shadow-sm bg-white dark:bg-slate-900"
-                                                            title="Cancel Rental"
+                                                            title="Cancel reservation"
+                                                            className="p-1.5 bg-rose-50 border border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/30 rounded-lg text-rose-650 dark:text-rose-450 hover:text-rose-800 transition cursor-pointer shadow-2xs"
                                                         >
-                                                            <MdCancel size={14} />
+                                                            <XCircle size={13} />
                                                         </button>
-                                                    ) : (
-                                                        <span className="text-slate-400 italic text-[10px]">No Actions</span>
-                                                    )}
+                                                    ) : null}
                                                 </div>
                                             </td>
                                         </tr>
@@ -500,7 +822,7 @@ export default function VehicleBookings() {
                                         <div className="space-y-2 py-2 border-b dark:border-slate-800/80 border-slate-200/80">
                                             <div className="flex justify-between text-slate-500">
                                                 <span>Duration:</span>
-                                                <span>{priceDetails.numDays} day(s)</span>
+                                                <span>{priceDetails.diffHours} hour(s) ({priceDetails.numDays} day(s))</span>
                                             </div>
                                             <div className="flex justify-between text-slate-600 dark:text-slate-350">
                                                 <span>Vehicle Total:</span>
@@ -510,6 +832,12 @@ export default function VehicleBookings() {
                                                 <div className="flex justify-between text-teal-650 dark:text-teal-400">
                                                     <span>Driver Total:</span>
                                                     <span>+ LKR {(priceDetails.driverRate * priceDetails.numDays).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                            )}
+                                            {priceDetails.securityDeposit > 0 && (
+                                                <div className="flex justify-between text-indigo-600 dark:text-indigo-400">
+                                                    <span>Security Deposit (Refundable):</span>
+                                                    <span>+ LKR {priceDetails.securityDeposit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -719,6 +1047,14 @@ export default function VehicleBookings() {
 
 
 
+                                {/* Availability warning banner */}
+                                {availabilityError && (
+                                    <div className="flex items-center gap-2 p-4 bg-rose-500/10 text-rose-500 border border-rose-500/25 rounded-xl font-bold text-xs animate-pulse">
+                                        <MdWarning size={16} className="flex-shrink-0" />
+                                        <span>{availabilityError}</span>
+                                    </div>
+                                )}
+
                                 {/* Form Action Buttons */}
                                 <div className="flex justify-end gap-3 pt-4 border-t dark:border-slate-800 border-slate-100 flex-shrink-0">
                                     <button
@@ -730,12 +1066,189 @@ export default function VehicleBookings() {
                                     </button>
                                     <button
                                         type="submit"
-                                        className={`px-6 py-3 text-white rounded-xl flex items-center gap-1.5 font-black cursor-pointer transition shadow-md ${currentAccent.bg}`}
+                                        disabled={!!availabilityError}
+                                        className={`px-6 py-3 text-white rounded-xl flex items-center gap-1.5 font-black transition shadow-md ${
+                                            availabilityError 
+                                                ? "bg-slate-400 dark:bg-slate-850 cursor-not-allowed opacity-60 shadow-none text-slate-500 dark:text-slate-400" 
+                                                : currentAccent.bg + " cursor-pointer"
+                                        }`}
                                     >
                                         <MdCheckCircle size={16} /> Confirm Hire Booking
                                     </button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* BOOKING DETAILS VIEW MODAL */}
+            {selectedBooking && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <div className={`w-full max-w-2xl rounded-2xl shadow-2xl border overflow-hidden max-h-[90vh] flex flex-col ${
+                        theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
+                    }`}>
+                        {/* Modal Header */}
+                        <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+                            <div>
+                                <h3 className="text-base font-black tracking-tight flex items-center gap-1.5">
+                                    🚗 Rental Booking Details
+                                </h3>
+                                <p className="text-[10px] font-bold text-blue-500 mt-0.5">Reference No: {selectedBooking.bookingNo}</p>
+                            </div>
+                            <button
+                                onClick={() => setSelectedBooking(null)}
+                                className="p-1 text-slate-400 hover:text-slate-650 dark:hover:text-white rounded-lg transition cursor-pointer"
+                            >
+                                <MdClose size={20} />
+                            </button>
+                        </div>
+
+                        {/* Modal Content - Scrollable */}
+                        <div className="p-6 overflow-y-auto space-y-6 text-xs">
+                            {/* Rental Summary Card */}
+                            <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-950/40 border border-slate-200/50 dark:border-slate-800/80">
+                                <div>
+                                    <span className="text-[10px] text-slate-450 uppercase block">Vehicle</span>
+                                    <span className="font-extrabold text-slate-850 dark:text-slate-100 mt-1 block">
+                                        {selectedBooking.vehicle?.brand} {selectedBooking.vehicle?.model}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 block mt-0.5">Plate No: {selectedBooking.vehicle?.plateNo}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] text-slate-450 uppercase block">Status</span>
+                                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider mt-1 ${getStatusColor(selectedBooking.status)}`}>
+                                        {selectedBooking.status.replace("_", " ")}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Guest Details */}
+                            <div>
+                                <h4 className="font-black text-slate-900 dark:text-white border-b dark:border-slate-800 pb-2 mb-3 uppercase tracking-wider text-[10px]">
+                                    👤 Guest Information
+                                </h4>
+                                <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 block">Full Name</span>
+                                        <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{selectedBooking.customer?.firstName} {selectedBooking.customer?.lastName}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 block">Email Address</span>
+                                        <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{selectedBooking.customer?.email}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 block">Phone Number</span>
+                                        <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{selectedBooking.customer?.phoneNumber}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Schedule & Duration */}
+                            <div>
+                                <h4 className="font-black text-slate-900 dark:text-white border-b dark:border-slate-800 pb-2 mb-3 uppercase tracking-wider text-[10px]">
+                                    📅 Booking Schedule
+                                </h4>
+                                <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 block">Pickup Date & Time</span>
+                                        <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{new Date(selectedBooking.pickupDatetime).toLocaleString()}</span>
+                                        <span className="text-[10px] text-slate-400 mt-0.5 block">Location: {selectedBooking.pickupLocation}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 block">Return Date & Time</span>
+                                        <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{new Date(selectedBooking.returnDatetime).toLocaleString()}</span>
+                                        <span className="text-[10px] text-slate-400 mt-0.5 block">Location: {selectedBooking.dropoffLocation}</span>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <span className="text-[10px] text-slate-400 block">Rental Duration</span>
+                                        <span className="font-extrabold text-teal-650 dark:text-teal-400 mt-0.5 block">{selectedBooking.numDays} Day(s)</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Self-Drive License Details (if applicable) */}
+                            {selectedBooking.hireType === "without_driver" && selectedBooking.customerLicenseNo && (
+                                <div>
+                                    <h4 className="font-black text-slate-900 dark:text-white border-b dark:border-slate-800 pb-2 mb-3 uppercase tracking-wider text-[10px]">
+                                        🪪 Driver's License Information
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-y-3 gap-x-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-950/20 border border-slate-200/50 dark:border-slate-800/80">
+                                        <div>
+                                            <span className="text-[10px] text-slate-400 block">License Number</span>
+                                            <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{selectedBooking.customerLicenseNo}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-[10px] text-slate-400 block">License Expiry</span>
+                                            <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{new Date(selectedBooking.customerLicenseExpiry).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Pricing Breakdown */}
+                            <div>
+                                <h4 className="font-black text-slate-900 dark:text-white border-b dark:border-slate-800 pb-2 mb-3 uppercase tracking-wider text-[10px]">
+                                    💵 Payment Breakdown
+                                </h4>
+                                <div className="space-y-2 max-w-md">
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-450">Vehicle Cost ({selectedBooking.numDays} Day(s)):</span>
+                                        <span className="font-bold">LKR {(parseFloat(selectedBooking.vehicleRatePerDay || 0) * selectedBooking.numDays).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    {selectedBooking.driverRatePerDay > 0 && (
+                                        <div className="flex justify-between text-teal-650 dark:text-teal-400">
+                                            <span>Driver Service Fee:</span>
+                                            <span className="font-bold">+ LKR {(parseFloat(selectedBooking.driverRatePerDay) * selectedBooking.numDays).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                    )}
+                                    {selectedBooking.securityDepositCollected > 0 && (
+                                        <div className="flex justify-between text-indigo-600 dark:text-indigo-400">
+                                            <span>Security Deposit (Paid):</span>
+                                            <span className="font-bold">+ LKR {parseFloat(selectedBooking.securityDepositCollected).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                    )}
+                                    <div className="border-t border-slate-200 dark:border-slate-800 my-1"></div>
+                                    <div className="flex justify-between text-sm font-black text-slate-900 dark:text-white">
+                                        <span>Total Paid:</span>
+                                        <span className={currentAccent.text}>LKR {parseFloat(selectedBooking.totalPayable || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Special Requirements */}
+                            {selectedBooking.specialRequirements && (
+                                <div>
+                                    <h4 className="font-black text-slate-900 dark:text-white border-b dark:border-slate-800 pb-2 mb-2 uppercase tracking-wider text-[10px]">
+                                        📝 Special Notes & Requests
+                                    </h4>
+                                    <p className="p-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200/50 dark:border-slate-800/80 rounded-xl leading-relaxed italic text-slate-700 dark:text-slate-350">
+                                        {selectedBooking.specialRequirements}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="flex justify-end p-4 bg-slate-50 dark:bg-slate-950/40 border-t border-slate-100 dark:border-slate-800 gap-2">
+                            <button
+                                onClick={() => handlePrintInvoice(selectedBooking)}
+                                className="flex items-center gap-1 px-4 py-2 text-xs font-bold border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer text-slate-755 dark:text-slate-250 bg-white dark:bg-slate-900"
+                            >
+                                <FileText size={14} /> Print Invoice
+                            </button>
+                            <button
+                                onClick={() => handlePrintReceipt(selectedBooking)}
+                                className="flex items-center gap-1 px-4 py-2 text-xs font-bold border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer text-slate-755 dark:text-slate-250 bg-white dark:bg-slate-900"
+                            >
+                                <Receipt size={14} /> Print Receipt
+                            </button>
+                            <button
+                                onClick={() => setSelectedBooking(null)}
+                                className={`px-5 py-2 text-xs font-bold text-white rounded-xl cursor-pointer transition shadow-xs ${currentAccent.bg}`}
+                            >
+                                Close View
+                            </button>
                         </div>
                     </div>
                 </div>

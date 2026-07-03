@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 import axios from "axios";
 import {
   Calendar,
@@ -157,6 +158,28 @@ export default function CustomerDashboard() {
         navigate("/customerLogin");
         return;
       }
+
+      // ── Fix 1: Role Guard ─────────────────────────────────────────────
+      // Decode the JWT and confirm the role is "customer".
+      // This prevents a staff token accidentally stored as customerToken
+      // from passing the guard.
+      try {
+        const decoded = jwtDecode(token);
+        if (!decoded || decoded.role !== "customer") {
+          sessionStorage.removeItem("customerToken");
+          localStorage.removeItem("customerToken");
+          toast.error("Access denied. Please log in as a customer.", { id: "auth-toast" });
+          navigate("/customerLogin");
+          return;
+        }
+      } catch {
+        // Malformed / tampered token
+        sessionStorage.removeItem("customerToken");
+        localStorage.removeItem("customerToken");
+        navigate("/customerLogin");
+        return;
+      }
+      // ───────────────────────────────────────────────────────────
 
       setIsLoading(true);
       try {
