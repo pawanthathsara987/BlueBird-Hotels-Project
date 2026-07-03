@@ -136,39 +136,102 @@ const RoomSelector = () => {
     }
   });
 
-  const getPickupTimeConstraints = () => {
-    if (!dateRange || !dateRange[0]?.startDate) return { disabled: false, min: "", error: "" };
-
-    const startDate = new Date(dateRange[0].startDate);
-    const today = new Date();
-
-    const isTodayDate = startDate.getDate() === today.getDate() &&
-      startDate.getMonth() === today.getMonth() &&
-      startDate.getFullYear() === today.getFullYear();
-
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const isTomorrowDate = startDate.getDate() === tomorrow.getDate() &&
-      startDate.getMonth() === tomorrow.getMonth() &&
-      startDate.getFullYear() === tomorrow.getFullYear();
-
-    if (isTodayDate) {
-      return {
-        disabled: true,
-        min: "",
-        error: "Airport pickup requests must be made at least 1 day in advance. Shuttle service is unavailable for today."
-      };
+  const getStoredPickupValue = (key, fallback) => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("airportPickUp"));
+      return stored && stored[key] !== undefined ? stored[key] : fallback;
+    } catch {
+      return fallback;
     }
+  };
 
-    if (isTomorrowDate) {
-      const hours = today.getHours();
-      const minutes = today.getMinutes();
-      const minTimeString = String(hours).padStart(2, '0') + ":" + String(minutes).padStart(2, '0');
-      return {
-        disabled: false,
-        min: minTimeString,
-        error: ""
-      };
+  const [flightNo, setFlightNo] = useState(() => getStoredPickupValue("flightNo", ""));
+  const [baggageCount, setBaggageCount] = useState(() => getStoredPickupValue("baggageCount", 0));
+  const [pickupDate, setPickupDate] = useState(() => getStoredPickupValue("pickupDate", ""));
+  const [passengerCount, setPassengerCount] = useState(() => getStoredPickupValue("passengerCount", 1));
+  const [hasManuallySetPassengers, setHasManuallySetPassengers] = useState(false);
+
+  const getPickupDateRange = () => {
+    if (!dateRange || !dateRange[0]?.startDate) return { min: "", max: "" };
+    const checkIn = new Date(dateRange[0].startDate);
+    const dayBefore = new Date(checkIn);
+    dayBefore.setDate(dayBefore.getDate() - 1);
+
+    const formatDate = (d) => {
+      const yr = d.getFullYear();
+      const mo = String(d.getMonth() + 1).padStart(2, "0");
+      const dy = String(d.getDate()).padStart(2, "0");
+      return `${yr}-${mo}-${dy}`;
+    };
+
+    return {
+      min: formatDate(dayBefore),
+      max: formatDate(checkIn)
+    };
+  };
+
+  const prevCheckInRef = useRef(null);
+
+  useEffect(() => {
+    if (dateRange && dateRange[0]?.startDate) {
+      const checkIn = new Date(dateRange[0].startDate);
+      const yr = checkIn.getFullYear();
+      const mo = String(checkIn.getMonth() + 1).padStart(2, "0");
+      const dy = String(checkIn.getDate()).padStart(2, "0");
+      const formattedCheckIn = `${yr}-${mo}-${dy}`;
+      if (prevCheckInRef.current !== formattedCheckIn) {
+        setPickupDate(formattedCheckIn);
+        prevCheckInRef.current = formattedCheckIn;
+      }
+    }
+  }, [dateRange]);
+
+  const getPickupTimeConstraints = () => {
+    if (!pickupDate) return { disabled: false, min: "", error: "" };
+
+    const today = new Date();
+    const [yr, mo, dy] = pickupDate.split("-").map(Number);
+    const timeVal = pickupTime || "12:00";
+    const [hr, min] = timeVal.split(":").map(Number);
+    const scheduledDateTime = new Date(yr, mo - 1, dy, hr, min);
+
+    const diffMs = scheduledDateTime - today;
+    const hoursDifference = diffMs / (1000 * 60 * 60);
+
+    if (hoursDifference < 12) {
+      const minValidDate = new Date(today.getTime() + 12 * 60 * 60 * 1000);
+
+      const minValidTimeStr = String(minValidDate.getHours()).padStart(2, '0') + ":" +
+        String(minValidDate.getMinutes()).padStart(2, '0');
+
+      const isSameAsMinDate = yr === minValidDate.getFullYear() &&
+        (mo - 1) === minValidDate.getMonth() &&
+        dy === minValidDate.getDate();
+
+      const selectedDateObj = new Date(yr, mo - 1, dy);
+      const minValidDateOnly = new Date(minValidDate.getFullYear(), minValidDate.getMonth(), minValidDate.getDate());
+
+      if (selectedDateObj < minValidDateOnly) {
+        return {
+          disabled: true,
+          min: "",
+          error: "Airport pickup requests must be made at least 12 hours in advance. Shuttle service is unavailable for this date."
+        };
+      }
+
+      if (isSameAsMinDate) {
+        return {
+          disabled: false,
+          min: minValidTimeStr,
+          error: `Airport pickup requests require at least 12 hours notice. For this date, pickup must be after ${minValidTimeStr}.`
+        };
+      } else {
+        return {
+          disabled: true,
+          min: "",
+          error: "Selected pickup date/time is in the past or less than 12 hours in advance."
+        };
+      }
     }
 
     return {
@@ -178,18 +241,15 @@ const RoomSelector = () => {
     };
   };
 
-  // Keep pickup status and time compliant with the 3-hour constraint
+  // Keep pickup status and time compliant with minimum constraints
   useEffect(() => {
     const constraints = getPickupTimeConstraints();
-    if (constraints.disabled && airportPickupEnabled) {
-      setAirportPickupEnabled(false);
-    }
     if (airportPickupEnabled && !constraints.disabled && constraints.min) {
       if (!pickupTime || pickupTime < constraints.min) {
         setPickupTime(constraints.min);
       }
     }
-  }, [dateRange, airportPickupEnabled, pickupTime]);
+  }, [dateRange, airportPickupEnabled, pickupTime, pickupDate]);
 
   // Dynamic Board Types state
   const [boardTypes, setBoardTypes] = useState([]);
@@ -209,6 +269,26 @@ const RoomSelector = () => {
       }
     };
     fetchBoardTypes();
+  }, []);
+
+  // Dynamic Airport Vehicles state
+  const [airportVehicles, setAirportVehicles] = useState([]);
+
+  // Fetch Airport Vehicles dynamically on mount
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      try {
+        const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api").trim().replace(/\/$/, "");
+        const response = await fetch(`${backendBaseUrl}/roombook/airport-vehicles`);
+        const result = await response.json();
+        if (result && result.success && Array.isArray(result.data)) {
+          setAirportVehicles(result.data);
+        }
+      } catch (err) {
+        console.error("Failed to load airport pickup vehicles from backend:", err);
+      }
+    };
+    fetchVehicles();
   }, []);
 
   // Dynamic Other Prices state
@@ -403,7 +483,125 @@ const RoomSelector = () => {
       const name = op.service_name || op.item_name || "";
       return name.toLowerCase() === "airport pickup";
     });
-    return item ? parseFloat(item.price) : 50.00;
+    return item ? parseFloat(item.price) : 15000.00;
+  };
+
+  const getAirportPickupTotalPrice = () => {
+    if (!airportVehicles || airportVehicles.length === 0) {
+      return getAirportPickupPrice(); // fallback
+    }
+
+    const targetP = Number(passengerCount) || 1;
+    const targetB = Number(baggageCount) || 0;
+
+    const maxCapP = Math.max(...airportVehicles.map(v => v.passenger_count));
+    const maxCapB = Math.max(...airportVehicles.map(v => v.baggage_count));
+
+    const limitP = targetP + maxCapP;
+    const limitB = targetB + maxCapB;
+
+    const dp = Array.from({ length: limitP + 1 }, () => Array(limitB + 1).fill(Infinity));
+    dp[0][0] = 0;
+
+    for (let p = 0; p <= limitP; p++) {
+      for (let b = 0; b <= limitB; b++) {
+        if (dp[p][b] === Infinity) continue;
+        for (const v of airportVehicles) {
+          const nextP = Math.min(limitP, p + v.passenger_count);
+          const nextB = Math.min(limitB, b + v.baggage_count);
+          const cost = dp[p][b] + parseFloat(v.price);
+          if (cost < dp[nextP][nextB]) {
+            dp[nextP][nextB] = cost;
+          }
+        }
+      }
+    }
+
+    let minCost = Infinity;
+    for (let p = targetP; p <= limitP; p++) {
+      for (let b = targetB; b <= limitB; b++) {
+        if (dp[p][b] < minCost) {
+          minCost = dp[p][b];
+        }
+      }
+    }
+
+    return minCost;
+  };
+
+  const getAirportPickupVehicleDescription = () => {
+    if (!airportVehicles || airportVehicles.length === 0) {
+      return "1 Car";
+    }
+
+    const targetP = Number(passengerCount) || 1;
+    const targetB = Number(baggageCount) || 0;
+
+    const maxCapP = Math.max(...airportVehicles.map(v => v.passenger_count));
+    const maxCapB = Math.max(...airportVehicles.map(v => v.baggage_count));
+
+    const limitP = targetP + maxCapP;
+    const limitB = targetB + maxCapB;
+
+    const dp = Array.from({ length: limitP + 1 }, () => Array(limitB + 1).fill(Infinity));
+    const parent = Array.from({ length: limitP + 1 }, () => Array(limitB + 1).fill(null));
+    dp[0][0] = 0;
+
+    for (let p = 0; p <= limitP; p++) {
+      for (let b = 0; b <= limitB; b++) {
+        if (dp[p][b] === Infinity) continue;
+        for (const v of airportVehicles) {
+          const nextP = Math.min(limitP, p + v.passenger_count);
+          const nextB = Math.min(limitB, b + v.baggage_count);
+          const cost = dp[p][b] + parseFloat(v.price);
+          if (cost < dp[nextP][nextB]) {
+            dp[nextP][nextB] = cost;
+            parent[nextP][nextB] = { prevP: p, prevB: b, vehicle: v };
+          }
+        }
+      }
+    }
+
+    let minCost = Infinity;
+    let bestP = targetP;
+    let bestB = targetB;
+
+    for (let p = targetP; p <= limitP; p++) {
+      for (let b = targetB; b <= limitB; b++) {
+        if (dp[p][b] < minCost) {
+          minCost = dp[p][b];
+          bestP = p;
+          bestB = b;
+        }
+      }
+    }
+
+    const counts = {};
+    let currP = bestP;
+    let currB = bestB;
+
+    while ((currP > 0 || currB > 0) && parent[currP][currB]) {
+      const step = parent[currP][currB];
+      const vType = step.vehicle.vehicle_type;
+      counts[vType] = (counts[vType] || 0) + 1;
+      currP = step.prevP;
+      currB = step.prevB;
+    }
+
+    const vehicleNames = {
+      car: "Car",
+      mini_van: "Mini Van",
+      mini_bus: "Mini Bus"
+    };
+
+    return Object.entries(counts)
+      .map(([type, qty]) => {
+        const matchingVehicle = airportVehicles.find(v => v.vehicle_type === type);
+        const maxGuests = matchingVehicle ? matchingVehicle.passenger_count : 4;
+        const maxBags = matchingVehicle ? matchingVehicle.baggage_count : 3;
+        return `${qty} ${vehicleNames[type] || type} (Max ${maxGuests} guests / ${maxBags} bags)`;
+      })
+      .join(" + ");
   };
 
   const hasAirportPickup = otherPrices.some(op => {
@@ -469,6 +667,16 @@ const RoomSelector = () => {
       }
     ];
   });
+
+  // Sync passengerCount with total occupancy of addedRooms
+  useEffect(() => {
+    if (!hasManuallySetPassengers) {
+      const totalGuests = addedRooms.reduce((sum, r) => sum + Number(r.adults || 0) + Number(r.children || 0), 0);
+      if (totalGuests > 0) {
+        setPassengerCount(totalGuests);
+      }
+    }
+  }, [addedRooms, hasManuallySetPassengers]);
 
   // Cleanup temporary saved state after load
   useEffect(() => {
@@ -794,11 +1002,11 @@ const RoomSelector = () => {
     if (airportPickupEnabled) {
       const constraints = getPickupTimeConstraints();
       if (constraints.disabled) {
-        toast.error("Airport pickup requests must be made at least 1 day in advance. Shuttle service is unavailable for today.");
+        toast.error(constraints.error || "Airport pickup requests must be made at least 12 hours in advance.");
         return;
       }
       if (constraints.min && (!pickupTime || pickupTime < constraints.min)) {
-        toast.error(`For tomorrow arrivals, pickup time must be at least 1 day in the future (after ${constraints.min} tomorrow).`);
+        toast.error(constraints.error || `Pickup time must be at least 12 hours in the future (after ${constraints.min}).`);
         return;
       }
     }
@@ -828,7 +1036,11 @@ const RoomSelector = () => {
       JSON.stringify({
         enabled: airportPickupEnabled,
         time: pickupTime,
-        price: getAirportPickupPrice()
+        price: getAirportPickupTotalPrice(),
+        flightNo,
+        baggageCount,
+        pickupDate,
+        passengerCount
       })
     );
 
@@ -837,7 +1049,7 @@ const RoomSelector = () => {
       checkInDate: dateRange[0].startDate.toISOString(),
       checkOutDate: dateRange[0].endDate.toISOString(),
       nights: nights,
-      totalPrice: totalNightlyRate * nights + (airportPickupEnabled ? getAirportPickupPrice() : 0),
+      totalPrice: totalNightlyRate * nights,
       nationality: nationality,
     };
 
@@ -1724,7 +1936,10 @@ const RoomSelector = () => {
 
                   {/* Surcharge Badge */}
                   <span className="text-xs font-black text-emerald-850 bg-emerald-50 border border-emerald-200/60 px-2.5 py-1 rounded-lg">
-                    +{process.env.CURRENCY_TYPE || "LKR"} {getAirportPickupPrice().toFixed(2)} / trip
+                    {airportPickupEnabled
+                      ? `+${process.env.CURRENCY_TYPE || "LKR"} ${getAirportPickupTotalPrice().toFixed(2)}`
+                      : `+${process.env.CURRENCY_TYPE || "LKR"} ${getAirportPickupPrice().toFixed(2)} / vehicle`
+                    }
                   </span>
                 </div>
 
@@ -1739,21 +1954,57 @@ const RoomSelector = () => {
 
                 {/* Shuttle Schedule Inputs */}
                 {airportPickupEnabled && (
-                  <div className="bg-white border border-stone-200/80 p-4 rounded-xl space-y-3.5 shadow-3xs animate-fadeIn mb-4">
-                    <span className="text-xs uppercase font-extrabold tracking-widest text-emerald-850 block border-b border-stone-100 pb-1.5 flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5" /> Transfer Schedule
+                  <div className="bg-white border border-stone-200/80 p-5 rounded-2xl space-y-4 shadow-xs animate-fadeIn mb-4">
+                    <span className="text-xs uppercase font-extrabold tracking-widest text-emerald-850 block border-b border-stone-100 pb-2 flex items-center gap-1.5 font-bold">
+                      <Clock className="w-3.5 h-3.5" /> Shuttle Service Details
                     </span>
 
+                    <div className="bg-emerald-50/50 text-emerald-950 p-3 rounded-xl text-xs font-bold border border-emerald-200/50 flex flex-col gap-0.5 shadow-3xs">
+                      <span className="text-[10px] uppercase text-emerald-800 tracking-wider font-extrabold">Allocated Vehicle(s):</span>
+                      <span className="text-emerald-900 font-extrabold text-sm">{getAirportPickupVehicleDescription()}</span>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-3.5">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-[10px] font-extrabold text-stone-400 uppercase tracking-wider">Shuttle Date</span>
-                        <div className="border text-xs rounded-lg px-3 py-2 bg-stone-50 text-stone-600 font-bold border-stone-250 cursor-not-allowed select-none">
-                          {format(dateRange[0].startDate, "dd MMM yyyy")}
-                        </div>
+                      {/* Flight Number */}
+                      <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
+                        <span className="text-[10px] font-extrabold text-stone-500 uppercase tracking-wider">Flight Number</span>
+                        <input
+                          type="text"
+                          value={flightNo}
+                          onChange={(e) => setFlightNo(e.target.value.toUpperCase())}
+                          placeholder="e.g. UL102 / EK650"
+                          className="border text-xs rounded-lg px-3 py-2 bg-white text-stone-700 font-bold border-stone-200 hover:border-stone-300 focus:ring-1 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
+                        />
                       </div>
 
-                      <div className="flex flex-col gap-1">
-                        <span className="text-[10px] font-extrabold text-stone-400 uppercase tracking-wider">Arrival Time</span>
+                      {/* Baggage Count */}
+                      <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
+                        <span className="text-[10px] font-extrabold text-stone-500 uppercase tracking-wider">Baggage Count</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={baggageCount}
+                          onChange={(e) => setBaggageCount(Math.max(0, parseInt(e.target.value) || 0))}
+                          className="border text-xs rounded-lg px-3 py-2 bg-white text-stone-700 font-bold border-stone-200 hover:border-stone-300 focus:ring-1 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
+                        />
+                      </div>
+
+                      {/* Shuttle Date */}
+                      <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
+                        <span className="text-[10px] font-extrabold text-stone-500 uppercase tracking-wider">Shuttle Date</span>
+                        <input
+                          type="date"
+                          value={pickupDate}
+                          min={getPickupDateRange().min}
+                          max={getPickupDateRange().max}
+                          onChange={(e) => setPickupDate(e.target.value)}
+                          className="border text-xs rounded-lg px-3 py-2 bg-white text-stone-700 font-bold border-stone-200 hover:border-stone-300 focus:ring-1 focus:ring-emerald-500/20 focus:border-emerald-600 transition cursor-pointer"
+                        />
+                      </div>
+
+                      {/* Landing Time */}
+                      <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
+                        <span className="text-[10px] font-extrabold text-stone-500 uppercase tracking-wider">Arrival/Landing Time</span>
                         <input
                           type="time"
                           value={pickupTime}
@@ -1763,7 +2014,7 @@ const RoomSelector = () => {
                             const val = e.target.value;
                             const curConstraints = getPickupTimeConstraints();
                             if (curConstraints.min && val < curConstraints.min) {
-                              toast.error(`Airport pickup requests require at least 1 day advance notice (after ${curConstraints.min} tomorrow).`);
+                              toast.error(curConstraints.error || `Airport pickup requests require at least 12 hours notice (after ${curConstraints.min}).`);
                               setPickupTime(curConstraints.min);
                             } else {
                               setPickupTime(val);
@@ -1772,14 +2023,31 @@ const RoomSelector = () => {
                           className="border text-xs rounded-lg px-3 py-2 bg-white text-stone-700 font-bold border-stone-200 hover:border-stone-300 focus:ring-1 focus:ring-emerald-500/20 focus:border-emerald-600 transition cursor-pointer disabled:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed"
                         />
                       </div>
+
+                      {/* Passenger Count */}
+                      <div className="flex flex-col gap-1 col-span-2">
+                        <span className="text-[10px] font-extrabold text-stone-500 uppercase tracking-wider">Passenger Count</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={passengerCount}
+                          onChange={(e) => {
+                            setPassengerCount(Math.max(1, parseInt(e.target.value) || 1));
+                            setHasManuallySetPassengers(true);
+                          }}
+                          className="border text-xs rounded-lg px-3 py-2 bg-white text-stone-700 font-bold border-stone-200 hover:border-stone-300 focus:ring-1 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
+                        />
+                      </div>
                     </div>
+
                     {getPickupTimeConstraints().error && (
                       <p className="text-[10px] text-rose-600 font-bold mt-1 animate-pulse">
                         ⚠️ {getPickupTimeConstraints().error}
                       </p>
                     )}
-                    <p className="text-[10px] text-emerald-800 font-semibold italic">
-                      * The pickup date matches your check-in date. Please update check-in date above if needed.
+
+                    <p className="text-[9px] text-stone-450 font-semibold leading-tight italic">
+                      * If arriving late night / midnight, please select the exact landing date (e.g. check-in date or night before).
                     </p>
                   </div>
                 )}
@@ -1791,11 +2059,6 @@ const RoomSelector = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    const c = getPickupTimeConstraints();
-                    if (c.disabled && !airportPickupEnabled) {
-                      toast.error("Airport pickup requests must be made at least 1 day in advance. Shuttle service is unavailable for today.");
-                      return;
-                    }
                     setAirportPickupEnabled(!airportPickupEnabled);
                   }}
                   className={`w-12 h-6.5 rounded-full p-1 transition-colors duration-300 focus:outline-none shadow-inner cursor-pointer relative ${airportPickupEnabled ? "bg-emerald-800" : "bg-stone-200"
@@ -1873,16 +2136,16 @@ const RoomSelector = () => {
             </div>
             {airportPickupEnabled && (
               <div className="flex flex-col items-end sm:items-start text-right sm:text-left bg-emerald-50/40 border border-emerald-250/60 px-4.5 py-2.5 rounded-2xl shadow-3xs animate-fadeIn shrink-0">
-                <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-emerald-800 mb-0.5">Shuttle Surcharge</span>
+                <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-emerald-800 mb-0.5">Shuttle Surcharge ({getAirportPickupVehicleDescription().split(" (")[0]})</span>
                 <span className="text-emerald-950 font-black text-lg sm:text-xl tracking-tight">
-                  +{process.env.CURRENCY_TYPE || "LKR"} {getAirportPickupPrice().toFixed(2)} <span className="text-xs font-bold text-stone-450">one-time</span>
+                  +{process.env.CURRENCY_TYPE || "LKR"} {getAirportPickupTotalPrice().toFixed(2)} <span className="text-xs font-bold text-amber-600 font-extrabold">pay at hotel</span>
                 </span>
               </div>
             )}
             <div className="flex flex-col items-end sm:items-start text-right sm:text-left bg-emerald-800 text-white border border-emerald-900/15 px-4.5 py-2.5 rounded-2xl shadow-[0_6px_16px_rgba(6,95,70,0.18)] animate-fadeIn shrink-0">
               <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-emerald-200 mb-0.5">Total for {getStayNights()} {getStayNights() === 1 ? 'Night' : 'Nights'}</span>
               <span className="font-black text-lg sm:text-xl tracking-tight text-white">
-                {process.env.CURRENCY_TYPE || "LKR"} {(totalNightlyRate * getStayNights() + (airportPickupEnabled ? getAirportPickupPrice() : 0)).toFixed(2)}
+                {process.env.CURRENCY_TYPE || "LKR"} {(totalNightlyRate * getStayNights()).toFixed(2)}
               </span>
             </div>
           </div>

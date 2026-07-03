@@ -51,7 +51,7 @@ const RoomPayment = () => {
     if (token) {
       try {
         guest = jwtDecode(token) || {};
-      } catch {}
+      } catch { }
     }
 
     setBillingDetails({
@@ -67,12 +67,12 @@ const RoomPayment = () => {
 
   const selectedRooms = location.state?.selectedRooms || [];
   const passedBookingData = location.state?.bookingData || {};
-  
+
   // Calculate rooms and adults, kids from selectedRooms
   const totalRooms = selectedRooms.length;
   const totalAdults = selectedRooms.reduce((sum, r) => sum + (r.adults || 0), 0);
   const totalKids = selectedRooms.reduce((sum, r) => sum + (r.kids || 0), 0);
-  
+
   // Calculate 50% advance payment
   const totalAmount = Number(passedBookingData?.totalPrice || 0);
   const originalTotalAmount = Number(
@@ -89,7 +89,7 @@ const RoomPayment = () => {
     setProcessing(true);
 
     let token = localStorage.getItem("customerToken") ||
-                sessionStorage.getItem("customerToken");
+      sessionStorage.getItem("customerToken");
     if (token === "undefined" || token === "null") {
       localStorage.removeItem("customerToken");
       sessionStorage.removeItem("customerToken");
@@ -163,11 +163,13 @@ const RoomPayment = () => {
           })),
           airportPickup: airportPickup?.enabled
             ? {
-                enabled: true,
-                pickupDate:
-                  passedBookingData?.checkInDate || savedBookingDetails?.checkInDate || null,
-                pickupTime: airportPickup?.time || "",
-              }
+              enabled: true,
+              pickupDate: airportPickup.pickupDate || passedBookingData?.checkInDate || savedBookingDetails?.checkInDate || null,
+              pickupTime: airportPickup.time || "",
+              flightNumber: airportPickup.flightNo || null,
+              baggageCount: Number(airportPickup.baggageCount) || 0,
+              passengerCount: Number(airportPickup.passengerCount) || 1
+            }
             : null,
           personalRequest,
         },
@@ -446,7 +448,7 @@ const RoomPayment = () => {
                       <div className="flex flex-wrap items-center gap-2">
                         {ages.map((a, i) => (
                           <span key={i} className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800 border border-emerald-100">
-                            <span className="flex w-4 h-4 rounded-full bg-emerald-300 text-white text-[11px] font-bold items-center justify-center">{i+1}</span>
+                            <span className="flex w-4 h-4 rounded-full bg-emerald-300 text-white text-[11px] font-bold items-center justify-center">{i + 1}</span>
                             <span>Age {a}</span>
                           </span>
                         ))}

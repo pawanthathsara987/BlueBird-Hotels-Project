@@ -16,11 +16,13 @@ Payment.init(
     bookingId: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      field: 'booking_id',
       references: { model: 'vehicle_booking', key: 'id' },
     },
     receivedBy: {
       type: DataTypes.INTEGER,
       allowNull: true,               // null for online payments (PayHere)
+      field: 'received_by',
       references: { model: 'staff_members', key: 'userId' },
     },
 
@@ -52,24 +54,29 @@ Payment.init(
     gatewayRef: {
       type: DataTypes.STRING(100),
       allowNull: true,               // PayHere payment_id
+      field: 'gateway_ref',
     },
     payhereStatusCode: {
       type: DataTypes.INTEGER,
       allowNull: true,               // raw PayHere status code
+      field: 'payhere_status_code',
     },
     rawPayload: {
       type: DataTypes.JSON,
       allowNull: true,               // full PayHere webhook payload
+      field: 'raw_payload',
     },
 
     // ── Manual payment (balance/extra) ───────────
     receiptNo: {
       type: DataTypes.STRING(100),
       allowNull: true,               // receipt number for cash/card payments
+      field: 'receipt_no',
     },
     receiptImageUrl: {
       type: DataTypes.STRING(255),
       allowNull: true,               // uploaded receipt image url
+      field: 'receipt_image_url',
     },
     notes: {
       type: DataTypes.TEXT,
@@ -78,6 +85,7 @@ Payment.init(
     receivedAt: {
       type: DataTypes.DATE,
       allowNull: true,               // when payment was received
+      field: 'received_at',
     },
   },
   {
@@ -88,4 +96,4 @@ Payment.init(
   }
 );
 
-export default Payment;
+export default Payment;
