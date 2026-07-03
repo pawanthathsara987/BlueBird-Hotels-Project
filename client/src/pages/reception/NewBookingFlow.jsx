@@ -9,12 +9,33 @@ import { getCountries } from "libphonenumber-js";
 import { getSubdomainUrl } from "../../utils/subdomain";
 
 export default function NewBookingFlow({ onBookingSuccess }) {
-    const today = new Date();
-    const defaultCheckOut = new Date(today);
-    defaultCheckOut.setDate(defaultCheckOut.getDate() + 1);
+    const getLocalDateString = (dateObj) => {
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
 
-    const [checkInDate, setCheckInDate] = useState(today.toISOString().split("T")[0]);
-    const [checkOutDate, setCheckOutDate] = useState(defaultCheckOut.toISOString().split("T")[0]);
+    const todayStr = useMemo(() => getLocalDateString(new Date()), []);
+    const tomorrowStr = useMemo(() => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return getLocalDateString(tomorrow);
+    }, []);
+
+    const [checkInDate, setCheckInDate] = useState(todayStr);
+    const [checkOutDate, setCheckOutDate] = useState(tomorrowStr);
+
+    const dateErrors = useMemo(() => {
+        const errors = {};
+        if (checkInDate && checkInDate < todayStr) {
+            errors.checkIn = "Check-in date cannot be in the past";
+        }
+        if (checkInDate && checkOutDate && checkOutDate <= checkInDate) {
+            errors.checkOut = "Check-out date must be after check-in date";
+        }
+        return errors;
+    }, [checkInDate, checkOutDate, todayStr]);
 
     const [packages, setPackages] = useState([]);
     const [selectedRoomTypeId, setSelectedRoomTypeId] = useState("");
@@ -86,19 +107,21 @@ export default function NewBookingFlow({ onBookingSuccess }) {
 
     // Fetch packages when dates change
     useEffect(() => {
-        if (checkInDate && checkOutDate) {
+        if (checkInDate && checkOutDate && Object.keys(dateErrors).length === 0) {
             fetchPackages(checkInDate, checkOutDate);
+        } else {
+            setPackages([]);
         }
-    }, [checkInDate, checkOutDate]);
+    }, [checkInDate, checkOutDate, dateErrors]);
 
     // Fetch specific rooms when room type is selected
     useEffect(() => {
-        if (selectedRoomTypeId && checkInDate && checkOutDate) {
+        if (selectedRoomTypeId && checkInDate && checkOutDate && Object.keys(dateErrors).length === 0) {
             fetchRoomsForPackage(selectedRoomTypeId, checkInDate, checkOutDate);
         } else {
             setAvailableRoomsForPackage([]);
         }
-    }, [selectedRoomTypeId, checkInDate, checkOutDate]);
+    }, [selectedRoomTypeId, checkInDate, checkOutDate, dateErrors]);
 
     const fetchPackages = async (checkIn, checkOut) => {
         try {
@@ -216,6 +239,12 @@ export default function NewBookingFlow({ onBookingSuccess }) {
     const totalPrice = selectedRooms.reduce((sum, room) => sum + (room.price * calculateNights()), 0);
 
     const handleSubmitBooking = async () => {
+        if (Object.keys(dateErrors).length > 0) {
+            const firstErr = Object.values(dateErrors)[0];
+            toast.error(firstErr);
+            return;
+        }
+
         if (!guestDetails.firstName || !guestDetails.lastName || !guestDetails.phoneNumber) {
             toast.error("Please fill in required guest details (First Name, Last Name, Phone)");
             return;
@@ -349,14 +378,21 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                                 <input
                                     type="date"
                                     value={checkInDate}
-                                    min={today.toISOString().split("T")[0]}
+                                    min={todayStr}
                                     onChange={(e) => setCheckInDate(e.target.value)}
-                                    className={`w-full pl-10 pr-4 py-2 text-sm border rounded-xl focus:outline-none ${
-                                        theme.mode === "dark"
-                                            ? "bg-slate-900 border-slate-800 text-white focus:border-slate-600"
-                                            : "bg-white border-slate-200 text-slate-800 focus:border-blue-500"
+                                    className={`w-full pl-10 pr-4 py-2 text-sm border rounded-xl focus:outline-none transition-all ${
+                                        dateErrors.checkIn
+                                            ? "border-rose-500 bg-rose-50/10 focus:border-rose-500 text-rose-600 dark:text-rose-450"
+                                            : theme.mode === "dark"
+                                                ? "bg-slate-900 border-slate-800 text-white focus:border-slate-600"
+                                                : "bg-white border-slate-200 text-slate-800 focus:border-blue-500"
                                     }`}
                                 />
+                                {dateErrors.checkIn && (
+                                    <p className="text-[10px] text-rose-500 font-bold mt-1.5 flex items-center gap-1 select-none">
+                                        ⚠️ {dateErrors.checkIn}
+                                    </p>
+                                )}
                             </div>
                         </div>
                         <div>
@@ -366,14 +402,21 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                                 <input
                                     type="date"
                                     value={checkOutDate}
-                                    min={checkInDate}
+                                    min={checkInDate || todayStr}
                                     onChange={(e) => setCheckOutDate(e.target.value)}
-                                    className={`w-full pl-10 pr-4 py-2 text-sm border rounded-xl focus:outline-none ${
-                                        theme.mode === "dark"
-                                            ? "bg-slate-900 border-slate-800 text-white focus:border-slate-600"
-                                            : "bg-white border-slate-200 text-slate-800 focus:border-blue-500"
+                                    className={`w-full pl-10 pr-4 py-2 text-sm border rounded-xl focus:outline-none transition-all ${
+                                        dateErrors.checkOut
+                                            ? "border-rose-500 bg-rose-50/10 focus:border-rose-500 text-rose-600 dark:text-rose-450"
+                                            : theme.mode === "dark"
+                                                ? "bg-slate-900 border-slate-800 text-white focus:border-slate-600"
+                                                : "bg-white border-slate-200 text-slate-800 focus:border-blue-500"
                                     }`}
                                 />
+                                {dateErrors.checkOut && (
+                                    <p className="text-[10px] text-rose-500 font-bold mt-1.5 flex items-center gap-1 select-none">
+                                        ⚠️ {dateErrors.checkOut}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>
