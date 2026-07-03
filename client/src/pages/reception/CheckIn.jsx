@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { MdSearch as MdSearchIcon, MdClose as MdCloseIcon, MdPayment } from "react-icons/md";
 import { LogIn, CheckCircle, AlertCircle, CreditCard, Eye, User, Phone, Mail, MapPin } from "lucide-react";
 import axios from "axios";
@@ -54,7 +54,7 @@ export default function CheckIn() {
     };
     const todayStr = getTodayLocalDate();
 
-    const todayCheckInsList = filteredGuests.filter(g => g.checkIn === todayStr);
+    const todayCheckInsList = filteredGuests.filter(g => g.checkIn <= todayStr);
     const upcomingCheckInsList = filteredGuests.filter(g => g.checkIn > todayStr);
 
     const openCheckInModal = async (guest) => {
@@ -152,11 +152,13 @@ export default function CheckIn() {
                                 <div>
                                     <h2 className={`text-lg font-bold ${dk ? "text-white" : "text-slate-800"}`}>{guest.firstName} {guest.lastName}</h2>
                                     <span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                                        guest.checkIn === todayStr
-                                            ? "bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-200 dark:border-amber-900/40"
-                                            : "bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200 dark:border-blue-900/40"
+                                        guest.checkIn < todayStr
+                                            ? "bg-rose-100 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border-rose-200 dark:border-rose-900/40 animate-pulse"
+                                            : guest.checkIn === todayStr
+                                                ? "bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-200 dark:border-amber-900/40"
+                                                : "bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200 dark:border-blue-900/40"
                                     }`}>
-                                        {guest.checkIn === todayStr ? "Arriving Today" : "Upcoming Arrival"}
+                                        {guest.checkIn < todayStr ? "Overdue Arrival" : guest.checkIn === todayStr ? "Arriving Today" : "Upcoming Arrival"}
                                     </span>
                                 </div>
                             </div>

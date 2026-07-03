@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { MdSearch as MdSearchIcon, MdClose as MdCloseIcon, MdPayment } from "react-icons/md";
 import { LogOut, CheckCircle, AlertCircle, CreditCard, Eye, User, Phone, Mail, MapPin } from "lucide-react";
@@ -54,7 +54,7 @@ export default function CheckOut() {
     };
     const todayStr = getTodayLocalDate();
 
-    const todayCheckOutsList = filteredGuests.filter(g => g.checkOut === todayStr);
+    const todayCheckOutsList = filteredGuests.filter(g => g.checkOut <= todayStr);
     const upcomingCheckOutsList = filteredGuests.filter(g => g.checkOut > todayStr);
 
     // Open full checkout details modal
@@ -63,7 +63,7 @@ export default function CheckOut() {
         setPaymentAmount("");
         setPaymentNote("");
         setPaymentMethod("cash");
-        setCheckOutModal({ guest, bookingId: guest.booking_id, bookedRoomId: guest.booking_id, data: null });
+        setCheckOutModal({ guest, bookingId: guest.booking_id, bookedRoomId: guest.booked_room_id, data: null });
         try {
             const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/checkin-details/${guest.booking_id}`);
             if (res.data.success) {
@@ -95,7 +95,7 @@ export default function CheckOut() {
     const handleConfirmCheckOut = async () => {
         if (!checkOutModal?.guest) return;
         try {
-            await axios.patch(`${import.meta.env.VITE_BACKEND_URL}/reception/bookings/${checkOutModal.guest.booking_id}/checkout`);
+            await axios.patch(`${import.meta.env.VITE_BACKEND_URL}/reception/bookings/${checkOutModal.guest.booked_room_id}/checkout`);
             toast.success("Guest checked out successfully!");
             setCheckOutModal(null);
             fetchCheckOuts();
@@ -151,11 +151,13 @@ export default function CheckOut() {
                             <div>
                                 <h2 className={`text-lg font-bold ${dk ? "text-white" : "text-slate-800"}`}>{guest.firstName} {guest.lastName}</h2>
                                 <span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                                    guest.checkOut === todayStr
-                                        ? "bg-orange-100 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400 border-orange-200 dark:border-orange-900/40"
-                                        : "bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200 dark:border-blue-900/40"
+                                    guest.checkOut < todayStr
+                                        ? "bg-rose-100 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border-rose-200 dark:border-rose-900/40 animate-pulse"
+                                        : guest.checkOut === todayStr
+                                            ? "bg-orange-100 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400 border-orange-200 dark:border-orange-900/40"
+                                            : "bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200 dark:border-blue-900/40"
                                 }`}>
-                                    {guest.checkOut === todayStr ? "Departing Today" : "Upcoming Departure"}
+                                    {guest.checkOut < todayStr ? "Overdue Departure" : guest.checkOut === todayStr ? "Departing Today" : "Upcoming Departure"}
                                 </span>
                             </div>
                             <p className={`text-xs font-semibold uppercase tracking-wider mt-3 ${dk ? "text-slate-400" : "text-slate-500"}`}>Room {guest.room_number || guest.roomNumber}</p>

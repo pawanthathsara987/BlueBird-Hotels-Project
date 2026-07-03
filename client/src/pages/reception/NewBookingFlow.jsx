@@ -6,6 +6,7 @@ import { MdCalendarToday, MdPerson, MdEmail, MdPhone, MdBadge, MdHotel } from "r
 import { FaMapMarkerAlt } from "react-icons/fa";
 import { validateSriLankanNIC, validatePassport } from "../../utils/validation";
 import { getCountries } from "libphonenumber-js";
+import { getSubdomainUrl } from "../../utils/subdomain";
 
 export default function NewBookingFlow({ onBookingSuccess }) {
     const today = new Date();
@@ -383,6 +384,19 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                             ? "bg-indigo-950/10 border-indigo-900/30"
                             : "bg-blue-50/50 border-blue-100"
                     }`}>
+                        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pb-3 border-b dark:border-slate-800/60 border-slate-200/60">
+                            <h3 className={`text-xs font-black uppercase tracking-wider ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
+                                Select Room & Board Config
+                            </h3>
+                            <a
+                                href={getSubdomainUrl("", "/booking")}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-4.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider text-white bg-blue-600 hover:bg-blue-700 active:scale-95 shadow-md shadow-blue-500/20 hover:shadow-lg transition-all cursor-pointer border border-blue-500"
+                            >
+                                <MdHotel className="text-sm text-blue-100" /> View Rooms on Website
+                            </a>
+                        </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className={`block text-xs font-black uppercase mb-2 ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
