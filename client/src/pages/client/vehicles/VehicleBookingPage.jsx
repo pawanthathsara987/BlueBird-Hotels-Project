@@ -108,11 +108,14 @@ export default function VehicleBookingPage() {
       return;
     }
 
-    // Check if pickup is in the past
+    // Check if pickup is at least 1 week in advance
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    if (pickupTime < today.getTime()) {
-      setAvailability({ available: false, reason: "Pickup date cannot be in the past.", days: 0, totalPrice: null, driverFee: null, pricePerDay: null });
+    const minPickupTime = new Date(today);
+    minPickupTime.setDate(today.getDate() + 7);
+    
+    if (pickupTime < minPickupTime.getTime()) {
+      setAvailability({ available: false, reason: "Bookings must be made at least 1 week in advance.", days: 0, totalPrice: null, driverFee: null, pricePerDay: null });
       setAvailabilityLoading(false);
       return;
     }
@@ -285,7 +288,7 @@ export default function VehicleBookingPage() {
                       <input
                         required
                         type="date"
-                        min={new Date().toISOString().split("T")[0]}
+                        min={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
                         value={pickupDate}
                         onChange={(e) => setPickupDate(e.target.value)}
                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
@@ -296,7 +299,7 @@ export default function VehicleBookingPage() {
                       <input
                         required
                         type="date"
-                        min={pickupDate || new Date().toISOString().split("T")[0]}
+                        min={pickupDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
                         value={returnDate}
                         onChange={(e) => setReturnDate(e.target.value)}
                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
