@@ -942,6 +942,13 @@ const RoomSelector = () => {
   };
 
   const handleFinalBookingSubmit = () => {
+    const normalizedFlightNo = flightNo.trim().toUpperCase();
+
+    if (airportPickupEnabled && !normalizedFlightNo) {
+      toast.error("Please enter your flight number for airport pickup.");
+      return;
+    }
+
     // 1. Check user login status and token expiration before proceeding
     let token = sessionStorage.getItem("customerToken") || localStorage.getItem("customerToken");
     if (token === "undefined" || token === "null") {
@@ -984,7 +991,8 @@ const RoomSelector = () => {
         personalRequest,
         airportPickup: {
           enabled: airportPickupEnabled,
-          time: pickupTime
+          time: pickupTime,
+          flightNo: normalizedFlightNo
         }
       };
       localStorage.setItem("tempSavedBookingState", JSON.stringify(bookingStateToSave));
@@ -1028,20 +1036,21 @@ const RoomSelector = () => {
 
     // Calculate total nightly rate of all rooms
     const totalNightlyRate = addedRooms.reduce((sum, r) => sum + (r.price || 0), 0);
+    const airportPickupDetails = {
+      enabled: airportPickupEnabled,
+      time: pickupTime,
+      price: getAirportPickupTotalPrice(),
+      flightNo: normalizedFlightNo,
+      baggageCount,
+      pickupDate,
+      passengerCount
+    };
 
     // Save to localStorage so BookingSummary.jsx and RoomPayment.jsx can read them
     localStorage.setItem("personalRequest", personalRequest);
     localStorage.setItem(
       "airportPickUp",
-      JSON.stringify({
-        enabled: airportPickupEnabled,
-        time: pickupTime,
-        price: getAirportPickupTotalPrice(),
-        flightNo,
-        baggageCount,
-        pickupDate,
-        passengerCount
-      })
+      JSON.stringify(airportPickupDetails)
     );
 
     // Construct bookingData expected by BookingSummary.jsx
@@ -1107,6 +1116,7 @@ const RoomSelector = () => {
       state: {
         bookingData,
         selectedRooms: resolvedRooms,
+        airportPickup: airportPickupDetails,
       }
     });
   };
@@ -1967,11 +1977,12 @@ const RoomSelector = () => {
                     <div className="grid grid-cols-2 gap-3.5">
                       {/* Flight Number */}
                       <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                        <span className="text-[10px] font-extrabold text-stone-500 uppercase tracking-wider">Flight Number</span>
+                        <span className="text-[10px] font-extrabold text-stone-500 uppercase tracking-wider">Flight Number <span className="text-rose-600">*</span></span>
                         <input
                           type="text"
                           value={flightNo}
                           onChange={(e) => setFlightNo(e.target.value.toUpperCase())}
+                          required={airportPickupEnabled}
                           placeholder="e.g. UL102 / EK650"
                           className="border text-xs rounded-lg px-3 py-2 bg-white text-stone-700 font-bold border-stone-200 hover:border-stone-300 focus:ring-1 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
                         />

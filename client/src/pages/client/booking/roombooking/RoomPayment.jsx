@@ -11,6 +11,7 @@ const RoomPayment = () => {
   const navigate = useNavigate();
   const bookingData = location.state?.bookingData || null;
   const bookingConfirmation = location.state?.bookingConfirmation || null;
+  const airportPickupFromState = location.state?.airportPickup || null;
 
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
@@ -67,6 +68,13 @@ const RoomPayment = () => {
 
   const selectedRooms = location.state?.selectedRooms || [];
   const passedBookingData = location.state?.bookingData || {};
+  const airportPickup = airportPickupFromState || (() => {
+    try {
+      return JSON.parse(localStorage.getItem("airportPickUp"));
+    } catch {
+      return null;
+    }
+  })();
 
   // Calculate rooms and adults, kids from selectedRooms
   const totalRooms = selectedRooms.length;
@@ -97,19 +105,12 @@ const RoomPayment = () => {
     }
 
     let savedBookingDetails = {};
-    let airportPickup = null;
     let personalRequest = null;
 
     try {
       savedBookingDetails = JSON.parse(localStorage.getItem("bookingDetails"));
     } catch {
       savedBookingDetails = {};
-    }
-
-    try {
-      airportPickup = JSON.parse(localStorage.getItem("airportPickUp"));
-    } catch {
-      airportPickup = null;
     }
 
     try {
@@ -211,6 +212,7 @@ const RoomPayment = () => {
       localStorage.setItem("completedBookingDetails", JSON.stringify({
         bookingData: passedBookingData,
         selectedRooms: selectedRooms,
+        airportPickup,
         bookingConfirmation: { bookingId: reservationId }
       }));
 
@@ -350,6 +352,24 @@ const RoomPayment = () => {
                     </div>
                   </div>
                 </div>
+
+                {airportPickup?.enabled && airportPickup.flightNo && (
+                  <div className="mb-8 p-6 bg-emerald-50/50 border border-emerald-100 rounded-2xl">
+                    <h3 className="text-md font-bold text-stone-900 mb-4 pb-2 border-b border-emerald-100">Shuttle Details</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-stone-500 text-xs">Flight Number</p>
+                        <p className="font-semibold text-stone-800">{airportPickup.flightNo}</p>
+                      </div>
+                      <div>
+                        <p className="text-stone-500 text-xs">Pickup Date</p>
+                        <p className="font-semibold text-stone-800">
+                          {airportPickup.pickupDate ? new Date(airportPickup.pickupDate).toLocaleDateString() : "Check-in Date"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="p-6 bg-emerald-50/50 border border-emerald-100 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
                   <div className="flex gap-3">

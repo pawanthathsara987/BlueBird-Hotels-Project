@@ -11,8 +11,12 @@ const BookingSummary = () => {
 
     const bookingData = location.state?.bookingData || {};
     const selectedRooms = location.state?.selectedRooms || [];
+    const airportPickupFromState = location.state?.airportPickup || null;
 
     const [airportPickup] = useState(() => {
+        if (airportPickupFromState) {
+            return airportPickupFromState;
+        }
         try {
             return JSON.parse(localStorage.getItem("airportPickUp")) || null;
         } catch {
@@ -146,6 +150,7 @@ const BookingSummary = () => {
             state: {
                 bookingData,
                 selectedRooms,
+                airportPickup,
             }
         });
     };
@@ -158,6 +163,7 @@ const BookingSummary = () => {
                 state: {
                     bookingData,
                     selectedRooms,
+                    airportPickup,
                 }
             });
 
