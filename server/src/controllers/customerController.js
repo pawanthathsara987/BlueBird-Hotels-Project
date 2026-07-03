@@ -2,7 +2,7 @@ import Customer from "../models/User/Customer.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import CustomerOTP from "../models/User/CustomerOTP.js";
-import { sendEmail } from "../services/emailService.js";
+import { sendEmail, sendInquiryEmail } from "../services/emailService.js";
 import dotenv from "dotenv";
 import axios from "axios";
 import { response } from "express";
@@ -997,3 +997,37 @@ export async function cancelAirportPickup(req, res) {
         res.status(500).json({ message: "Internal server error" });
     }
 }
+
+export const handleContactInquiry = async (req, res) => {
+    try {
+        const { name, email, message } = req.body;
+
+        if (!name || !email || !message) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide all required fields (name, email, message)"
+            });
+        }
+
+        const emailSent = await sendInquiryEmail({ name, email, message });
+
+        if (!emailSent) {
+            return res.status(500).json({
+                success: false,
+                message: "Failed to dispatch email notification."
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Inquiry message received and email dispatched successfully"
+        });
+
+    } catch (error) {
+        console.error("Error handling contact inquiry:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+};
