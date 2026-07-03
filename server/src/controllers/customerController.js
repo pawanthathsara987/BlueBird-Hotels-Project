@@ -11,7 +11,7 @@ import { Op } from "sequelize";
 dotenv.config();
 
 import sequelize from "../config/database.js";
-import { Booking, BookedRoom, Room, RoomType, AirPortPickup, VehicleBooking, Vehicle, TourInquiry, Tour, Payment, RoomPayment, BoardType, RoomPrice, ServiceCharge } from "../models/index.js";
+import { Booking, BookedRoom, Room, RoomType, AirPortPickup, VehicleBooking, Vehicle, TourInquiry, Tour, Payment, RoomPayment, BoardType, RoomPrice, AirportPickupVehicle } from "../models/index.js";
 
 export async function registerCustomer(req, res) {
 
@@ -548,10 +548,10 @@ export async function getCustomerBookings(req, res) {
             }]
         });
 
-        const pickupCharge = await ServiceCharge.findOne({
-            where: { service_Code: "AIRPORT_PICKUP", status: true }
+        const pickupVehicle = await AirportPickupVehicle.findOne({
+            order: [["price", "ASC"]]
         });
-        const airportPickupFee = pickupCharge ? parseFloat(pickupCharge.price) : 15000;
+        const airportPickupFee = pickupVehicle ? parseFloat(pickupVehicle.price) : 15000;
 
         res.status(200).json({
             success: true,
