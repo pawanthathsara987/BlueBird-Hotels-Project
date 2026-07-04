@@ -30,6 +30,8 @@ export default function VehicleBookings() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
+    const [collectPaymentMethod, setCollectPaymentMethod] = useState("cash");
+    const [isCollecting, setIsCollecting] = useState(false);
 
     // Booking form modal state
     const [showForm, setShowForm] = useState(false);
@@ -330,6 +332,25 @@ export default function VehicleBookings() {
         } catch (error) {
             console.error(error);
             toast.error(error.response?.data?.message || "Failed to cancel booking.");
+        }
+    };
+
+    const handleCollectBalance = async (id) => {
+        setIsCollecting(true);
+        try {
+            const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/reception/vehicle-bookings/${id}/collect-balance`, {
+                paymentMethod: collectPaymentMethod
+            });
+            if (res.data.success) {
+                toast.success("Balance payment collected successfully!");
+                setSelectedBooking(res.data.data);
+                fetchData();
+            }
+        } catch (error) {
+            console.error("Error collecting balance:", error);
+            toast.error(error.response?.data?.message || "Failed to collect balance payment.");
+        } finally {
+            setIsCollecting(false);
         }
     };
 
@@ -758,25 +779,47 @@ export default function VehicleBookings() {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex flex-col gap-0.5 text-[10px] text-slate-500 font-medium min-w-[130px]">
+                                                <div className="flex flex-col gap-0.5 text-[10px] text-slate-500 font-medium min-w-[135px]">
                                                     <span className="flex justify-between gap-4">
                                                         <span>Vehicle:</span>
-                                                        <span className="font-semibold text-slate-700 dark:text-slate-350">LKR {vehicleCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                        <span className="font-semibold text-slate-700 dark:text-slate-350">LKR {vehicleCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                     </span>
                                                     {driverCost > 0 && (
                                                         <span className="flex justify-between gap-4 text-teal-650 dark:text-teal-400">
                                                             <span>Driver:</span>
-                                                            <span className="font-semibold">+ LKR {driverCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                            <span className="font-semibold">+ LKR {driverCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                         </span>
                                                     )}
                                                     <div className="border-t border-slate-200 dark:border-slate-800 my-0.5"></div>
                                                     <span className="flex justify-between gap-4 font-black text-slate-900 dark:text-white text-xs">
                                                         <span>Total:</span>
-                                                        <span className={currentAccent.text}>LKR {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                        <span className={currentAccent.text}>LKR {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                     </span>
-                                                    <div className="text-[9px] text-slate-400 mt-1">
-                                                        Paid: LKR {b.balancePaidAt ? total.toLocaleString() : parseFloat(b.depositAmount).toLocaleString()} ({b.balancePaidAt ? "Full" : "50% Dep"})
-                                                    </div>
+                                                    
+                                                    {/* Half / Full details */}
+                                                    {b.id ? (
+                                                        <div className="mt-1 pt-1 border-t border-dashed border-slate-200 dark:border-slate-800 space-y-0.5 text-[9px] font-bold">
+                                                            <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                                                                <span>Deposit (50%):</span>
+                                                                <span>LKR {parseFloat(b.depositAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                            </div>
+                                                            {b.balancePaidAt ? (
+                                                                <div className="flex justify-between text-blue-500 dark:text-blue-400 font-black">
+                                                                    <span>Remaining ({b.balancePaymentMethod}):</span>
+                                                                    <span>Paid</span>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex justify-between text-rose-500 dark:text-rose-400">
+                                                                    <span>Balance Due:</span>
+                                                                    <span>LKR {parseFloat(b.remainingAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="mt-1 pt-1 border-t border-dashed border-slate-200 dark:border-slate-800 text-amber-500 dark:text-amber-400 font-bold text-[9px] text-center">
+                                                            Awaiting Deposit
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
@@ -1263,12 +1306,77 @@ export default function VehicleBookings() {
                                         </div>
                                     )}
                                     <div className="border-t border-slate-200 dark:border-slate-800 my-1"></div>
-                                    <div className="flex justify-between text-sm font-black text-slate-900 dark:text-white">
-                                        <span>Total Paid:</span>
-                                        <span className={currentAccent.text}>LKR {parseFloat(selectedBooking.totalPayable || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                    <div className="flex justify-between text-slate-600 dark:text-slate-350">
+                                        <span>Total Payable:</span>
+                                        <span className="font-extrabold">LKR {parseFloat(selectedBooking.totalPayable || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     </div>
+                                    <div className="flex justify-between text-emerald-600 dark:text-emerald-450">
+                                        <span>Advance Paid (Deposit):</span>
+                                        <span className="font-bold">LKR {parseFloat(selectedBooking.depositAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    
+                                    {!selectedBooking.balancePaidAt ? (
+                                        <>
+                                            <div className="flex justify-between text-rose-600 dark:text-rose-400 font-extrabold text-sm border-t border-dashed dark:border-slate-800 pt-1.5">
+                                                <span>Remaining Balance Due:</span>
+                                                <span>LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="flex justify-between text-teal-600 dark:text-teal-450 font-extrabold text-sm border-t border-dashed dark:border-slate-800 pt-1.5">
+                                                <span>Remaining Balance (Paid):</span>
+                                                <span>LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            </div>
+                                            <div className="text-[9px] text-slate-400 mt-1">
+                                                Balance collected on {new Date(selectedBooking.balancePaidAt).toLocaleString()} via {selectedBooking.balancePaymentMethod?.toUpperCase()}
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
+
+                            {/* Collect Balance Payment Panel (Reception desk) */}
+                            {!selectedBooking.balancePaidAt && !["cancelled", "completed", "returned"].includes(selectedBooking.status) && (
+                                <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/5 dark:bg-rose-500/2 space-y-3.5">
+                                    <div className="flex items-center gap-1.5 text-rose-550 dark:text-rose-400 font-bold uppercase tracking-wider text-[10px]">
+                                        <span>💵 Collect Remaining Balance Payment</span>
+                                    </div>
+                                    {selectedBooking.status === "pending_payment" ? (
+                                        <div className="flex items-start gap-2 p-3 bg-amber-500/10 text-amber-500 border border-amber-500/25 rounded-lg font-bold text-[11px]">
+                                            <span className="mt-0.5">⚠️</span>
+                                            <span>Advance Deposit Unpaid: The customer has not paid the online deposit (50%) for this booking yet. The remaining balance can only be collected after the deposit is paid and status becomes confirmed.</span>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-bold">
+                                                The customer must pay the remaining balance of <span className="text-rose-500 font-extrabold">LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> to check-in/start the vehicle rental.
+                                            </p>
+                                            <div className="flex flex-col sm:flex-row gap-3 items-end">
+                                                <div className="flex-1 w-full">
+                                                    <label className="block text-[10px] text-slate-450 uppercase mb-1.5 font-bold">Select Payment Method</label>
+                                                    <select
+                                                        value={collectPaymentMethod}
+                                                        onChange={(e) => setCollectPaymentMethod(e.target.value)}
+                                                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 outline-none font-bold text-xs cursor-pointer"
+                                                    >
+                                                        <option value="cash">Cash</option>
+                                                        <option value="card">Card Payment</option>
+                                                        <option value="bank_transfer">Bank Transfer</option>
+                                                    </select>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleCollectBalance(selectedBooking.id)}
+                                                    disabled={isCollecting}
+                                                    className="px-5 py-2.5 text-xs font-black text-white bg-rose-600 hover:bg-rose-700 disabled:bg-slate-400 rounded-lg transition shadow-sm cursor-pointer select-none whitespace-nowrap h-9 flex items-center justify-center"
+                                                >
+                                                    {isCollecting ? "Recording..." : `Confirm Payment (LKR ${parseFloat(selectedBooking.balanceAmount || 0).toLocaleString()})`}
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Special Requirements */}
                             {selectedBooking.specialRequirements && (

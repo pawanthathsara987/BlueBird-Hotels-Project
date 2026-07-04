@@ -249,7 +249,7 @@ export default function CustomerLoginPage() {
                     <span>Not a member yet?</span>
                     <button
                         type="button"
-                        onClick={() => navigate("/registerCustomer")}
+                        onClick={() => navigate("/registerCustomer", { state: location.state })}
                         disabled={loading}
                         className="font-bold text-amber-400 hover:text-amber-300 hover:underline transition-colors cursor-pointer"
                     >

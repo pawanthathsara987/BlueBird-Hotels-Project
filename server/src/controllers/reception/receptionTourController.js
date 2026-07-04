@@ -1,4 +1,6 @@
-import { TourInquiry, Tour, Customer } from "../../models/index.js";
+import { TourInquiry, Tour, Customer, StaffMember } from "../../models/index.js";
+import { Op } from "sequelize";
+import sequelize from "../../config/database.js";
 import crypto from "crypto";
 import {
   validateEmail,
@@ -187,14 +189,39 @@ export const createTourInquiry = async (req, res) => {
 // Get all tour inquiries (receptionist view)
 export const getAllInquiries = async (req, res) => {
   try {
-    const inquiries = await TourInquiry.findAll({
-      include: [
-        {
-          model: Tour,
-          attributes: ["id", "packageName", "price", "discount"],
-        },
-      ],
-      order: [["createdAt", "DESC"]],
+    const rows = await sequelize.query(`
+      SELECT 
+        ti.*,
+        t.id AS tour_id,
+        t.packageName,
+        t.price AS tourPrice,
+        t.discount AS tourDiscount,
+        tb.id AS bookingId,
+        tb.bookingRef,
+        tb.totalAmount,
+        tb.depositAmount,
+        tb.remainingAmount,
+        tb.status AS bookingStatus,
+        tb.balancePaidAt,
+        tb.balancePaymentMethod,
+        tb.balanceCollectedBy
+      FROM tour_inquiries ti
+      LEFT JOIN tours t ON ti.tourId = t.id
+      LEFT JOIN tour_bookings tb ON ti.id = tb.inquiryId
+      ORDER BY ti.createdAt DESC
+    `, {
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    const inquiries = rows.map(r => {
+      const item = { ...r };
+      item.Tour = r.tour_id ? {
+        id: r.tour_id,
+        packageName: r.packageName,
+        price: r.tourPrice,
+        discount: r.tourDiscount
+      } : null;
+      return item;
     });
 
     res.status(200).json({
@@ -346,6 +373,89 @@ export const updatePax = async (req, res) => {
       success: false,
       message: "Error updating pax",
       error: error.message,
+    });
+  }
+};
+
+// Collect remaining balance payment for a Tour booking
+export const collectTourBalancePayment = async (req, res) => {
+  try {
+    const { id } = req.params; // inquiryId
+    const { paymentMethod } = req.body;
+
+    if (!paymentMethod) {
+      return res.status(400).json({
+        success: false,
+        message: "paymentMethod is required"
+      });
+    }
+
+    // Check if matching booking exists in tour_bookings
+    const [booking] = await sequelize.query(
+      "SELECT * FROM tour_bookings WHERE inquiryId = :inquiryId LIMIT 1",
+      {
+        replacements: { inquiryId: id },
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Tour booking not found. The customer might not have paid the deposit yet."
+      });
+    }
+
+    if (booking.balancePaidAt) {
+      return res.status(400).json({
+        success: false,
+        message: "Balance payment has already been collected for this tour booking"
+      });
+    }
+
+    let balanceCollectedBy = null;
+    if (req.user?.id) {
+      const staffObj = await StaffMember.findOne({
+        where: {
+          [Op.or]: [
+            { userId: req.user.id },
+            { email: req.user.email }
+          ]
+        }
+      });
+      if (staffObj) {
+        balanceCollectedBy = staffObj.userId;
+      }
+    }
+
+    // Update remaining balance details in tour_bookings
+    await sequelize.query(`
+      UPDATE tour_bookings 
+      SET 
+        status = 'completed', 
+        balancePaidAt = NOW(), 
+        balancePaymentMethod = :paymentMethod, 
+        balanceCollectedBy = :balanceCollectedBy,
+        updatedAt = NOW()
+      WHERE inquiryId = :inquiryId
+    `, {
+      replacements: {
+        inquiryId: id,
+        paymentMethod,
+        balanceCollectedBy
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Tour balance payment collected successfully"
+    });
+
+  } catch (error) {
+    console.error("Error collecting tour balance:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error while collecting balance payment"
     });
   }
 };

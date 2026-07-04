@@ -107,7 +107,7 @@ export default function TourInquiryPage() {
     numberOfAdults: 1,
     numberOfChildren: 0,
     startDate: '',
-    pickupLocation: '',
+    pickupLocation: 'BlueBird Hotel Lobby',
     specialRequests: '',
   });
 
@@ -492,7 +492,7 @@ export default function TourInquiryPage() {
                 />
               </Field>
               <Field label="Pickup Location *" error={errors.pickupLocation}>
-                <input name="pickupLocation" value={form.pickupLocation} onChange={handleChange} placeholder="e.g. Colombo City Hotel" className={inputCls(errors.pickupLocation)} />
+                <input name="pickupLocation" value={form.pickupLocation} disabled readOnly className={`${inputCls(errors.pickupLocation)} bg-gray-100 cursor-not-allowed font-semibold text-gray-700`} />
               </Field>
             </div>
 
