@@ -385,12 +385,84 @@ export const deleteTour = async (req, res) => {
 
     await transaction.commit();
 
-    return res.status(200).json({
+      return res.status(200).json({
       success: true,
       message: "Tour deleted successfully",
     });
   } catch (error) {
     await transaction.rollback();
     return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getConfirmedTourBookings = async (req, res) => {
+  try {
+    const bookings = await sequelize.query(
+      `SELECT tb.*, ti.fullName, ti.email, ti.phone, ti.nationality, ti.numberOfAdults, ti.numberOfChildren,
+              t.packageName, t.duration
+       FROM tour_bookings tb
+       LEFT JOIN tour_inquiries ti ON tb.inquiryId = ti.id
+       LEFT JOIN tours t ON ti.tourId = t.id
+       ORDER BY tb.createdAt DESC`,
+      {
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: bookings
+    });
+  } catch (error) {
+    console.error("Error fetching confirmed tour bookings:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const getTourAnalytics = async (req, res) => {
+  try {
+    // 1. Total listed tours
+    const [toursCount] = await sequelize.query("SELECT COUNT(*) as count FROM tours", { type: sequelize.QueryTypes.SELECT });
+    
+    // 2. Total inquiries
+    const [inquiriesCount] = await sequelize.query("SELECT COUNT(*) as count FROM tour_inquiries", { type: sequelize.QueryTypes.SELECT });
+    
+    // 3. Inquiry status breakdown
+    const inquiryStatusBreakdown = await sequelize.query(
+      "SELECT status, COUNT(*) as count FROM tour_inquiries GROUP BY status",
+      { type: sequelize.QueryTypes.SELECT }
+    );
+
+    // 4. Total confirmed bookings
+    const [bookingsCount] = await sequelize.query("SELECT COUNT(*) as count FROM tour_bookings", { type: sequelize.QueryTypes.SELECT });
+
+    // 5. Total booking revenue (sum of depositAmount)
+    const [revenueData] = await sequelize.query("SELECT SUM(depositAmount) as total FROM tour_bookings", { type: sequelize.QueryTypes.SELECT });
+
+    // 6. Popular tours by inquiries
+    const popularTours = await sequelize.query(
+      `SELECT t.packageName, COUNT(ti.id) as inquiryCount 
+       FROM tours t
+       LEFT JOIN tour_inquiries ti ON t.id = ti.tourId
+       GROUP BY t.id, t.packageName
+       ORDER BY inquiryCount DESC
+       LIMIT 5`,
+      { type: sequelize.QueryTypes.SELECT }
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalTours: toursCount?.count || 0,
+        totalInquiries: inquiriesCount?.count || 0,
+        inquiryStatusBreakdown,
+        totalBookings: bookingsCount?.count || 0,
+        totalRevenue: parseFloat(revenueData?.total || 0),
+        popularTours
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching tour analytics:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
