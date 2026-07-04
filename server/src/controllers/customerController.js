@@ -659,7 +659,7 @@ export async function submitVehicleReview(req, res) {
             await t.rollback();
             return res.status(404).json({ success: false, message: "Rental booking not found or not authorized" });
         }
-        if (![ "completed", "returned" ].includes(booking.status)) {
+        if (!["completed", "returned"].includes(booking.status)) {
             await t.rollback();
             return res.status(400).json({ success: false, message: "You can only review a completed rental" });
         }
@@ -1014,7 +1014,7 @@ export async function getCustomerRentals(req, res) {
             ? await sequelize.query(
                 `SELECT * FROM vehicle_refunds WHERE bookingId IN (:ids)`,
                 { replacements: { ids: rentals.map(r => r.id) }, type: sequelize.QueryTypes.SELECT }
-              )
+            )
             : [];
 
         const data = rentals.map(r => ({
@@ -1439,7 +1439,7 @@ export async function cancelSingleBookedRoom(req, res) {
         // 8. Adjust booking total price
         const currentTotal = parseFloat(booking.total_price);
         const newTotal = Math.max(0, currentTotal - refundAmount);
-        
+
         // Recalculate tax if tax exists
         let newTax = 0;
         if (booking.tax_percentage > 0) {
@@ -1462,7 +1462,7 @@ export async function cancelSingleBookedRoom(req, res) {
 
         if (activeRoomsCount === 0) {
             await booking.update({ status: "cancelled" }, { transaction: t });
-            
+
             // Also mark pending payments as failed
             await RoomPayment.update(
                 { status: "failed" },

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { 
-  Calendar, MapPin, Check, BedDouble, Users, AlertCircle, Info, Search, Filter, 
-  FileText, XCircle, ArrowRight, HelpCircle, User, CreditCard, Clock, 
+import {
+  Calendar, MapPin, Check, BedDouble, Users, AlertCircle, Info, Search, Filter,
+  FileText, XCircle, ArrowRight, HelpCircle, User, CreditCard, Clock,
   ChevronRight, RefreshCw, Eye, ShieldCheck, Mail, Phone, Home, Ticket, Star
 } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -47,8 +47,8 @@ export default function BookingsTab({
   const [isPickupCancelModalOpen, setIsPickupCancelModalOpen] = useState(false);
   const [isSubmittingPickupCancel, setIsSubmittingPickupCancel] = useState(false);
 
-  const selectedPickupPrice = selectedBooking?.raw?.airportPickup?.price > 0 
-    ? parseFloat(selectedBooking.raw.airportPickup.price) 
+  const selectedPickupPrice = selectedBooking?.raw?.airportPickup?.price > 0
+    ? parseFloat(selectedBooking.raw.airportPickup.price)
     : (selectedBooking?.airportPickupFee || 15000);
 
   useEffect(() => {
@@ -94,7 +94,7 @@ export default function BookingsTab({
       if (response.data.success) {
         setRefundEligibility(response.data);
         setShowAirportPickupInRefundModal(actualPickup || shouldSelectAll);
-        
+
         let roomsInit = actualRoomId ? [actualRoomId] : [];
         let pickupInit = actualPickup;
 
@@ -148,7 +148,7 @@ export default function BookingsTab({
       } else {
         updatedRooms = updatedRooms.filter(id => id !== roomId);
       }
-      
+
       // Auto-check airport pickup if all eligible rooms are selected
       if (refundEligibility?.eligibleRooms && updatedRooms.length === refundEligibility.eligibleRooms.length) {
         if (refundEligibility.eligibleAirportPickup) {
@@ -254,9 +254,9 @@ export default function BookingsTab({
             ...booking,
             raw: booking.raw
               ? {
-                  ...booking.raw,
-                  stayReview: reviewData
-                }
+                ...booking.raw,
+                stayReview: reviewData
+              }
               : booking.raw
           };
         }));
@@ -265,9 +265,9 @@ export default function BookingsTab({
           ...prev,
           raw: prev.raw
             ? {
-                ...prev.raw,
-                stayReview: reviewData
-              }
+              ...prev.raw,
+              stayReview: reviewData
+            }
             : prev.raw
         } : prev);
 
@@ -306,17 +306,17 @@ export default function BookingsTab({
         setBookings((prev) => prev.map((booking) =>
           booking.realId === selectedBooking.realId
             ? {
-                ...booking,
-                amount: response.data.newTotal ?? booking.amount,
-                raw: booking.raw
-                  ? {
-                      ...booking.raw,
-                      airportPickup: booking.raw.airportPickup
-                        ? { ...booking.raw.airportPickup, status: "CANCELLED" }
-                        : booking.raw.airportPickup
-                    }
-                  : booking.raw
-              }
+              ...booking,
+              amount: response.data.newTotal ?? booking.amount,
+              raw: booking.raw
+                ? {
+                  ...booking.raw,
+                  airportPickup: booking.raw.airportPickup
+                    ? { ...booking.raw.airportPickup, status: "CANCELLED" }
+                    : booking.raw.airportPickup
+                }
+                : booking.raw
+            }
             : booking
         ));
 
@@ -325,11 +325,11 @@ export default function BookingsTab({
           amount: response.data.newTotal ?? prev.amount,
           raw: prev.raw
             ? {
-                ...prev.raw,
-                airportPickup: prev.raw.airportPickup
-                  ? { ...prev.raw.airportPickup, status: "CANCELLED" }
-                  : prev.raw.airportPickup
-              }
+              ...prev.raw,
+              airportPickup: prev.raw.airportPickup
+                ? { ...prev.raw.airportPickup, status: "CANCELLED" }
+                : prev.raw.airportPickup
+            }
             : prev.raw
         } : prev);
 
@@ -392,16 +392,16 @@ export default function BookingsTab({
             amount: response.data?.data?.amount ? booking.amount : booking.amount,
             raw: booking.raw
               ? {
-                  ...booking.raw,
-                  status: nextBookingStatus,
-                  bookedRooms: nextBookedRooms,
-                  airportPickup: booking.raw.airportPickup
-                    ? {
-                        ...booking.raw.airportPickup,
-                        status: shouldCancelPickupNow ? "CANCELLED" : booking.raw.airportPickup.status
-                      }
-                    : booking.raw.airportPickup
-                }
+                ...booking.raw,
+                status: nextBookingStatus,
+                bookedRooms: nextBookedRooms,
+                airportPickup: booking.raw.airportPickup
+                  ? {
+                    ...booking.raw.airportPickup,
+                    status: shouldCancelPickupNow ? "CANCELLED" : booking.raw.airportPickup.status
+                  }
+                  : booking.raw.airportPickup
+              }
               : booking.raw
           };
         }));
@@ -411,20 +411,20 @@ export default function BookingsTab({
           status: nextBookingStatus,
           raw: prev.raw
             ? {
-                ...prev.raw,
-                status: nextBookingStatus,
-                bookedRooms: prev.raw.bookedRooms?.map((room) => (
-                  selectedRefundRooms.includes(room.id)
-                    ? { ...room, status: "cancelled" }
-                    : room
-                )),
-                airportPickup: prev.raw.airportPickup
-                  ? {
-                      ...prev.raw.airportPickup,
-                      status: shouldCancelPickupNow ? "CANCELLED" : prev.raw.airportPickup.status
-                    }
-                  : prev.raw.airportPickup
-              }
+              ...prev.raw,
+              status: nextBookingStatus,
+              bookedRooms: prev.raw.bookedRooms?.map((room) => (
+                selectedRefundRooms.includes(room.id)
+                  ? { ...room, status: "cancelled" }
+                  : room
+              )),
+              airportPickup: prev.raw.airportPickup
+                ? {
+                  ...prev.raw.airportPickup,
+                  status: shouldCancelPickupNow ? "CANCELLED" : prev.raw.airportPickup.status
+                }
+                : prev.raw.airportPickup
+            }
             : prev.raw
         } : prev);
 
@@ -472,9 +472,9 @@ export default function BookingsTab({
 
   const formatDateTime = (dateStr) => {
     if (!dateStr) return "—";
-    return new Date(dateStr).toLocaleDateString("en-US", { 
-      month: "short", 
-      day: "numeric", 
+    return new Date(dateStr).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit"
@@ -535,8 +535,8 @@ export default function BookingsTab({
       const matchId = (b.id || "").toLowerCase().includes(term);
       const matchHotel = (b.hotelName || "").toLowerCase().includes(term);
       const matchDate = formatDate(b.checkIn).toLowerCase().includes(term) || formatDate(b.checkOut).toLowerCase().includes(term);
-      
-      const matchRoom = b.raw?.bookedRooms?.some(r => 
+
+      const matchRoom = b.raw?.bookedRooms?.some(r =>
         (r.Room?.roomType?.type || "").toLowerCase().includes(term)
       );
 
@@ -546,29 +546,29 @@ export default function BookingsTab({
 
   // Print Invoice layout
   const handlePrintInvoice = (booking) => {
-      const checkIn = formatDate(booking.checkIn);
-      const checkOut = formatDate(booking.checkOut);
-      const createdDate = formatDateTime(booking.raw?.createdAt);
-      const supportContact = process.env.VITE_SUPPORT_CONTACT || "+94701950195";
-      const customerName = profile.name || "Valued Guest";
-      const customerEmail = profile.email || "";
-      const customerPhone = profile.phone || "";
-      const customerCountry = profile.country || "Sri Lanka";
-      
-      const successPayments = booking.raw?.payments?.filter(p => p.status === "success" || p.status === "paid") || [];
-      const totalPaid = successPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
-      const balanceDue = Math.max(0, booking.amount - totalPaid);
-      const totalRooms = booking.raw?.bookedRooms?.length || booking.rooms?.length || 0;
-      const totalPax = (booking.raw?.bookedRooms || []).reduce((sum, room) => sum + (room.adults || 0) + (room.kids || 0), 0) || booking.guestsSummary || "";
-      const pickupStatus = (booking.raw?.airportPickup?.status || "").toUpperCase();
-      const pickupPrice = pickupStatus !== "CANCELLED"
-        ? parseFloat(booking.raw?.airportPickup?.price || booking.airportPickupFee || 0)
-        : 0;
+    const checkIn = formatDate(booking.checkIn);
+    const checkOut = formatDate(booking.checkOut);
+    const createdDate = formatDateTime(booking.raw?.createdAt);
+    const supportContact = process.env.VITE_SUPPORT_CONTACT || "+94701950195";
+    const customerName = profile.name || "Valued Guest";
+    const customerEmail = profile.email || "";
+    const customerPhone = profile.phone || "";
+    const customerCountry = profile.country || "Sri Lanka";
 
-      const priceBreakdownRows = booking.raw?.bookedRooms?.map((room, idx) => {
-        const roomTotal = parseFloat(room.price || room.totalPrice || room.pricePerNight || 0);
-        const rate = booking.nights > 0 ? roomTotal / booking.nights : roomTotal;
-        return `
+    const successPayments = booking.raw?.payments?.filter(p => p.status === "success" || p.status === "paid") || [];
+    const totalPaid = successPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+    const balanceDue = Math.max(0, booking.amount - totalPaid);
+    const totalRooms = booking.raw?.bookedRooms?.length || booking.rooms?.length || 0;
+    const totalPax = (booking.raw?.bookedRooms || []).reduce((sum, room) => sum + (room.adults || 0) + (room.kids || 0), 0) || booking.guestsSummary || "";
+    const pickupStatus = (booking.raw?.airportPickup?.status || "").toUpperCase();
+    const pickupPrice = pickupStatus !== "CANCELLED"
+      ? parseFloat(booking.raw?.airportPickup?.price || booking.airportPickupFee || 0)
+      : 0;
+
+    const priceBreakdownRows = booking.raw?.bookedRooms?.map((room, idx) => {
+      const roomTotal = parseFloat(room.price || room.totalPrice || room.pricePerNight || 0);
+      const rate = booking.nights > 0 ? roomTotal / booking.nights : roomTotal;
+      return `
           <tr>
             <td>Room ${idx + 1}: ${room.Room?.roomType?.type || "Deluxe Suite"} (${room.board_type || "Room Only"})</td>
             <td style="text-align: center;">${booking.nights}</td>
@@ -576,18 +576,18 @@ export default function BookingsTab({
             <td style="text-align: right;">${CURRENCY} ${roomTotal.toFixed(2)}</td>
           </tr>
         `;
-      }).join("") || "";
+    }).join("") || "";
 
-      const hasPickup = booking.raw?.airportPickup;
-      const extraChargesRows = hasPickup ? `
+    const hasPickup = booking.raw?.airportPickup;
+    const extraChargesRows = hasPickup ? `
         <tr>
           <td colspan="3">Airport Shuttle Transfer Service (Katunayake Fixed Point)</td>
           <td style="text-align: right;">${CURRENCY} ${pickupPrice.toFixed(2)}</td>
         </tr>
       ` : "";
 
-      const printWindow = window.open("", "_blank");
-      printWindow.document.write(`
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
         <html>
         <head>
           <title>Proforma Invoice - ${booking.id}</title>
@@ -703,8 +703,8 @@ export default function BookingsTab({
         </body>
         </html>
       `);
-      printWindow.document.close();
-      printWindow.print();
+    printWindow.document.close();
+    printWindow.print();
   };
 
   const getTimelineSteps = (booking) => {
@@ -713,7 +713,7 @@ export default function BookingsTab({
     const bookedRooms = booking.raw?.bookedRooms || [];
     const hasCheckedIn = bookedRooms.some(r => (r.status || "").toLowerCase() === "checked_in" || (r.status || "").toLowerCase() === "checked_out");
     const hasCheckedOut = bookedRooms.some(r => (r.status || "").toLowerCase() === "checked_out");
-    
+
     return [
       { label: "Booking Created", date: formatDateTime(booking.raw?.createdAt), active: true, done: true },
       { label: "Payment Completed", date: isPaid ? "Verified Online" : null, active: isPaid, done: isPaid },
@@ -726,39 +726,39 @@ export default function BookingsTab({
   const getOverallStayStatus = (booking) => {
     const bookedRooms = booking.raw?.bookedRooms || [];
     const status = (booking.status || "").toLowerCase();
-    
+
     if (bookedRooms.length > 0) {
       const roomStatuses = bookedRooms.map(r => (r.status || "").toLowerCase());
       if (roomStatuses.includes("checked_in")) {
-        return { 
-          key: "checked_in", 
-          label: "Checked In", 
+        return {
+          key: "checked_in",
+          label: "Checked In",
           color: "emerald",
           message: "You are currently checked-in to your room. Enjoy your stay at BlueBird Hotels & Resorts!"
         };
       }
       if (roomStatuses.includes("checked_out")) {
-        return { 
-          key: "checked_out", 
-          label: "Checked Out", 
+        return {
+          key: "checked_out",
+          label: "Checked Out",
           color: "blue",
           message: "You have checked-out of this room. Thank you for choosing BlueBird Luxury Hotels!"
         };
       }
     }
-    
+
     if (status === "cancelled" || status === "rejected") {
-      return { 
-        key: "cancelled", 
-        label: "Cancelled", 
+      return {
+        key: "cancelled",
+        label: "Cancelled",
         color: "rose",
         message: "This reservation has been cancelled or rejected."
       };
     }
     if (status === "confirmed") {
-      return { 
-        key: "confirmed", 
-        label: "Reserved & Confirmed", 
+      return {
+        key: "confirmed",
+        label: "Reserved & Confirmed",
         color: "indigo",
         message: "Your stay is confirmed! We look forward to welcoming you on your check-in date."
       };
@@ -820,11 +820,10 @@ export default function BookingsTab({
             <button
               key={tab.id}
               onClick={() => setFilterTab(tab.id)}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                filterTab === tab.id 
-                  ? "bg-white text-slate-800 shadow-3xs" 
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${filterTab === tab.id
+                  ? "bg-white text-slate-800 shadow-3xs"
                   : "text-slate-500 hover:text-slate-700"
-              }`}
+                }`}
             >
               {tab.label}
             </button>
@@ -854,7 +853,7 @@ export default function BookingsTab({
         )
       ) : (
         <div className="space-y-6">
-          
+
           {/* DESKTOP TABLE VIEW */}
           <div className="hidden md:block overflow-hidden bg-white border border-slate-150 rounded-2xl shadow-3xs">
             <table className="min-w-full border-collapse">
@@ -965,14 +964,14 @@ export default function BookingsTab({
           {/* MOBILE CARDS VIEW */}
           <div className="md:hidden space-y-4">
             {filteredAndSearchedBookings.map((b) => (
-              <div 
+              <div
                 key={b.id}
                 className="bg-white border border-slate-200 rounded-2xl p-4 space-y-4 shadow-3xs"
               >
                 <div className="flex justify-between items-start">
                   <div>
                     <span className="text-[10px] font-black text-slate-450 tracking-wider">BOOKING ID</span>
-                    <button 
+                    <button
                       onClick={() => setSelectedBooking(b)}
                       className="block text-xs font-black text-blue-700 text-left outline-none cursor-pointer"
                     >
@@ -1066,12 +1065,12 @@ export default function BookingsTab({
       {/* DETAILED BOOKING POPUP MODAL */}
       {selectedBooking && (
         <>
-          <div 
-            className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-40 transition-opacity animate-fadeIn" 
+          <div
+            className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-40 transition-opacity animate-fadeIn"
             onClick={() => setSelectedBooking(null)}
           />
           <div className="fixed inset-y-0 right-0 max-w-xl w-full bg-white z-50 shadow-2xl flex flex-col justify-between overflow-y-auto animate-slideLeft">
-            
+
             {/* Modal Header */}
             <div className="p-5 border-b border-slate-200 flex justify-between items-center bg-blue-950 text-white">
               <div>
@@ -1081,7 +1080,7 @@ export default function BookingsTab({
                   {selectedBooking.id}
                 </h3>
               </div>
-              <button 
+              <button
                 onClick={() => setSelectedBooking(null)}
                 className="p-1.5 hover:bg-white/10 rounded-lg text-white/80 hover:text-white transition cursor-pointer"
               >
@@ -1091,7 +1090,7 @@ export default function BookingsTab({
 
             {/* Modal Body */}
             <div className="p-6 flex-1 space-y-6">
-              
+
               {/* Status Highlight Banner */}
               {(() => {
                 const stayStatus = getOverallStayStatus(selectedBooking);
@@ -1127,13 +1126,12 @@ export default function BookingsTab({
                 <div className="relative pl-6 space-y-4 border-l border-slate-200">
                   {getTimelineSteps(selectedBooking).map((step, idx) => (
                     <div key={idx} className="relative">
-                      <div className={`absolute -left-8.5 top-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                        step.done 
-                          ? "bg-emerald-600 border-emerald-600 text-white" 
-                          : step.active 
-                            ? "bg-amber-400 border-amber-400 text-white" 
+                      <div className={`absolute -left-8.5 top-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${step.done
+                          ? "bg-emerald-600 border-emerald-600 text-white"
+                          : step.active
+                            ? "bg-amber-400 border-amber-400 text-white"
                             : "bg-white border-slate-200"
-                      }`}>
+                        }`}>
                         {step.done && <Check size={8} className="stroke-3" />}
                       </div>
                       <div>
@@ -1185,9 +1183,9 @@ export default function BookingsTab({
                 {selectedBooking.raw?.bookedRooms?.map((room, idx) => (
                   <div key={idx} className="p-3.5 bg-slate-50/50 border border-slate-200/60 rounded-xl flex gap-3 items-start">
                     {room.Room?.roomType?.image_url ? (
-                      <img 
-                        src={room.Room.roomType.image_url} 
-                        alt={room.Room?.roomType?.type || "Room"} 
+                      <img
+                        src={room.Room.roomType.image_url}
+                        alt={room.Room?.roomType?.type || "Room"}
                         className="w-16 h-12 object-cover rounded-lg border border-slate-200 shrink-0 shadow-3xs"
                       />
                     ) : (
@@ -1334,13 +1332,12 @@ export default function BookingsTab({
                       </div>
                       <div className="text-right">
                         <p className="font-black text-rose-700">-{CURRENCY} {parseFloat(refund.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                        <span className={`inline-block mt-0.5 px-2 py-0.5 text-[8px] font-black uppercase rounded-full border ${
-                          refund.status === "COMPLETED" || refund.status === "APPROVED"
+                        <span className={`inline-block mt-0.5 px-2 py-0.5 text-[8px] font-black uppercase rounded-full border ${refund.status === "COMPLETED" || refund.status === "APPROVED"
                             ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                             : refund.status === "PENDING"
-                            ? "bg-amber-50 text-amber-700 border-amber-250 animate-pulse"
-                            : "bg-rose-50 text-rose-700 border-rose-200"
-                        }`}>
+                              ? "bg-amber-50 text-amber-700 border-amber-250 animate-pulse"
+                              : "bg-rose-50 text-rose-700 border-rose-200"
+                          }`}>
                           {refund.status}
                         </span>
                       </div>
@@ -1408,7 +1405,7 @@ export default function BookingsTab({
       {/* Dynamic Refund Request Selection Modal */}
       {isRefundModalOpen && refundEligibility && (
         <>
-          <div 
+          <div
             className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs z-55 animate-fadeIn"
             onClick={handleCloseRefundModal}
           />
@@ -1419,7 +1416,7 @@ export default function BookingsTab({
                   <RefreshCw className="w-6 h-6 text-indigo-650 animate-spin-slow animate-pulse" />
                   <h4 className="font-serif font-bold text-base text-slate-800">Request Booking Refund</h4>
                 </div>
-                <button 
+                <button
                   onClick={handleCloseRefundModal}
                   className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition cursor-pointer"
                 >
@@ -1431,21 +1428,20 @@ export default function BookingsTab({
                 {/* Eligible Stays List */}
                 <div className="space-y-2">
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Select items to refund:</span>
-                  
+
                   {/* Rooms list */}
                   {refundEligibility.eligibleRooms && refundEligibility.eligibleRooms.length > 0 ? (
                     <div className="space-y-2">
                       <p className="font-bold text-slate-700">Rooms Stay Service:</p>
                       {refundEligibility.eligibleRooms.map((room) => (
-                        <label 
-                          key={room.id} 
-                          className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
-                            selectedRefundRooms.includes(room.id)
+                        <label
+                          key={room.id}
+                          className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${selectedRefundRooms.includes(room.id)
                               ? "bg-indigo-50/50 border-indigo-250 shadow-3xs"
                               : "bg-slate-50/50 border-slate-200 hover:bg-slate-50"
-                          }`}
+                            }`}
                         >
-                          <input 
+                          <input
                             type="checkbox"
                             className="mt-1 accent-indigo-600"
                             checked={selectedRefundRooms.includes(room.id)}
@@ -1476,14 +1472,13 @@ export default function BookingsTab({
                   {showAirportPickupInRefundModal && refundEligibility.eligibleAirportPickup && (
                     <div className="space-y-2 pt-2">
                       <p className="font-bold text-slate-700">Airport Transfer Shuttle Service:</p>
-                      <label 
-                        className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
-                          selectedRefundPickup
+                      <label
+                        className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${selectedRefundPickup
                             ? "bg-indigo-50/50 border-indigo-250 shadow-3xs"
                             : "bg-slate-50/50 border-slate-200 hover:bg-slate-50"
-                        }`}
+                          }`}
                       >
-                        <input 
+                        <input
                           type="checkbox"
                           className="mt-1 accent-indigo-600"
                           checked={selectedRefundPickup}
