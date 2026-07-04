@@ -131,19 +131,38 @@ export default function ChecklistManagement() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <ClipboardCheck className="h-6 w-6 text-blue-600" /> Inspections / Checklists
+    <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 text-slate-900">
+      {/* Premium Dashboard Header Card */}
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="space-y-2 max-w-2xl">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-blue-600 tracking-widest uppercase bg-blue-50 px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit">
+              <ClipboardCheck size={12} className="animate-pulse" />
+              Quality & Condition
+            </span>
+          </div>
+          <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">
+            Vehicle Checklists & Inspections
           </h1>
-          <p className="text-sm text-slate-500 mt-1">Pre-trip and post-trip vehicle condition reports.</p>
+          <p className="text-xs md:text-sm text-slate-400 font-medium leading-relaxed">
+            Record pre-trip (pickup) and post-trip (return) vehicle safety, mileage, and damage parameters.
+          </p>
         </div>
-        <button onClick={openCreate} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-blue-700 transition">
-          <Plus className="h-4 w-4" /> Add Checklist
-        </button>
+
+        <div className="flex flex-wrap gap-3 w-full xl:w-auto shrink-0">
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors shadow-sm text-xs cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            Add Checklist
+          </button>
+        </div>
       </div>
+
+      <div className="w-full max-w-7xl mx-auto space-y-6">
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
@@ -317,6 +336,7 @@ export default function ChecklistManagement() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

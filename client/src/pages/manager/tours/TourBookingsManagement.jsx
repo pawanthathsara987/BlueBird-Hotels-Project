@@ -89,25 +89,40 @@ export default function TourBookingsManagement() {
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      {/* Header & Stats */}
-      <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">Confirmed Tour Bookings</h1>
-          <p className="text-slate-500">Overview of all confirmed tours and revenue.</p>
-        </div>
+    <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 text-slate-900">
+      {/* Premium Dashboard Header Card */}
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
         
-        <div className="flex gap-4">
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 min-w-[150px]">
-              <p className="text-sm font-semibold text-slate-500 mb-1">Total Bookings</p>
-              <p className="text-2xl font-bold text-slate-800">{bookings.length}</p>
-            </div>
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 min-w-[200px]">
-              <p className="text-sm font-semibold text-slate-500 mb-1">Total Revenue</p>
-              <p className="text-2xl font-bold text-emerald-600">{formatCurrency(totalRevenue)}</p>
-            </div>
+        <div className="space-y-2 max-w-2xl">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-blue-600 tracking-widest uppercase bg-blue-50 px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit">
+              <Calendar size={12} className="animate-pulse" />
+              Confirmed Tours
+            </span>
+          </div>
+          <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">
+            Confirmed Tour Bookings
+          </h1>
+          <p className="text-xs md:text-sm text-slate-400 font-medium leading-relaxed">
+            Overview of all confirmed tour bookings, passenger numbers, payment deposits, and active balances.
+          </p>
+        </div>
+
+        {/* Quick Stats Grid */}
+        <div className="flex gap-4 w-full xl:w-auto shrink-0">
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-inner min-w-[140px] text-center">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Bookings</p>
+            <p className="mt-1 text-2xl font-black text-slate-800">{bookings.length}</p>
+          </div>
+          <div className="bg-emerald-50/40 border border-emerald-100 rounded-2xl p-4 shadow-inner min-w-[180px] text-center">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Revenue</p>
+            <p className="mt-1 text-2xl font-black text-emerald-600">{formatCurrency(totalRevenue)}</p>
+          </div>
         </div>
       </div>
+
+      <div className="w-full max-w-7xl mx-auto space-y-6">
 
       {/* Filters */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
@@ -215,6 +230,7 @@ export default function TourBookingsManagement() {
             </div>
           ))
         )}
+      </div>
       </div>
     </div>
   );

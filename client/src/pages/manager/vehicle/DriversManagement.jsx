@@ -154,27 +154,45 @@ export default function DriversManagement() {
   };
 
   return (
-    <div className="min-h-full bg-linear-to-b from-sky-50 via-blue-50 to-slate-50 px-4 py-6 md:px-8 md:py-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-blue-100 text-blue-700 text-sm font-semibold mb-3">
-              <Users className="w-4 h-4" />
-              Driver Management
-            </div>
-            <h1 className="text-4xl font-black tracking-tight text-slate-800">Drivers</h1>
-            <p className="text-slate-500 mt-2 max-w-2xl">Manage drivers, licenses, availability and profiles.</p>
+    <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 text-slate-900">
+      {/* Premium Dashboard Header Card */}
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="space-y-2 max-w-2xl">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-blue-600 tracking-widest uppercase bg-blue-50 px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit">
+              <Users size={12} className="animate-pulse" />
+              Operations Center
+            </span>
           </div>
-
-          <div className="flex gap-3">
-            <button onClick={fetchDrivers} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border bg-white text-slate-700">
-              <RefreshCw className="w-4 h-4" /> Refresh
-            </button>
-            <button onClick={openAdd} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white">
-              <Plus className="w-4 h-4" /> Add Driver
-            </button>
-          </div>
+          <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">
+            Driver Management
+          </h1>
+          <p className="text-xs md:text-sm text-slate-400 font-medium leading-relaxed">
+            Manage drivers, licenses, profiles, availability, and uniform daily rates.
+          </p>
         </div>
+
+        <div className="flex flex-wrap gap-3 w-full xl:w-auto shrink-0">
+          <button
+            onClick={fetchDrivers}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-semibold hover:bg-slate-100 transition-colors shadow-sm text-xs cursor-pointer"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </button>
+          <button
+            onClick={openAdd}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors shadow-sm text-xs cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            Add Driver
+          </button>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto space-y-6">
 
         <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-3 gap-4">
           <div className="rounded-2xl p-5 border bg-white">Total<br /><div className="text-2xl font-bold">{stats.total}</div></div>
