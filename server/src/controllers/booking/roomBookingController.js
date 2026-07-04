@@ -885,6 +885,62 @@ const getAvailableRoomTypesByDate = async (req, res) => {
             type: QueryTypes.SELECT
         });
 
+        // Query active seasonal discounts for this date range
+        const activeSeasonalDiscounts = await SeasonalDiscount.findAll({
+            where: {
+                startDate: { [Op.lte]: new Date(checkOut) },
+                endDate: { [Op.gte]: new Date(checkIn) }
+            }
+        });
+
+        // Apply seasonal discount to the nightly rate of each room price entry
+        const start = new Date(checkIn);
+        const end = new Date(checkOut);
+        const stayNights = Math.max(1, Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)));
+
+        for (const item of roomTypeList) {
+            let totalDiscountedPrice = 0;
+            let totalOriginalPrice = 0;
+            let firstAppliedDiscountValue = 0;
+            let firstAppliedDiscountType = null;
+            let firstAppliedDiscountName = null;
+            const baseRate = parseFloat(item.price);
+
+            for (let day = 0; day < stayNights; day++) {
+                const currentNightDate = new Date(start);
+                currentNightDate.setDate(start.getDate() + day);
+
+                let nightlyRate = baseRate;
+
+                // Find if any seasonal discount matches currentNightDate in memory
+                const activeDiscount = activeSeasonalDiscounts.find(sd => {
+                    const sdStart = new Date(sd.startDate);
+                    const sdEnd = new Date(sd.endDate);
+                    return currentNightDate >= sdStart && currentNightDate <= sdEnd;
+                });
+
+                if (activeDiscount) {
+                    if (activeDiscount.discountType === "percentage") {
+                        nightlyRate = nightlyRate * (1 - activeDiscount.discountValue / 100);
+                    } else if (activeDiscount.discountType === "fixed") {
+                        nightlyRate = Math.max(0, nightlyRate - activeDiscount.discountValue);
+                    }
+                    firstAppliedDiscountValue = activeDiscount.discountValue;
+                    firstAppliedDiscountType = activeDiscount.discountType;
+                    firstAppliedDiscountName = activeDiscount.name;
+                }
+
+                totalDiscountedPrice += nightlyRate;
+                totalOriginalPrice += baseRate;
+            }
+
+            item.price = totalDiscountedPrice / stayNights;
+            item.originalPrice = totalOriginalPrice / stayNights;
+            item.discount = firstAppliedDiscountValue;
+            item.discountType = firstAppliedDiscountType;
+            item.discountName = firstAppliedDiscountName;
+        }
+
         // Fetch detailed available physical rooms list to allow client-side room assignment
         const roomsQuery = `
             SELECT r.id, r.room_number, r.floor, r.room_type_id, r.kids_allow, r.kids AS max_kids, ot.capacity AS max_adults

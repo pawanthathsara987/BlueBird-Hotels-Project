@@ -798,7 +798,7 @@ export default function CustomerDetailsPage() {
                                 <div className="p-3 bg-emerald-50 border border-emerald-150 rounded-xl flex gap-2.5">
                                     <FaCheck className="h-4 w-4 text-emerald-800 shrink-0 mt-0.5" />
                                     <div className="text-[11px] leading-tight text-emerald-800 font-semibold">
-                                        You pay 50% advance (${(Number(totalPrice || 0) * 0.5).toFixed(2)}) on the next payment page to secure your luxury booking.
+                                        You pay 50% advance on the next payment page to secure your luxury booking.
                                     </div>
                                 </div>
                             </div>
