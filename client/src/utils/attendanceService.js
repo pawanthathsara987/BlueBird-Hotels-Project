@@ -36,4 +36,12 @@ export const updateAttendanceSettings = (settings) => {
     return API.put("/attendance/settings", settings);
 };
 
+export const getRoleAttendanceSettings = () => {
+    return API.get("/attendance/role-settings");
+};
+
+export const updateRoleAttendanceSettings = (settings) => {
+    return API.put("/attendance/role-settings", settings);
+};
+
 

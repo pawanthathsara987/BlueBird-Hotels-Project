@@ -1,4 +1,5 @@
 import StaffMember from "../models/User/StaffMember.js";
+import Role from "../models/User/Role.js";
 import Attendance from "../models/attendance/Attendance.js";
 import AttendanceEditLog from "../models/attendance/AttendanceEditLog.js";
 import AttendanceSetting from "../models/attendance/AttendanceSetting.js";
@@ -6,6 +7,63 @@ import LeaveRequest from "../models/leave/LeaveRequest.js";
 import dayjs from "dayjs";
 import crypto from "crypto";
 import { Op } from "sequelize";
+
+const DEFAULT_OFFICE_START_TIME = "08:00";
+const DEFAULT_OFFICE_END_TIME = "17:00";
+const DEFAULT_GRACE_PERIOD = 10;
+
+const parseTime = (timeString) => {
+    if (!timeString || typeof timeString !== "string") {
+        return null;
+    }
+
+    const [hour, minute] = timeString.split(":").map(Number);
+    if (Number.isNaN(hour) || Number.isNaN(minute)) {
+        return null;
+    }
+
+    return { hour, minute };
+};
+
+const buildDateTime = (referenceDate, timeString) => {
+    const parsed = parseTime(timeString);
+    if (!parsed) {
+        return null;
+    }
+
+    return dayjs(referenceDate)
+        .hour(parsed.hour)
+        .minute(parsed.minute)
+        .second(0)
+        .millisecond(0);
+};
+
+const buildShiftWindow = (referenceDate, startTime, endTime) => {
+    const start = buildDateTime(referenceDate, startTime);
+    let end = buildDateTime(referenceDate, endTime);
+
+    if (start && end && !end.isAfter(start)) {
+        end = end.add(1, "day");
+    }
+
+    return { start, end };
+};
+
+const normalizeRoleSchedule = async (role) => {
+    const globalSettings = await getSettingsMap();
+
+    return {
+        officeStartTime: role?.officeStartTime || globalSettings.OFFICE_START_TIME || DEFAULT_OFFICE_START_TIME,
+        officeEndTime: role?.officeEndTime || globalSettings.OFFICE_END_TIME || DEFAULT_OFFICE_END_TIME,
+        gracePeriodMinutes: role?.gracePeriodMinutes ?? Number(globalSettings.GRACE_PERIOD ?? DEFAULT_GRACE_PERIOD),
+        standardWorkingHours: role?.standardWorkingHours ?? Number(globalSettings.STANDARD_WORKING_HOURS ?? 8)
+    };
+};
+
+const getRoleScheduleForStaff = async (staff) => {
+    const role = staff?.Role || (staff?.roleId ? await Role.findByPk(staff.roleId) : null);
+    return normalizeRoleSchedule(role);
+};
 
 export const getSetting = async (key, defaultValue) => {
     const setting = await AttendanceSetting.findOne({ where: { settingKey: key } });
@@ -87,7 +145,12 @@ export const scanAttendance = async (data) => {
     const staff = await StaffMember.findOne({
         where: {
             staffId
-        }
+        },
+        include: [
+            {
+                model: Role
+            }
+        ]
     });
 
     if (!staff) {
@@ -113,19 +176,26 @@ export const scanAttendance = async (data) => {
     }
 
     if (!attendance) {
-        // Calculate Lateness
         const now = dayjs();
-        const startTimeStr = await getSetting("OFFICE_START_TIME", "08:00");
-        const [startHour, startMinute] = startTimeStr.split(":").map(Number);
-        
-        const officeStart = dayjs().hour(startHour).minute(startMinute).second(0).millisecond(0);
-        const gracePeriodMins = parseInt(await getSetting("GRACE_PERIOD", "10"), 10);
-        const officeStartWithGrace = officeStart.add(gracePeriodMins, "minute");
+        const roleSchedule = await getRoleScheduleForStaff(staff);
+        const { start: officeStart, end: officeEnd } = buildShiftWindow(today, roleSchedule.officeStartTime, roleSchedule.officeEndTime);
+        const gracePeriodMins = Number(roleSchedule.gracePeriodMinutes || 0);
+
+        if (officeEnd && now.isAfter(officeEnd)) {
+            return {
+                success: false,
+                message: `Check-in window closed for ${staff.Role?.roleName || "this role"} today.`,
+                staffName: staff.name,
+                staff
+            };
+        }
+
+        const officeStartWithGrace = officeStart ? officeStart.add(gracePeriodMins, "minute") : null;
 
         let lateMinutes = 0;
         let status = "Present";
 
-        if (now.isAfter(officeStartWithGrace)) {
+        if (officeStartWithGrace && now.isAfter(officeStartWithGrace)) {
             lateMinutes = now.diff(officeStart, "minute");
             status = "Late";
         }
@@ -259,13 +329,63 @@ export const getAttendanceRecords = async (query) => {
     };
 };
 
+export const getRoleAttendanceSettings = async () => {
+    const roles = await Role.findAll({
+        order: [["roleName", "ASC"]]
+    });
+
+    return {
+        success: true,
+        data: roles
+    };
+};
+
+export const updateRoleAttendanceSettings = async (rolesArray) => {
+    if (!Array.isArray(rolesArray)) {
+        throw new Error("Invalid role settings payload");
+    }
+
+    for (const item of rolesArray) {
+        const { roleId, officeStartTime, officeEndTime, gracePeriodMinutes, standardWorkingHours } = item;
+        if (!roleId) {
+            continue;
+        }
+
+        const role = await Role.findByPk(roleId);
+        if (!role) {
+            continue;
+        }
+
+        role.officeStartTime = officeStartTime || null;
+        role.officeEndTime = officeEndTime || null;
+        role.gracePeriodMinutes = gracePeriodMinutes === "" || gracePeriodMinutes === null || gracePeriodMinutes === undefined
+            ? null
+            : Number(gracePeriodMinutes);
+        role.standardWorkingHours = standardWorkingHours === "" || standardWorkingHours === null || standardWorkingHours === undefined
+            ? null
+            : Number(standardWorkingHours);
+
+        await role.save();
+    }
+
+    const updatedRoles = await Role.findAll({ order: [["roleName", "ASC"]] });
+
+    return {
+        success: true,
+        message: "Role schedules updated successfully",
+        data: updatedRoles
+    };
+};
+
 export const getDailyAttendanceStats = async () => {
     const today = dayjs().format("YYYY-MM-DD");
 
-    // Total active staff members
     const totalStaff = await StaffMember.count();
 
-    // Query all logs for today
+    const staffMembers = await StaffMember.findAll({
+        include: [{ model: Role }]
+    });
+
     const logs = await Attendance.findAll({
         where: {
             attendanceDate: today
@@ -281,7 +401,19 @@ export const getDailyAttendanceStats = async () => {
     const lateCount = logs.filter(l => l.status === "Late").length;
     const onLeaveCount = logs.filter(l => l.status === "On Leave").length;
     const checkedInCount = logs.filter(l => l.status === "Present" || l.status === "Late").length;
-    const absentCount = logs.filter(l => l.status === "Absent").length + Math.max(0, totalStaff - logs.length);
+
+    const staffWithRecords = new Set(logs.map(log => log.staffId));
+    const missingStaff = staffMembers.filter(staff => !staffWithRecords.has(staff.staffId));
+    let absentCount = logs.filter(l => l.status === "Absent").length;
+
+    for (const staff of missingStaff) {
+        const roleSchedule = await getRoleScheduleForStaff(staff);
+        const { end: officeEnd } = buildShiftWindow(today, roleSchedule.officeStartTime, roleSchedule.officeEndTime);
+
+        if (!officeEnd || dayjs().isAfter(officeEnd)) {
+            absentCount += 1;
+        }
+    }
 
     const attendanceRate = totalStaff > 0
         ? Math.round((checkedInCount / totalStaff) * 100)
@@ -465,8 +597,9 @@ export const markAbsentees = async () => {
 
     const today = dayjs().format("YYYY-MM-DD");
 
-    // Fetch all active staff members
-    const allStaff = await StaffMember.findAll();
+    const allStaff = await StaffMember.findAll({
+        include: [{ model: Role }]
+    });
     if (allStaff.length === 0) {
         throw new Error("No staff members found in the system.");
     }
@@ -500,11 +633,20 @@ export const markAbsentees = async () => {
     });
 
     const staffOnLeave = new Set(activeLeaves.map(l => l.staffId));
+    const now = dayjs();
 
-    // Create records for the missing staff members
-    const recordsToCreate = missingStaff.map(staff => {
+    const recordsToCreate = [];
+
+    for (const staff of missingStaff) {
+        const roleSchedule = await getRoleScheduleForStaff(staff);
+        const { end: officeEnd } = buildShiftWindow(today, roleSchedule.officeStartTime, roleSchedule.officeEndTime);
+
+        if (officeEnd && now.isBefore(officeEnd)) {
+            continue;
+        }
+
         const isOnLeave = staffOnLeave.has(staff.staffId);
-        return {
+        recordsToCreate.push({
             staffId: staff.staffId,
             attendanceDate: today,
             checkInTime: null,
@@ -515,8 +657,16 @@ export const markAbsentees = async () => {
             status: isOnLeave ? "On Leave" : "Absent",
             attendanceMethod: "QR",
             remarks: isOnLeave ? "Automatically marked on leave" : "Automatically marked absent"
+        });
+    }
+
+    if (recordsToCreate.length === 0) {
+        return {
+            success: true,
+            message: "No staff are eligible to be marked absent yet.",
+            markedCount: 0
         };
-    });
+    }
 
     await Attendance.bulkCreate(recordsToCreate);
 

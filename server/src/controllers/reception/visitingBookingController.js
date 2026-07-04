@@ -42,7 +42,7 @@ const availableRooms = async (req, res) => {
 // Add customer specifically for reception before booking
 const createReceptionCustomer = async (req, res) => {
     try {
-        const { firstName, lastName, email, phoneNumber, idPassport, country, idType, idNumber } = req.body;
+        const { firstName, lastName, email, phoneNumber, idPassport, country, idType, idNumber, address } = req.body;
 
         if (!firstName || !lastName || !phoneNumber) {
             return res.status(400).json({
@@ -81,6 +81,7 @@ const createReceptionCustomer = async (req, res) => {
             country: country || (isNIC ? 'Sri Lanka' : 'Unknown'),
             idType: finalIdType,
             idNumber: idNumber || idPassport,
+            address,
             password: null,
             googleAuth: false
         });
@@ -150,6 +151,7 @@ const createVisitorBooking = async (req, res) => {
                     country: guestDetails.country || (isNIC ? 'Sri Lanka' : 'Unknown'),
                     idType: isNIC ? 'NIC' : (guestDetails.idPassport ? 'PASSPORT' : null),
                     idNumber: guestDetails.idPassport,
+                    address: guestDetails.address,
                     password: null,
                     googleAuth: false
                 }, { transaction: t });
@@ -222,6 +224,11 @@ const createVisitorBooking = async (req, res) => {
 
             if (!room) {
                 throw new Error(`Room ${roomId} is not available`);
+            }
+
+            // Verify capacity constraints (kids allow and capacity limits)
+            if (actualKids > 0 && (!room.kids_allow || actualKids > room.kids)) {
+                throw new Error(`Room ${room.room_number || roomId} does not allow kids, or has a maximum limit of ${room.kids || 0} kids.`);
             }
 
             // Check overlapping bookings

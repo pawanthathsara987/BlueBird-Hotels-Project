@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import {
     MdDirectionsCar,
@@ -51,6 +51,29 @@ export default function VehicleBookings() {
         paymentMethod: "cash"
     });
 
+    const dateErrors = useMemo(() => {
+        const errors = {};
+        if (newBooking.pickupDatetime) {
+            const pickup = new Date(newBooking.pickupDatetime);
+            const now = new Date();
+            const minPickup = new Date(now.getTime() + 59 * 60 * 1000); // 59 mins buffer
+            
+            if (pickup < minPickup) {
+                errors.pickup = "Pickup time must be at least 1 hour in the future";
+            }
+        }
+        
+        if (newBooking.pickupDatetime && newBooking.returnDatetime) {
+            const pickup = new Date(newBooking.pickupDatetime);
+            const ret = new Date(newBooking.returnDatetime);
+            
+            if (ret <= pickup) {
+                errors.return = "Return time must be strictly after the pickup time";
+            }
+        }
+        return errors;
+    }, [newBooking.pickupDatetime, newBooking.returnDatetime]);
+
     // Theme state
     const [theme, setTheme] = useState(() => {
         try {
@@ -77,32 +100,14 @@ export default function VehicleBookings() {
     // Real-time availability check
     useEffect(() => {
         const checkAvailability = async () => {
+            // First check date validation errors
+            if (Object.keys(dateErrors).length > 0) {
+                setAvailabilityError(Object.values(dateErrors)[0]);
+                return;
+            }
+
             if (!newBooking.vehicleId || !newBooking.pickupDatetime || !newBooking.returnDatetime) {
                 setAvailabilityError("");
-                return;
-            }
-
-            // Local Date Validations
-            const pickup = new Date(newBooking.pickupDatetime);
-            const ret = new Date(newBooking.returnDatetime);
-            const now = new Date();
-            // 1-minute buffer to allow selection of "now" without milliseconds ticking past
-            const nowWithBuffer = new Date(now.getTime() - 60000);
-
-            if (isNaN(pickup.getTime())) {
-                setAvailabilityError("Invalid pickup date and time");
-                return;
-            }
-            if (isNaN(ret.getTime())) {
-                setAvailabilityError("Invalid return date and time");
-                return;
-            }
-            if (pickup < nowWithBuffer) {
-                setAvailabilityError("Pickup date & time cannot be in the past");
-                return;
-            }
-            if (ret <= pickup) {
-                setAvailabilityError("Return date & time must be after the pickup date & time");
                 return;
             }
 
@@ -132,7 +137,7 @@ export default function VehicleBookings() {
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [newBooking.vehicleId, newBooking.pickupDatetime, newBooking.returnDatetime]);
+    }, [newBooking.vehicleId, newBooking.pickupDatetime, newBooking.returnDatetime, dateErrors]);
 
     // Reset availability error when modal opens/closes
     useEffect(() => {
@@ -173,12 +178,20 @@ export default function VehicleBookings() {
         }
     };
 
+    const formatLocalDatetime = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
     // Date calculations
     const getMinPickupDatetime = () => {
         const now = new Date();
-        const offsetMs = now.getTimezoneOffset() * 60 * 1000;
-        const localTime = new Date(now.getTime() - offsetMs);
-        return localTime.toISOString().slice(0, 16);
+        const oneHourLater = new Date(now.getTime() + 1 * 60 * 60 * 1000);
+        return formatLocalDatetime(oneHourLater);
     };
 
     const getMinReturnDatetime = () => {
@@ -237,15 +250,8 @@ export default function VehicleBookings() {
         const pickup = new Date(newBooking.pickupDatetime);
         const ret = new Date(newBooking.returnDatetime);
 
-        const now = new Date();
-        const nowWithBuffer = new Date(now.getTime() - 60000);
-
-        if (pickup < nowWithBuffer) {
-            toast.error("Pickup date & time cannot be in the past.");
-            return;
-        }
-        if (ret <= pickup) {
-            toast.error("Return date & time must be after the pickup date & time.");
+        if (Object.keys(dateErrors).length > 0) {
+            toast.error(Object.values(dateErrors)[0]);
             return;
         }
 
@@ -602,7 +608,28 @@ export default function VehicleBookings() {
                         <MdDirectionsCar size={16} className={currentAccent.text} /> View Vehicles Page
                     </button>
                     <button
-                        onClick={() => setShowForm(true)}
+                        onClick={() => {
+                            const now = new Date();
+                            const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+                            const twoHoursLater = new Date(now.getTime() + 120 * 60 * 1000);
+                            setNewBooking({
+                                vehicleId: "",
+                                fullName: "",
+                                email: "",
+                                phone: "",
+                                pickupDatetime: formatLocalDatetime(oneHourLater),
+                                returnDatetime: formatLocalDatetime(twoHoursLater),
+                                pickupLocation: "Hotel Lobby",
+                                dropoffLocation: "Hotel Lobby",
+                                hireType: "without_driver",
+                                customerLicenseNo: "",
+                                customerLicenseExpiry: "",
+                                specialRequirements: "",
+                                isFullyPaid: true,
+                                paymentMethod: "cash"
+                            });
+                            setShowForm(true);
+                        }}
                         className={`flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-black text-white shadow-md cursor-pointer transition ${currentAccent.bg}`}
                     >
                         <MdAdd size={16} /> Book A Vehicle
@@ -881,7 +908,11 @@ export default function VehicleBookings() {
                                             required
                                             value={newBooking.vehicleId}
                                             onChange={(e) => setNewBooking({ ...newBooking, vehicleId: e.target.value })}
-                                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none cursor-pointer"
+                                            className={`w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-3 outline-none cursor-pointer transition-all ${
+                                                availabilityError.includes("no longer available") || availabilityError.includes("not available")
+                                                    ? "border-rose-500 bg-rose-50/10 focus:border-rose-500 text-rose-600 dark:text-rose-450"
+                                                    : "border-slate-200 dark:border-slate-800 focus:border-blue-500"
+                                            }`}
                                         >
                                             <option value="">-- Select Active Vehicle --</option>
                                             {vehicles.map((v) => (
@@ -890,6 +921,11 @@ export default function VehicleBookings() {
                                                 </option>
                                             ))}
                                         </select>
+                                        {(availabilityError.includes("no longer available") || availabilityError.includes("not available")) && (
+                                            <p className="text-[10px] text-rose-500 font-bold mt-1.5 flex items-center gap-1 select-none">
+                                                ⚠️ {availabilityError}
+                                            </p>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-slate-550 mb-2">Hire Type *</label>
@@ -952,8 +988,17 @@ export default function VehicleBookings() {
                                             min={getMinPickupDatetime()}
                                             value={newBooking.pickupDatetime}
                                             onChange={(e) => setNewBooking({ ...newBooking, pickupDatetime: e.target.value })}
-                                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none"
+                                            className={`w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-3 outline-none transition-all ${
+                                                dateErrors.pickup
+                                                    ? "border-rose-500 bg-rose-50/10 focus:border-rose-500 text-rose-600 dark:text-rose-450"
+                                                    : "border-slate-200 dark:border-slate-800 focus:border-blue-500"
+                                            }`}
                                         />
+                                        {dateErrors.pickup && (
+                                            <p className="text-[10px] text-rose-500 font-bold mt-1.5 flex items-center gap-1 select-none">
+                                                ⚠️ {dateErrors.pickup}
+                                            </p>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-slate-550 mb-2">Return Date & Time *</label>
@@ -964,8 +1009,17 @@ export default function VehicleBookings() {
                                             min={getMinReturnDatetime()}
                                             value={newBooking.returnDatetime}
                                             onChange={(e) => setNewBooking({ ...newBooking, returnDatetime: e.target.value })}
-                                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none"
+                                            className={`w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-3 outline-none transition-all ${
+                                                dateErrors.return
+                                                    ? "border-rose-500 bg-rose-50/10 focus:border-rose-500 text-rose-600 dark:text-rose-450"
+                                                    : "border-slate-200 dark:border-slate-800 focus:border-blue-500"
+                                            }`}
                                         />
+                                        {dateErrors.return && (
+                                            <p className="text-[10px] text-rose-500 font-bold mt-1.5 flex items-center gap-1 select-none">
+                                                ⚠️ {dateErrors.return}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
