@@ -42,6 +42,7 @@ import AttendanceSetting from "./attendance/AttendanceSetting.js";
 import LeaveType from "./leave/LeaveType.js";
 import LeaveRequest from "./leave/LeaveRequest.js";
 import AirportPickupVehicle from "./booking/airportPickupVehicleModel.js";
+import RoleLeaveLimit from "./leave/RoleLeaveLimit.js";
 
 
 
@@ -504,6 +505,27 @@ export function initModels() {
         as: "approver"
     });
 
-    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourPayment, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, ServiceCharge, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance, AttendanceEditLog, BookingRefund, BookingRefundItem, LeaveRequest, LeaveType, AirportPickupVehicle };
+    // Role Leave Limits
+    Role.hasMany(RoleLeaveLimit, {
+        foreignKey: "roleId",
+        as: "leaveLimits"
+    });
+
+    RoleLeaveLimit.belongsTo(Role, {
+        foreignKey: "roleId",
+        as: "role"
+    });
+
+    LeaveType.hasMany(RoleLeaveLimit, {
+        foreignKey: "leaveTypeId",
+        as: "roleLimits"
+    });
+
+    RoleLeaveLimit.belongsTo(LeaveType, {
+        foreignKey: "leaveTypeId",
+        as: "leaveType"
+    });
+
+    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, ServiceCharge, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance, AttendanceEditLog, BookingRefund, BookingRefundItem, LeaveRequest, LeaveType, AirportPickupVehicle, RoleLeaveLimit };
 }
-export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourPayment, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, ServiceCharge, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance, AttendanceEditLog, BookingRefund, BookingRefundItem, RoomStayReview, LeaveRequest, LeaveType, AirportPickupVehicle };
+export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, ServiceCharge, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance, AttendanceEditLog, BookingRefund, BookingRefundItem, LeaveRequest, LeaveType, AirportPickupVehicle, RoleLeaveLimit };

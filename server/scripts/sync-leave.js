@@ -10,7 +10,7 @@ async function sync() {
     console.log('✅ Connected to database');
 
     const models = initModels();
-    const { LeaveType, LeaveRequest } = models;
+    const { LeaveType, LeaveRequest, RoleLeaveLimit } = models;
     
     // Create/alter tables
     await LeaveType.sync({ alter: true });
@@ -18,6 +18,9 @@ async function sync() {
 
     await LeaveRequest.sync({ alter: true });
     console.log('✅ leave_requests table synced');
+
+    await RoleLeaveLimit.sync({ alter: true });
+    console.log('✅ role_leave_limits table synced');
 
     // Alter Attendance status ENUM in MySQL
     try {

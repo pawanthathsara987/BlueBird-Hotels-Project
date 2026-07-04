@@ -5,6 +5,7 @@ import HomeLandingPage from "./homeLandingPage";
 import TermsConditions from "./TermsConditions";
 import ReturnPolicy from "./ReturnPolicy";
 import PrivacyPolicy from "./PrivacyPolicy";
+import Gallery from "./Gallery";
 import FloatingChatbot from "./../components/FloatingChatbot";
 
 
@@ -18,6 +19,7 @@ export default function HomePage(){
                     <Route path="/terms" element={<TermsConditions />} />
                     <Route path="/return-policy" element={<ReturnPolicy />} />
                     <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                    <Route path="/gallery" element={<Gallery />} />
                 </Routes>
             </div>
             <FloatingChatbot />

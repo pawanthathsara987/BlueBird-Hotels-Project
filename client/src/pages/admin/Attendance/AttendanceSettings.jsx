@@ -173,47 +173,8 @@ export default function AttendanceSettings() {
     return (
         <div className="w-full font-sans">
             <form onSubmit={handleSave} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Global Policy Card */}
-                    <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-md space-y-6">
-                        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
-                            <ShieldAlert className="text-blue-500 w-5 h-5" /> Attendance Policy
-                        </h3>
-                        
-                        <div className="space-y-4">
-
-                            <div>
-                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Grace Period (Minutes)</label>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    max="60"
-                                    value={formValues.GRACE_PERIOD}
-                                    onChange={(e) => handleChange("GRACE_PERIOD", e.target.value)}
-                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-slate-700 transition"
-                                    required
-                                />
-                                <span className="text-[10px] text-slate-400 mt-1 block">Staff can check-in up to this many minutes after start time without being flagged "Late".</span>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Standard Working Hours</label>
-                                <input
-                                    type="number"
-                                    step="0.5"
-                                    min="1"
-                                    max="24"
-                                    value={formValues.STANDARD_WORKING_HOURS}
-                                    onChange={(e) => handleChange("STANDARD_WORKING_HOURS", e.target.value)}
-                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-slate-700 transition"
-                                    required
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Operational Settings Card */}
-                    <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-md space-y-6">
+                {/* Operational Settings Card */}
+                <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-md space-y-6">
                         <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
                             <ShieldAlert className="text-indigo-500 w-5 h-5" /> Operational Limits & Policies
                         </h3>
@@ -291,7 +252,6 @@ export default function AttendanceSettings() {
                             </div>
                         </div>
                     </div>
-                </div>
 
                 <div className="flex items-center justify-end gap-3 pt-4">
                     <button
@@ -356,7 +316,7 @@ export default function AttendanceSettings() {
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-4 pt-2">
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3 pt-2">
                                         <div>
                                             <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Start Time</label>
                                             <input
@@ -387,20 +347,6 @@ export default function AttendanceSettings() {
                                                 max="60"
                                                 value={selectedRoleSchedule.gracePeriodMinutes !== null && selectedRoleSchedule.gracePeriodMinutes !== undefined ? selectedRoleSchedule.gracePeriodMinutes : (formValues.GRACE_PERIOD || "10")}
                                                 onChange={(e) => handleRoleChange(selectedRoleSchedule.roleId, "gracePeriodMinutes", e.target.value)}
-                                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm text-slate-700 transition"
-                                                required
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Working Hours</label>
-                                            <input
-                                                type="number"
-                                                step="0.5"
-                                                min="1"
-                                                max="24"
-                                                value={selectedRoleSchedule.standardWorkingHours !== null && selectedRoleSchedule.standardWorkingHours !== undefined ? selectedRoleSchedule.standardWorkingHours : (formValues.STANDARD_WORKING_HOURS || "8")}
-                                                onChange={(e) => handleRoleChange(selectedRoleSchedule.roleId, "standardWorkingHours", e.target.value)}
                                                 className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm text-slate-700 transition"
                                                 required
                                             />
