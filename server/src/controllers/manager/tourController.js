@@ -385,12 +385,36 @@ export const deleteTour = async (req, res) => {
 
     await transaction.commit();
 
-    return res.status(200).json({
+      return res.status(200).json({
       success: true,
       message: "Tour deleted successfully",
     });
   } catch (error) {
     await transaction.rollback();
     return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getConfirmedTourBookings = async (req, res) => {
+  try {
+    const bookings = await sequelize.query(
+      `SELECT tb.*, ti.fullName, ti.email, ti.phone, ti.nationality, ti.numberOfAdults, ti.numberOfChildren,
+              t.packageName, t.duration
+       FROM tour_bookings tb
+       LEFT JOIN tour_inquiries ti ON tb.inquiryId = ti.id
+       LEFT JOIN tours t ON ti.tourId = t.id
+       ORDER BY tb.createdAt DESC`,
+      {
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: bookings
+    });
+  } catch (error) {
+    console.error("Error fetching confirmed tour bookings:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
