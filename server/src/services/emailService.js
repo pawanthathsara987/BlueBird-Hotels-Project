@@ -2,27 +2,41 @@ import nodemailer from 'nodemailer';
 import { RoomPayment, AirPortPickup, Policy, BookedRoom } from '../models/index.js';
 
 // Configure Nodemailer transporter
-const smtpPort = parseInt(process.env.SMTP_PORT) || 587;
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_SERVER,
-  port: smtpPort,
-  secure: smtpPort === 465,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  tls: {  
-    rejectUnauthorized: false
-  }
-});
+const useGmail = !process.env.SMTP_SERVER && process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD;
+
+const transporterConfig = useGmail
+  ? {
+      service: 'gmail',
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      }
+    }
+  : {
+      host: process.env.SMTP_SERVER || 'localhost',
+      port: parseInt(process.env.SMTP_PORT) || 587,
+      secure: (parseInt(process.env.SMTP_PORT) || 587) === 465,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+      tls: {  
+        rejectUnauthorized: false
+      }
+    };
+
+const transporter = nodemailer.createTransport(transporterConfig);
 
 const getCurrencyType = () => process.env.CURRENCY_TYPE || 'LKR';
 
 // Helper function to send emails
-export const sendEmail = async ({ to, subject, html, text }) => {
+export const sendEmail = async ({ to, subject, html, text, fromName }) => {
   try {
+    const senderEmail = process.env.EMAIL_SENDER || process.env.GMAIL_USER || 'info@bluebirdhotels.lk';
+    const senderName = fromName || process.env.EMAIL_SENDER_NAME || 'BlueBird Hotels & Tours';
+
     const mailOptions = {
-      from: `"${process.env.EMAIL_SENDER_NAME}" <${process.env.EMAIL_SENDER}>`,
+      from: `"${senderName}" <${senderEmail}>`,
       to,
       subject: subject,
       html,
@@ -872,6 +886,58 @@ export const sendPersonalRequestEmail = async (customer, booking, personalReques
     return true;
   } catch (error) {
     console.error("[EMAIL ERROR] Failed to send personal request email:", error.message);
+    return false;
+  }
+};
+
+/**
+ * Sends a notification email about a customer contact inquiry to the hotel admin.
+ *
+ * @param {object} params
+ * @param {string} params.name - Customer's name
+ * @param {string} params.email - Customer's email
+ * @param {string} params.message - Customer's message
+ */
+export const sendInquiryEmail = async ({ name, email, message }) => {
+  try {
+    const subject = `New Contact Inquiry from ${name}`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+        <h2 style="color: #0369a1; border-bottom: 2px solid #0369a1; padding-bottom: 10px;">New Contact Message Received</h2>
+        <p>A visitor has submitted a new inquiry message through the Contact Us form:</p>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+          <tr>
+            <td style="padding: 8px; font-weight: bold; width: 120px; border-bottom: 1px solid #f0f0f0;">Sender Name:</td>
+            <td style="padding: 8px; border-bottom: 1px solid #f0f0f0;">${name}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #f0f0f0;">Sender Email:</td>
+            <td style="padding: 8px; border-bottom: 1px solid #f0f0f0;"><a href="mailto:${email}">${email}</a></td>
+          </tr>
+        </table>
+        
+        <div style="margin-top: 20px; padding: 15px; background-color: #f9f9f9; border-left: 4px solid #0369a1; border-radius: 4px;">
+          <h4 style="margin: 0 0 10px 0; color: #555;">Message Content:</h4>
+          <p style="margin: 0; white-space: pre-wrap;">${message}</p>
+        </div>
+        
+        <p style="margin-top: 25px; font-size: 11px; color: #888; border-top: 1px solid #e0e0e0; padding-top: 15px;">
+          This email was generated automatically by the Blue Bird Hotels &amp; Tours portal contact system.
+        </p>
+      </div>
+    `;
+
+    await sendEmail({
+      to: "sandeepal513@gmail.com",
+      subject,
+      html,
+      text: `New Contact Inquiry from ${name}\n\nEmail: ${email}\n\nMessage:\n${message}`,
+      fromName: "Customer Inquiry (Hotel BlueBird)"
+    });
+    return true;
+  } catch (error) {
+    console.error("[EMAIL ERROR] Failed to send contact inquiry email:", error.message);
     return false;
   }
 };

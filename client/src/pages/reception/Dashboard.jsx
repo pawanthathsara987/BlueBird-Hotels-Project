@@ -143,7 +143,7 @@ export default function Dashboard() {
                 axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/occupied-rooms`),
                 axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/recent-checkins`),
                 axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/recent-bookings`),
-                axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/rooms`),
+                axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/rooms`),
                 axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/room-types`),
                 axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/analytics-summary`),
                 axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/airport-pickups`)

@@ -112,15 +112,13 @@ async function getPendingCheckins(req, res) {
             JOIN booked_rooms br ON b.id = br.booking_id
             JOIN room ON br.room_id = room.id
             JOIN customer c ON b.customer_id = c.id
-            WHERE b.status = 'confirmed'
+            WHERE b.status != 'cancelled'
             AND br.status = 'reserved'
-            AND br.checkIn = :date
             GROUP BY b.id, c.firstName, c.lastName
-            ORDER BY b.createdAt ASC
+            ORDER BY MIN(br.checkIn) ASC
         `;
 
         const result = await sequelize.query(query, {
-            replacements: { date },
             type: QueryTypes.SELECT
         });
 
@@ -145,7 +143,8 @@ async function getPendingCheckOuts(req, res) {
 
         const query = `
             SELECT
-                br.id AS booking_id,
+                b.id AS booking_id,
+                br.id AS booked_room_id,
                 c.firstName,
                 c.lastName,
                 br.room_id,
@@ -158,12 +157,10 @@ async function getPendingCheckOuts(req, res) {
             JOIN customer c ON b.customer_id = c.id
             JOIN room r ON br.room_id = r.id
             WHERE br.status = 'checked_in'
-            AND br.checkOut >= :date
             ORDER BY br.checkOut ASC
         `;
 
         const result = await sequelize.query(query, {
-            replacements: { date },
             type: QueryTypes.SELECT
         });
 
