@@ -14,6 +14,7 @@ import {
     updateTour,
     deleteTour,
     getConfirmedTourBookings,
+    getTourAnalytics,
     upload as tourUpload
 } from '../controllers/manager/tourController.js';
 import { getAirportPickupRequests } from '../controllers/manager/airportPickupController.js';
@@ -81,6 +82,7 @@ router.post('/tours', tourUpload.single('image'), createTour);
 router.put('/tours/:id', tourUpload.single('image'), updateTour);
 router.delete('/tours/:id', deleteTour);
 router.get('/tour-bookings', getConfirmedTourBookings);
+router.get('/tour-analytics', getTourAnalytics);
 
 
 // Airport pickup requests

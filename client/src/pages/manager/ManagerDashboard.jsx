@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import ToursDashboard from "./ToursDashboard";
+import VehiclesDashboard from "./vehicle/VehiclesDashboard";
 import DriverForm from "./vehicle/DriverForm";
 
 export default function ManagerDashboard() {
@@ -34,25 +35,7 @@ export default function ManagerDashboard() {
 
             <div className="mt-4">
                 {dashboardSelectBtn === "tour" && <ToursDashboard />}
-                {dashboardSelectBtn === "vehicle" && (
-                    <div className="flex items-center justify-center min-h-96">
-                        <div className="max-w-xl w-full bg-white border border-gray-200 rounded-2xl shadow-sm p-8 text-center">
-                            <h2 className="text-3xl font-bold text-gray-800">Vehicle Dashboard</h2>
-                            <p className="mt-3 text-gray-600">
-                                Manage the hotel fleet from the dedicated vehicle page.
-                            </p>
-                            <Link
-                                to="/manager/vehicles"
-                                className="inline-flex mt-6 items-center justify-center px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
-                            >
-                                Open Vehicle Manager
-                            </Link>
-                                                <div className="mt-4">
-                                                    <button onClick={() => setShowDriverForm(true)} className="ml-4 inline-flex items-center justify-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">Add Driver</button>
-                                                </div>
-                        </div>
-                    </div>
-                )}
+                {dashboardSelectBtn === "vehicle" && <VehiclesDashboard />}
             </div>
                 {showDriverForm && (
                     <div className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm overflow-y-auto py-8 px-4">
