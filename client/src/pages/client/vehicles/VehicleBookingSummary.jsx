@@ -73,9 +73,6 @@ export default function VehicleBookingSummary() {
                 <div className="space-y-1">
                   <p className="text-xl font-bold text-slate-900">{vehicle.brand || "Premium"} {vehicle.model}</p>
                   <p className="text-sm text-slate-500">{vehicle.vehicleType?.name || "Premium Fleet"} • {vehicle.year}</p>
-                  <div className="mt-3 inline-block rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700">
-                    Registration: {vehicle.plateNumber || "-"}
-                  </div>
                 </div>
               </div>
 
