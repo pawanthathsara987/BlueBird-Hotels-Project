@@ -495,21 +495,38 @@ export default function BookingManagement() {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6 pb-24">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-[#1e293b] tracking-tight">Vehicle Bookings</h1>
-          <p className="text-[#64748b] mt-1">Monitor vehicle hire bookings, assign drivers, record payment collections and update states.</p>
+    <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 text-slate-900">
+      {/* Premium Dashboard Header Card */}
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="space-y-2 max-w-2xl">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-blue-600 tracking-widest uppercase bg-blue-50 px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit">
+              <Calendar size={12} className="animate-pulse" />
+              Bookings Center
+            </span>
+          </div>
+          <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">
+            Vehicle Hire Bookings
+          </h1>
+          <p className="text-xs md:text-sm text-slate-400 font-medium leading-relaxed">
+            Monitor vehicle hire logs, assign drivers, record deposit/balance payments, and update lifecycle states.
+          </p>
         </div>
-        <button
-          onClick={fetchBookings}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition duration-150 self-start md:self-auto"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
+
+        <div className="flex flex-wrap gap-3 w-full xl:w-auto shrink-0">
+          <button
+            onClick={fetchBookings}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-semibold hover:bg-slate-100 transition-colors shadow-sm text-xs cursor-pointer"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+        </div>
       </div>
+
+      <div className="w-full max-w-7xl mx-auto space-y-6">
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -558,10 +575,10 @@ export default function BookingManagement() {
       </div>
 
       {/* Filter and search panel */}
-      <Card className="bg-[#29384d] text-white">
+      <Card className="bg-white border border-slate-100 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
           <div className="md:col-span-1 space-y-1">
-            <label className="text-xs font-bold text-white/70 uppercase tracking-wider">Search</label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Search</label>
             <div className="relative">
               <Search className="absolute left-3 top-3 text-slate-400 w-4 h-4" />
               <input
@@ -569,16 +586,16 @@ export default function BookingManagement() {
                 placeholder="Booking #, Customer, Plate..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-white/10 hover:bg-white/15 focus:bg-white focus:text-slate-800 border border-white/20 rounded-xl outline-none text-sm transition"
+                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition"
               />
             </div>
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-bold text-white/70 uppercase tracking-wider">Status</label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Status</label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-[#1e2a3b] border border-white/20 rounded-xl text-sm outline-none text-white focus:border-white"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
             >
               <option value="">All Statuses</option>
               <option value="pending_payment">Pending Deposit</option>
@@ -593,21 +610,21 @@ export default function BookingManagement() {
             </select>
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-bold text-white/70 uppercase tracking-wider">From Date</label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">From Date</label>
             <input
               type="date"
               value={startDateFilter}
               onChange={(e) => setStartDateFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-[#1e2a3b] border border-white/20 rounded-xl text-sm outline-none text-white focus:border-white"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-bold text-white/70 uppercase tracking-wider">To Date</label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">To Date</label>
             <input
               type="date"
               value={endDateFilter}
               onChange={(e) => setEndDateFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-[#1e2a3b] border border-white/20 rounded-xl text-sm outline-none text-white focus:border-white"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
             />
           </div>
         </div>
@@ -891,11 +908,11 @@ export default function BookingManagement() {
       {showDriverModal && selectedBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
           <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="px-6 py-4 bg-[#29384d] text-white flex items-center justify-between">
-              <h3 className="font-bold text-lg flex items-center gap-2">
-                <UserCheck className="w-5 h-5" /> Driver Assignment
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-bold text-lg text-slate-850 flex items-center gap-2">
+                <UserCheck className="w-5 h-5 text-blue-600" /> Driver Assignment
               </h3>
-              <button onClick={() => setShowDriverModal(false)} className="text-white/70 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition">
+              <button onClick={() => setShowDriverModal(false)} className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1.5 rounded-lg transition">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -945,11 +962,11 @@ export default function BookingManagement() {
       {showPaymentModal && selectedBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
           <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="px-6 py-4 bg-[#29384d] text-white flex items-center justify-between">
-              <h3 className="font-bold text-lg flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-emerald-400" /> {selectedBooking.status === "completed" ? "Collect Final Payment" : "Collect Balance Payment"}
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-bold text-lg text-slate-850 flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-emerald-600" /> {selectedBooking.status === "completed" ? "Collect Final Payment" : "Collect Balance Payment"}
               </h3>
-              <button onClick={() => setShowPaymentModal(false)} className="text-white/70 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition">
+              <button onClick={() => setShowPaymentModal(false)} className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1.5 rounded-lg transition">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1056,11 +1073,11 @@ export default function BookingManagement() {
       {showStatusModal && selectedBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
           <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="px-6 py-4 bg-[#29384d] text-white flex items-center justify-between">
-              <h3 className="font-bold text-lg flex items-center gap-2">
-                <SlidersHorizontal className="w-5 h-5 text-blue-400" /> Update Booking Status
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-bold text-lg text-slate-850 flex items-center gap-2">
+                <SlidersHorizontal className="w-5 h-5 text-blue-600" /> Update Booking Status
               </h3>
-              <button onClick={() => setShowStatusModal(false)} className="text-white/70 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition">
+              <button onClick={() => setShowStatusModal(false)} className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1.5 rounded-lg transition">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1185,7 +1202,7 @@ export default function BookingManagement() {
         handleGenerateBill={handleGenerateBill}
         formatMoney={formatMoney}
       />
-
+      </div>
     </div>
   );
 }

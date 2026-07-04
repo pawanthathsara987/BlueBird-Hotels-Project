@@ -273,42 +273,44 @@ export default function TourInquiriesManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="relative overflow-hidden border-b border-slate-200 bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 text-white">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.22),transparent_32%),radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.16),transparent_28%)]" />
-        <div className="relative mx-auto w-full max-w-7xl px-4 py-10 md:px-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-200">
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                Operations Dashboard
-              </div>
-              <h1 className="text-3xl font-semibold tracking-tight md:text-5xl">Tour Inquiries</h1>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300 md:text-base">
-                Review customer requests, approve or reject them, and send customized quote emails from a single control panel.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-lg">
-              {[
-                { label: 'Total', value: allInquiries.length, accent: 'from-sky-500 to-cyan-400' },
-                { label: 'Pending', value: statusCounts.pending, accent: 'from-amber-500 to-orange-400' },
-                { label: 'In Progress', value: statusCounts.progress, accent: 'from-emerald-500 to-teal-400' },
-                { label: 'Confirmed', value: statusCounts.accepted, accent: 'from-blue-500 to-indigo-400' },
-                { label: 'Rejected', value: statusCounts.rejected, accent: 'from-rose-500 to-pink-400' },
-              ].map((item) => (
-                <div key={item.label} className="rounded-2xl border border-white/10 bg-white/10 p-4 shadow-lg backdrop-blur-sm">
-                  <div className={`mb-3 h-1.5 w-12 rounded-full bg-linear-to-r ${item.accent}`} />
-                  <p className="text-xs uppercase tracking-[0.22em] text-slate-300">{item.label}</p>
-                  <p className="mt-2 text-2xl font-semibold text-white">{item.value}</p>
-                </div>
-              ))}
-            </div>
+    <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 text-slate-900">
+      {/* Premium Dashboard Header Card */}
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="space-y-2 max-w-2xl">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-indigo-600 tracking-widest uppercase bg-indigo-50 px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              Operations Panel
+            </span>
           </div>
+          <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">
+            Tour Inquiries Management
+          </h1>
+          <p className="text-xs md:text-sm text-slate-400 font-medium leading-relaxed">
+            Review customer requests, confirm bookings, reject inquiries, and generate customized quote emails from a single professional control interface.
+          </p>
+        </div>
+
+        {/* Quick Stats Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 w-full xl:w-auto shrink-0">
+          {[
+            { label: 'Total', value: allInquiries.length, bg: 'bg-slate-50 border-slate-200 text-slate-700' },
+            { label: 'Pending', value: statusCounts.pending, bg: 'bg-amber-50 border-amber-200 text-amber-700' },
+            { label: 'In Progress', value: statusCounts.progress, bg: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
+            { label: 'Confirmed', value: statusCounts.accepted, bg: 'bg-blue-50 border-blue-200 text-blue-700' },
+            { label: 'Rejected', value: statusCounts.rejected, bg: 'bg-rose-50 border-rose-200 text-rose-700' },
+          ].map((item) => (
+            <div key={item.label} className={`rounded-2xl border p-4 shadow-inner text-center bg-white ${item.bg}`}>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{item.label}</p>
+              <p className="mt-1 text-xl font-black">{item.value}</p>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 md:py-10">
+      <div className="w-full max-w-7xl mx-auto space-y-6">
         <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap gap-2">
             {['pending', 'progress', 'accepted', 'rejected', 'canceled'].map(status => (

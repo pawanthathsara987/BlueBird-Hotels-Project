@@ -573,21 +573,108 @@ async function getDailyReport(req, res) {
         const checkInsQuery = `SELECT COUNT(*) AS count FROM booked_rooms WHERE checkIn = :date AND status != 'cancelled'`;
         const checkOutsQuery = `SELECT COUNT(*) AS count FROM booked_rooms WHERE checkOut = :date AND status != 'cancelled'`;
 
-        const [bookings, summary, checkIns, checkOuts] = await Promise.all([
+        const vehicleBookingsQuery = `
+            SELECT
+                vb.id AS reservation_id,
+                vb.bookingNo,
+                c.firstName,
+                c.lastName,
+                v.brand,
+                v.model,
+                vb.pickupDatetime,
+                vb.returnDatetime,
+                vb.status AS bookingStatus,
+                vb.totalPayable,
+                vb.depositAmount,
+                vb.balanceAmount,
+                vb.balancePaidAt,
+                vb.createdAt AS bookedAt
+            FROM vehicle_booking vb
+            LEFT JOIN customer c ON vb.customerId = c.id
+            LEFT JOIN vehicles v ON vb.vehicleId = v.id
+            WHERE DATE(vb.createdAt) = :date
+            ORDER BY vb.createdAt DESC
+        `;
+
+        const vehicleSummaryQuery = `
+            SELECT
+                COUNT(*) AS totalBookings,
+                COALESCE(SUM(totalPayable), 0) AS totalRevenue
+            FROM vehicle_booking
+            WHERE DATE(createdAt) = :date AND status != 'cancelled'
+        `;
+
+        const tourBookingsQuery = `
+            SELECT
+                tb.id AS reservation_id,
+                tb.bookingRef,
+                c.firstName,
+                c.lastName,
+                t.packageName AS tourTitle,
+                tb.tourStartDate,
+                tb.status AS bookingStatus,
+                tb.totalAmount,
+                tb.depositAmount,
+                tb.remainingAmount,
+                tb.balancePaidAt,
+                tb.createdAt AS bookedAt
+            FROM tour_bookings tb
+            JOIN tour_inquiries ti ON tb.inquiryId = ti.id
+            JOIN tours t ON ti.tourId = t.id
+            LEFT JOIN customer c ON ti.customerId = c.id
+            WHERE DATE(tb.createdAt) = :date
+            ORDER BY tb.createdAt DESC
+        `;
+
+        const tourSummaryQuery = `
+            SELECT
+                COUNT(*) AS totalBookings,
+                COALESCE(SUM(totalAmount), 0) AS totalRevenue
+            FROM tour_bookings
+            WHERE DATE(createdAt) = :date AND status != 'cancelled'
+        `;
+
+        const [
+            bookings, summary, checkIns, checkOuts,
+            vehicleBookings, vehicleSummary,
+            tourBookings, tourSummary
+        ] = await Promise.all([
             sequelize.query(bookingsQuery, { replacements: { date }, type: QueryTypes.SELECT }),
             sequelize.query(summaryQuery, { replacements: { date }, type: QueryTypes.SELECT }),
             sequelize.query(checkInsQuery, { replacements: { date }, type: QueryTypes.SELECT }),
             sequelize.query(checkOutsQuery, { replacements: { date }, type: QueryTypes.SELECT }),
+            sequelize.query(vehicleBookingsQuery, { replacements: { date }, type: QueryTypes.SELECT }),
+            sequelize.query(vehicleSummaryQuery, { replacements: { date }, type: QueryTypes.SELECT }),
+            sequelize.query(tourBookingsQuery, { replacements: { date }, type: QueryTypes.SELECT }),
+            sequelize.query(tourSummaryQuery, { replacements: { date }, type: QueryTypes.SELECT }),
         ]);
+
+        const totalBookingsCount = (Number(summary[0]?.totalBookings) || 0) +
+                                    (Number(vehicleSummary[0]?.totalBookings) || 0) +
+                                    (Number(tourSummary[0]?.totalBookings) || 0);
+
+        const totalRevenueValue = (Number(summary[0]?.totalRevenue) || 0) +
+                                   (Number(vehicleSummary[0]?.totalRevenue) || 0) +
+                                   (Number(tourSummary[0]?.totalRevenue) || 0);
+
+        const avgRevenueValue = totalBookingsCount > 0 ? (totalRevenueValue / totalBookingsCount) : 0;
 
         return res.status(200).json({
             success: true,
             data: {
                 date,
                 bookings,
-                totalBookings: Number(summary[0]?.totalBookings) || 0,
-                totalRevenue: Number(summary[0]?.totalRevenue) || 0,
-                avgRevenue: Number(summary[0]?.avgRevenue) || 0,
+                vehicleBookings,
+                tourBookings,
+                totalBookings: totalBookingsCount,
+                totalRevenue: totalRevenueValue,
+                avgRevenue: avgRevenueValue,
+                roomBookingsCount: Number(summary[0]?.totalBookings) || 0,
+                roomRevenue: Number(summary[0]?.totalRevenue) || 0,
+                vehicleBookingsCount: Number(vehicleSummary[0]?.totalBookings) || 0,
+                vehicleRevenue: Number(vehicleSummary[0]?.totalRevenue) || 0,
+                tourBookingsCount: Number(tourSummary[0]?.totalBookings) || 0,
+                tourRevenue: Number(tourSummary[0]?.totalRevenue) || 0,
                 todayCheckIns: Number(checkIns[0]?.count) || 0,
                 todayCheckOuts: Number(checkOuts[0]?.count) || 0,
             }
@@ -648,24 +735,176 @@ async function getMonthlyReport(req, res) {
             ORDER BY bk.createdAt DESC
         `;
 
-        const [dailyBreakdown, summary, bookings] = await Promise.all([
+        const vehicleDailyBreakdownQuery = `
+            SELECT
+                DATE(createdAt) AS date,
+                COUNT(*) AS bookings,
+                COALESCE(SUM(totalPayable), 0) AS revenue
+            FROM vehicle_booking
+            WHERE DATE_FORMAT(createdAt, '%Y-%m') = :monthPrefix AND status != 'cancelled'
+            GROUP BY DATE(createdAt)
+        `;
+
+        const vehicleSummaryQuery = `
+            SELECT
+                COUNT(*) AS totalBookings,
+                COALESCE(SUM(totalPayable), 0) AS totalRevenue,
+                SUM(CASE WHEN status = 'confirmed' OR status = 'ongoing' OR status = 'completed' OR status = 'balance_paid' THEN 1 ELSE 0 END) AS confirmed,
+                SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled
+            FROM vehicle_booking
+            WHERE DATE_FORMAT(createdAt, '%Y-%m') = :monthPrefix
+        `;
+
+        const vehicleBookingsListQuery = `
+            SELECT
+                vb.id AS reservation_id,
+                vb.bookingNo,
+                c.firstName,
+                c.lastName,
+                v.brand,
+                v.model,
+                vb.pickupDatetime,
+                vb.returnDatetime,
+                vb.status AS bookingStatus,
+                vb.totalPayable,
+                vb.depositAmount,
+                vb.balanceAmount,
+                vb.balancePaidAt,
+                vb.createdAt AS bookedAt
+            FROM vehicle_booking vb
+            LEFT JOIN customer c ON vb.customerId = c.id
+            LEFT JOIN vehicles v ON vb.vehicleId = v.id
+            WHERE DATE_FORMAT(vb.createdAt, '%Y-%m') = :monthPrefix
+            ORDER BY vb.createdAt DESC
+        `;
+
+        const tourDailyBreakdownQuery = `
+            SELECT
+                DATE(createdAt) AS date,
+                COUNT(*) AS bookings,
+                COALESCE(SUM(totalAmount), 0) AS revenue
+            FROM tour_bookings
+            WHERE DATE_FORMAT(createdAt, '%Y-%m') = :monthPrefix AND status != 'cancelled'
+            GROUP BY DATE(createdAt)
+        `;
+
+        const tourSummaryQuery = `
+            SELECT
+                COUNT(*) AS totalBookings,
+                COALESCE(SUM(totalAmount), 0) AS totalRevenue,
+                SUM(CASE WHEN status = 'half_paid' OR status = 'completed' THEN 1 ELSE 0 END) AS confirmed,
+                SUM(CASE WHEN status = 'cancelled' OR status = 'rejected' THEN 1 ELSE 0 END) AS cancelled
+            FROM tour_bookings
+            WHERE DATE_FORMAT(createdAt, '%Y-%m') = :monthPrefix
+        `;
+
+        const tourBookingsListQuery = `
+            SELECT
+                tb.id AS reservation_id,
+                tb.bookingRef,
+                c.firstName,
+                c.lastName,
+                t.packageName AS tourTitle,
+                tb.tourStartDate,
+                tb.status AS bookingStatus,
+                tb.totalAmount,
+                tb.depositAmount,
+                tb.remainingAmount,
+                tb.balancePaidAt,
+                tb.createdAt AS bookedAt
+            FROM tour_bookings tb
+            JOIN tour_inquiries ti ON tb.inquiryId = ti.id
+            JOIN tours t ON ti.tourId = t.id
+            LEFT JOIN customer c ON ti.customerId = c.id
+            WHERE DATE_FORMAT(tb.createdAt, '%Y-%m') = :monthPrefix
+            ORDER BY tb.createdAt DESC
+        `;
+
+        const [
+            dailyBreakdown, summary, bookings,
+            vehicleDailyBreakdown, vehicleSummary, vehicleBookings,
+            tourDailyBreakdown, tourSummary, tourBookings
+        ] = await Promise.all([
             sequelize.query(dailyBreakdownQuery, { replacements: { monthPrefix }, type: QueryTypes.SELECT }),
             sequelize.query(summaryQuery, { replacements: { monthPrefix }, type: QueryTypes.SELECT }),
             sequelize.query(bookingsListQuery, { replacements: { monthPrefix }, type: QueryTypes.SELECT }),
+            sequelize.query(vehicleDailyBreakdownQuery, { replacements: { monthPrefix }, type: QueryTypes.SELECT }),
+            sequelize.query(vehicleSummaryQuery, { replacements: { monthPrefix }, type: QueryTypes.SELECT }),
+            sequelize.query(vehicleBookingsListQuery, { replacements: { monthPrefix }, type: QueryTypes.SELECT }),
+            sequelize.query(tourDailyBreakdownQuery, { replacements: { monthPrefix }, type: QueryTypes.SELECT }),
+            sequelize.query(tourSummaryQuery, { replacements: { monthPrefix }, type: QueryTypes.SELECT }),
+            sequelize.query(tourBookingsListQuery, { replacements: { monthPrefix }, type: QueryTypes.SELECT }),
         ]);
+
+        // Aggregate daily breakdowns
+        const dailyMap = {};
+        dailyBreakdown.forEach(day => {
+            const dateStr = new Date(day.date).toISOString().split('T')[0];
+            dailyMap[dateStr] = {
+                date: dateStr,
+                bookings: Number(day.bookings) || 0,
+                revenue: Number(day.revenue) || 0
+            };
+        });
+
+        vehicleDailyBreakdown.forEach(day => {
+            const dateStr = new Date(day.date).toISOString().split('T')[0];
+            if (!dailyMap[dateStr]) {
+                dailyMap[dateStr] = { date: dateStr, bookings: 0, revenue: 0 };
+            }
+            dailyMap[dateStr].bookings += Number(day.bookings) || 0;
+            dailyMap[dateStr].revenue += Number(day.revenue) || 0;
+        });
+
+        tourDailyBreakdown.forEach(day => {
+            const dateStr = new Date(day.date).toISOString().split('T')[0];
+            if (!dailyMap[dateStr]) {
+                dailyMap[dateStr] = { date: dateStr, bookings: 0, revenue: 0 };
+            }
+            dailyMap[dateStr].bookings += Number(day.bookings) || 0;
+            dailyMap[dateStr].revenue += Number(day.revenue) || 0;
+        });
+
+        const aggregatedDailyBreakdown = Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date));
+
+        const totalBookingsCount = (Number(summary[0]?.totalBookings) || 0) +
+                                    (Number(vehicleSummary[0]?.totalBookings) || 0) +
+                                    (Number(tourSummary[0]?.totalBookings) || 0);
+
+        const totalRevenueValue = (Number(summary[0]?.totalRevenue) || 0) +
+                                   (Number(vehicleSummary[0]?.totalRevenue) || 0) +
+                                   (Number(tourSummary[0]?.totalRevenue) || 0);
+
+        const avgRevenueValue = totalBookingsCount > 0 ? (totalRevenueValue / totalBookingsCount) : 0;
+
+        const totalConfirmed = (Number(summary[0]?.confirmed) || 0) +
+                               (Number(vehicleSummary[0]?.confirmed) || 0) +
+                               (Number(tourSummary[0]?.confirmed) || 0);
+
+        const totalCancelled = (Number(summary[0]?.cancelled) || 0) +
+                                (Number(vehicleSummary[0]?.cancelled) || 0) +
+                                (Number(tourSummary[0]?.cancelled) || 0);
 
         return res.status(200).json({
             success: true,
             data: {
                 year: Number(year),
                 month: Number(month),
-                dailyBreakdown,
+                dailyBreakdown: aggregatedDailyBreakdown,
                 bookings,
-                totalBookings: Number(summary[0]?.totalBookings) || 0,
-                totalRevenue: Number(summary[0]?.totalRevenue) || 0,
-                avgRevenue: Number(summary[0]?.avgRevenue) || 0,
-                confirmed: Number(summary[0]?.confirmed) || 0,
-                cancelled: Number(summary[0]?.cancelled) || 0,
+                vehicleBookings,
+                tourBookings,
+                totalBookings: totalBookingsCount,
+                totalRevenue: totalRevenueValue,
+                avgRevenue: avgRevenueValue,
+                confirmed: totalConfirmed,
+                cancelled: totalCancelled,
+                roomBookingsCount: Number(summary[0]?.totalBookings) || 0,
+                roomRevenue: Number(summary[0]?.totalRevenue) || 0,
+                vehicleBookingsCount: Number(vehicleSummary[0]?.totalBookings) || 0,
+                vehicleRevenue: Number(vehicleSummary[0]?.totalRevenue) || 0,
+                tourBookingsCount: Number(tourSummary[0]?.totalBookings) || 0,
+                tourRevenue: Number(tourSummary[0]?.totalRevenue) || 0,
             }
         });
     } catch (error) {
