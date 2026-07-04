@@ -60,15 +60,15 @@ const RoomPayment = () => {
 
     // If logged in, fetch the real, up-to-date user profile from the backend database
     if (token) {
-      axios.get(`${import.meta.env.VITE_BACKEND_URL}/customers/profile`,{
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+      axios.get(`${import.meta.env.VITE_BACKEND_URL}/customers/profile`, {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
+      }
       ).then(response => {
         if (response.data && response.data.success && response.data.data) {
           const profile = response.data.data;
-          
+
           // Parse city from address line if possible
           const addr = profile.address || '';
           const parts = addr.split(',').map(p => p.trim()).filter(Boolean);
@@ -516,12 +516,18 @@ const RoomPayment = () => {
                     <span className="text-stone-600">Subtotal:</span>
                     <span className="text-stone-900">{CURRENCY} {totalAmount.toFixed(2)}</span>
                   </div>
-                  {totalSavings > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-stone-600">Discount Savings:</span>
-                      <span className="font-semibold text-emerald-700">-{CURRENCY} {totalSavings.toFixed(2)}</span>
-                    </div>
-                  )}
+                  {totalSavings > 0 && (() => {
+                    const firstDiscountRoom = selectedRooms.find(r => r.discountName);
+                    const discountLabel = firstDiscountRoom?.discountName
+                      ? `Discount (${firstDiscountRoom.discountName}):`
+                      : "Discount Savings:";
+                    return (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-stone-600">{discountLabel}</span>
+                        <span className="font-semibold text-emerald-700">-{CURRENCY} {totalSavings.toFixed(2)}</span>
+                      </div>
+                    );
+                  })()}
                   <div className="flex justify-between text-sm">
                     <span className="text-stone-600">Advance (50%):</span>
                     <span className="font-semibold text-emerald-700">{CURRENCY} {advanceAmount.toFixed(2)}</span>
