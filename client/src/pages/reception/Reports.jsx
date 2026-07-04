@@ -2,9 +2,11 @@ import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { MdTrendingUp, MdAttachMoney, MdCardTravel, MdDateRange, MdRefresh, MdLocalPrintshop, MdBarChart } from "react-icons/md";
 import { toast } from "react-hot-toast";
+import Logo from "../../assets/bluebird logo.png";
 
 export default function Reports() {
     const [reportType, setReportType] = useState("daily"); // "daily" or "monthly"
+    const [viewMode, setViewMode] = useState("dashboard"); // "dashboard" or "report"
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -116,40 +118,83 @@ export default function Reports() {
     };
 
     return (
-        <div className={`p-4 md:p-6 lg:p-8 space-y-6 print:p-0 print:bg-white print:text-black ${theme.mode === "dark" ? "bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-900"} min-h-screen transition-colors duration-300`}>
+        <div className={`p-4 md:p-6 lg:p-8 space-y-6 print:p-0 print:bg-white print:text-black ${theme.mode === "dark" ? "bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-900"} min-h-screen max-h-screen overflow-y-auto transition-colors duration-300`}>
             <style>{`
                 @media print {
                     @page {
-                        margin: 0;
+                        margin: 1.2cm 1cm !important;
+                    }
+                    /* Hide scrollbars from all elements when printing */
+                    ::-webkit-scrollbar {
+                        display: none !important;
+                    }
+                    * {
+                        scrollbar-width: none !important;
+                        -ms-overflow-style: none !important;
+                    }
+                    html, body, #root, div, section, main, aside, article, header, footer {
+                        overflow: visible !important;
+                        height: auto !important;
+                        max-height: none !important;
                     }
                     body {
                         background: white !important;
                         color: black !important;
-                        padding: 1.5cm 1cm !important;
+                        font-family: 'Times New Roman', Georgia, serif !important;
                     }
                     .no-print {
                         display: none !important;
                     }
-                    .print-full {
-                        width: 100% !important;
-                        border: none !important;
-                        box-shadow: none !important;
+                    /* Reset container scroll height for clean printing across pages */
+                    div.min-h-screen {
+                        height: auto !important;
+                        min-height: 0 !important;
+                        max-height: none !important;
+                        overflow: visible !important;
                         padding: 0 !important;
-                        margin: 0 !important;
                     }
-                    table {
-                        border-collapse: collapse;
-                        width: 100%;
+                    table.invoice-style-table {
+                        border-collapse: collapse !important;
+                        width: 100% !important;
+                        margin-top: 15px !important;
+                        margin-bottom: 25px !important;
                     }
-                    th, td {
-                        border: 1px solid #ddd;
-                        padding: 8px;
-                        text-align: left;
+                    table.invoice-style-table.details-table {
+                        table-layout: fixed !important;
                     }
-                    th {
-                        background-color: #f2f2f2 !important;
+                    table.invoice-style-table th {
+                        border-top: 1.5px solid #000 !important;
+                        border-bottom: 1.5px solid #000 !important;
+                        border-left: none !important;
+                        border-right: none !important;
+                        padding: 8px 12px !important;
+                        text-align: left !important;
+                        font-weight: bold !important;
+                        font-size: 10px !important;
+                        text-transform: uppercase !important;
                         color: black !important;
                     }
+                    table.invoice-style-table td {
+                        border-bottom: 1px solid #e2e8f0 !important;
+                        border-left: none !important;
+                        border-right: none !important;
+                        padding: 8px 12px !important;
+                        font-size: 10px !important;
+                        color: black !important;
+                        word-break: break-word !important;
+                    }
+                    table.invoice-style-table tr:last-child td {
+                        border-bottom: 1.5px solid #000 !important;
+                    }
+                    
+                    /* Column widths for details tables to align perfectly and prevent wrapping */
+                    table.invoice-style-table.details-table th:nth-child(1), table.invoice-style-table.details-table td:nth-child(1) { width: 13% !important; font-family: monospace !important; }
+                    table.invoice-style-table.details-table th:nth-child(2), table.invoice-style-table.details-table td:nth-child(2) { width: 16% !important; }
+                    table.invoice-style-table.details-table th:nth-child(3), table.invoice-style-table.details-table td:nth-child(3) { width: 17% !important; }
+                    table.invoice-style-table.details-table th:nth-child(4), table.invoice-style-table.details-table td:nth-child(4) { width: 12% !important; }
+                    table.invoice-style-table.details-table th:nth-child(5), table.invoice-style-table.details-table td:nth-child(5) { width: 12% !important; }
+                    table.invoice-style-table.details-table th:nth-child(6), table.invoice-style-table.details-table td:nth-child(6) { width: 14% !important; text-align: center !important; white-space: nowrap !important; }
+                    table.invoice-style-table.details-table th:nth-child(7), table.invoice-style-table.details-table td:nth-child(7) { width: 16% !important; text-align: right !important; white-space: nowrap !important; }
                 }
             `}</style>
 
@@ -167,6 +212,12 @@ export default function Reports() {
 
                 {/* Print/Download Button */}
                 <div className="flex gap-2">
+                    <button
+                        onClick={() => setViewMode(viewMode === "dashboard" ? "report" : "dashboard")}
+                        className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-200 rounded-xl transition duration-200 cursor-pointer shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+                    >
+                        {viewMode === "dashboard" ? "👁️ View Report" : "📊 View Dashboard"}
+                    </button>
                     <button
                         onClick={handlePrint}
                         className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white rounded-xl transition duration-200 cursor-pointer shadow-sm hover:scale-102 ${currentAccent.bg}`}
@@ -243,16 +294,7 @@ export default function Reports() {
                 </div>
             </div>
 
-            {/* Printable summary header (only visible during print) */}
-            <div className="hidden print:block text-center space-y-2 pb-6 border-b border-slate-200">
-                <h1 className="text-2xl font-black uppercase tracking-wide">BLUEBIRD HOTEL</h1>
-                <h2 className="text-lg font-bold text-slate-700 capitalize">
-                    {reportType} Bookings & Income Report
-                </h2>
-                <p className="text-xs text-slate-500">
-                    Report period: {reportType === "daily" ? selectedDate : `${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}`} | Generated on {new Date().toLocaleString()}
-                </p>
-            </div>
+
 
             {/* Loading state indicator */}
             {isLoading ? (
@@ -262,6 +304,9 @@ export default function Reports() {
                 </div>
             ) : reportData ? (
                 <div className="space-y-6">
+                    {/* Render Interactive Dashboard View on screen */}
+                    {viewMode === "dashboard" && (
+                        <div className="space-y-6 no-print">
                     {/* KPI cards grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-4 print:gap-2">
                         <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs space-y-1">
@@ -551,8 +596,10 @@ export default function Reports() {
                                                             {badgeText}
                                                         </span>
                                                     </td>
-                                                    <td className="px-4 py-3 text-right font-black text-slate-800 dark:text-slate-100">
-                                                        Rs. {Number(b.totalPayable || 0).toLocaleString()}
+                                                    <td className="px-4 py-3 text-right">
+                                                        <div className="font-black text-slate-800 dark:text-slate-100">Rs. {Number(b.totalPayable || 0).toLocaleString()}</div>
+                                                        <div className="text-[9px] text-slate-500 font-bold mt-0.5">Paid: Rs. {Number(b.depositAmount || 0).toLocaleString()}</div>
+                                                        <div className="text-[9px] text-slate-650 dark:text-slate-400 font-bold">Bal: Rs. {Number(b.balanceAmount || 0).toLocaleString()}</div>
                                                     </td>
                                                 </tr>
                                             );
@@ -628,8 +675,10 @@ export default function Reports() {
                                                             {badgeText}
                                                         </span>
                                                     </td>
-                                                    <td className="px-4 py-3 text-right font-black text-slate-800 dark:text-slate-100">
-                                                        Rs. {Number(b.totalAmount || 0).toLocaleString()}
+                                                    <td className="px-4 py-3 text-right">
+                                                        <div className="font-black text-slate-800 dark:text-slate-100">Rs. {Number(b.totalAmount || 0).toLocaleString()}</div>
+                                                        <div className="text-[9px] text-slate-500 font-bold mt-0.5">Paid: Rs. {Number(b.depositAmount || 0).toLocaleString()}</div>
+                                                        <div className="text-[9px] text-slate-650 dark:text-slate-400 font-bold">Bal: Rs. {Number(b.remainingAmount || 0).toLocaleString()}</div>
                                                     </td>
                                                 </tr>
                                             );
@@ -645,10 +694,242 @@ export default function Reports() {
                             </table>
                         </div>
                     </div>
+                        </div>
+                    )}
                 </div>
             ) : (
                 <div className="flex items-center justify-center py-12 bg-white dark:bg-slate-900 rounded-2xl border border-slate-150 text-slate-400 text-xs font-bold shadow-xs">
                     No report data compiled yet.
+                </div>
+            )}
+
+            {/* Print-only Invoice style report */}
+            {reportData && (
+                <div className={`${viewMode === "report" ? "block bg-white p-8 rounded-2xl border border-slate-200 shadow-sm max-w-4xl mx-auto mb-10" : "hidden"} print:block print:border-none print:shadow-none print:p-0 print:max-w-none font-serif text-black leading-relaxed`}>
+                    {/* Invoice Letterhead */}
+                    <div className="flex justify-between items-start border-b-2 border-slate-900 pb-4 mb-6">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <img src={Logo} alt="BlueBird Logo" className="h-10 w-auto object-contain" />
+                                <span className="text-3xl font-serif tracking-wide text-[#006838] font-black">bluebird</span>
+                            </div>
+                            <p className="text-xs font-bold text-slate-800 mt-1 font-sans">Hotels & Travels (PVT) LTD</p>
+                        </div>
+                        <div className="text-right">
+                            <h1 className="text-xl font-black uppercase tracking-wider text-slate-900 font-serif">
+                                {reportType === "daily" ? "Daily Bookings & Income Report" : "Monthly Bookings & Income Report"}
+                            </h1>
+                            <p className="text-[10px] text-slate-500 font-sans mt-1">
+                                Report period: {reportType === "daily" ? selectedDate : `${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}`} | Generated on {new Date().toLocaleString()}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Metadata details grid */}
+                    <div className="grid grid-cols-2 gap-8 text-xs font-sans pb-4">
+                        <div>
+                            <p className="font-bold text-slate-900">HOTEL DETAILS:</p>
+                            <p className="mt-1">BlueBird Hotels & Travels</p>
+                            <p>Colombo, Sri Lanka</p>
+                            <p>Phone: +94 77 123 4567</p>
+                            <p>Support: +94701950195</p>
+                        </div>
+                        <div className="text-right">
+                            <p><span className="font-bold">Report Type:</span> {reportType === "daily" ? "Daily Performance" : "Monthly Performance"}</p>
+                            <p className="mt-1"><span className="font-bold">Period:</span> {reportType === "daily" ? selectedDate : `${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}`}</p>
+                            <p className="mt-1"><span className="font-bold">Status:</span> Live Compiled</p>
+                            <p className="mt-1"><span className="font-bold">Generated By:</span> Reception Desk</p>
+                        </div>
+                    </div>
+
+                    {/* Summary Rates Block (Like Room Rates in Invoice) */}
+                    <div className="mt-6">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-sans">SUMMARY STREAM REVENUES:</h3>
+                        <table className="w-full mt-2 invoice-style-table font-sans">
+                            <thead>
+                                <tr>
+                                    <th className="text-left py-2 border-y border-slate-900">SERVICE</th>
+                                    <th className="text-center py-2 border-y border-slate-900 font-bold">BOOKINGS</th>
+                                    <th className="text-right py-2 border-y border-slate-900">REVENUE</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td className="py-2 border-b border-slate-200">Room Reservations</td>
+                                    <td className="text-center py-2 border-b border-slate-200 font-bold">{reportData.roomBookingsCount || 0}</td>
+                                    <td className="text-right py-2 border-b border-slate-200 font-bold">LKR {Number(reportData.roomRevenue || 0).toFixed(2)}</td>
+                                </tr>
+                                <tr>
+                                    <td className="py-2 border-b border-slate-200">Vehicle Rentals</td>
+                                    <td className="text-center py-2 border-b border-slate-200 font-bold">{reportData.vehicleBookingsCount || 0}</td>
+                                    <td className="text-right py-2 border-b border-slate-200 font-bold">LKR {Number(reportData.vehicleRevenue || 0).toFixed(2)}</td>
+                                </tr>
+                                <tr>
+                                    <td className="py-2 border-b border-slate-200">Tour Package Bookings</td>
+                                    <td className="text-center py-2 border-b border-slate-200 font-bold">{reportData.tourBookingsCount || 0}</td>
+                                    <td className="text-right py-2 border-b border-slate-200 font-bold">LKR {Number(reportData.tourRevenue || 0).toFixed(2)}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        {/* Summary Totals Box */}
+                        <div className="flex justify-end mt-4">
+                            <div className="w-72 border border-slate-300 p-4 bg-white font-sans">
+                                <div className="flex justify-between text-xs py-1">
+                                    <span className="font-bold text-slate-700">Total Bookings:</span>
+                                    <span className="font-bold text-slate-900">{reportData.totalBookings}</span>
+                                </div>
+                                <div className="border-t border-slate-300 my-2"></div>
+                                <div className="flex justify-between text-sm py-1 font-black">
+                                    <span className="text-slate-800">TOTAL REVENUE:</span>
+                                    <span>LKR {Number(reportData.totalRevenue || 0).toFixed(2)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Section breakdown tables */}
+                    <div className="mt-10 page-break-before">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-2 font-sans border-b border-slate-400 pb-1">🏨 ROOM RESERVATIONS DETAIL:</h3>
+                        <table className="w-full invoice-style-table details-table font-sans">
+                            <thead>
+                                <tr>
+                                    <th style={{ width: "15%" }}>Booking ID</th>
+                                    <th style={{ width: "20%" }}>Guest Name</th>
+                                    <th style={{ width: "15%" }}>Rooms</th>
+                                    <th style={{ width: "15%" }}>Check-In</th>
+                                    <th style={{ width: "15%" }}>Check-Out</th>
+                                    <th style={{ width: "10%", textAlign: "center" }}>Status</th>
+                                    <th style={{ width: "10%", textAlign: "right" }}>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {reportData.bookings?.length > 0 ? (
+                                    reportData.bookings.map((booking) => {
+                                        const isCheckedIn = booking.roomStatuses?.includes('checked_in');
+                                        const isCheckedOut = booking.roomStatuses?.includes('checked_out');
+                                        const isCancelled = booking.roomStatuses?.includes('cancelled') || booking.bookingStatus === 'cancelled';
+                                        const isNoShow = booking.bookingStatus === 'no_show' || booking.bookingStatus === 'no-show';
+                                        const statusText = isCheckedIn ? "Checked-in" : isCheckedOut ? "Checked-out" : isCancelled ? "Cancelled" : isNoShow ? "No-show" : "Confirmed";
+
+                                        return (
+                                            <tr key={booking.reservation_id}>
+                                                <td>#{booking.reservation_id}</td>
+                                                <td className="font-semibold">{booking.firstName} {booking.lastName}</td>
+                                                <td>
+                                                    {booking.rooms?.split(",").map(r => `R-${r.trim()}`).join(", ")}
+                                                </td>
+                                                <td>{booking.checkIn ? new Date(booking.checkIn).toLocaleDateString() : "—"}</td>
+                                                <td>{booking.checkOut ? new Date(booking.checkOut).toLocaleDateString() : "—"}</td>
+                                                <td className="text-center font-bold">{statusText.toUpperCase()}</td>
+                                                <td className="text-right font-bold">LKR {Number(booking.total_price || 0).toFixed(2)}</td>
+                                            </tr>
+                                        );
+                                    })
+                                ) : (
+                                    <tr>
+                                        <td colSpan="7" className="text-center py-6 text-slate-400">No room reservations recorded.</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="mt-8 page-break-inside-avoid">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-2 font-sans border-b border-slate-400 pb-1">🚗 VEHICLE HIRE DETAIL:</h3>
+                        <table className="w-full invoice-style-table details-table font-sans">
+                            <thead>
+                                <tr>
+                                    <th style={{ width: "18%" }}>Booking No</th>
+                                    <th style={{ width: "18%" }}>Guest Name</th>
+                                    <th style={{ width: "22%" }}>Vehicle Details</th>
+                                    <th style={{ width: "14%" }}>Pickup Date</th>
+                                    <th style={{ width: "14%" }}>Return Date</th>
+                                    <th style={{ width: "8%", textAlign: "center" }}>Status</th>
+                                    <th style={{ width: "6%", textAlign: "right" }}>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {reportData.vehicleBookings?.length > 0 ? (
+                                    reportData.vehicleBookings.map((b) => {
+                                        const status = b.bookingStatus?.toLowerCase();
+                                        const statusText = (status === "completed" || status === "balance_paid") ? "Completed" : status === "ongoing" ? "Ongoing" : (status === "confirmed" || status === "driver_assigned") ? "Confirmed" : status === "cancelled" ? "Cancelled" : "Pending";
+
+                                        return (
+                                            <tr key={b.id}>
+                                                <td>{b.bookingNo}</td>
+                                                <td className="font-semibold">{b.firstName || b.lastName ? `${b.firstName || ""} ${b.lastName || ""}` : "Walk-in Guest"}</td>
+                                                <td>{b.brand && b.model ? `${b.brand} ${b.model}` : "Custom Vehicle"}</td>
+                                                <td>{b.pickupDatetime ? new Date(b.pickupDatetime).toLocaleDateString() : "—"}</td>
+                                                <td>{b.returnDatetime ? new Date(b.returnDatetime).toLocaleDateString() : "—"}</td>
+                                                <td className="text-center font-bold">{statusText.toUpperCase()}</td>
+                                                <td className="text-right">
+                                                    <div className="font-bold">LKR {Number(b.totalPayable || 0).toFixed(2)}</div>
+                                                    <div className="text-[8px] text-slate-500">Paid: LKR {Number(b.depositAmount || 0).toFixed(2)}</div>
+                                                    <div className="text-[8px] text-slate-700 font-bold">Bal: LKR {Number(b.balanceAmount || 0).toFixed(2)}</div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                ) : (
+                                    <tr>
+                                        <td colSpan="7" className="text-center py-6 text-slate-400">No vehicle rentals recorded.</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="mt-8 page-break-inside-avoid">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-2 font-sans border-b border-slate-400 pb-1">⛰️ TOUR PACKAGES DETAIL:</h3>
+                        <table className="w-full invoice-style-table details-table font-sans">
+                            <thead>
+                                <tr>
+                                    <th style={{ width: "18%" }}>Booking Ref</th>
+                                    <th style={{ width: "18%" }}>Guest Name</th>
+                                    <th style={{ width: "22%" }}>Tour Title</th>
+                                    <th style={{ width: "14%" }}>Start Date</th>
+                                    <th style={{ width: "14%" }}>End Date</th>
+                                    <th style={{ width: "8%", textAlign: "center" }}>Status</th>
+                                    <th style={{ width: "6%", textAlign: "right" }}>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {reportData.tourBookings?.length > 0 ? (
+                                    reportData.tourBookings.map((b) => {
+                                        const status = b.bookingStatus?.toLowerCase();
+                                        const statusText = status === "completed" ? "Completed" : status === "half_paid" ? "Half Paid" : (status === "cancelled" || status === "rejected") ? "Cancelled" : "Pending";
+
+                                        return (
+                                            <tr key={b.id}>
+                                                <td>{b.bookingRef}</td>
+                                                <td className="font-semibold">{b.firstName || b.lastName ? `${b.firstName || ""} ${b.lastName || ""}` : "Guest"}</td>
+                                                <td>{b.tourTitle || "Custom Tour"}</td>
+                                                <td>{b.tourStartDate ? new Date(b.tourStartDate).toLocaleDateString() : "—"}</td>
+                                                <td>—</td>
+                                                <td className="text-center font-bold">{statusText.toUpperCase()}</td>
+                                                <td className="text-right">
+                                                    <div className="font-bold">LKR {Number(b.totalAmount || 0).toFixed(2)}</div>
+                                                    <div className="text-[8px] text-slate-500">Paid: LKR {Number(b.depositAmount || 0).toFixed(2)}</div>
+                                                    <div className="text-[8px] text-slate-700 font-bold">Bal: LKR {Number(b.remainingAmount || 0).toFixed(2)}</div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                ) : (
+                                    <tr>
+                                        <td colSpan="7" className="text-center py-6 text-slate-400">No tour bookings recorded.</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Invoice style footer */}
+                    <div className="text-center mt-12 pt-6 border-t border-slate-350 text-xs font-serif text-slate-700">
+                        <p className="font-bold italic">We thank you for compiled reports and hope to see you again in the future....</p>
+                        <p className="mt-1 font-sans text-[10px]">Support Contact: +94701950195</p>
+                    </div>
                 </div>
             )}
         </div>
