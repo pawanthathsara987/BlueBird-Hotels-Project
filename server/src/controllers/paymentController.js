@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import sequelize from '../config/database.js';
-import { Reservation, Customer, BookedRoom, Room, RoomType, RoomPayment, AirPortPickup } from "../models/index.js";
+import { Reservation, Customer, BookedRoom, Room, RoomType, RoomPayment, AirPortPickup, VehicleBooking, Payment, TourInquiry, Tour } from "../models/index.js";
 import { sendBookingConfirmationEmail, sendPersonalRequestEmail } from "../services/emailService.js";
 
 // Helper to generate MD5 hash
@@ -95,6 +95,7 @@ export const handlePayHereNotification = async (req, res) => {
         // PayHere Sandbox success code is 2
         if (Number(status_code) === 2) {
             const isTour = String(order_id).startsWith("TOUR_");
+            const isVehicle = String(order_id).startsWith("VEHICLE_");
             let booking;
             let expectedAmount;
             let actualOrderId = order_id;
@@ -107,6 +108,14 @@ export const handlePayHereNotification = async (req, res) => {
                     return res.status(404).send("Tour Inquiry not found");
                 }
                 expectedAmount = Number((Number(booking.Tour.price) * booking.numberOfAdults * 0.5).toFixed(2));
+            } else if (isVehicle) {
+                actualOrderId = String(order_id).replace("VEHICLE_", "");
+                booking = await VehicleBooking.findByPk(actualOrderId);
+                if (!booking) {
+                    console.warn(`[PAYHERE WARNING] Vehicle Booking ID #${actualOrderId} not found.`);
+                    return res.status(404).send("Vehicle Booking not found");
+                }
+                expectedAmount = Number((Number(booking.depositAmount)).toFixed(2));
             } else {
                 booking = await Reservation.findByPk(actualOrderId);
                 if (!booking) {
@@ -133,6 +142,42 @@ export const handlePayHereNotification = async (req, res) => {
                 if (booking.status === "progress") {
                     console.log(`[PAYHERE SUCCESS] Tour #${actualOrderId} verified. Updating status to accepted.`);
                     await booking.update({ status: "accepted" });
+                }
+                return res.status(200).send("OK");
+            }
+
+            if (isVehicle) {
+                try {
+                    const existingPayment = await Payment.findOne({ where: { payment_no: payment_id } });
+                    if (!existingPayment) {
+                        await Payment.create({
+                            booking_id: Number(actualOrderId),
+                            customer_id: booking.customerId,
+                            payment_no: payment_id,
+                            amount: receivedAmount,
+                            currency: payhere_currency,
+                            method: 'online',
+                            status: 'success',
+                            raw_payload: {
+                                type: 'advance',
+                                gatewayRef: payment_id,
+                                payhereStatusCode: status_code,
+                                rawPayload: req.body
+                            }
+                        });
+                    }
+                } catch (dbErr) {
+                    console.error("[PAYHERE ERROR] Failed to record vehicle payment:", dbErr);
+                }
+
+                if (booking.status === "pending_payment") {
+                    console.log(`[PAYHERE SUCCESS] Vehicle Booking #${actualOrderId} verified. Updating status to confirmed.`);
+                    await booking.update({ 
+                        status: "confirmed",
+                        depositPaidAt: new Date()
+                    });
+                } else {
+                    console.log(`[PAYHERE IGNORE] Vehicle Booking #${order_id} is already in state: ${booking.status}`);
                 }
                 return res.status(200).send("OK");
             }
@@ -203,6 +248,31 @@ export const handlePayHereNotification = async (req, res) => {
             }
         } else {
             console.log(`[PAYHERE UPDATE] Non-successful status code received: ${status_code} for Booking #${order_id}`);
+            const isVehicle = String(order_id).startsWith("VEHICLE_");
+
+            if (isVehicle) {
+                const actualOrderId = String(order_id).replace("VEHICLE_", "");
+                const t = await sequelize.transaction();
+                try {
+                    const booking = await VehicleBooking.findByPk(actualOrderId, { transaction: t });
+                    if (booking && booking.status === "pending_payment") {
+                        console.log(`[PAYHERE FAILURE] Vehicle Booking #${order_id} failed. Transitioning status to payment_failed.`);
+                        await booking.update({ status: "payment_failed" }, { transaction: t });
+                        
+                        await Payment.update(
+                            { status: "failed" },
+                            { where: { booking_id: Number(actualOrderId), status: "pending" }, transaction: t }
+                        );
+                        await t.commit();
+                    } else {
+                        await t.rollback();
+                    }
+                } catch (dbErr) {
+                    await t.rollback();
+                    console.error("[PAYHERE DB ERROR] Failed to cancel vehicle booking:", dbErr);
+                }
+                return res.status(200).send("OK");
+            }
             
             // FIX: Open the transaction BEFORE targeting any model mutations or searches
             const t = await sequelize.transaction();
