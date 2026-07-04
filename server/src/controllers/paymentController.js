@@ -139,10 +139,91 @@ export const handlePayHereNotification = async (req, res) => {
             }
 
             if (isTour) {
-                if (booking.status === "progress") {
-                    console.log(`[PAYHERE SUCCESS] Tour #${actualOrderId} verified. Updating status to accepted.`);
-                    await booking.update({ status: "accepted" });
+                try {
+                    if (booking.status === "progress") {
+                        console.log(`[PAYHERE SUCCESS] Tour #${actualOrderId} verified. Updating status to accepted.`);
+                        await booking.update({ status: "accepted" });
+                    }
+
+                    // 1. Create or update tour_bookings record
+                    const [existingTourBooking] = await sequelize.query(
+                        'SELECT id FROM tour_bookings WHERE inquiryId = :inquiryId LIMIT 1',
+                        {
+                            replacements: { inquiryId: Number(actualOrderId) },
+                            type: sequelize.QueryTypes.SELECT
+                        }
+                    );
+
+                    const totalAmount = Number(booking.Tour.price) * booking.numberOfAdults;
+                    const depositAmount = receivedAmount;
+                    const remainingAmount = totalAmount - depositAmount;
+
+                    if (!existingTourBooking) {
+                        const trackingToken = crypto.randomBytes(16).toString("hex");
+                        const bookingRef = `TI-${booking.inquiryRef || actualOrderId}-BK`;
+
+                        await sequelize.query(
+                            `INSERT INTO tour_bookings (bookingRef, inquiryId, tourStartDate, totalAmount, depositAmount, remainingAmount, status, trackingToken, acceptedAt, createdAt, updatedAt) 
+                             VALUES (:bookingRef, :inquiryId, :tourStartDate, :totalAmount, :depositAmount, :remainingAmount, :status, :trackingToken, NOW(), NOW(), NOW())`,
+                            {
+                                replacements: {
+                                    bookingRef,
+                                    inquiryId: Number(actualOrderId),
+                                    tourStartDate: booking.startDate,
+                                    totalAmount,
+                                    depositAmount,
+                                    remainingAmount,
+                                    status: 'half_paid',
+                                    trackingToken
+                                }
+                            }
+                        );
+                        console.log(`[PAYHERE SUCCESS] Tour booking record created in tour_bookings for Order #${order_id}.`);
+                    } else {
+                        await sequelize.query(
+                            `UPDATE tour_bookings SET status = 'half_paid', depositAmount = :depositAmount, remainingAmount = :remainingAmount, updatedAt = NOW() WHERE inquiryId = :inquiryId`,
+                            {
+                                replacements: {
+                                    inquiryId: Number(actualOrderId),
+                                    depositAmount,
+                                    remainingAmount
+                                }
+                            }
+                        );
+                    }
+
+                    // 2. Create tour_payments record if not exists
+                    const [existingTourPayment] = await sequelize.query(
+                        'SELECT id FROM tour_payments WHERE payment_no = :payment_no LIMIT 1',
+                        {
+                            replacements: { payment_no: payment_id },
+                            type: sequelize.QueryTypes.SELECT
+                        }
+                    );
+
+                    if (!existingTourPayment) {
+                        await sequelize.query(
+                            `INSERT INTO tour_payments (inquiry_id, customer_id, payment_no, amount, currency, method, status, raw_payload, createdAt, updatedAt) 
+                             VALUES (:inquiry_id, :customer_id, :payment_no, :amount, :currency, :method, :status, :raw_payload, NOW(), NOW())`,
+                            {
+                                replacements: {
+                                    inquiry_id: Number(actualOrderId),
+                                    customer_id: booking.customerId,
+                                    payment_no: payment_id,
+                                    amount: receivedAmount,
+                                    currency: payhere_currency,
+                                    method: 'online',
+                                    status: 'success',
+                                    raw_payload: JSON.stringify(req.body)
+                                }
+                            }
+                        );
+                        console.log(`[PAYHERE SUCCESS] Tour payment record created in tour_payments for Order #${order_id}.`);
+                    }
+                } catch (dbErr) {
+                    console.error("[PAYHERE ERROR] Failed to record tour payment:", dbErr);
                 }
+
                 return res.status(200).send("OK");
             }
 
@@ -314,5 +395,116 @@ export const handlePayHereNotification = async (req, res) => {
     } catch (error) {
         console.error("❌ PayHere Notification Webhook Error:", error);
         return res.status(500).send("Webhook internal processing error");
+    }
+};
+
+export const confirmTourPayment = async (req, res) => {
+    try {
+        const customerId = req.user.id;
+        const { inquiryId, paymentNo, amount, currency } = req.body;
+
+        if (!inquiryId || !paymentNo || !amount) {
+            return res.status(400).json({ success: false, message: "Missing required fields" });
+        }
+
+        const booking = await TourInquiry.findByPk(inquiryId, { include: [{ model: Tour }] });
+        if (!booking) {
+            return res.status(404).json({ success: false, message: "Tour Inquiry not found" });
+        }
+
+        if (booking.customerId) {
+            if (booking.customerId !== customerId) {
+                return res.status(403).json({ success: false, message: "Not authorized" });
+            }
+        } else {
+            if (booking.email !== req.user.email) {
+                return res.status(403).json({ success: false, message: "Not authorized" });
+            }
+            await booking.update({ customerId });
+        }
+
+        // Update TourInquiry status
+        if (booking.status === "progress") {
+            await booking.update({ status: "accepted" });
+        }
+
+        // 1. Create or update tour_bookings record
+        const [existingTourBooking] = await sequelize.query(
+            'SELECT id FROM tour_bookings WHERE inquiryId = :inquiryId LIMIT 1',
+            {
+                replacements: { inquiryId: Number(inquiryId) },
+                type: sequelize.QueryTypes.SELECT
+            }
+        );
+
+        const totalAmount = Number(booking.Tour.price) * booking.numberOfAdults;
+        const depositAmount = Number(amount);
+        const remainingAmount = totalAmount - depositAmount;
+
+        if (!existingTourBooking) {
+            const trackingToken = crypto.randomBytes(16).toString("hex");
+            const bookingRef = `TI-${booking.inquiryRef || inquiryId}-BK`;
+
+            await sequelize.query(
+                `INSERT INTO tour_bookings (bookingRef, inquiryId, tourStartDate, totalAmount, depositAmount, remainingAmount, status, trackingToken, acceptedAt, createdAt, updatedAt) 
+                 VALUES (:bookingRef, :inquiryId, :tourStartDate, :totalAmount, :depositAmount, :remainingAmount, :status, :trackingToken, NOW(), NOW(), NOW())`,
+                {
+                    replacements: {
+                        bookingRef,
+                        inquiryId: Number(inquiryId),
+                        tourStartDate: booking.startDate,
+                        totalAmount,
+                        depositAmount,
+                        remainingAmount,
+                        status: 'half_paid',
+                        trackingToken
+                    }
+                }
+            );
+        } else {
+            await sequelize.query(
+                `UPDATE tour_bookings SET status = 'half_paid', depositAmount = :depositAmount, remainingAmount = :remainingAmount, updatedAt = NOW() WHERE inquiryId = :inquiryId`,
+                {
+                    replacements: {
+                        inquiryId: Number(inquiryId),
+                        depositAmount,
+                        remainingAmount
+                    }
+                }
+            );
+        }
+
+        // 2. Create tour_payments record if not exists
+        const [existingTourPayment] = await sequelize.query(
+            'SELECT id FROM tour_payments WHERE payment_no = :payment_no LIMIT 1',
+            {
+                replacements: { payment_no: paymentNo },
+                type: sequelize.QueryTypes.SELECT
+            }
+        );
+
+        if (!existingTourPayment) {
+            await sequelize.query(
+                `INSERT INTO tour_payments (inquiry_id, customer_id, payment_no, amount, currency, method, status, raw_payload, createdAt, updatedAt) 
+                 VALUES (:inquiry_id, :customer_id, :payment_no, :amount, :currency, :method, :status, :raw_payload, NOW(), NOW())`,
+                {
+                    replacements: {
+                        inquiry_id: Number(inquiryId),
+                        customer_id: customerId,
+                        payment_no: paymentNo,
+                        amount: depositAmount,
+                        currency: currency || 'LKR',
+                        method: 'online',
+                        status: 'success',
+                        raw_payload: JSON.stringify({ type: 'client-confirmed', ...req.body })
+                    }
+                }
+            );
+        }
+
+        return res.status(200).json({ success: true, message: "Tour payment logged successfully" });
+    } catch (error) {
+        console.error("Error confirming tour payment:", error);
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 };

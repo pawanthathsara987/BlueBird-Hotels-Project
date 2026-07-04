@@ -57,6 +57,26 @@ async function startServer() {
       }
     } catch (e) {}
 
+    try {
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS room_stay_reviews (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          booking_id INT NOT NULL,
+          booked_room_id INT NOT NULL UNIQUE,
+          customer_id INT NOT NULL,
+          hotel_rating INT NOT NULL,
+          room_rating INT NOT NULL,
+          comment TEXT NULL,
+          createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          CONSTRAINT fk_room_stay_reviews_booking FOREIGN KEY (booking_id) REFERENCES booking(id) ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT fk_room_stay_reviews_booked_room FOREIGN KEY (booked_room_id) REFERENCES booked_rooms(id) ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT fk_room_stay_reviews_customer FOREIGN KEY (customer_id) REFERENCES customer(id) ON DELETE CASCADE ON UPDATE CASCADE
+        );
+      `);
+      console.log('✅ Created room_stay_reviews table if not exists');
+    } catch (e) {}
+
     await seedDefaultSettings();
 
     // await sequelize.sync({ alter: false }); // Keep startup read-only against existing tables

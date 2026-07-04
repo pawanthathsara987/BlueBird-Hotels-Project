@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { Compass, MapPin } from "lucide-react";
+import { Compass, MapPin, X, Phone, Mail, Clock } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import logo from "../../../assets/bluebird logo.png";
 
 export default function ToursTab({
   tours,
@@ -11,7 +12,11 @@ export default function ToursTab({
   filterList
 }) {
   const [processingId, setProcessingId] = useState(null);
+  const [modifyModal, setModifyModal] = useState({ isOpen: false, tour: null });
   const navigate = useNavigate();
+
+  const supportContact = import.meta.env.VITE_SUPPORT_CONTACT || "+94 11 234 5678";
+  const supportEmail = import.meta.env.VITE_SUPPORT_EMAIL || "concierge@bluebirdhotels.com";
 
   const handlePayment = (tour) => {
     if (!tour.tourId) {
@@ -90,7 +95,7 @@ export default function ToursTab({
           "Elevate your itinerary with off-site excursions curated specifically by our concierge department.",
           <Compass size={36} />,
           "Book Custom Excursion",
-          () => toast.success("Tour planner opened...")
+          () => navigate("/booking/tour")
         )
       ) : (
         <div className="space-y-6">
@@ -137,13 +142,13 @@ export default function ToursTab({
               {/* Concierge Response Chat Bubble */}
               <div className="bg-blue-50/40 border border-blue-100/40 rounded-2xl p-4 flex gap-3">
                 <img
-                  src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&h=100&q=80"
-                  alt="Elena"
-                  className="w-8 h-8 rounded-full object-cover shrink-0"
+                  src={logo}
+                  alt="BlueBird Logo"
+                  className="w-8 h-8 rounded-full object-contain shrink-0 bg-blue-50/50 p-1 border border-blue-100/20"
                 />
-                <div className="space-y-1">
+                <div className="space-y-1 w-full">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-blue-950">Elena (Elena - Luxury Concierge Coordinator)</span>
+                    <span className="text-[10px] font-bold text-blue-950">BlueBird Concierge Coordinator</span>
                     <span className="text-[9px] text-slate-400">Last updated: {tour.lastUpdated}</span>
                   </div>
                   <p className="text-slate-600 text-[11px] leading-relaxed italic">
@@ -170,11 +175,7 @@ export default function ToursTab({
                   </button>
                 ) : null}
                 <button
-                  onClick={() => {
-                    toast.success("Modification request submitted. Our coordinator will contact you.", {
-                      style: { borderRadius: '8px', background: '#1e3a8a', color: '#fff' }
-                    });
-                  }}
+                  onClick={() => setModifyModal({ isOpen: true, tour: tour })}
                   className="px-4 py-2 bg-white border border-slate-200 text-slate-700 font-semibold text-xs rounded-xl hover:bg-slate-50 transition-colors"
                 >
                   Modify Excursion Details
@@ -191,6 +192,69 @@ export default function ToursTab({
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Excursion Modification Support Modal */}
+      {modifyModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-blue-950/40 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl border border-blue-50/50 space-y-6 relative animate-in fade-in zoom-in-95 duration-200">
+            <button
+              onClick={() => setModifyModal({ isOpen: false, tour: null })}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-50 transition-colors"
+            >
+              <X size={16} />
+            </button>
+            
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-900 flex items-center justify-center mx-auto">
+                <Compass size={24} />
+              </div>
+              <h3 className="font-serif font-semibold text-lg text-blue-950">Modify Excursion</h3>
+              <p className="text-slate-500 text-xs px-2">
+                To request modifications for reservation <span className="font-semibold text-blue-950">{modifyModal.tour?.id}</span>, please contact our guest support desk.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100/60">
+                <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-900 flex items-center justify-center shrink-0">
+                  <Phone size={14} />
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold block">CALL CONCIERGE</span>
+                  <a href={`tel:${supportContact}`} className="text-xs font-semibold text-blue-950 hover:underline">{supportContact}</a>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100/60">
+                <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-900 flex items-center justify-center shrink-0">
+                  <Mail size={14} />
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold block">EMAIL SUPPORT</span>
+                  <a href={`mailto:${supportEmail}`} className="text-xs font-semibold text-blue-950 hover:underline">{supportEmail}</a>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100/60">
+                <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-900 flex items-center justify-center shrink-0">
+                  <Clock size={14} />
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold block">SERVICE HOURS</span>
+                  <span className="text-xs font-semibold text-blue-950">Daily: 8:00 AM - 8:00 PM (Sri Lanka Time)</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setModifyModal({ isOpen: false, tour: null })}
+              className="w-full py-2.5 bg-blue-950 hover:bg-blue-900 text-white font-semibold text-xs rounded-xl transition-all shadow-sm"
+            >
+              Close
+            </button>
+          </div>
         </div>
       )}
     </div>
