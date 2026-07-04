@@ -37,7 +37,7 @@ async function startServer() {
         INSERT IGNORE INTO room_reviews (id, booking_id, customer_id, hotel_rating, comment, createdAt, updatedAt)
         SELECT id, booking_id, customer_id, hotel_rating, comment, createdAt, updatedAt
         FROM room_stay_reviews
-      `).catch(() => {}); // Ignore if old table doesn't exist
+      `).catch(() => { }); // Ignore if old table doesn't exist
       console.log("✅ room_reviews table ready");
     } catch (e) { console.warn("room_reviews:", e.message); }
 
@@ -105,7 +105,7 @@ async function startServer() {
         `ALTER TABLE tour_inquiries MODIFY COLUMN status ENUM('pending','progress','accepted','rejected','canceled') NOT NULL DEFAULT 'pending'`
       );
       console.log("✅ tour_inquiries.status ENUM patched");
-    } catch (e) {}
+    } catch (e) { }
 
     // Patch tour_bookings table for remaining balance payments
     try {
