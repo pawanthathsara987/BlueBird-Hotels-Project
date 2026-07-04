@@ -647,20 +647,25 @@ export async function getCustomerPayments(req, res) {
             status: p.status === "success" ? "Succeeded" : p.status === "pending" ? "Pending" : "Failed"
         }));
 
-        const mappedVehiclePayments = vehiclePayments.map(p => ({
-            id: `PAY-VH-${p.id}`,
-            refNo: p.receiptNo || p.gatewayRef || `VH-${p.id}`,
-            date: p.createdAt,
-            category: "Vehicle Rental",
-            description: `Vehicle Rental – ${p.type.charAt(0).toUpperCase() + p.type.slice(1)}`,
-            bookingRef: `#${p.booking?.bookingNo || p.bookingId}`,
-            method: p.method || "online",
-            currency: "LKR",
-            amount: parseFloat(p.amount),
-            isRefund: p.type === "refund",
-            notes: p.notes || null,
-            status: p.type === "refund" ? "Refunded" : "Succeeded"
-        }));
+        const mappedVehiclePayments = vehiclePayments.map(p => {
+            const raw = p.raw_payload || {};
+            const typeStr = raw.type ? raw.type.charAt(0).toUpperCase() + raw.type.slice(1) : "Online";
+            const isRefund = raw.type === "refund";
+            return {
+                id: `PAY-VH-${p.id}`,
+                refNo: p.payment_no || `VH-${p.id}`,
+                date: p.createdAt,
+                category: "Vehicle Rental",
+                description: `Vehicle Rental – ${typeStr}`,
+                bookingRef: `#${p.booking?.bookingNo || p.booking_id}`,
+                method: p.method || "online",
+                currency: p.currency || "LKR",
+                amount: parseFloat(p.amount),
+                isRefund: isRefund,
+                notes: raw.notes || null,
+                status: isRefund ? "Refunded" : p.status === "success" ? "Succeeded" : p.status === "pending" ? "Pending" : "Failed"
+            };
+        });
 
         const allPayments = [...mappedRoomPayments, ...mappedVehiclePayments].sort(
             (a, b) => new Date(b.date) - new Date(a.date)
@@ -769,6 +774,14 @@ export async function cancelCustomerRental(req, res) {
             cancelledAt: new Date(),
             cancellationReason: "Cancelled by customer via dashboard"
         }, { transaction: t });
+
+        await Payment.update(
+            { status: "failed" },
+            {
+                where: { booking_id: id, status: "pending" },
+                transaction: t
+            }
+        );
 
         await t.commit();
         res.status(200).json({ success: true, message: "Rental booking cancelled successfully" });

@@ -182,7 +182,7 @@ const ServiceChargeView = () => {
                                 <th className="px-6 py-4.5 text-xs font-bold text-slate-400 uppercase tracking-wider">ID</th>
                                 <th className="px-6 py-4.5 text-xs font-bold text-slate-400 uppercase tracking-wider">Service Code</th>
                                 <th className="px-6 py-4.5 text-xs font-bold text-slate-400 uppercase tracking-wider">Service Name</th>
-                                <th className="px-6 py-4.5 text-xs font-bold text-slate-400 uppercase tracking-wider">Price ({process.env.CURRENCY_TYPE || 'LKR'})</th>
+                                <th className="px-6 py-4.5 text-xs font-bold text-slate-400 uppercase tracking-wider">Price ({import.meta.env.VITE_CURRENCY_TYPE || 'LKR'})</th>
                                 <th className="px-6 py-4.5 text-xs font-bold text-slate-400 uppercase tracking-wider">Status</th>
                                 <th className="px-6 py-4.5 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
                             </tr>
@@ -200,7 +200,7 @@ const ServiceChargeView = () => {
                                         {item.service_name}
                                     </td>
                                     <td className="px-6 py-4.5 text-sm font-extrabold text-blue-600">
-                                        {process.env.CURRENCY_TYPE || 'LKR'} {parseFloat(item.price).toFixed(2)}
+                                        {import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {parseFloat(item.price).toFixed(2)}
                                     </td>
                                     <td className="px-6 py-4.5">
                                         <button

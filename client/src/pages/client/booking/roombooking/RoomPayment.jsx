@@ -6,7 +6,7 @@ import { jwtDecode } from 'jwt-decode';
 import { toast } from 'react-hot-toast';
 
 const RoomPayment = () => {
-  const CURRENCY = process.env.CURRENCY_TYPE || "LKR";
+  const CURRENCY = import.meta.env.VITE_CURRENCY_TYPE || "LKR";
   const location = useLocation();
   const navigate = useNavigate();
   const bookingData = location.state?.bookingData || null;

@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { MapPin, Clock, Users, ArrowRight } from "lucide-react";
 
 export default function TourPackageCard({ tour }) {
-    const currencyType = process.env.CURRENCY_TYPE || "LKR";
+    const currencyType = import.meta.env.VITE_CURRENCY_TYPE || "LKR";
 
     const finalPrice = tour.discount
         ? tour.price - (tour.price * tour.discount) / 100
