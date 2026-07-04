@@ -1,5 +1,3 @@
-import React from "react";
-import axios from "axios";
 import { Link } from "react-router-dom";
 import logo from "../../../assets/bluebird logo.png";
 import {
@@ -12,7 +10,7 @@ import {
   CreditCard,
   LogOut
 } from "lucide-react";
-import { toast } from "react-hot-toast";
+
 
 export default function DashboardHeader({
   profile,

@@ -6,8 +6,7 @@ import { toast } from "react-hot-toast";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
     FaUser, FaEnvelope, FaGlobe, FaPhone, FaLock, FaEye, FaEyeSlash,
-    FaIdCard, FaMapMarkerAlt, FaArrowRight, FaArrowLeft, FaCalendar,
-    FaUsers, FaClock, FaCheck, FaInfoCircle
+    FaIdCard, FaMapMarkerAlt, FaArrowRight, FaArrowLeft, FaCheck
 } from "react-icons/fa";
 import { validateSriLankanNIC, validatePassport } from "../../../../utils/validation";
 import { jwtDecode } from "jwt-decode";

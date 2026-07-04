@@ -1215,7 +1215,7 @@ export default function BookingsTab({
                         <span className="text-blue-600 font-extrabold text-[9px] block mt-1.5 uppercase tracking-wide">✓ Checked Out</span>
                       ) : room.status === "checked_in" ? (
                         <span className="text-emerald-600 font-extrabold text-[9px] block mt-1.5 uppercase tracking-wide">✓ Checked In</span>
-                      ) : (selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && selectedBooking.status.toLowerCase() !== "cancellation pending") ? (
+                      ) : (!isBookingCompleted(selectedBooking) && selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && selectedBooking.status.toLowerCase() !== "cancellation pending") ? (
                         <button
                           onClick={() => handleRequestRefundClick(room.id, false)}
                           className="mt-2 text-rose-600 hover:text-rose-800 font-bold text-[9px] hover:underline cursor-pointer flex items-center gap-1 uppercase tracking-wider"
@@ -1249,7 +1249,7 @@ export default function BookingsTab({
                       <p className="col-span-2 text-rose-600 font-extrabold uppercase text-[10px] tracking-wide mt-1.5 flex items-center gap-1">
                         🚫 Airport Shuttle Cancelled
                       </p>
-                    ) : (selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && selectedBooking.status.toLowerCase() !== "cancellation pending") ? (
+                    ) : (!isBookingCompleted(selectedBooking) && selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && selectedBooking.status.toLowerCase() !== "cancellation pending") ? (
                       <button
                         onClick={handleOpenPickupCancelModal}
                         className="col-span-2 mt-2 px-3 py-1.5 bg-rose-50 hover:bg-rose-105 border border-rose-200 text-rose-700 font-extrabold rounded-lg text-[9px] hover:underline cursor-pointer flex items-center justify-center gap-1.5 w-full uppercase tracking-wider transition-all"
@@ -1362,7 +1362,7 @@ export default function BookingsTab({
                 <FileText size={13} />
                 Invoice
               </button>
-              {selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && (
+              {!isBookingCompleted(selectedBooking) && selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && (
                 <button
                   onClick={() => handleRequestRefundClick(null, false)}
                   className="px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold text-center cursor-pointer flex justify-center items-center gap-1 hover:scale-[1.02] transition-all"
@@ -1371,7 +1371,7 @@ export default function BookingsTab({
                   Request Refund
                 </button>
               )}
-              {selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && selectedBooking.status.toLowerCase() !== "cancellation pending" ? (
+              {!isBookingCompleted(selectedBooking) && selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && selectedBooking.status.toLowerCase() !== "cancellation pending" ? (
                 <button
                   onClick={() => {
                     handleRequestRefundClick(null, false, true);
