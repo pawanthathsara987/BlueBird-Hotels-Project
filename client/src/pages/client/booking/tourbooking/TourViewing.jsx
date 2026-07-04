@@ -1,317 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, DollarSign, Tag, X, SlidersHorizontal, RotateCcw, Search, Loader } from 'lucide-react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { 
+  MapPin, Search, SlidersHorizontal, Users, CalendarDays, 
+  ArrowRight, X, Sparkles, Compass, Shield, Clock, RotateCcw, 
+  BadgeDollarSign, Tag, ChevronDown, Check
+} from 'lucide-react';
 import Header from '../../../../components/header';
 import Footer from '../../../../components/footer';
 import FloatingChatbot from '../../../../components/FloatingChatbot';
 
-/* ===================================
-   TOUR CARD COMPONENT
-   ==================================== */
-function TourCard({ tour, onSelect }) {
-  const finalPrice = tour.discount
-    ? tour.price - (tour.price * tour.discount / 100)
-    : tour.price;
+const formatMoney = (value) => {
+  const amount = Number(value);
+  const currency = import.meta.env.VITE_CURRENCY_TYPE || "LKR";
+  if (!Number.isFinite(amount)) return `${currency} 0.00`;
+  return `${currency} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
 
-  const savings = tour.discount ? (tour.price * tour.discount / 100).toFixed(2) : 0;
-
-  return (
-    <div
-      onClick={() => onSelect(tour)}
-      className="bg-white/95 backdrop-blur rounded-3xl shadow-[0_14px_40px_rgba(15,23,42,0.12)] overflow-hidden border border-slate-200/70 hover:shadow-[0_22px_48px_rgba(2,6,23,0.18)] transition-all hover:-translate-y-1.5 cursor-pointer group"
-    >
-      {/* Tour Image */}
-      <div className="relative h-56 overflow-hidden bg-linear-to-br from-cyan-500 to-blue-700">
-        {tour.image ? (
-          <img
-            src={tour.image}
-            alt={tour.packageName}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <p className="text-white text-center px-4 font-semibold text-lg">{tour.packageName}</p>
-          </div>
-        )}
-
-        <div className="absolute inset-0 bg-linear-to-t from-slate-900/65 via-slate-900/10 to-transparent" />
-
-        {/* Discount Badge */}
-        {tour.discount > 0 && (
-          <div className="absolute top-4 left-4 bg-rose-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-            {tour.discount}% OFF
-          </div>
-        )}
-
-        {/* Status Badge */}
-        <div className="absolute top-4 right-4">
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-bold shadow-lg border ${tour.status === 'active'
-                ? 'bg-emerald-500/95 text-white border-emerald-300/50'
-                : 'bg-slate-500/95 text-white border-slate-300/50'
-              }`}
-          >
-            {tour.status === 'active' ? '✓ Active' : '● Inactive'}
-          </span>
-        </div>
-      </div>
-
-      {/* Tour Info */}
-      <div className="p-5">
-        {/* Tour Name */}
-        <h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-2 group-hover:text-cyan-700 transition-colors">
-          {tour.packageName || 'Untitled Tour'}
-        </h3>
-
-        {/* Location */}
-        {tour.location && (
-          <div className="flex items-center gap-2 mb-3 text-sm text-slate-600">
-            <MapPin className="w-4 h-4 text-cyan-700 shrink-0" />
-            <span className="line-clamp-1">{tour.location}</span>
-          </div>
-        )}
-
-        {/* Overview */}
-        {tour.overview && (
-          <p className="text-sm text-slate-600 mb-4 line-clamp-2 h-10">
-            {tour.overview}
-          </p>
-        )}
-
-        {/* Group Size */}
-        {tour.groupSize && (
-          <div className="text-xs text-slate-500 mb-3 bg-slate-100 inline-flex rounded-full px-2.5 py-1">
-            Max {tour.groupSize} guests / package
-          </div>
-        )}
-
-        {/* Tour Items Tags */}
-        {tour.TourItems && tour.TourItems.length > 0 && (
-          <div className="mb-4 flex flex-wrap gap-2">
-            {tour.TourItems.slice(0, 2).map((item) => (
-              <span
-                key={item.id}
-                className="px-2 py-1 text-xs rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200"
-              >
-                {item.name}
-              </span>
-            ))}
-            {tour.TourItems.length > 2 && (
-              <span className="px-2 py-1 text-xs rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200">
-                +{tour.TourItems.length - 2} more
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Pricing Section */}
-        <div className="border-t border-slate-200 pt-4">
-          {tour.discount > 0 ? (
-            <div className="mb-3">
-              <p className="text-xs text-slate-500 mb-1">Original Price</p>
-              <p className="text-sm text-slate-500 line-through mb-2">
-                {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {Number(tour.price).toFixed(2)}
-              </p>
-              <div className="flex items-baseline gap-2">
-                <p className="text-2xl font-bold text-emerald-700">
-                  {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {finalPrice.toFixed(2)}
-                </p>
-                <p className="text-xs text-emerald-700 font-semibold">
-                  Save {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {savings}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <p className="text-2xl font-bold text-cyan-700 mb-3">
-              {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {Number(tour.price).toFixed(2)}
-            </p>
-          )}
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect(tour);
-            }}
-            className="w-full bg-cyan-700 hover:bg-cyan-800 active:bg-cyan-800 text-white px-4 py-2.5 rounded-xl text-sm font-semibold border border-cyan-700 transition-colors"
-          >
-            View Details
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ===================================
-   FILTER SIDEBAR COMPONENT
-   ==================================== */
-function FilterSidebar({
-  minPrice,
-  setMinPrice,
-  maxPrice,
-  setMaxPrice,
-  statusFilter,
-  setStatusFilter,
-  onReset,
-  maxAvailablePrice,
-  locations,
-  selectedLocation,
-  setSelectedLocation,
-}) {
-  return (
-    <div className="bg-white/95 backdrop-blur rounded-3xl shadow-[0_12px_36px_rgba(2,6,23,0.12)] border border-slate-200 p-6 h-fit sticky top-4">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
-          <SlidersHorizontal className="w-5 h-5 text-cyan-700" />
-          Filters
-        </h2>
-        <button
-          onClick={onReset}
-          className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-          title="Reset filters"
-        >
-          <RotateCcw className="w-5 h-5 text-slate-600" />
-        </button>
-      </div>
-
-      {/* Location Filter */}
-      {locations.length > 0 && (
-        <div className="mb-6">
-          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-3 flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-cyan-700" />
-            Location
-          </h3>
-          <select
-            value={selectedLocation}
-            onChange={(e) => setSelectedLocation(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-cyan-600 focus:border-transparent"
-          >
-            <option value="">All Locations</option>
-            {locations.map((location) => (
-              <option key={location} value={location}>
-                {location}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* Price Range Filter */}
-      <div className="mb-8">
-        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-4 flex items-center gap-2">
-          <DollarSign className="w-4 h-4 text-cyan-700" />
-          Price Range
-        </h3>
-
-        {/* Min Price */}
-        <div className="mb-4">
-          <label className="block text-xs text-slate-600 mb-2">Min Price</label>
-          <input
-            type="range"
-            min="0"
-            max={maxAvailablePrice || 10000}
-            value={minPrice}
-            onChange={(e) => setMinPrice(Number(e.target.value))}
-            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-cyan-700"
-          />
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-sm font-semibold text-slate-900">{import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {minPrice.toLocaleString()}</span>
-          </div>
-        </div>
-
-        {/* Max Price */}
-        <div className="mb-4">
-          <label className="block text-xs text-slate-600 mb-2">Max Price</label>
-          <input
-            type="range"
-            min="0"
-            max={maxAvailablePrice || 10000}
-            value={maxPrice}
-            onChange={(e) => setMaxPrice(Number(e.target.value))}
-            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-cyan-700"
-          />
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-sm font-semibold text-slate-900">{import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {maxPrice.toLocaleString()}</span>
-          </div>
-        </div>
-
-        {/* Price Range Display */}
-        <div className="p-3 bg-cyan-50 rounded-xl border border-cyan-200">
-          <p className="text-sm text-center font-semibold text-cyan-900">
-            {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {minPrice.toLocaleString()} - {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {maxPrice.toLocaleString()}
-          </p>
-        </div>
-      </div>
-
-      {/* Status Filter */}
-      <div className="mb-8">
-        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-4 flex items-center gap-2">
-          <Tag className="w-4 h-4 text-cyan-700" />
-          Tour Status
-        </h3>
-
-        <div className="space-y-3">
-          <label className="flex items-center gap-3 cursor-pointer group">
-            <input
-              type="radio"
-              name="status"
-              value="all"
-              checked={statusFilter === 'all'}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-4 h-4 cursor-pointer accent-cyan-700"
-            />
-            <span className="text-sm text-slate-700 group-hover:text-slate-900">All Tours</span>
-          </label>
-
-          <label className="flex items-center gap-3 cursor-pointer group">
-            <input
-              type="radio"
-              name="status"
-              value="active"
-              checked={statusFilter === 'active'}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-4 h-4 cursor-pointer accent-green-600"
-            />
-            <div className="flex items-center gap-2">
-              <span className="inline-block w-2 h-2 bg-green-600 rounded-full"></span>
-              <span className="text-sm text-slate-700 group-hover:text-slate-900">Active Tours</span>
-            </div>
-          </label>
-
-          <label className="flex items-center gap-3 cursor-pointer group">
-            <input
-              type="radio"
-              name="status"
-              value="inactive"
-              checked={statusFilter === 'inactive'}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-4 h-4 cursor-pointer accent-gray-600"
-            />
-            <div className="flex items-center gap-2">
-              <span className="inline-block w-2 h-2 bg-gray-600 rounded-full"></span>
-              <span className="text-sm text-slate-700 group-hover:text-slate-900">Inactive Tours</span>
-            </div>
-          </label>
-        </div>
-      </div>
-
-      {/* Reset Button */}
-      <button
-        onClick={onReset}
-        className="w-full bg-slate-900 hover:bg-slate-800 text-white px-4 py-3 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
-      >
-        <RotateCcw className="w-4 h-4" />
-        Reset All Filters
-      </button>
-    </div>
-  );
-}
-
-/* ===================================
-   MAIN TOUR VIEW COMPONENT
-   ==================================== */
 export default function TourViewPage() {
   const navigate = useNavigate();
   const [tours, setTours] = useState([]);
@@ -319,14 +24,15 @@ export default function TourViewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [locations, setLocations] = useState([]);
-
+  
   // Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(10000);
-  const [statusFilter, setStatusFilter] = useState('all');
   const [selectedLocation, setSelectedLocation] = useState('');
   const [maxAvailablePrice, setMaxAvailablePrice] = useState(10000);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('featured');
 
   const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3002/api').replace(/\/$/, '');
 
@@ -354,8 +60,8 @@ export default function TourViewPage() {
           if (toursData.length > 0) {
             const prices = toursData.map(tour => tour.price || 0);
             const max = Math.max(...prices);
-            setMaxAvailablePrice(Math.ceil(max * 1.5));
-            setMaxPrice(Math.ceil(max * 1.5));
+            setMaxAvailablePrice(Math.ceil(max));
+            setMaxPrice(Math.ceil(max));
           }
 
           setError(null);
@@ -374,15 +80,15 @@ export default function TourViewPage() {
   }, [backendBaseUrl]);
 
   /* =========================
-     APPLY FILTERS
+     APPLY FILTERS & SORT
   ========================== */
   useEffect(() => {
-    let filtered = tours;
+    let result = tours;
 
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(tour =>
+      result = result.filter(tour =>
         (tour.packageName && tour.packageName.toLowerCase().includes(query)) ||
         (tour.location && tour.location.toLowerCase().includes(query)) ||
         (tour.overview && tour.overview.toLowerCase().includes(query))
@@ -391,190 +97,324 @@ export default function TourViewPage() {
 
     // Apply location filter
     if (selectedLocation) {
-      filtered = filtered.filter(tour => tour.location === selectedLocation);
+      result = result.filter(tour => tour.location === selectedLocation);
     }
-
-    // Apply price filter
-    filtered = filtered.filter(tour => {
-      const price = tour.price || 0;
-      return price >= minPrice && price <= maxPrice;
-    });
 
     // Apply status filter
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(tour => tour.status === statusFilter);
+      result = result.filter(tour => tour.status === statusFilter);
     }
 
-    setFilteredTours(filtered);
-  }, [tours, searchQuery, selectedLocation, minPrice, maxPrice, statusFilter]);
+    // Apply price filter
+    result = result.filter(tour => {
+      const finalPrice = tour.discount
+        ? tour.price - (tour.price * tour.discount / 100)
+        : tour.price;
+      return finalPrice >= minPrice && finalPrice <= maxPrice;
+    });
 
-  /* =========================
-     RESET FILTERS
-  ========================== */
+    // Apply Sorting
+    switch (sortBy) {
+      case 'price-low':
+        result = [...result].sort((a, b) => {
+          const pA = a.discount ? a.price - (a.price * a.discount / 100) : a.price;
+          const pB = b.discount ? b.price - (b.price * b.discount / 100) : b.price;
+          return pA - pB;
+        });
+        break;
+      case 'price-high':
+        result = [...result].sort((a, b) => {
+          const pA = a.discount ? a.price - (a.price * a.discount / 100) : a.price;
+          const pB = b.discount ? b.price - (b.price * b.discount / 100) : b.price;
+          return pB - pA;
+        });
+        break;
+      case 'duration':
+        result = [...result].sort((a, b) => Number(b.duration || 0) - Number(a.duration || 0));
+        break;
+      default:
+        result = [...result];
+    }
+
+    setFilteredTours(result);
+  }, [tours, searchQuery, selectedLocation, minPrice, maxPrice, statusFilter, sortBy]);
+
   const handleResetFilters = () => {
     setSearchQuery('');
     setSelectedLocation('');
     setMinPrice(0);
     setMaxPrice(maxAvailablePrice);
     setStatusFilter('all');
+    setSortBy('featured');
   };
 
-  const activeFiltersCount =
-    (searchQuery.trim() ? 1 : 0) +
-    (selectedLocation ? 1 : 0) +
-    (statusFilter !== 'all' ? 1 : 0) +
-    (minPrice > 0 || maxPrice < maxAvailablePrice ? 1 : 0);
-
-  /* =========================
-     HANDLE TOUR SELECT
-  ========================== */
   const handleSelectTour = (tour) => {
     navigate(`/booking/tour-details?tourId=${tour.id}`, { state: { tour } });
   };
 
-  /* =========================
-     LOADING STATE
-  ========================== */
-  if (loading) {
-    return (
-      <div className="w-full h-screen flex flex-col">
-        <Header />
-        <div className="flex-1 flex items-center justify-center bg-gray-50">
-          <div className="text-center">
-            <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-            <p className="text-gray-600 text-lg">Loading tours...</p>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
-  /* =========================
-     ERROR STATE
-  ========================== */
-  if (error) {
-    return (
-      <div className="w-full h-screen flex flex-col">
-        <Header />
-        <div className="flex-1 md:w-[90%] mx-auto py-12 flex items-center justify-center bg-gray-50">
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl p-6 max-w-md">
-            <p className="font-semibold mb-2">Unable to load tours</p>
-            <p className="text-sm">{error}</p>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
   return (
-    <div className="w-full min-h-screen flex flex-col">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       <Header />
-      <div className="flex-1 bg-linear-to-b from-cyan-50 via-slate-50 to-white">
-        <div className="w-full md:w-[95%] lg:w-[90%] mx-auto py-8 px-4">
 
-          {/* Page Title */}
-          <div className="mb-8 rounded-3xl bg-slate-900 text-white px-6 py-8 md:px-8 md:py-10 relative overflow-hidden">
-            <div className="absolute -top-16 -right-10 w-56 h-56 rounded-full bg-cyan-500/20 blur-2xl" />
-            <div className="absolute -bottom-20 left-10 w-64 h-64 rounded-full bg-emerald-400/20 blur-2xl" />
-            <div className="relative">
-              <p className="text-xs uppercase tracking-[0.25em] text-cyan-200 font-semibold mb-2">BlueBird Experiences</p>
-              <h1 className="text-4xl md:text-5xl font-black text-white mb-2">
-                Explore Our Tours
-              </h1>
-              <p className="text-slate-200 text-lg max-w-2xl">
-                Discover amazing experiences at the best prices
-              </p>
-            </div>
+      {/* Main Catalog Area */}
+      <div className="flex-1 max-w-7xl w-full mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+        
+        {/* Title Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Resort Excursions & Guided Tours</h1>
+            <p className="text-sm text-slate-500 mt-1 font-medium font-sans">Explore Sri Lanka’s wild safaris, historic ruins, and golden coasts.</p>
           </div>
-
-          {/* Search Bar */}
-          <div className="mb-8">
-            <div className="flex items-center gap-3 bg-white/90 border border-slate-300 rounded-2xl px-4 py-3 shadow-[0_8px_24px_rgba(2,6,23,0.08)] focus-within:ring-2 focus-within:ring-cyan-600 focus-within:border-transparent transition-all max-w-3xl">
-              <Search className="w-5 h-5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search tours by name, location..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 outline-none bg-transparent text-slate-700 placeholder-slate-400"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
-                >
-                  <X className="w-4 h-4 text-slate-400" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Results Count */}
-          <div className="mb-6 p-4 bg-cyan-50 rounded-2xl border border-cyan-200 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm text-cyan-900 font-semibold">
-              Showing <span className="text-lg font-bold">{filteredTours.length}</span> of{' '}
-              <span className="text-lg font-bold">{tours.length}</span> tours
-            </p>
-            <p className="text-xs font-semibold text-slate-600">
-              Active filters: <span className="text-cyan-800">{activeFiltersCount}</span>
-            </p>
-          </div>
-
-          {/* Main Layout - Cards and Filters */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Left Side: Filter Sidebar */}
-            <div className="lg:col-span-1">
-              <FilterSidebar
-                minPrice={minPrice}
-                setMinPrice={setMinPrice}
-                maxPrice={maxPrice}
-                setMaxPrice={setMaxPrice}
-                statusFilter={statusFilter}
-                setStatusFilter={setStatusFilter}
-                onReset={handleResetFilters}
-                maxAvailablePrice={maxAvailablePrice}
-                locations={locations}
-                selectedLocation={selectedLocation}
-                setSelectedLocation={setSelectedLocation}
-              />
-            </div>
-
-            {/* Right Side: Tour Cards */}
-            <div className="lg:col-span-3">
-              {filteredTours.length === 0 ? (
-                <div className="bg-white rounded-3xl shadow-[0_12px_28px_rgba(2,6,23,0.1)] border border-slate-200 p-12 text-center">
-                  <div className="mb-4">
-                    <X className="w-16 h-16 text-slate-300 mx-auto" />
-                  </div>
-                  <p className="text-xl text-slate-600 font-semibold mb-2">No tours found</p>
-                  <p className="text-slate-500 mb-6">
-                    Try adjusting your filters to find more tours
-                  </p>
-                  <button
-                    onClick={handleResetFilters}
-                    className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-xl font-semibold transition-colors inline-flex items-center gap-2"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    Reset Filters
-                  </button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {filteredTours.map((tour) => (
-                    <TourCard
-                      key={tour.id}
-                      tour={tour}
-                      onSelect={handleSelectTour}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+          
+          {/* Sorting and Count in Top Bar */}
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold text-slate-400">Sort by</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none transition cursor-pointer text-slate-700 focus:border-blue-450"
+            >
+              <option value="featured">Featured First</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
+              <option value="duration">Longest Duration</option>
+            </select>
           </div>
         </div>
+
+        {/* Catalog Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* Left Column: Premium Left Filter Sidebar */}
+          <aside className="lg:col-span-3 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6 lg:sticky lg:top-6">
+            
+            {/* Sidebar Title */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <h2 className="text-sm font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-blue-650" /> Filter Excursions
+              </h2>
+              <button 
+                onClick={handleResetFilters}
+                className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer transition"
+              >
+                <RotateCcw className="w-3 h-3" /> Reset
+              </button>
+            </div>
+
+            {/* Keyword Search */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Search Keywords</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
+                <input
+                  type="text"
+                  placeholder="e.g. Ella, Safari, Temple..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-400 rounded-xl pl-9 pr-3 py-2.5 text-xs outline-none transition text-slate-700"
+                />
+              </div>
+            </div>
+
+            {/* Destination Selection */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Destination Location</label>
+              <select
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value)}
+                className="w-full bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-400 rounded-xl px-3 py-2.5 text-xs outline-none transition text-slate-750 font-bold cursor-pointer"
+              >
+                <option value="">All Destinations</option>
+                {locations.map((loc) => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Price Budget limit */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Max Budget</label>
+                <span className="text-xs font-bold text-slate-700">{formatMoney(maxPrice)}</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max={maxAvailablePrice}
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(Number(e.target.value))}
+                className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-slate-900"
+              />
+              <div className="flex items-center justify-between text-[10px] font-bold text-slate-400">
+                <span>Min: 0.00</span>
+                <span>Max: {maxAvailablePrice.toLocaleString()}</span>
+              </div>
+            </div>
+
+            {/* Tour Status Filters (All, Active, Inactive) */}
+            <div className="space-y-3 pt-2">
+              <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Status Category</label>
+              <div className="flex flex-col gap-2.5">
+                {[
+                  { value: 'all', label: 'All Packages' },
+                  { value: 'active', label: 'Active / Available' },
+                  { value: 'inactive', label: 'Inactive / Private' }
+                ].map((item) => (
+                  <label key={item.value} className="flex items-center gap-2.5 cursor-pointer select-none group text-xs font-bold text-slate-600 hover:text-slate-900">
+                    <input 
+                      type="radio" 
+                      name="tourStatus" 
+                      value={item.value} 
+                      checked={statusFilter === item.value}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="w-4 h-4 accent-slate-900 cursor-pointer"
+                    />
+                    <span>{item.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+          </aside>
+
+          {/* Right Column: Grid of Cards */}
+          <main className="lg:col-span-9 space-y-6">
+            
+            {/* Count Indicator */}
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs font-bold text-slate-400">{filteredTours.length} tours match your search criteria</span>
+            </div>
+
+            {/* Loading / Error States */}
+            {loading ? (
+              <div className="rounded-3xl border border-slate-100 bg-white p-20 text-center shadow-xs">
+                <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <p className="mt-4 text-sm font-semibold text-slate-455">Retrieving excursions...</p>
+              </div>
+            ) : error ? (
+              <div className="rounded-3xl border border-red-100 bg-red-50 p-8 text-center text-red-750 font-bold">
+                <p className="text-lg">Failed to Load Tours</p>
+                <p className="text-xs font-semibold mt-1">{error}</p>
+              </div>
+            ) : filteredTours.length === 0 ? (
+              <div className="rounded-3xl border border-slate-100 bg-white p-20 text-center shadow-xs">
+                <p className="text-lg font-bold text-slate-800">No excursions match your queries</p>
+                <p className="text-xs text-slate-450 mt-1">Try expanding the budget slider or resetting location filters.</p>
+              </div>
+            ) : (
+              /* Tours Grid */
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {filteredTours.map((tour) => {
+                  const finalPrice = tour.discount
+                    ? tour.price - (tour.price * tour.discount / 100)
+                    : tour.price;
+                  const isTourActive = tour.status === 'active';
+
+                  return (
+                    <article
+                      key={tour.id}
+                      onClick={() => handleSelectTour(tour)}
+                      className="group bg-white rounded-3xl border border-slate-200/60 overflow-hidden shadow-xs hover:shadow-[0_20px_50px_rgba(15,23,42,0.1)] transition-all duration-300 flex flex-col h-full cursor-pointer hover:-translate-y-1"
+                    >
+                      {/* Cover Image aspect-video */}
+                      <div className="relative aspect-video overflow-hidden bg-slate-100 shrink-0">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent z-10" />
+                        <img 
+                          src={tour.image || "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80"} 
+                          alt={tour.packageName} 
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+
+                        {/* Discount floating badge */}
+                        {tour.discount > 0 && (
+                          <div className="absolute top-4 left-4 z-20">
+                            <span className="px-2 py-0.5 rounded-lg bg-rose-600 text-white text-[9px] font-black uppercase tracking-wider shadow-sm animate-pulse">
+                              {tour.discount}% OFF
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Status Category floating badge */}
+                        <div className="absolute top-4 right-4 z-20">
+                          <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white shadow-sm ${
+                            isTourActive ? 'bg-emerald-600' : 'bg-slate-500'
+                          }`}>
+                            {isTourActive ? '✓ Active' : '● Inactive'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Info Content Body */}
+                      <div className="p-5 flex flex-col flex-1 justify-between space-y-4">
+                        <div className="space-y-2">
+                          
+                          {/* Location Label */}
+                          {tour.location && (
+                            <div className="flex items-center gap-1 text-[10px] font-black text-blue-650 uppercase tracking-widest">
+                              <MapPin size={12} className="text-blue-500" />
+                              <span className="truncate max-w-[150px]">{tour.location}</span>
+                            </div>
+                          )}
+
+                          {/* Tour Title */}
+                          <h3 className="text-base font-bold text-slate-800 tracking-tight leading-snug line-clamp-1 group-hover:text-blue-600 transition-colors font-sans">
+                            {tour.packageName}
+                          </h3>
+
+                          {/* Short description */}
+                          <p className="text-xs text-slate-550 leading-relaxed line-clamp-2 h-8">
+                            {tour.overview || "No package overview description has been specified."}
+                          </p>
+
+                          {/* Detail indicators */}
+                          <div className="flex flex-wrap items-center gap-2 pt-1.5">
+                            {tour.duration && (
+                              <span className="text-[9px] font-bold text-blue-700 bg-blue-55 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                                {tour.duration} {tour.durationType === 'hours' ? 'Hrs' : 'Days'}
+                              </span>
+                            )}
+                            {tour.groupSize && (
+                              <span className="text-[9px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                                Max {tour.groupSize} Guests
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Bottom pricing row & button */}
+                        <div className="border-t border-slate-100 pt-3 flex items-center justify-between gap-2 mt-auto">
+                          <div>
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">From Rate</span>
+                            <div className="flex items-baseline gap-1 mt-0.5">
+                              <span className="text-sm font-black text-slate-900">{formatMoney(finalPrice)}</span>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectTour(tour);
+                            }}
+                            className="bg-slate-900 hover:bg-slate-800 text-white font-bold px-3 py-2 rounded-xl text-[10px] transition uppercase tracking-wider"
+                          >
+                            Explore Details
+                          </button>
+                        </div>
+
+                      </div>
+
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+
+          </main>
+
+        </div>
+
       </div>
+
       <FloatingChatbot />
       <Footer />
     </div>
