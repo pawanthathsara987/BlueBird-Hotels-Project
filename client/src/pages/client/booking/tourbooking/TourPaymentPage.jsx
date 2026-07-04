@@ -27,6 +27,33 @@ export default function TourPaymentPage() {
     }
   }, [tour, inquiry, navigate]);
 
+  useEffect(() => {
+    const fetchCustomerProfile = async () => {
+      try {
+        let token = sessionStorage.getItem("customerToken") || localStorage.getItem("customerToken");
+        if (token) {
+          const profileRes = await axios.get(
+            `${backendBaseUrl}/customer/profile`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          if (profileRes.data) {
+            const customer = profileRes.data;
+            setBilling({
+              fullName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || inquiry?.fullName || '',
+              email: customer.email || inquiry?.email || '',
+              phone: customer.phoneNumber || inquiry?.phone || '',
+              address: customer.address || inquiry?.address || ''
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching customer profile:", err);
+      }
+    };
+
+    fetchCustomerProfile();
+  }, [backendBaseUrl, inquiry]);
+
   if (!tour || !inquiry) return null;
 
   const advanceAmount = Number((tour.price * inquiry.adults * 0.5).toFixed(2));
@@ -65,8 +92,23 @@ export default function TourPaymentPage() {
           return;
         }
 
-        window.payhere.onCompleted = function (oid) {
-          alert("Payment completed successfully! Your tour is confirmed.");
+        window.payhere.onCompleted = async function (oid) {
+          try {
+            await axios.post(
+              `${backendBaseUrl}/payment/tour-confirm`,
+              {
+                inquiryId: inquiry.realId,
+                paymentNo: oid || `PAY_PAYHERE_TOUR_${inquiry.realId}`,
+                amount: advanceAmount,
+                currency: import.meta.env.VITE_CURRENCY_TYPE || "LKR"
+              },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            alert("Payment completed successfully! Your tour is confirmed.");
+          } catch (err) {
+            console.error("Error confirming tour payment:", err);
+            alert("Payment completed on gateway, but failed to log to server. Please contact concierge.");
+          }
           navigate('/dashboard');
         };
         window.payhere.onDismissed = function () {

@@ -1,7 +1,25 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import axios from "axios";
 
 export default function ReturnPolicy() {
     const [activeTab, setActiveTab] = useState("rooms");
+    const [policy, setPolicy] = useState(null);
+
+    useEffect(() => {
+        const loadPolicy = async () => {
+            try {
+                const backendUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api").replace(/\/$/, "");
+                const response = await axios.get(`${backendUrl}/roombook/policy`);
+                if (response.data?.success) {
+                    setPolicy(response.data.data || null);
+                }
+            } catch (error) {
+                setPolicy(null);
+            }
+        };
+
+        loadPolicy();
+    }, []);
 
     return (
         <div 
@@ -211,7 +229,7 @@ export default function ReturnPolicy() {
                             How to Claim a Refund &amp; Cancel
                         </h3>
                         <p className="text-[14px] text-stone-600 leading-relaxed">
-                            To request a room or tour cancellation, you must submit a written request outlining your booking details. We process all refunds within **10 to 15 business days** from formal authorization.
+                            To request a room or tour cancellation, you must submit a written request outlining your booking details. We process all refunds within **{policy?.refund_handle_business_days || 15} business days** from formal authorization.
                         </p>
                         
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-3">

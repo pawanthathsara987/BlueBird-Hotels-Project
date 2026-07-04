@@ -425,3 +425,76 @@ export const getReceptionVehiclePolicy = async (req, res) => {
     });
   }
 };
+
+// 7. Collect balance payment for an existing vehicle booking
+export const collectVehicleBalancePayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { paymentMethod } = req.body;
+
+    if (!paymentMethod) {
+      return res.status(400).json({
+        success: false,
+        message: "paymentMethod is required"
+      });
+    }
+
+    const booking = await VehicleBooking.findByPk(id);
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Vehicle booking not found"
+      });
+    }
+
+    if (booking.status === "pending_payment") {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot collect balance payment for an unpaid booking. The customer must pay the advance deposit first."
+      });
+    }
+
+    if (booking.balancePaidAt) {
+      return res.status(400).json({
+        success: false,
+        message: "Balance payment has already been collected for this booking"
+      });
+    }
+
+    let balanceCollectedBy = null;
+    if (req.user?.id) {
+      const staffObj = await StaffMember.findOne({
+        where: {
+          [Op.or]: [
+            { userId: req.user.id },
+            { email: req.user.email }
+          ]
+        }
+      });
+      if (staffObj) {
+        balanceCollectedBy = staffObj.userId;
+      }
+    }
+
+    // Update status and payment details
+    booking.balancePaidAt = new Date();
+    booking.balancePaymentMethod = paymentMethod;
+    booking.balanceCollectedBy = balanceCollectedBy;
+    booking.status = "balance_paid";
+
+    await booking.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Balance payment collected successfully",
+      data: booking
+    });
+
+  } catch (error) {
+    console.error("Error collecting vehicle balance:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error while collecting balance payment"
+    });
+  }
+};

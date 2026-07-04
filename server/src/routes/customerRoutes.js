@@ -14,10 +14,12 @@ import {
     getCustomerRentals,
     getCustomerTours,
     getCustomerPayments,
+    submitRoomStayReview,
     cancelCustomerBooking,
     cancelCustomerRental,
     cancelSingleBookedRoom,
-    cancelAirportPickup
+    cancelAirportPickup,
+    handleContactInquiry
 } from "../controllers/customerController.js";
 import { requireAuth, requireRole } from "../middleware/authMiddleware.js";
 
@@ -31,6 +33,7 @@ customerRouter.post("/reset-password", verifyOTPAndResetPassword);
 customerRouter.post("/google-login", googleLogin);
 customerRouter.post("/refresh", refreshToken);
 customerRouter.post("/logout", logoutCustomer);
+customerRouter.post("/contact", handleContactInquiry);
 
 // ── PROTECTED routes (valid customer JWT required) ────────────────────────────
 customerRouter.put("/update-profile",  requireAuth, requireRole("customer"), updateCustomerProfile);
@@ -44,6 +47,7 @@ customerRouter.get("/payments",  requireAuth, requireRole("customer"), getCustom
 
 customerRouter.post("/bookings/:id/cancel",                            requireAuth, requireRole("customer"), cancelCustomerBooking);
 customerRouter.post("/bookings/:bookingId/rooms/:bookedRoomId/cancel", requireAuth, requireRole("customer"), cancelSingleBookedRoom);
+customerRouter.post("/bookings/:bookingId/reviews", requireAuth, requireRole("customer"), submitRoomStayReview);
 customerRouter.post("/bookings/:bookingId/airport-pickup/cancel",      requireAuth, requireRole("customer"), cancelAirportPickup);
 customerRouter.post("/rentals/:id/cancel",                             requireAuth, requireRole("customer"), cancelCustomerRental);
 

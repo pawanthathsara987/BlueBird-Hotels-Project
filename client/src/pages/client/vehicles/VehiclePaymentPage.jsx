@@ -24,6 +24,8 @@ export default function VehiclePaymentPage() {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState("");
   const [bookingSuccess, setBookingSuccess] = useState(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
 
   const [customerForm, setCustomerForm] = useState({
     name: "",
@@ -88,6 +90,105 @@ export default function VehiclePaymentPage() {
     navigate(`/vehicles/${id}/summary`, { state });
   };
 
+  const handlePayDeposit = async () => {
+    if (!bookingSuccess?.bookingId) {
+      setPaymentError("Booking details are missing. Please create the booking again.");
+      return;
+    }
+
+    setPaymentError("");
+    setPaymentLoading(true);
+
+    try {
+      let token = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
+      if (token === "undefined" || token === "null") {
+        token = null;
+      }
+
+      if (!token) {
+        throw new Error("Your session has expired. Please login again.");
+      }
+
+      const orderId = `VEHICLE_${bookingSuccess.bookingId}`;
+      const amount = Number(bookingSuccess.depositAmount || depositAmount || 0).toFixed(2);
+      const nameParts = (customerForm.name || "Customer").trim().split(/\s+/);
+      const firstName = nameParts[0] || "Customer";
+      const lastName = nameParts.slice(1).join(" ") || "Guest";
+
+      const hashRes = await axios.post(
+        `${backendBaseUrl}/payment/payhere-hash`,
+        {
+          orderId,
+          amount,
+          currency: import.meta.env.VITE_CURRENCY_TYPE || "LKR"
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      if (!hashRes.data?.success || !hashRes.data?.hash) {
+        throw new Error(hashRes.data?.message || "Failed to generate payment hash");
+      }
+
+      const { hash, merchantId } = hashRes.data;
+
+      setTimeout(() => {
+        if (!window.payhere) {
+          setPaymentError("Payment portal failed to initialize. Please refresh the page and try again.");
+          setPaymentLoading(false);
+          return;
+        }
+
+        window.payhere.onCompleted = function onCompleted(orderRef) {
+          console.log("Vehicle payment completed. OrderID:", orderRef);
+          setPaymentLoading(false);
+          navigate("/customer/dashboard", { replace: true });
+        };
+
+        window.payhere.onDismissed = function onDismissed() {
+          setPaymentError("Payment window was closed. You can retry payment.");
+          setPaymentLoading(false);
+        };
+
+        window.payhere.onError = function onError(error) {
+          console.error("PayHere Error:", error);
+          setPaymentError("Payment transaction failed. Please try again.");
+          setPaymentLoading(false);
+        };
+
+        const backendUrl = String(import.meta.env.VITE_BACKEND_URL || backendBaseUrl);
+        const cleanBackendUrl = backendUrl.endsWith("/") ? backendUrl : `${backendUrl}/`;
+
+        window.payhere.startPayment({
+          sandbox: true,
+          merchant_id: merchantId,
+          return_url: `${window.location.origin}/customer/dashboard`,
+          cancel_url: `${window.location.origin}/vehicles/${id}/payment`,
+          notify_url: import.meta.env.VITE_NOTIFY_URL
+            ? `${import.meta.env.VITE_NOTIFY_URL}/api/payment/notify`
+            : `${cleanBackendUrl}payment/notify`,
+          order_id: orderId,
+          items: `BlueBird Vehicle Booking #${bookingSuccess.bookingNo}`,
+          amount,
+          currency: import.meta.env.VITE_CURRENCY_TYPE || "LKR",
+          hash,
+          first_name: firstName,
+          last_name: lastName,
+          email: customerForm.email || "guest@bluebird.com",
+          phone: customerForm.phone || "0771234567",
+          address: [customerForm.addressLine1, customerForm.addressLine2].filter(Boolean).join(", ") || "N/A",
+          city: customerForm.city || "Colombo",
+          country: customerForm.country || "Sri Lanka"
+        });
+      }, 500);
+    } catch (err) {
+      console.error(err);
+      setPaymentError(err.response?.data?.message || err.message || "Failed to initiate payment.");
+      setPaymentLoading(false);
+    }
+  };
+
   const handleBookSubmit = async (e) => {
     e.preventDefault();
 
@@ -118,6 +219,7 @@ export default function VehiclePaymentPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       setBookingSuccess(res.data.data);
+      setPaymentError("");
     } catch (err) {
       setBookingError(err.response?.data?.message || "Failed to create booking. Please try again.");
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -251,12 +353,18 @@ export default function VehiclePaymentPage() {
             </p>
           </div>
 
-          <button 
-            disabled={bookingLoading}
-            className="mt-6 w-full flex items-center justify-center rounded-xl bg-emerald-700 px-4 py-4 text-sm font-extrabold uppercase tracking-wider text-white transition hover:bg-emerald-800 shadow-[0_4px_14px_0_rgba(4,120,87,0.39)] disabled:opacity-70" 
-            onClick={handlePayment}
+          {paymentError && (
+            <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+              {paymentError}
+            </div>
+          )}
+
+          <button
+            className="mt-6 w-full rounded-xl bg-emerald-700 px-4 py-4 text-sm font-extrabold uppercase tracking-wider text-white transition hover:bg-emerald-800 shadow-[0_4px_14px_0_rgba(4,120,87,0.39)] disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={handlePayDeposit}
+            disabled={paymentLoading}
           >
-            {bookingLoading ? "Initializing Portal..." : "Pay Deposit Now"}
+            {paymentLoading ? "Opening PayHere..." : "Pay Deposit Now"}
           </button>
           <Link to="/vehicles" className="mt-4 inline-flex w-full items-center justify-center rounded-xl border border-stone-200 bg-white px-4 py-4 text-sm font-extrabold uppercase tracking-wider text-stone-700 transition hover:bg-stone-50 hover:text-stone-900">
             Return to Fleet
@@ -298,7 +406,7 @@ export default function VehiclePaymentPage() {
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-8 lg:px-14">
         <form onSubmit={handleBookSubmit} className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          
+
           {/* Left Column: Form Details */}
           <div className="lg:col-span-2 space-y-6">
             {bookingError && (
@@ -544,11 +652,11 @@ export default function VehiclePaymentPage() {
 
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-stone-100">
                   <div>
-                    <span className="block text-[10px] font-black text-stone-500 uppercase tracking-widest mb-1 flex items-center gap-1"><CalendarDays className="h-3 w-3"/> Pickup</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-black text-stone-500 uppercase tracking-widest mb-1"><CalendarDays className="h-3 w-3" /> Pickup</span>
                     <span className="text-xs font-bold text-stone-900">{new Date(pickupDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
                   </div>
                   <div>
-                    <span className="block text-[10px] font-black text-stone-500 uppercase tracking-widest mb-1 flex items-center gap-1"><CalendarDays className="h-3 w-3"/> Return</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-black text-stone-500 uppercase tracking-widest mb-1"><CalendarDays className="h-3 w-3" /> Return</span>
                     <span className="text-xs font-bold text-stone-900">{new Date(returnDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
                   </div>
                 </div>
