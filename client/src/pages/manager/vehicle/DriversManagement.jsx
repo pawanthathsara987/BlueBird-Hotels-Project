@@ -3,6 +3,7 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import { Plus, RefreshCw, Users, Search, AlertTriangle } from "lucide-react";
 import DriverForm from "./DriverForm";
+import DriverDetailsModal from "./DriverDetailsModal";
 
 const Card = ({ children, className = "" }) => (
   <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm p-6 ${className}`}>{children}</div>
@@ -52,6 +53,7 @@ export default function DriversManagement() {
   const [showForm, setShowForm] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [viewDriverId, setViewDriverId] = useState(null);
 
   // Search & filter state
   const [searchTerm, setSearchTerm] = useState("");
@@ -279,6 +281,7 @@ export default function DriversManagement() {
                         <p className="text-sm font-semibold text-emerald-700 mt-1">Shared driver price: {formatMoney(driverPricing.driverPricePerDay)}</p>
                       </div>
                       <div className="flex flex-col gap-2">
+                        <button onClick={() => setViewDriverId(d.id)} className="inline-flex items-center gap-2 px-3 py-1 rounded bg-sky-500 hover:bg-sky-600 text-white transition">View</button>
                         <button onClick={() => openEdit(d)} className="inline-flex items-center gap-2 px-3 py-1 rounded bg-amber-500 text-white">Edit</button>
                         <button disabled={deletingId === d.id} onClick={() => handleDelete(d)} className="inline-flex items-center gap-2 px-3 py-1 rounded bg-rose-600 text-white">{deletingId === d.id ? 'Deleting...' : 'Delete'}</button>
                       </div>
@@ -296,6 +299,15 @@ export default function DriversManagement() {
               <DriverForm driver={selectedDriver} onCancel={closeForm} onSaved={handleSaved} />
             </div>
           </div>
+        )}
+
+        {viewDriverId && (
+          <DriverDetailsModal 
+            driverId={viewDriverId} 
+            onClose={() => setViewDriverId(null)} 
+            backendBaseUrl={backendBaseUrl}
+            config={config}
+          />
         )}
       </div>
     </div>

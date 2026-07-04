@@ -2,6 +2,8 @@ import { Op } from 'sequelize';
 import multer from 'multer';
 import Driver from '../../models/vehicle/driverModel.js';
 import VehicleBooking from '../../models/vehicle/VehicleBookingModel.js';
+import Vehicle from '../../models/vehicle/vehicleModel.js';
+import Customer from '../../models/User/Customer.js';
 import supabase from '../../config/supabaseClient.js';
 
 // Multer memory storage for image uploads
@@ -154,7 +156,22 @@ export const getDrivers = async (req, res) => {
 // ── GET single driver ────────────────────────────────────────────────────────
 export const getDriver = async (req, res) => {
   try {
-    const driver = await Driver.findByPk(req.params.id);
+    const driver = await Driver.findByPk(req.params.id, {
+      include: [
+        {
+          model: VehicleBooking,
+          as: 'bookings',
+          include: [
+            { model: Vehicle, as: 'vehicle', attributes: ['brand', 'model', 'plateNumber', 'image', 'vehicleTypeId'] },
+            { model: Customer, as: 'customer', attributes: ['firstName', 'lastName', 'email', 'phoneNumber'] }
+          ],
+          required: false // driver might not have bookings
+        }
+      ],
+      order: [
+        [{ model: VehicleBooking, as: 'bookings' }, 'pickupDatetime', 'ASC']
+      ]
+    });
     if (!driver) return res.status(404).json({ success: false, message: 'Driver not found' });
     res.json({ success: true, data: driver });
   } catch (err) {
