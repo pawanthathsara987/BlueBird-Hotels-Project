@@ -420,7 +420,7 @@ const RoomSelector = () => {
               kidsAllow: dbKidsAllow,
               image: rt.image_url,
               images: [rt.image_url],
-              price: `${process.env.CURRENCY_TYPE || "LKR"} ${priceVal}`,
+              price: `${import.meta.env.VITE_CURRENCY_TYPE || "LKR"} ${priceVal}`,
               description,
               tagline,
               roomSize: size,
@@ -1415,7 +1415,7 @@ const RoomSelector = () => {
                     <h4 className="text-stone-800 font-extrabold text-base sm:text-lg tracking-tight flex items-center gap-2">
                       <span>{room.roomType}</span>
                       <span className="text-emerald-850 bg-emerald-50 border border-emerald-250/60 px-2 py-0.5 rounded-lg text-xs font-extrabold tracking-wide">
-                        {process.env.CURRENCY_TYPE || "LKR"} {room.price} / night
+                        {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {room.price} / night
                       </span>
                     </h4>
 
@@ -1448,7 +1448,7 @@ const RoomSelector = () => {
                         className="w-full h-full object-cover"
                       />
                       <div className="absolute bottom-1 left-1 bg-stone-950/80 text-white text-xs font-black px-2 py-0.5 rounded backdrop-blur-3xs">
-                        {process.env.CURRENCY_TYPE || "LKR"} {room.price}
+                        {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {room.price}
                       </div>
                     </div>
                   )}
@@ -1730,7 +1730,7 @@ const RoomSelector = () => {
                           <div className="flex justify-between">
                             <span>Base Rate:</span>
                             <span>
-                              {process.env.CURRENCY_TYPE || "LKR"} {(() => {
+                              {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {(() => {
                                 const typeObj = roomTypes.find(t => t.name === room.roomType);
                                 return typeObj ? Number(typeObj.price.replace(/[^0-9.]/g, '')) : 0;
                               })()}
@@ -1739,7 +1739,7 @@ const RoomSelector = () => {
                           <div className="flex justify-between">
                             <span>{room.boardType} Add-on:</span>
                             <span>
-                              +{process.env.CURRENCY_TYPE || "LKR"} {(() => {
+                              +{import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {(() => {
                                 const typeObj = roomTypes.find(t => t.name === room.roomType);
                                 const baseRate = typeObj ? Number(typeObj.price.replace(/[^0-9.]/g, '')) : 0;
                                 return Math.max(0, room.price - baseRate);
@@ -1750,7 +1750,7 @@ const RoomSelector = () => {
                         <div className="pt-2 border-t border-emerald-200/35 flex items-center justify-between">
                           <span className="text-xs font-black text-emerald-850">Total Nightly Rate:</span>
                           <span className="font-black text-emerald-900 text-sm sm:text-base">
-                            {process.env.CURRENCY_TYPE || "LKR"} {room.price} / night
+                            {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {room.price} / night
                           </span>
                         </div>
                       </div>
@@ -2140,7 +2140,7 @@ const RoomSelector = () => {
             <div className="flex flex-col items-end sm:items-start text-right sm:text-left bg-stone-50 border border-stone-200/50 px-4.5 py-2.5 rounded-2xl shadow-3xs animate-fadeIn shrink-0">
               <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-stone-400 mb-0.5">Est. Total Nightly Rate</span>
               <span className="text-emerald-900 font-black text-lg sm:text-xl tracking-tight">
-                {process.env.CURRENCY_TYPE || "LKR"} {totalNightlyRate} <span className="text-xs font-bold text-stone-450">/ night</span>
+                {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {totalNightlyRate} <span className="text-xs font-bold text-stone-450">/ night</span>
               </span>
             </div>
             {airportPickupEnabled && (

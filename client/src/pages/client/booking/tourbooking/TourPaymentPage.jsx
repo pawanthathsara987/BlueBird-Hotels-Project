@@ -48,7 +48,7 @@ export default function TourPaymentPage() {
 
       const hashRes = await axios.post(
         `${backendBaseUrl}/payment/payhere-hash`,
-        { orderId, amount: advanceAmount, currency: "LKR" },
+        { orderId, amount: advanceAmount, currency: import.meta.env.VITE_CURRENCY_TYPE || "LKR" },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -86,7 +86,7 @@ export default function TourPaymentPage() {
           order_id: orderId,
           items: `Advance Payment - ${tour.packageName || 'Tour Package'}`,
           amount: advanceAmount,
-          currency: "LKR",
+          currency: import.meta.env.VITE_CURRENCY_TYPE || "LKR",
           hash,
           first_name: firstName,
           last_name: lastName,

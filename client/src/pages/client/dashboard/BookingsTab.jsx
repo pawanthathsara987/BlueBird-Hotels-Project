@@ -350,7 +350,7 @@ export default function BookingsTab({
 
 
 
-  const CURRENCY = process.env.CURRENCY_TYPE || "LKR";
+  const CURRENCY = import.meta.env.VITE_CURRENCY_TYPE || "LKR";
 
   const getStatusColors = (status) => {
     const s = (status || "").toLowerCase();

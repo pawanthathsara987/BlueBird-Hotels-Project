@@ -51,8 +51,13 @@ export const createVehicleBooking = async (req, res) => {
       return res.status(400).json({ success: false, message: 'pickup and return datetimes must be valid dates' });
     }
 
-    if (pickupDate <= new Date()) {
-      return res.status(400).json({ success: false, message: 'pickup datetime must be in the future' });
+    const today = new Date();
+    today.setDate(today.getDate() + 7);
+    const minPickupDateStr = today.toISOString().split("T")[0]; // YYYY-MM-DD
+    const pickupDateStr = pickupDatetime.split("T")[0]; // works with "YYYY-MM-DD" or "YYYY-MM-DDTHH:mm:ss"
+
+    if (pickupDateStr < minPickupDateStr) {
+      return res.status(400).json({ success: false, message: 'Pickup datetime must be at least 1 week (7 days) in advance' });
     }
 
     if (returnDate <= pickupDate) {

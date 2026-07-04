@@ -348,7 +348,7 @@ export default function RoomPriceView() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-sm text-slate-800 font-black">
-                                        {process.env.CURRENCY_TYPE || 'LKR'} {Number(item.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        {import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {Number(item.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end gap-3">
@@ -458,10 +458,10 @@ export default function RoomPriceView() {
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Nightly Price ({process.env.CURRENCY_TYPE || 'LKR'})</label>
+                                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Nightly Price ({import.meta.env.VITE_CURRENCY_TYPE || 'LKR'})</label>
                                     <div className="relative">
                                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 font-semibold text-sm">
-                                            {process.env.CURRENCY_TYPE || 'LKR'}
+                                            {import.meta.env.VITE_CURRENCY_TYPE || 'LKR'}
                                         </div>
                                         <input
                                             type="number"
@@ -472,7 +472,7 @@ export default function RoomPriceView() {
                                             placeholder="Enter rate per night"
                                             disabled={isActionLoading}
                                             required
-                                            className={`w-full border border-slate-200 rounded-xl ${(process.env.CURRENCY_TYPE || 'LKR').length > 1 ? 'pl-16' : 'pl-12'} pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 text-slate-800 font-semibold transition`}
+                                            className={`w-full border border-slate-200 rounded-xl ${(import.meta.env.VITE_CURRENCY_TYPE || 'LKR').length > 1 ? 'pl-16' : 'pl-12'} pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 text-slate-800 font-semibold transition`}
                                         />
                                     </div>
                                 </div>

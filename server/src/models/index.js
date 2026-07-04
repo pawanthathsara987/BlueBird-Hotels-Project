@@ -234,8 +234,12 @@ export function initModels() {
     VehicleBooking.belongsTo(Driver, { foreignKey: 'driverId', as: 'driver' });
 
     // VehicleBooking → Payment
-    VehicleBooking.hasMany(Payment, { foreignKey: 'bookingId', as: 'payments', onDelete: 'CASCADE' });
-    Payment.belongsTo(VehicleBooking, { foreignKey: 'bookingId', as: 'booking' });
+    VehicleBooking.hasMany(Payment, { foreignKey: 'booking_id', as: 'payments', onDelete: 'CASCADE' });
+    Payment.belongsTo(VehicleBooking, { foreignKey: 'booking_id', as: 'booking' });
+
+    // Customer → Payment
+    Customer.hasMany(Payment, { foreignKey: 'customer_id', as: 'vehiclePayments', onDelete: 'CASCADE' });
+    Payment.belongsTo(Customer, { foreignKey: 'customer_id', as: 'customer' });
 
     // ── Vehicle → VehicleServiceLog ───────────────────────────────────────────────
     Vehicle.hasMany(VehicleServiceLog, { foreignKey: 'vehicleId', as: 'serviceLogs', onDelete: 'CASCADE' });

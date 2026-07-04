@@ -22,6 +22,15 @@ const calculateDeposit = (totalPrice) => {
   return { depositAmount, balanceAmount };
 };
 
+const getMinDateStr = () => {
+  const today = new Date();
+  today.setDate(today.getDate() + 7);
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function VehicleBookingPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -43,14 +52,9 @@ export default function VehicleBookingPage() {
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
 
   const [bookingForm, setBookingForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    pickupLocation: "",
-    dropoffLocation: "",
-    specialRequirements: "",
-    customerLicenseNo: "",
-    customerLicenseExpiry: ""
+    pickupLocation: "Hotel Lobby",
+    dropoffLocation: "Hotel Lobby",
+    specialRequirements: location.state?.bookingForm?.specialRequirements || ""
   });
 
   const [bookingLoading, setBookingLoading] = useState(false);
@@ -113,11 +117,9 @@ export default function VehicleBookingPage() {
       return;
     }
 
-    // Check if pickup is in the past
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (pickupTime < today.getTime()) {
-      setAvailability({ available: false, reason: "Pickup date cannot be in the past.", days: 0, totalPrice: null, driverFee: null, pricePerDay: null });
+    // Check if pickup is at least 1 week in advance
+    if (pickupDate < getMinDateStr()) {
+      setAvailability({ available: false, reason: "Bookings must be made at least 1 week in advance.", days: 0, totalPrice: null, driverFee: null, pricePerDay: null });
       setAvailabilityLoading(false);
       return;
     }
@@ -178,45 +180,25 @@ export default function VehicleBookingPage() {
     !bookingLoading
   );
 
-  const handleBookSubmit = async (e) => {
+  const handleBookSubmit = (e) => {
     e.preventDefault();
     if (!canSubmit) {
-      setBookingError("Please choose an available date range before confirming your reservation.");
+      setBookingError("Please choose an available date range before proceeding.");
       return;
     }
 
-    // License expiration validation
-    if (driverOption === "without" && bookingForm.customerLicenseExpiry) {
-      const expiry = new Date(bookingForm.customerLicenseExpiry).getTime();
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (expiry < today.getTime()) {
-        setBookingError("Your driver's license is expired. We cannot proceed with the booking.");
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
-      }
-    }
-
-    setBookingLoading(true);
     setBookingError("");
 
-    try {
-      const payload = {
-        ...bookingForm,
-        pickupDatetime: pickupDate,
-        returnDatetime: returnDate,
-        withDriver: driverOption === "with"
-      };
-      const token = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
-      const res = await axios.post(`${backendBaseUrl}/vehicles/${id}/book`, payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setBookingSuccess(res.data.data);
-    } catch (err) {
-      setBookingError(err.response?.data?.message || "Failed to create booking. Please try again.");
-    } finally {
-      setBookingLoading(false);
-    }
+    navigate(`/vehicles/${id}/summary`, {
+      state: {
+        vehicle,
+        pickupDate,
+        returnDate,
+        driverOption,
+        availability,
+        bookingForm
+      }
+    });
   };
 
   if (vehicleLoading) {
@@ -310,6 +292,7 @@ export default function VehicleBookingPage() {
                       <input
                         required
                         type="date"
+                        min={getMinDateStr()}
                         value={pickupDate}
                         onChange={(e) => setPickupDate(e.target.value)}
                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
@@ -320,12 +303,20 @@ export default function VehicleBookingPage() {
                       <input
                         required
                         type="date"
+                        min={pickupDate || getMinDateStr()}
                         value={returnDate}
                         onChange={(e) => setReturnDate(e.target.value)}
                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                       />
                     </div>
                   </div>
+                  
+                  {availability?.available === false && (
+                    <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm font-medium text-amber-800">
+                      <div className="font-semibold">This vehicle is unavailable for the selected dates.</div>
+                      <div className="mt-1 text-xs text-amber-700">{availability.reason || 'Please choose different dates.'}</div>
+                    </div>
+                  )}
 
                   <div className="mt-5">
                     <div className="text-xs font-bold uppercase text-slate-500 mb-3">Driver option *</div>
@@ -350,49 +341,15 @@ export default function VehicleBookingPage() {
 
                 <section className="space-y-5">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900 mb-4 border-b border-slate-100 pb-2">Customer Information</h3>
-                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Full Name *</label>
-                        <input required type="text" value={bookingForm.name} onChange={(e) => setBookingForm({ ...bookingForm, name: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-100 transition bg-slate-50/50" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Email Address *</label>
-                        <input required type="email" value={bookingForm.email} onChange={(e) => setBookingForm({ ...bookingForm, email: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-100 transition bg-slate-50/50" />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Phone Number *</label>
-                        <input required type="tel" value={bookingForm.phone} onChange={(e) => setBookingForm({ ...bookingForm, phone: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-100 transition bg-slate-50/50" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {driverOption === "without" && (
-                    <div>
-                      <h3 className="text-lg font-bold text-slate-900 mb-4 border-b border-slate-100 pb-2">Driver's License (Self-Drive)</h3>
-                      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                        <div>
-                          <label className="block text-xs font-bold uppercase text-slate-500 mb-2">License Number *</label>
-                          <input required={driverOption === "without"} type="text" value={bookingForm.customerLicenseNo} onChange={(e) => setBookingForm({ ...bookingForm, customerLicenseNo: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-100 transition bg-slate-50/50" placeholder="e.g. B1234567" />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold uppercase text-slate-500 mb-2">License Expiry *</label>
-                          <input required={driverOption === "without"} type="date" value={bookingForm.customerLicenseExpiry} onChange={(e) => setBookingForm({ ...bookingForm, customerLicenseExpiry: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-100 transition bg-slate-50/50" />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
                     <h3 className="text-lg font-bold text-slate-900 mb-4 border-b border-slate-100 pb-2">Trip Details</h3>
                     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                       <div className="md:col-span-2">
                         <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Pickup Location *</label>
-                        <input required type="text" value={bookingForm.pickupLocation} onChange={(e) => setBookingForm({ ...bookingForm, pickupLocation: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-100 transition bg-slate-50/50" placeholder="e.g. Airport, Hotel Name" />
+                        <input readOnly type="text" value={bookingForm.pickupLocation} className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition bg-slate-100 text-slate-600 font-semibold cursor-not-allowed" />
                       </div>
                       <div className="md:col-span-2">
                         <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Dropoff Location</label>
-                        <input type="text" value={bookingForm.dropoffLocation} onChange={(e) => setBookingForm({ ...bookingForm, dropoffLocation: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-100 transition bg-slate-50/50" placeholder="Leave blank if same as pickup" />
+                        <input readOnly type="text" value={bookingForm.dropoffLocation} className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition bg-slate-100 text-slate-600 font-semibold cursor-not-allowed" />
                       </div>
                       <div className="md:col-span-2">
                         <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Special Requirements</label>
@@ -407,15 +364,7 @@ export default function VehicleBookingPage() {
                     </div>
                   )}
 
-                  {availability?.available === false && (
-                    <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm font-medium text-amber-800">
-                      <div className="font-semibold">This vehicle is unavailable for the selected dates.</div>
-                      <div className="mt-1 text-xs text-amber-700">{availability.reason || 'Please choose different dates.'}</div>
-                      {availability.conflictingBookingNo && (
-                        <div className="mt-2 text-xs text-amber-700">Conflicting booking: <strong className="text-amber-900">{availability.conflictingBookingNo}</strong></div>
-                      )}
-                    </div>
-                  )}
+
 
                   {/* Rental Terms & Conditions */}
                   <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5">
@@ -448,11 +397,9 @@ export default function VehicleBookingPage() {
                     <button
                       type="submit"
                       disabled={!canSubmit}
-                      aria-disabled={!canSubmit}
-                      title={!canSubmit ? (availability?.available === false ? (availability.reason || 'Vehicle unavailable') : 'Complete the form to enable booking') : ''}
-                      className="w-full rounded-2xl bg-slate-950 px-4 py-4 text-base font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="flex w-full items-center justify-center rounded-2xl bg-sky-600 px-4 py-4 text-sm font-semibold text-white shadow-[0_4px_14px_0_rgba(2,132,199,0.39)] transition hover:bg-sky-700 hover:shadow-[0_6px_20px_rgba(2,132,199,0.23)] disabled:opacity-50 disabled:shadow-none"
                     >
-                      {bookingLoading ? "Processing your reservation..." : "Confirm Reservation"}
+                      Proceed to Summary
                     </button>
                     <p className="mt-4 text-center text-xs text-slate-500">
                       By confirming, you agree to the rental terms above. You will secure this reservation by paying the {availability?.depositPercentage || 50}% advance deposit.
