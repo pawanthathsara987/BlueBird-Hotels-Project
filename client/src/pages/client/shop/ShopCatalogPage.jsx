@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import { Search, Sparkles, ShoppingBag, ArrowRight, Tag, Info, AlertCircle, ShoppingCart } from "lucide-react";
+import { Search, Sparkles, ShoppingBag, ArrowRight, Tag, AlertCircle } from "lucide-react";
 import Header from "../../../components/header";
 import Footer from "../../../components/footer";
 import { getCategoryStyle } from "../../admin/shop/utils/shopHelpers";
@@ -309,24 +309,7 @@ export default function ShopCatalogPage() {
 
         </section>
         
-        {/* Notice Info Banner */}
-        <section className="bg-slate-900 text-slate-350 py-12 px-6">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-blue-400 shrink-0">
-                <Info size={20} />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-white uppercase tracking-wider">Acquiring Gift Shop Items</h4>
-                <p className="text-xs text-slate-400 mt-0.5">Please check availability details on product pages. Purchase transactions are completed at the front lobby desk.</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-300 font-bold bg-slate-800 px-4 py-2.5 rounded-xl border border-slate-700">
-              <ShoppingCart size={14} className="text-blue-400 shrink-0" />
-              <span>Dial ext. 104 from your suite</span>
-            </div>
-          </div>
-        </section>
+
       </main>
 
       <Footer />

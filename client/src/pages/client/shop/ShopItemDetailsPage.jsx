@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import axios from "axios";
-import { ChevronLeft, ShoppingBag, ShoppingCart, Sparkles, Tag, Check, AlertTriangle, ArrowLeft } from "lucide-react";
+import { ShoppingBag, AlertTriangle, ArrowLeft } from "lucide-react";
 import Header from "../../../components/header";
 import Footer from "../../../components/footer";
 import { getCategoryStyle } from "../../admin/shop/utils/shopHelpers";
@@ -180,39 +180,7 @@ export default function ShopItemDetailsPage() {
                 </div>
               </div>
 
-              {/* Lobby Desk purchase assistance card */}
-              <div className="bg-slate-900 text-white rounded-[28px] p-6 space-y-4 shadow-xl shadow-slate-900/10 border border-slate-800">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4.5 w-4.5 text-blue-400 animate-pulse" />
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-blue-400">Hotel Guest Exclusive</span>
-                </div>
-                
-                <h3 className="text-base font-bold text-white leading-snug">How to Purchase &amp; Collect Items</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  To secure this item, you may visit our Boutique and Gift Shop located in the main lobby. Purchases can be charged to your room bill or settled directly.
-                </p>
 
-                <div className="pt-2 border-t border-slate-800 space-y-2">
-                  <div className="flex items-start gap-2 text-xs">
-                    <Check className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-                    <span className="text-slate-300">Room delivery service available.</span>
-                  </div>
-                  <div className="flex items-start gap-2 text-xs">
-                    <Check className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-                    <span className="text-slate-300">Secure billing options linked to guest card.</span>
-                  </div>
-                </div>
-
-                <div className="pt-4">
-                  <a
-                    href="tel:104"
-                    className="flex w-full items-center justify-center gap-2 px-5 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-md shadow-blue-600/10 hover:scale-[1.01]"
-                  >
-                    <ShoppingCart size={15} />
-                    <span>Dial extension 104</span>
-                  </a>
-                </div>
-              </div>
 
             </div>
 

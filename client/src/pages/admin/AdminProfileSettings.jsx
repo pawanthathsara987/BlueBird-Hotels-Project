@@ -129,6 +129,11 @@ export default function AdminProfileSettings() {
 
             localStorage.setItem("adminName", name);
             localStorage.setItem("adminEmail", email);
+            // Keep sidebar avatar in sync
+            const updatedImageUrl = imageFile ? imagePreview : imageUrl;
+            if (updatedImageUrl) {
+                localStorage.setItem("adminImageUrl", updatedImageUrl);
+            }
             toast.success("Profile updated successfully!");
             setTimeout(() => window.location.reload(), 800);
         } catch (error) {
