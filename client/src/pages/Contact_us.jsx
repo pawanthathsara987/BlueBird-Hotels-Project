@@ -92,8 +92,8 @@ export default function ContactPage() {
                                     </svg>
                                 ),
                                 label: "Email Us",
-                                value: "info@bluebirdhotels.lk",
-                                href: "mailto:info@bluebirdhotels.lk",
+                                value: import.meta.env.VITE_SUPPORT_EMAIL,
+                                href: `mailto:${import.meta.env.VITE_SUPPORT_EMAIL}`,
                             },
                             {
                                 icon: (
@@ -102,8 +102,8 @@ export default function ContactPage() {
                                     </svg>
                                 ),
                                 label: "Call Us",
-                                value: "(+94) 70 1950 195",
-                                href: "tel:+94701950195",
+                                value: import.meta.env.VITE_SUPPORT_CONTACT,
+                                href: `tel:${import.meta.env.VITE_SUPPORT_CONTACT}`,
                             },
                             {
                                 icon: (
