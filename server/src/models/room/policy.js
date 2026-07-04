@@ -33,6 +33,15 @@ Policy.init({
         allowNull: false,
         defaultValue: "12:00 PM"
     },
+    refund_handle_business_days: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 15,
+        validate: {
+            min: 10,
+            max: 50
+        }
+    },
     status: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
