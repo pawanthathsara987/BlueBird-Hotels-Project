@@ -35,6 +35,9 @@ const getVehicleTypeName = (vehicle, vehicleTypesById) => {
   return vehicleTypesById.get(Number(typeId)) || "Premium Fleet";
 };
 
+import Header from "../../../components/header";
+import Footer from "../../../components/footer";
+
 export default function VehicleCatalogPage() {
   const [vehicles, setVehicles] = useState([]);
   const [vehicleTypes, setVehicleTypes] = useState([]);
@@ -108,7 +111,9 @@ export default function VehicleCatalogPage() {
   const clearFilters = () => setFilters(defaultFilters);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
+      <Header />
+      <div className="flex-1">
       <section className="relative overflow-hidden border-b border-slate-200/70">
         <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(14,165,233,0.14),rgba(59,130,246,0.06),transparent)]" />
         <div className="absolute -top-24 -right-32 h-80 w-80 rounded-full bg-sky-300/20 blur-3xl" />
@@ -425,7 +430,8 @@ export default function VehicleCatalogPage() {
         )}
       </section>
 
-
+      </div>
+      <Footer />
     </div>
   );
 }

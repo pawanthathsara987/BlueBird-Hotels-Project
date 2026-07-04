@@ -355,6 +355,12 @@ export default function RoomTypeDetails() {
                                         {policy?.cancellation_policy || "Free cancellation up to 48 hours prior to arrival."}
                                     </p>
                                 </div>
+                                <div className="space-y-2 p-4 bg-slate-50/50 rounded-2xl border border-slate-100/30">
+                                    <h4 className="font-bold text-slate-700 text-sm tracking-wide uppercase">Refund Handling Time</h4>
+                                    <p className="text-xs text-slate-500 leading-relaxed mt-2">
+                                        Refunds are handled within {policy?.refund_handle_business_days || 15} business days after approval.
+                                    </p>
+                                </div>
                                 <div className="md:col-span-2 space-y-2 p-4 bg-slate-50/50 rounded-2xl border border-slate-100/30">
                                     <h4 className="font-bold text-slate-700 text-sm tracking-wide uppercase">Payment Policy</h4>
                                     <p className="text-xs text-slate-500 leading-relaxed mt-2">

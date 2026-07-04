@@ -14,6 +14,7 @@ import vehicleTypeRouter from './routes/vehicleTypeRouter.js';
 import paymentRouter from './routes/paymentRouter.js';
 import attendanceRoutes from './routes/attendanceRoutes.js';
 import leaveRoutes from './routes/leaveRoutes.js';
+import galleryRouter from './routes/galleryRoutes.js';
 
 const app = express();
 
@@ -61,6 +62,7 @@ app.use('/api/vehicle-types', vehicleTypeRouter);
 app.use('/api/payment', paymentRouter);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/leave', leaveRoutes);
+app.use('/api/gallery', galleryRouter);
 // Vehicle service logs: nested under vehicles and standalone for log operations
 // Vehicle service logs removed
 app.post('/api/chat', chatBot);

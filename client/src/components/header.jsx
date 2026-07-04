@@ -132,7 +132,7 @@ export default function Header() {
   const rightLinks = [
     { label: "TRAVELS", to: "/booking/tour" },
     { label: "VEHICLES", to: "/vehicles" },
-    { label: "GALLERY", to: "/" },
+    { label: "GALLERY", to: "/gallery" },
     { label: "CONTACT", to: "/contact" },
   ];
 
@@ -249,7 +249,7 @@ export default function Header() {
             ) : (
               <button
                 type="button"
-                onClick={() => navigate("/customerLogin")}
+                onClick={() => navigate("/customerLogin", { state: { from: location.pathname } })}
                 className="px-4 py-2 text-sm font-semibold text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200 cursor-pointer"
               >
                 Sign In
@@ -382,7 +382,7 @@ export default function Header() {
                 { label: "FAQ", to: "/faq" },
                 { label: "Travels", to: "/booking/tour" },
                 { label: "Vehicles", to: "/vehicles" },
-                { label: "Gallery", to: "/" },
+                { label: "Gallery", to: "/gallery" },
                 { label: "Contact", to: "/contact" },
               ].map((l) => (
                 <Link

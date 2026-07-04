@@ -182,6 +182,7 @@ export default function RentalsTab({ vehicles, setVehicles, isEmptyState, filter
                     <span className="text-[10px] text-slate-500 block">
                       {new Date(v.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                     </span>
+                    <span className="text-[10px] text-slate-500 font-medium block mt-0.5">{new Date(v.startDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
                   </div>
                 </div>
 

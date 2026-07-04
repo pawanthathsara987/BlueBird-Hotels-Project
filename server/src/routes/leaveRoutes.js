@@ -8,7 +8,9 @@ import {
     createLeaveRequest,
     updateLeaveRequest,
     deleteLeaveRequest,
-    updateLeaveStatus
+    updateLeaveStatus,
+    getRoleLeaveLimits,
+    updateRoleLeaveLimits
 } from "../controllers/leaveController.js";
 
 const router = express.Router();
@@ -25,5 +27,9 @@ router.post("/requests", createLeaveRequest);
 router.put("/requests/:id", updateLeaveRequest);
 router.delete("/requests/:id", deleteLeaveRequest);
 router.patch("/requests/:id/status", updateLeaveStatus);
+
+// Role Leave Limits Routes
+router.get("/role-limits", getRoleLeaveLimits);
+router.put("/role-limits", updateRoleLeaveLimits);
 
 export default router;

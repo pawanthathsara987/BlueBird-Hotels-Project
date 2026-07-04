@@ -55,6 +55,7 @@ async function seed() {
                 payment_policy: "No prepayment required. Secure your booking online and pay 50% advance on checkout to hold your luxury stay.",
                 check_in_time: "2:00 PM",
                 check_out_time: "12:00 PM",
+                refund_handle_business_days: 15,
                 status: true
             });
             console.log('+ Created Default Hotel Policy');
