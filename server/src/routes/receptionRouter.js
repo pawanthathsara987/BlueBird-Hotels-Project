@@ -48,10 +48,11 @@ router.get('/drivers', getDrivers);
 router.get('/vehicles', getVehicles);
 
 // Vehicle Rentals (Reception side)
-import { getReceptionVehicleBookings, createReceptionVehicleBooking, cancelReceptionVehicleBooking, getDriverPricing, checkVehicleAvailability, getReceptionVehiclePolicy } from '../controllers/reception/receptionVehicleBookingController.js';
+import { getReceptionVehicleBookings, createReceptionVehicleBooking, cancelReceptionVehicleBooking, getDriverPricing, checkVehicleAvailability, getReceptionVehiclePolicy, collectVehicleBalancePayment } from '../controllers/reception/receptionVehicleBookingController.js';
 router.get('/vehicle-bookings', getReceptionVehicleBookings);
 router.post('/vehicle-bookings', createReceptionVehicleBooking);
 router.put('/vehicle-bookings/:id/cancel', cancelReceptionVehicleBooking);
+router.put('/vehicle-bookings/:id/collect-balance', collectVehicleBalancePayment);
 router.get('/driver-pricing', getDriverPricing);
 router.get('/vehicle-bookings/check-availability', checkVehicleAvailability);
 router.get('/vehicle-policy', getReceptionVehiclePolicy);
