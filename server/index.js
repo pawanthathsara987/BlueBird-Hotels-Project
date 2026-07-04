@@ -28,6 +28,34 @@ async function startServer() {
       // Ignore if already correct
     }
 
+    // Patch tour_bookings table for remaining balance payments
+    try {
+      await sequelize.query(
+        `ALTER TABLE tour_bookings ADD COLUMN balancePaidAt DATETIME NULL`
+      );
+      console.log("✅ Added balancePaidAt column to tour_bookings");
+    } catch (e) {
+      // Ignore if already exists
+    }
+
+    try {
+      await sequelize.query(
+        `ALTER TABLE tour_bookings ADD COLUMN balancePaymentMethod VARCHAR(50) NULL`
+      );
+      console.log("✅ Added balancePaymentMethod column to tour_bookings");
+    } catch (e) {
+      // Ignore if already exists
+    }
+
+    try {
+      await sequelize.query(
+        `ALTER TABLE tour_bookings ADD COLUMN balanceCollectedBy INT NULL`
+      );
+      console.log("✅ Added balanceCollectedBy column to tour_bookings");
+    } catch (e) {
+      // Ignore if already exists
+    }
+
     // await sequelize.sync({ alter: false }); // Keep startup read-only against existing tables
     console.log('✅ Models synced');
 
