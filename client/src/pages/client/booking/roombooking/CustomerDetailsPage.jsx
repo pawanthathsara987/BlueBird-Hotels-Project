@@ -19,6 +19,7 @@ export default function CustomerDetailsPage() {
     // Preserve checkout state passed from BookingSummary
     const bookingData = location.state?.bookingData || {};
     const selectedRooms = location.state?.selectedRooms || [];
+    const airportPickup = location.state?.airportPickup || null;
 
     const userNationality = bookingData.nationality || "";
     const isSriLankan = userNationality === "Sri Lankan";
@@ -241,7 +242,8 @@ export default function CustomerDetailsPage() {
                 navigate("/payment", {
                     state: {
                         bookingData,
-                        selectedRooms
+                        selectedRooms,
+                        airportPickup
                     }
                 });
             } catch (error) {
@@ -339,7 +341,8 @@ export default function CustomerDetailsPage() {
             navigate("/payment", {
                 state: {
                     bookingData,
-                    selectedRooms
+                    selectedRooms,
+                    airportPickup
                 }
             });
 
@@ -778,6 +781,12 @@ export default function CustomerDetailsPage() {
                                         <span className="font-bold text-stone-900">{import.meta.env.VITE_CURRENCY_TYPE}{(room.pricePerNight * nights).toFixed(2)}</span>
                                     </div>
                                 ))}
+                                {airportPickup?.enabled && airportPickup.flightNo && (
+                                    <div className="flex justify-between text-xs py-1.5 px-3 bg-emerald-50 border border-emerald-100 rounded-xl font-medium text-emerald-800">
+                                        <span className="font-semibold">Flight Number</span>
+                                        <span className="font-bold">{airportPickup.flightNo}</span>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Price Breakdown */}

@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import axios from "axios";
+import bluebirdLogo from "../../../assets/bluebird logo.png";
 
 export default function BookingsTab({
   bookings,
@@ -29,8 +30,11 @@ export default function BookingsTab({
   const [refundReason, setRefundReason] = useState("");
   const [refundPaymentMethod, setRefundPaymentMethod] = useState("Cash");
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
+  const [showAirportPickupInRefundModal, setShowAirportPickupInRefundModal] = useState(false);
   const [refundHistory, setRefundHistory] = useState([]);
   const [isSubmittingRefund, setIsSubmittingRefund] = useState(false);
+  const [isPickupCancelModalOpen, setIsPickupCancelModalOpen] = useState(false);
+  const [isSubmittingPickupCancel, setIsSubmittingPickupCancel] = useState(false);
 
   const selectedPickupPrice = selectedBooking?.raw?.airportPickup?.price > 0 
     ? parseFloat(selectedBooking.raw.airportPickup.price) 
@@ -78,6 +82,7 @@ export default function BookingsTab({
       );
       if (response.data.success) {
         setRefundEligibility(response.data);
+        setShowAirportPickupInRefundModal(actualPickup || shouldSelectAll);
         
         let roomsInit = actualRoomId ? [actualRoomId] : [];
         let pickupInit = actualPickup;
@@ -148,6 +153,7 @@ export default function BookingsTab({
 
     if (updatedRooms.length === 0 && !updatedPickup) {
       setRefundCalculation(null);
+      setShowAirportPickupInRefundModal(false);
       return;
     }
 
@@ -168,6 +174,80 @@ export default function BookingsTab({
       }
     } catch (error) {
       console.error("Error calculating refund:", error);
+    }
+  };
+
+  const handleCloseRefundModal = () => {
+    setIsRefundModalOpen(false);
+    setShowAirportPickupInRefundModal(false);
+  };
+
+  const handleOpenPickupCancelModal = () => {
+    if (!selectedBooking?.raw?.airportPickup || selectedBooking.raw.airportPickup.status === "CANCELLED") {
+      return;
+    }
+    setIsPickupCancelModalOpen(true);
+  };
+
+  const handleClosePickupCancelModal = () => {
+    setIsPickupCancelModalOpen(false);
+  };
+
+  const handleConfirmPickupCancel = async () => {
+    if (!selectedBooking?.realId) return;
+
+    setIsSubmittingPickupCancel(true);
+    try {
+      const token = localStorage.getItem("customerToken");
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api"}/customers/bookings/${selectedBooking.realId}/airport-pickup/cancel`,
+        {},
+        { headers }
+      );
+
+      if (response.data.success) {
+        const pickupPrice = response.data.refundAmount || selectedPickupPrice;
+        setBookings((prev) => prev.map((booking) =>
+          booking.realId === selectedBooking.realId
+            ? {
+                ...booking,
+                amount: response.data.newTotal ?? booking.amount,
+                raw: booking.raw
+                  ? {
+                      ...booking.raw,
+                      airportPickup: booking.raw.airportPickup
+                        ? { ...booking.raw.airportPickup, status: "CANCELLED" }
+                        : booking.raw.airportPickup
+                    }
+                  : booking.raw
+              }
+            : booking
+        ));
+
+        setSelectedBooking((prev) => prev ? {
+          ...prev,
+          amount: response.data.newTotal ?? prev.amount,
+          raw: prev.raw
+            ? {
+                ...prev.raw,
+                airportPickup: prev.raw.airportPickup
+                  ? { ...prev.raw.airportPickup, status: "CANCELLED" }
+                  : prev.raw.airportPickup
+              }
+            : prev.raw
+        } : prev);
+
+        toast.success(`Airport pickup cancelled successfully. ${CURRENCY} ${pickupPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })} removed from the booking total.`);
+        setIsPickupCancelModalOpen(false);
+      } else {
+        toast.error(response.data.message || "Failed to cancel airport pickup.");
+      }
+    } catch (error) {
+      console.error("Error cancelling airport pickup:", error);
+      toast.error(error.response?.data?.message || "Failed to cancel airport pickup.");
+    } finally {
+      setIsSubmittingPickupCancel(false);
     }
   };
 
@@ -193,6 +273,66 @@ export default function BookingsTab({
         { headers }
       );
       if (response.data.success) {
+        const activeRooms = selectedBooking?.raw?.bookedRooms?.filter((room) => room.status !== "cancelled") || [];
+        const allActiveRoomsSelected = activeRooms.length > 0 && selectedRefundRooms.length === activeRooms.length;
+        const shouldCancelPickupNow = selectedRefundPickup || allActiveRoomsSelected;
+        const hasAnyRoomCancellation = selectedRefundRooms.length > 0;
+        const nextBookingStatus = allActiveRoomsSelected && shouldCancelPickupNow
+          ? "cancelled"
+          : (hasAnyRoomCancellation || shouldCancelPickupNow)
+            ? "cancellation pending"
+            : selectedBooking?.status;
+
+        setBookings((prev) => prev.map((booking) => {
+          if (booking.realId !== selectedBooking.realId) return booking;
+
+          const nextBookedRooms = booking.raw?.bookedRooms?.map((room) => {
+            if (!selectedRefundRooms.includes(room.id)) return room;
+            return { ...room, status: "cancelled" };
+          }) || booking.raw?.bookedRooms;
+
+          return {
+            ...booking,
+            status: nextBookingStatus,
+            amount: response.data?.data?.amount ? booking.amount : booking.amount,
+            raw: booking.raw
+              ? {
+                  ...booking.raw,
+                  status: nextBookingStatus,
+                  bookedRooms: nextBookedRooms,
+                  airportPickup: booking.raw.airportPickup
+                    ? {
+                        ...booking.raw.airportPickup,
+                        status: shouldCancelPickupNow ? "CANCELLED" : booking.raw.airportPickup.status
+                      }
+                    : booking.raw.airportPickup
+                }
+              : booking.raw
+          };
+        }));
+
+        setSelectedBooking((prev) => prev ? {
+          ...prev,
+          status: nextBookingStatus,
+          raw: prev.raw
+            ? {
+                ...prev.raw,
+                status: nextBookingStatus,
+                bookedRooms: prev.raw.bookedRooms?.map((room) => (
+                  selectedRefundRooms.includes(room.id)
+                    ? { ...room, status: "cancelled" }
+                    : room
+                )),
+                airportPickup: prev.raw.airportPickup
+                  ? {
+                      ...prev.raw.airportPickup,
+                      status: shouldCancelPickupNow ? "CANCELLED" : prev.raw.airportPickup.status
+                    }
+                  : prev.raw.airportPickup
+              }
+            : prev.raw
+        } : prev);
+
         toast.success("Refund request successfully submitted and is pending review!");
         setIsRefundModalOpen(false);
         fetchRefundHistory(selectedBooking.realId);
@@ -292,20 +432,33 @@ export default function BookingsTab({
     const checkIn = formatDate(booking.checkIn);
     const checkOut = formatDate(booking.checkOut);
     const createdDate = formatDateTime(booking.raw?.createdAt);
+    const supportContact = "+94701950195";
+    const customerName = profile.name || "Valued Guest";
+    const customerEmail = profile.email || "";
+    const customerPhone = profile.phone || "";
+    const customerCountry = profile.country || "Sri Lanka";
+    const boardSummary = booking.raw?.bookedRooms?.map((room) => room.board_type || "Room Only").filter(Boolean).join(", ") || "Room Only";
+    const mealPlan = boardSummary;
 
     const successPayments = booking.raw?.payments?.filter(p => p.status === "success" || p.status === "paid") || [];
     const totalPaid = successPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
     const balanceDue = Math.max(0, booking.amount - totalPaid);
+    const totalRooms = booking.raw?.bookedRooms?.length || booking.rooms?.length || 0;
+    const totalPax = (booking.raw?.bookedRooms || []).reduce((sum, room) => sum + (room.adults || 0) + (room.kids || 0), 0) || booking.guestsSummary || "";
+    const pickupStatus = (booking.raw?.airportPickup?.status || "").toUpperCase();
+    const pickupPrice = pickupStatus !== "CANCELLED"
+      ? parseFloat(booking.raw?.airportPickup?.price || booking.airportPickupFee || 0)
+      : 0;
 
     const priceBreakdownRows = booking.raw?.bookedRooms?.map((room, idx) => {
-      const rate = parseFloat(room.Room?.roomPrices?.[0]?.price || room.pricePerNight || 0);
-      const rowTotal = rate * booking.nights;
+      const roomTotal = parseFloat(room.price || room.totalPrice || room.pricePerNight || 0);
+      const rate = booking.nights > 0 ? roomTotal / booking.nights : roomTotal;
       return `
         <tr>
           <td>Room ${idx + 1}: ${room.Room?.roomType?.type || "Deluxe Suite"} (${room.board_type || "Room Only"})</td>
           <td style="text-align: center;">${booking.nights}</td>
           <td style="text-align: right;">${CURRENCY} ${rate.toFixed(2)}</td>
-          <td style="text-align: right;">${CURRENCY} ${rowTotal.toFixed(2)}</td>
+          <td style="text-align: right;">${CURRENCY} ${roomTotal.toFixed(2)}</td>
         </tr>
       `;
     }).join("") || "";
@@ -314,113 +467,137 @@ export default function BookingsTab({
     const extraChargesRows = hasPickup ? `
       <tr>
         <td colspan="3">Airport Shuttle Transfer Service (Katunayake Fixed Point)</td>
-        <td style="text-align: right;">${CURRENCY} 15,000.00</td>
+        <td style="text-align: right;">${CURRENCY} ${pickupPrice.toFixed(2)}</td>
       </tr>
     ` : "";
 
     const baseAmount = booking.amount - (booking.tax || 0);
+    const baseWithoutPickup = Math.max(0, baseAmount - pickupPrice);
 
     const printWindow = window.open("", "_blank");
     printWindow.document.write(`
       <html>
       <head>
-        <title>Invoice - ${booking.id}</title>
+        <title>Proforma Invoice - ${booking.id}</title>
         <style>
-          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; margin: 40px; line-height: 1.5; }
-          .header { display: flex; justify-content: space-between; border-bottom: 2px solid #1e3b8a; padding-bottom: 20px; }
-          .logo { font-size: 24px; font-weight: 900; color: #1e3a8a; letter-spacing: 1px; }
-          .title { font-size: 28px; font-weight: 800; text-align: right; color: #1e293b; }
-          .details { display: flex; justify-content: space-between; margin-top: 30px; }
-          .section-title { font-size: 10px; font-weight: bold; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
-          .info-block { flex: 1; }
-          table { width: 100%; border-collapse: collapse; margin-top: 40px; }
-          th { background-color: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-size: 12px; font-weight: bold; text-transform: uppercase; padding: 12px 10px; text-align: left; }
-          td { border-bottom: 1px solid #f1f5f9; padding: 12px 10px; font-size: 13px; color: #334155; }
-          .totals { width: 300px; float: right; margin-top: 30px; font-size: 13px; }
-          .totals-row { display: flex; justify-content: space-between; padding: 6px 0; }
-          .grand-total { border-top: 2px solid #e2e8f0; padding-top: 10px; margin-top: 10px; font-size: 18px; font-weight: 900; color: #1e3a8a; }
-          .footer { margin-top: 150px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; }
+          * { box-sizing: border-box; }
+          body { font-family: Georgia, 'Times New Roman', serif; color: #111827; margin: 0; padding: 0; line-height: 1.35; background: #fff; }
+          .page { width: 100%; max-width: 900px; margin: 0 auto; padding: 32px 40px 28px; }
+          .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
+          .brand { width: 240px; text-align: center; }
+          .brand img { width: 120px; height: auto; display: block; margin: 0 auto 8px; }
+          .brand .company { font-size: 16px; font-weight: 700; }
+          .brand .sub { font-size: 13px; margin-top: 3px; }
+          .title-block { text-align: center; flex: 1; padding-top: 12px; }
+          .title { font-size: 28px; font-weight: 700; letter-spacing: 0.5px; }
+          .meta { width: 250px; font-size: 14px; padding-top: 14px; }
+          .meta div { margin-bottom: 1px; }
+          .top-grid { display: flex; justify-content: space-between; margin-top: 20px; gap: 24px; }
+          .top-left { width: 56%; font-size: 15px; }
+          .top-left div { margin-bottom: 2px; }
+          .top-right { width: 40%; font-size: 15px; }
+          .section-label { margin: 44px 0 12px; font-size: 17px; font-weight: 700; text-transform: uppercase; }
+          table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+          th { font-size: 12px; text-transform: uppercase; text-align: left; padding: 10px 8px; border-bottom: 1px solid #111; }
+          td { font-size: 14px; padding: 10px 8px; border-bottom: 1px solid #d1d5db; vertical-align: top; }
+          .rates td { border-bottom: 0; }
+          .rate-line { display: flex; justify-content: space-between; gap: 20px; font-size: 15px; margin-bottom: 4px; }
+          .rate-desc { width: 58%; }
+          .rate-nights { width: 16%; text-align: center; }
+          .rate-amount { width: 26%; text-align: right; font-weight: 700; }
+          .totals-box { width: 360px; margin-left: auto; margin-top: 8px; font-size: 15px; }
+          .totals-row { display: flex; justify-content: space-between; padding: 4px 0; }
+          .grand-total { font-weight: 700; border-top: 1px solid #111; border-bottom: 3px double #111; padding: 6px 0; margin-top: 4px; }
+          .payment-box { margin-top: 24px; padding: 14px 16px; border: 1px solid #d1d5db; }
+          .payment-title { font-weight: 700; margin-bottom: 8px; text-transform: uppercase; }
+          .footer { margin-top: 38px; text-align: center; font-size: 15px; font-weight: 700; }
+          .support { margin-top: 18px; text-align: center; font-size: 14px; }
+          .muted { color: #374151; font-size: 13px; }
         </style>
       </head>
       <body>
-        <div class="header">
-          <div>
-            <div class="logo">BLUEBIRD HOTELS</div>
-            <div style="font-size: 12px; color: #64748b;">Galle Face, Colombo, Sri Lanka</div>
+        <div class="page">
+          <div class="header">
+            <div class="brand">
+              <img src="${bluebirdLogo}" alt="BlueBird logo" />
+              <div class="company">Hotels & Travels (PVT) LTD</div>
+            </div>
+            <div class="title-block">
+              <div class="title">PROFORMA INVOICE</div>
+            </div>
+            <div class="meta">
+              <div>Date: ${createdDate}</div>
+              <div>Agent: ${customerName}</div>
+              <div>Country: ${customerCountry}</div>
+              <div>Purpose: Holiday</div>
+            </div>
           </div>
-          <div>
-            <div class="title">INVOICE</div>
-            <div style="font-size: 13px; font-weight: bold;">Invoice No: INV-${booking.realId}</div>
-            <div style="font-size: 12px; color: #64748b;">Date: ${createdDate}</div>
-          </div>
-        </div>
 
-        <div class="details">
-          <div class="info-block">
-            <div class="section-title">Billed To</div>
-            <div style="font-weight: bold;">${profile.name || "Valued Guest"}</div>
-            <div style="font-size: 12px;">${profile.email || ""}</div>
-            <div style="font-size: 12px;">${profile.phone || ""}</div>
-            <div style="font-size: 12px;">${profile.address || ""}</div>
+          <div class="top-grid">
+            <div class="top-left">
+              <div>Guest Name: ${customerName}</div>
+              <div>Arrival Date: ${checkIn}</div>
+              <div>Departure Date: ${checkOut}</div>
+              <div>No of Rooms: ${String(totalRooms).padStart(2, "0")}</div>
+              <div>No of Nights: ${String(booking.nights || 0).padStart(2, "0")}</div>
+              <div>Pax Count: ${totalPax || booking.guestsSummary || ""}</div>
+              <div>Meal Plan: ${mealPlan}</div>
+            </div>
+            <div class="top-right">
+              <div class="muted">Invoice No: INV-${booking.realId}</div>
+              <div class="muted">Booking Ref: ${booking.id}</div>
+              <div class="muted">Status: ${booking.status}</div>
+              <div class="muted">Support: ${supportContact}</div>
+            </div>
           </div>
-          <div class="info-block" style="text-align: right;">
-            <div class="section-title">Reservation Summary</div>
-            <div style="font-weight: bold;">Booking Ref: ${booking.id}</div>
-            <div style="font-size: 12px;">Check-In: ${checkIn}</div>
-            <div style="font-size: 12px;">Check-Out: ${checkOut}</div>
-            <div style="font-size: 12px;">Status: ${booking.status}</div>
-          </div>
-        </div>
 
-        <table>
-          <thead>
-            <tr>
-              <th>Stay Service Item Description</th>
-              <th style="text-align: center; width: 80px;">Nights</th>
-              <th style="text-align: right; width: 120px;">Nightly Price</th>
-              <th style="text-align: right; width: 140px;">Line Price</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${priceBreakdownRows}
-            ${extraChargesRows}
-          </tbody>
-        </table>
+          <div class="section-label">Room Rates:</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th style="text-align:center; width: 100px;">Nights</th>
+                <th style="text-align:right; width: 160px;">Rate</th>
+                <th style="text-align:right; width: 160px;">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${priceBreakdownRows}
+              ${extraChargesRows}
+            </tbody>
+          </table>
 
-        <div class="totals">
-          <div class="totals-row">
-            <span>Base Charge:</span>
-            <span>${CURRENCY} ${(baseAmount - (hasPickup ? 15000 : 0)).toFixed(2)}</span>
+          <div class="totals-box">
+            <div class="totals-row">
+              <span>Total Amount</span>
+              <span>:</span>
+              <span>${CURRENCY} ${booking.amount.toFixed(2)}</span>
+            </div>
+            ${hasPickup ? `
+            <div class="totals-row">
+              <span>Airport Pickup</span>
+              <span>:</span>
+              <span>${CURRENCY} ${pickupPrice.toFixed(2)}</span>
+            </div>` : ""}
+            <div class="totals-row payment-box">
+              <span class="payment-title">Payment Details</span>
+            </div>
+            <div class="totals-row">
+              <span>Amount Paid (Deposit)</span>
+              <span>:</span>
+              <span>${CURRENCY} ${totalPaid.toFixed(2)}</span>
+            </div>
+            <div class="totals-row">
+              <span>Balance Due</span>
+              <span>:</span>
+              <span>${CURRENCY} ${balanceDue.toFixed(2)}</span>
+            </div>
           </div>
-          ${hasPickup ? `
-          <div class="totals-row">
-            <span>Service Charge (Pickup):</span>
-            <span>${CURRENCY} 15,000.00</span>
-          </div>` : ""}
-          <div class="totals-row">
-            <span>Taxes (${booking.taxPercentage}%):</span>
-            <span>${CURRENCY} ${booking.tax.toFixed(2)}</span>
-          </div>
-          <div class="totals-row grand-total">
-            <span>Total Payable:</span>
-            <span>${CURRENCY} ${booking.amount.toFixed(2)}</span>
-          </div>
-          <div class="totals-row" style="font-weight: bold; color: #10b981; border-top: 1px dashed #e2e8f0; padding-top: 6px; margin-top: 6px;">
-            <span>Amount Paid (Deposit):</span>
-            <span>${CURRENCY} ${totalPaid.toFixed(2)}</span>
-          </div>
-          <div class="totals-row" style="font-weight: bold; color: #f59e0b;">
-            <span>Balance Due at Check-In:</span>
-            <span>${CURRENCY} ${balanceDue.toFixed(2)}</span>
-          </div>
-        </div>
 
-        <div style="clear: both;"></div>
-
-        <div class="footer">
-          Thank you for choosing BlueBird Luxury Hotels. This is a system-generated invoice statement.
-          <br/>
-          For billing support, contact: billing@bluebird.lk | +94 11 234 5678
+          <div class="footer">
+            We thank you for your stay and hope to see you again in the future....
+          </div>
+          <div class="support">Support Contact: ${supportContact}</div>
         </div>
       </body>
       </html>
@@ -995,6 +1172,9 @@ export default function BookingsTab({
                       <p className="text-slate-500 text-[10px]">
                         Room Assigned: <span className="font-bold text-slate-700">{room.Room?.room_number ? `Room ${room.Room.room_number}` : "Assigning upon arrival"}</span>
                       </p>
+                      <p className="text-slate-500 text-[10px] mt-1">
+                        Room Price: <span className="font-bold text-slate-700">{CURRENCY} {parseFloat(room.price || room.totalPrice || room.pricePerNight || 0).toFixed(2)}</span>
+                      </p>
                       {room.status === "cancelled" ? (
                         <span className="text-rose-600 font-extrabold text-[9px] block mt-1.5 uppercase tracking-wide">🚫 Cancelled</span>
                       ) : (room.status === "checked_in" || room.status === "checked_out") ? (
@@ -1020,18 +1200,22 @@ export default function BookingsTab({
                     <MapPin size={14} className="text-emerald-700" />
                     Airport Shuttle Pickup Info (Active)
                   </div>
-                  <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 text-[11px] text-emerald-800 font-semibold">
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-[11px] text-emerald-800 font-semibold">
                     <p>Location: Katunayake (Fixed)</p>
                     <p>Date: {formatDate(selectedBooking.raw.airportPickup.pickup_date)}</p>
                     <p>Time: {selectedBooking.raw.airportPickup.pickup_time}</p>
+                    <p>Flight No: {selectedBooking.raw.airportPickup.flight_number || "—"}</p>
+                    <p>Passengers: {selectedBooking.raw.airportPickup.passenger_count || 1}</p>
+                    <p>Baggage: {selectedBooking.raw.airportPickup.baggage_count || 0}</p>
                     <p>Status: {selectedBooking.raw.airportPickup.status}</p>
+                    <p>Pickup Type: Private Shuttle</p>
                     {selectedBooking.raw.airportPickup.status === "CANCELLED" ? (
                       <p className="col-span-2 text-rose-600 font-extrabold uppercase text-[10px] tracking-wide mt-1.5 flex items-center gap-1">
                         🚫 Airport Shuttle Cancelled
                       </p>
                     ) : (selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && selectedBooking.status.toLowerCase() !== "cancellation pending") ? (
                       <button
-                        onClick={() => handleRequestRefundClick(null, true)}
+                        onClick={handleOpenPickupCancelModal}
                         className="col-span-2 mt-2 px-3 py-1.5 bg-rose-50 hover:bg-rose-105 border border-rose-200 text-rose-700 font-extrabold rounded-lg text-[9px] hover:underline cursor-pointer flex items-center justify-center gap-1.5 w-full uppercase tracking-wider transition-all"
                       >
                         <XCircle size={12} className="text-rose-500" />
@@ -1183,7 +1367,7 @@ export default function BookingsTab({
         <>
           <div 
             className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs z-55 animate-fadeIn"
-            onClick={() => setIsRefundModalOpen(false)}
+            onClick={handleCloseRefundModal}
           />
           <div className="fixed inset-0 flex items-center justify-center z-55 p-4">
             <div className="bg-white rounded-3xl p-6 max-w-lg w-full border border-slate-100 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto animate-scaleUp">
@@ -1193,7 +1377,7 @@ export default function BookingsTab({
                   <h4 className="font-serif font-bold text-base text-slate-800">Request Booking Refund</h4>
                 </div>
                 <button 
-                  onClick={() => setIsRefundModalOpen(false)}
+                  onClick={handleCloseRefundModal}
                   className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition cursor-pointer"
                 >
                   <XCircle size={18} />
@@ -1246,7 +1430,7 @@ export default function BookingsTab({
                   )}
 
                   {/* Airport pickup */}
-                  {refundEligibility.eligibleAirportPickup && (
+                  {showAirportPickupInRefundModal && refundEligibility.eligibleAirportPickup && (
                     <div className="space-y-2 pt-2">
                       <p className="font-bold text-slate-700">Airport Transfer Shuttle Service:</p>
                       <label 
@@ -1341,7 +1525,7 @@ export default function BookingsTab({
                 <div className="flex gap-2.5 pt-2">
                   <button
                     type="button"
-                    onClick={() => setIsRefundModalOpen(false)}
+                    onClick={handleCloseRefundModal}
                     className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition cursor-pointer text-center"
                   >
                     Close
@@ -1362,6 +1546,74 @@ export default function BookingsTab({
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Airport Pickup Cancel Confirmation Modal */}
+      {isPickupCancelModalOpen && selectedBooking?.raw?.airportPickup && (
+        <>
+          <div
+            className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs z-55 animate-fadeIn"
+            onClick={handleClosePickupCancelModal}
+          />
+          <div className="fixed inset-0 flex items-center justify-center z-55 p-4">
+            <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-100 shadow-2xl space-y-4 animate-scaleUp">
+              <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-6 h-6 text-rose-600" />
+                  <h4 className="font-serif font-bold text-base text-slate-800">Cancel Airport Pickup</h4>
+                </div>
+                <button
+                  onClick={handleClosePickupCancelModal}
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+                >
+                  <XCircle size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-3 text-xs text-slate-700">
+                <p className="text-slate-600 leading-relaxed">
+                  This will cancel only the airport pickup service. Your room booking will remain active.
+                </p>
+
+                <div className="grid grid-cols-2 gap-2 rounded-2xl border border-rose-100 bg-rose-50/40 p-3.5 font-semibold text-slate-700">
+                  <p>Flight No: {selectedBooking.raw.airportPickup.flight_number || "—"}</p>
+                  <p>Passengers: {selectedBooking.raw.airportPickup.passenger_count || 1}</p>
+                  <p>Baggage: {selectedBooking.raw.airportPickup.baggage_count || 0}</p>
+                  <p>Pickup: {formatDate(selectedBooking.raw.airportPickup.pickup_date)} {selectedBooking.raw.airportPickup.pickup_time || ""}</p>
+                </div>
+
+                <div className="rounded-2xl border border-amber-100 bg-amber-50/60 p-3 text-amber-900 font-semibold">
+                  Cancellation will remove the shuttle charge from the booking total.
+                </div>
+              </div>
+
+              <div className="flex gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={handleClosePickupCancelModal}
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition cursor-pointer text-center"
+                >
+                  Keep Pickup
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmPickupCancel}
+                  disabled={isSubmittingPickupCancel}
+                  className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl font-bold transition cursor-pointer text-center flex items-center justify-center gap-1.5"
+                >
+                  {isSubmittingPickupCancel ? (
+                    <>
+                      <RefreshCw size={13} className="animate-spin" />
+                      Cancelling...
+                    </>
+                  ) : (
+                    "Cancel Pickup"
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </>

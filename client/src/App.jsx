@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import HomePage from "./pages/homePage";
-import StaffLogin from "./pages/admin/StaffLogin";
+import StaffLogin from "./pages/auth/StaffLogin";
 import CustomerLoginPage from "./pages/auth/CustomerLoginPage";
 import axios from "axios";
 import { getSubdomain, getSubdomainUrl } from "./utils/subdomain";
