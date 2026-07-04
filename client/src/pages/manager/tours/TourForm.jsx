@@ -472,13 +472,13 @@ export default function AddTour({ onSave, onCancel, isEdit = false, initialData 
 
                 {/* Price */}
                 <div>
-                  <FieldLabel text={`Price (${process.env.CURRENCY_TYPE || 'LKR'})`} required error={errors.price} />
+                  <FieldLabel text={`Price (${import.meta.env.VITE_CURRENCY_TYPE || 'LKR'})`} required error={errors.price} />
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">{import.meta.env.VITE_CURRENCY_TYPE || "LKR"}</span>
                     <input
                       type="number" name="price" value={form.price} onChange={handleChange}
                       placeholder="0.00" min="0"
-                      className={`${inputCls(errors.price)} ${(process.env.CURRENCY_TYPE || 'LKR').length > 1 ? 'pl-14' : 'pl-7'}`}
+                      className={`${inputCls(errors.price)} ${(import.meta.env.VITE_CURRENCY_TYPE || 'LKR').length > 1 ? 'pl-14' : 'pl-7'}`}
                     />
                   </div>
                 </div>

@@ -8,6 +8,8 @@ export default function TourInquiriesManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('pending');
+  const [tourFilter, setTourFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
   const [expandedId, setExpandedId] = useState(null);
   const [processing, setProcessing] = useState(null);
   const [emailingInquiryId, setEmailingInquiryId] = useState(null);
@@ -68,7 +70,7 @@ export default function TourInquiriesManagement() {
   };
 
   const statusCounts = useMemo(() => {
-    const counts = { pending: 0, progress: 0, accepted: 0, rejected: 0 };
+    const counts = { pending: 0, progress: 0, accepted: 0, rejected: 0, canceled: 0 };
     allInquiries.forEach((inq) => {
       if (counts[inq.status] !== undefined) {
         counts[inq.status] += 1;
@@ -107,14 +109,26 @@ export default function TourInquiriesManagement() {
 
   useEffect(() => {
     const filtered = allInquiries.filter((inq) => {
-      if (filter === 'pending') return inq.status === 'pending';
-      if (filter === 'progress') return inq.status === 'progress';
-      if (filter === 'accepted') return inq.status === 'accepted';
-      if (filter === 'rejected') return inq.status === 'rejected';
-      return true;
+      // Status filter
+      let matchStatus = false;
+      if (filter === 'pending') matchStatus = inq.status === 'pending';
+      else if (filter === 'progress') matchStatus = inq.status === 'progress';
+      else if (filter === 'accepted') matchStatus = inq.status === 'accepted';
+      else if (filter === 'rejected') matchStatus = inq.status === 'rejected';
+      else if (filter === 'canceled') matchStatus = inq.status === 'canceled';
+      else matchStatus = true;
+
+      // Tour filter (search by tour package name or destination)
+      const tourName = getTourPackageName(inq).toLowerCase();
+      const matchTour = tourFilter ? tourName.includes(tourFilter.toLowerCase()) : true;
+
+      // Date filter (exact match on startDate, format: YYYY-MM-DD)
+      const matchDate = dateFilter ? inq.startDate === dateFilter : true;
+
+      return matchStatus && matchTour && matchDate;
     });
     setInquiries(filtered);
-  }, [allInquiries, filter]);
+  }, [allInquiries, filter, tourFilter, dateFilter]);
 
   const handleAccept = async (inquiryId) => {
     setProcessing(inquiryId);
@@ -297,7 +311,7 @@ export default function TourInquiriesManagement() {
       <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 md:py-10">
         <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap gap-2">
-            {['pending', 'progress', 'accepted', 'rejected'].map(status => (
+            {['pending', 'progress', 'accepted', 'rejected', 'canceled'].map(status => (
               <button
                 key={status}
                 onClick={() => setFilter(status)}
@@ -309,20 +323,48 @@ export default function TourInquiriesManagement() {
                       ? 'bg-emerald-100 text-emerald-800 shadow-inner'
                       : status === 'accepted'
                       ? 'bg-blue-100 text-blue-800 shadow-inner'
+                      : status === 'canceled'
+                      ? 'bg-gray-200 text-gray-800 shadow-inner'
                       : 'bg-rose-100 text-rose-800 shadow-inner'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
-                {status === 'pending' ? 'Pending' : status === 'progress' ? 'In Progress' : status === 'accepted' ? 'Confirmed' : 'Rejected'}
+                {status === 'pending' ? 'Pending' : status === 'progress' ? 'In Progress' : status === 'accepted' ? 'Confirmed' : status === 'canceled' ? 'Canceled' : 'Rejected'}
                 <span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-bold ${filter === status ? 'bg-black/10 text-slate-900' : 'bg-slate-200 text-slate-700'}`}>
-                  {statusCounts[status]}
+                  {statusCounts[status] || 0}
                 </span>
               </button>
             ))}
           </div>
 
-          <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
-            Active filter: <span className="font-semibold capitalize text-slate-900">{filter}</span>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 border border-slate-200">
+              <span className="text-sm font-medium text-slate-500">Tour:</span>
+              <input
+                type="text"
+                placeholder="Search tour name..."
+                value={tourFilter}
+                onChange={(e) => setTourFilter(e.target.value)}
+                className="bg-transparent text-sm text-slate-900 outline-none w-32 placeholder-slate-400"
+              />
+            </div>
+            <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 border border-slate-200">
+              <span className="text-sm font-medium text-slate-500">Date:</span>
+              <input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="bg-transparent text-sm text-slate-900 outline-none"
+              />
+              {dateFilter && (
+                <button onClick={() => setDateFilter('')} className="text-slate-400 hover:text-slate-600">
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600 border border-transparent">
+              Active status: <span className="font-semibold capitalize text-slate-900">{filter}</span>
+            </div>
           </div>
         </div>
 
@@ -532,7 +574,7 @@ export default function TourInquiriesManagement() {
 
                               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                                 <div>
-                                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Total Package Price ({process.env.CURRENCY_TYPE || 'LKR'}) *</label>
+                                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Total Package Price ({import.meta.env.VITE_CURRENCY_TYPE || 'LKR'}) *</label>
                                   <p className="mb-2 text-xs text-slate-500">Final total for the entire package</p>
                                   <input
                                     type="number"

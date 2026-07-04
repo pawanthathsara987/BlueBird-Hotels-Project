@@ -370,15 +370,20 @@ export const collectBalance = async (req, res) => {
 
     // Create payment entry for the total collected amount (Balance + Security Deposit)
     const payment = await Payment.create({
-      bookingId: booking.id,
-      receivedBy: staffId,
-      type: 'balance',
+      booking_id: booking.id,
+      customer_id: booking.customerId,
+      payment_no: receiptNo || `REC-${Date.now().toString(36).toUpperCase()}`,
       amount: totalCollected,
+      currency: "LKR",
       method: paymentMethod,
-      receiptNo: receiptNo || `REC-${Date.now().toString(36).toUpperCase()}`,
-      receiptImageUrl: receiptImageUrl,
-      notes: (notes ? notes + ' | ' : '') + `Includes $${securityDepositAmount} Security Deposit`,
-      receivedAt: new Date(),
+      status: "success",
+      raw_payload: {
+        receivedBy: staffId,
+        type: 'balance',
+        receiptImageUrl: receiptImageUrl,
+        notes: (notes ? notes + ' | ' : '') + `Includes $${securityDepositAmount} Security Deposit`,
+        receivedAt: new Date(),
+      }
     }, { transaction: t });
 
 
@@ -449,15 +454,20 @@ export const collectFinalSettlement = async (req, res) => {
 
     // Create payment entry for the remaining amount
     const payment = await Payment.create({
-      bookingId: booking.id,
-      receivedBy: staffId,
-      type: 'extra', // categorize as extra/final settlement
+      booking_id: booking.id,
+      customer_id: booking.customerId,
+      payment_no: receiptNo || `REC-F-${Date.now().toString(36).toUpperCase()}`,
       amount: remainingBalance,
+      currency: "LKR",
       method: paymentMethod,
-      receiptNo: receiptNo || `REC-F-${Date.now().toString(36).toUpperCase()}`,
-      receiptImageUrl: receiptImageUrl,
-      notes: notes || 'Final settlement collected',
-      receivedAt: new Date(),
+      status: "success",
+      raw_payload: {
+        receivedBy: staffId,
+        type: 'extra',
+        receiptImageUrl: receiptImageUrl,
+        notes: notes || 'Final settlement collected',
+        receivedAt: new Date(),
+      }
     }, { transaction: t });
 
     // Ensure balancePaidAt is set if it wasn't already

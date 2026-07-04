@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import HomePage from "./pages/homePage";
-import StaffLogin from "./pages/admin/StaffLogin";
+import StaffLogin from "./pages/auth/StaffLogin";
 import CustomerLoginPage from "./pages/auth/CustomerLoginPage";
 import axios from "axios";
 import { getSubdomain, getSubdomainUrl } from "./utils/subdomain";
@@ -19,10 +19,10 @@ if (token) {
 // clear the stored token and redirect the user to the staff login portal on
 // auth subdomain (or customer login on booking subdomain).
 const ROLE_LOGIN_MAP = {
-    admin:        () => getSubdomainUrl("auth", "/staffLogin"),
-    manager:      () => getSubdomainUrl("auth", "/staffLogin"),
+    admin: () => getSubdomainUrl("auth", "/staffLogin"),
+    manager: () => getSubdomainUrl("auth", "/staffLogin"),
     receptionist: () => getSubdomainUrl("auth", "/staffLogin"),
-    customer:     () => "/customerLogin",
+    customer: () => "/customerLogin",
 };
 
 // Endpoints that can legitimately return 401 for wrong credentials.
@@ -110,6 +110,8 @@ import CustomerDashboard from "./pages/client/dashboard/CustomerDashboard";
 import VehicleCatalogPage from "./pages/client/vehicles/VehicleCatalogPage";
 import VehicleDetailsPage from "./pages/client/vehicles/VehicleDetailsPage";
 import VehicleBookingPage from "./pages/client/vehicles/VehicleBookingPage";
+import VehicleBookingSummary from "./pages/client/vehicles/VehicleBookingSummary";
+import VehiclePaymentPage from "./pages/client/vehicles/VehiclePaymentPage";
 import CustomerDetailsPage from "./pages/client/booking/roombooking/CustomerDetailsPage";
 import RoomTypeDetails from "./pages/client/RoomTypeDetails";
 import FaqPage from "./pages/Faq";
@@ -136,7 +138,7 @@ function RedirectToSubdomain({ subdomain, path }) {
 function StaffGuard({ allowedRole, children }) {
     const storedToken = localStorage.getItem("token");
     let isAuthorized = false;
-    
+
     try {
         if (storedToken) {
             const payload = JSON.parse(atob(storedToken.split(".")[1]));
@@ -147,11 +149,11 @@ function StaffGuard({ allowedRole, children }) {
     } catch {
         // invalid token
     }
-    
+
     if (!isAuthorized) {
         return <RedirectToSubdomain subdomain="auth" path="/staffLogin" />;
     }
-    
+
     return children;
 }
 
@@ -164,17 +166,17 @@ export default function App() {
     if (ssoToken) {
         localStorage.setItem("token", ssoToken);
         axios.defaults.headers.common["Authorization"] = `Bearer ${ssoToken}`;
-        
+
         const ssoUser = params.get("user");
         if (ssoUser) {
             localStorage.setItem("user", ssoUser);
         }
-        
+
         const ssoAdminName = params.get("adminName");
         if (ssoAdminName) {
             localStorage.setItem("adminName", ssoAdminName);
         }
-        
+
         const ssoAdminEmail = params.get("adminEmail");
         if (ssoAdminEmail) {
             localStorage.setItem("adminEmail", ssoAdminEmail);
@@ -263,7 +265,9 @@ export default function App() {
                         <Route path="/vehicles" element={<VehicleCatalogPage />} />
                         <Route path="/vehicles/:id" element={<VehicleDetailsPage />} />
                         <Route path="/vehicles/:id/book" element={<VehicleBookingPage />} />
-                        
+                        <Route path="/vehicles/:id/summary" element={<VehicleBookingSummary />} />
+                        <Route path="/vehicles/:id/payment" element={<VehiclePaymentPage />} />
+
                         {/* Redirections for staff routes from booking subdomain */}
                         <Route path="/admin/*" element={<RedirectToSubdomain subdomain="admin" path="/admin" />} />
                         <Route path="/manager/*" element={<RedirectToSubdomain subdomain="manager" path="/manager" />} />
@@ -272,7 +276,7 @@ export default function App() {
                         <Route path="/receptionistLogin" element={<RedirectToSubdomain subdomain="auth" path="/staffLogin" />} />
                         <Route path="/managerLogin" element={<RedirectToSubdomain subdomain="auth" path="/staffLogin" />} />
                         <Route path="/adminLogin" element={<RedirectToSubdomain subdomain="auth" path="/staffLogin" />} />
-                        
+
                         <Route path="/*" element={<HomePage />} />
                     </Routes>
                 );

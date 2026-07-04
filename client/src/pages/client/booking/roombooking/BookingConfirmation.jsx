@@ -4,7 +4,7 @@ import { CheckCircle, ArrowLeft, Home, Calendar, Users } from "lucide-react";
 import { format } from "date-fns";
 
 const BookingConfirmation = () => {
-  const CURRENCY = process.env.CURRENCY_TYPE || "LKR";
+  const CURRENCY = import.meta.env.VITE_CURRENCY_TYPE || "LKR";
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -16,6 +16,7 @@ const BookingConfirmation = () => {
   let selectedRooms = location.state?.selectedRooms || [];
   let bookingConfirmation = location.state?.bookingConfirmation;
   let paymentConfirmation = location.state?.paymentConfirmation;
+  let airportPickup = location.state?.airportPickup;
 
   // LocalStorage fallback for external redirects (PayHere)
   if (!bookingData && orderId) {
@@ -25,6 +26,7 @@ const BookingConfirmation = () => {
         bookingData = stored.bookingData;
         selectedRooms = stored.selectedRooms || [];
         bookingConfirmation = stored.bookingConfirmation;
+        airportPickup = stored.airportPickup || airportPickup;
         paymentConfirmation = { paymentId: query.get("payment_id") || `PAY_PAYHERE_${orderId}` };
       }
     } catch (e) {
@@ -124,6 +126,13 @@ const BookingConfirmation = () => {
 
         {/* Booking Info */}
         <div className="space-y-3 border-t border-b py-6 mb-6">
+          {airportPickup?.enabled && airportPickup.flightNo && (
+            <div className="flex justify-between items-center">
+              <span className="text-stone-600 font-medium">Flight Number</span>
+              <span className="font-semibold text-stone-900">{airportPickup.flightNo}</span>
+            </div>
+          )}
+
           {bookingConfirmation?.bookingId && (
             <div className="flex justify-between items-center">
               <span className="text-stone-600 font-medium">Booking ID</span>

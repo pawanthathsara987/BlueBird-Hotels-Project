@@ -67,7 +67,7 @@ const getRoomDescription = (typeName) => {
 export default function RoomTypeDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const currencyType = process.env.CURRENCY_TYPE || "LKR";
+    const currencyType = import.meta.env.VITE_CURRENCY_TYPE || "LKR";
 
     const [roomType, setRoomType] = useState(null);
     const [prices, setPrices] = useState([]);

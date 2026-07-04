@@ -19,6 +19,7 @@ export default function CustomerDetailsPage() {
     // Preserve checkout state passed from BookingSummary
     const bookingData = location.state?.bookingData || {};
     const selectedRooms = location.state?.selectedRooms || [];
+    const airportPickup = location.state?.airportPickup || null;
 
     const userNationality = bookingData.nationality || "";
     const isSriLankan = userNationality === "Sri Lankan";
@@ -241,7 +242,8 @@ export default function CustomerDetailsPage() {
                 navigate("/payment", {
                     state: {
                         bookingData,
-                        selectedRooms
+                        selectedRooms,
+                        airportPickup
                     }
                 });
             } catch (error) {
@@ -339,7 +341,8 @@ export default function CustomerDetailsPage() {
             navigate("/payment", {
                 state: {
                     bookingData,
-                    selectedRooms
+                    selectedRooms,
+                    airportPickup
                 }
             });
 
@@ -775,16 +778,22 @@ export default function CustomerDetailsPage() {
                                 {selectedRooms.map((room, index) => (
                                     <div key={room.frontendRoomId || index} className="flex justify-between text-xs py-1.5 px-3 bg-stone-50 border border-stone-200/50 rounded-xl font-medium">
                                         <span className="text-stone-700 font-semibold">Room {index + 1}: {room.packageName}</span>
-                                        <span className="font-bold text-stone-900">{process.env.CURRENCY_TYPE}{(room.pricePerNight * nights).toFixed(2)}</span>
+                                        <span className="font-bold text-stone-900">{import.meta.env.VITE_CURRENCY_TYPE}{(room.pricePerNight * nights).toFixed(2)}</span>
                                     </div>
                                 ))}
+                                {airportPickup?.enabled && airportPickup.flightNo && (
+                                    <div className="flex justify-between text-xs py-1.5 px-3 bg-emerald-50 border border-emerald-100 rounded-xl font-medium text-emerald-800">
+                                        <span className="font-semibold">Flight Number</span>
+                                        <span className="font-bold">{airportPickup.flightNo}</span>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Price Breakdown */}
                             <div className="space-y-2.5">
                                 <div className="flex justify-between items-center bg-emerald-800 text-white p-4 rounded-2xl shadow-3xs">
                                     <span className="font-extrabold text-sm tracking-wide">Stay Total Cost:</span>
-                                    <span className="text-2xl font-black">{process.env.CURRENCY_TYPE}{Number(totalPrice || 0).toFixed(2)}</span>
+                                    <span className="text-2xl font-black">{import.meta.env.VITE_CURRENCY_TYPE}{Number(totalPrice || 0).toFixed(2)}</span>
                                 </div>
 
                                 <div className="p-3 bg-emerald-50 border border-emerald-150 rounded-xl flex gap-2.5">

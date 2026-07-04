@@ -74,7 +74,7 @@ TourInquiry.init(
     },
     // Status
     status: {
-      type: DataTypes.ENUM("pending", "progress", "accepted", "rejected"),
+      type: DataTypes.ENUM("pending", "progress", "accepted", "rejected", "canceled"),
       defaultValue: "pending",
       allowNull: false,
     },

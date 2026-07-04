@@ -401,7 +401,7 @@ export default function ServiceLogManagement() {
 
                 {/* Cost */}
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Cost ($)</label>
+                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Cost ({import.meta.env.VITE_CURRENCY_TYPE || "LKR"})</label>
                   <input type="number" min="0" step="0.01" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="0.00" />
                   {formErrors.cost && <p className="text-xs text-red-600 mt-1">{formErrors.cost}</p>}
                 </div>

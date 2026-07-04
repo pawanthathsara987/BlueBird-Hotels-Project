@@ -1,6 +1,7 @@
 import express from 'express';
 import { getAvailableRooms, todayCheckIns, todayCheckOuts, getOccupiedRooms, recentCheckins, recentCheckouts, recentBookings, getAnalyticsSummary, getDailyReport, getMonthlyReport } from '../controllers/reception/dashboardController.js';
 import { setCheckIn, setCheckOut, getPendingCheckins, getPendingCheckOuts, getAirportPickups, updateAirportPickupStatus, createAirportPickup, getPickupAlerts, getCheckInDetails, recordManualPayment } from '../controllers/reception/receptionBookingController.js';
+import { getAllRooms } from '../controllers/admin/roomController.js';
 import { requireAuth, requireRole } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -29,6 +30,9 @@ router.patch("/bookings/:id/checkout", setCheckOut);
 // Check-In Details & Manual Payment
 router.get('/checkin-details/:bookingId', getCheckInDetails);
 router.post('/checkin-details/:bookingId/pay', recordManualPayment);
+
+// Room data for dashboard (receptionist-accessible)
+router.get('/rooms', getAllRooms);
 
 import { getDrivers } from '../controllers/manager/driverController.js';
 import { getVehicles } from '../controllers/manager/vehicleController.js';
