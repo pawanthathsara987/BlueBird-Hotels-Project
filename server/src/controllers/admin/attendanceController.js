@@ -114,6 +114,32 @@ export const getAttendanceSettings = async (req, res) => {
     }
 };
 
+export const getRoleAttendanceSettings = async (req, res) => {
+    try {
+        const result = await attendanceService.getRoleAttendanceSettings();
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Failed to fetch role attendance settings"
+        });
+    }
+};
+
+export const updateRoleAttendanceSettings = async (req, res) => {
+    try {
+        const result = await attendanceService.updateRoleAttendanceSettings(req.body);
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error(error);
+        return res.status(400).json({
+            success: false,
+            message: error.message || "Failed to update role attendance settings"
+        });
+    }
+};
+
 export const updateAttendanceSettings = async (req, res) => {
     try {
         const result = await attendanceService.updateAttendanceSettings(req.body);
