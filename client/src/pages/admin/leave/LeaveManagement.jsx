@@ -1,7 +1,8 @@
 import { useState } from "react";
 import LeaveRequestsTab from "./components/LeaveRequestsTab";
 import LeaveTypesTab from "./components/LeaveTypesTab";
-import { MdEventNote, MdListAlt } from "react-icons/md";
+import LeaveLimitsTab from "./components/LeaveLimitsTab";
+import { MdEventNote, MdListAlt, MdTune } from "react-icons/md";
 
 export default function LeaveManagement() {
     const [activeTab, setActiveTab] = useState("requests");
@@ -43,11 +44,24 @@ export default function LeaveManagement() {
                     <MdListAlt className="text-lg" />
                     Leave Types
                 </button>
+                <button
+                    className={`flex items-center gap-2 py-3 px-6 font-medium text-sm border-b-2 transition-colors ${
+                        activeTab === "limits"
+                            ? "border-blue-600 text-blue-600"
+                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                    onClick={() => setActiveTab("limits")}
+                >
+                    <MdTune className="text-lg" />
+                    Leave Limits
+                </button>
             </div>
 
             {/* Tab Content */}
             <div className="mt-6">
-                {activeTab === "requests" ? <LeaveRequestsTab /> : <LeaveTypesTab />}
+                {activeTab === "requests" && <LeaveRequestsTab />}
+                {activeTab === "types" && <LeaveTypesTab />}
+                {activeTab === "limits" && <LeaveLimitsTab />}
             </div>
         </div>
     );

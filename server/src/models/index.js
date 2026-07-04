@@ -25,7 +25,6 @@ import DriverPricingSetting from "./vehicle/driverPricingModel.js";
 import VehicleBooking from "./vehicle/VehicleBookingModel.js";
 import Driver from "./vehicle/driverModel.js";
 import Payment from "./vehicle/paymentModel.js";
-// Checklist and VehicleServiceLog restored
 import VehicleChecklist from "./vehicle/vehicleChecklistModel.js";
 import VehicleServiceLog from "./vehicle/vehicleServiceLogModel.js";
 import ServiceCharge from "./room/ServiceCharge.js";
@@ -37,17 +36,17 @@ import Attendance from "./attendance/Attendance.js";
 import AttendanceEditLog from "./attendance/AttendanceEditLog.js";
 import BookingRefund from "./booking/bookingRefund.js";
 import BookingRefundItem from "./booking/bookingRefundItem.js";
-import RoomStayReview from "./booking/roomStayReview.js";
+import RoomReview from "./booking/roomStayReview.js";
+import VehicleReview from "./vehicle/vehicleReview.js";
+import TourReview from "./tour_package/tourReview.js";
 import AttendanceSetting from "./attendance/AttendanceSetting.js";
 import LeaveType from "./leave/LeaveType.js";
 import LeaveRequest from "./leave/LeaveRequest.js";
 import AirportPickupVehicle from "./booking/airportPickupVehicleModel.js";
-
-
+import RoleLeaveLimit from "./leave/RoleLeaveLimit.js";
 
 // Keep `Reservation` alias for backward compatibility with existing controllers
 const Reservation = Booking;
-
 
 export function initModels() {
 
@@ -64,29 +63,51 @@ export function initModels() {
         as: "booking",
     });
 
-    Booking.hasOne(RoomStayReview, {
+    Booking.hasOne(RoomReview, {
         foreignKey: "booking_id",
         as: "stayReview",
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
     });
 
-    RoomStayReview.belongsTo(Booking, {
+    RoomReview.belongsTo(Booking, {
         foreignKey: "booking_id",
         as: "booking",
     });
 
-    Customer.hasMany(RoomStayReview, {
+    Customer.hasMany(RoomReview, {
         foreignKey: "customer_id",
         as: "stayReviews",
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
     });
 
-    RoomStayReview.belongsTo(Customer, {
+    RoomReview.belongsTo(Customer, {
         foreignKey: "customer_id",
         as: "customer",
     });
+
+    // VehicleBooking -> VehicleReview
+    VehicleBooking.hasOne(VehicleReview, {
+        foreignKey: "vehicle_booking_id",
+        as: "review",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+    });
+    VehicleReview.belongsTo(VehicleBooking, { foreignKey: "vehicle_booking_id", as: "booking" });
+    Customer.hasMany(VehicleReview, { foreignKey: "customer_id", as: "vehicleReviews", onDelete: "CASCADE" });
+    VehicleReview.belongsTo(Customer, { foreignKey: "customer_id", as: "customer" });
+
+    // TourInquiry -> TourReview
+    TourInquiry.hasOne(TourReview, {
+        foreignKey: "tour_booking_id",
+        as: "review",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+    });
+    TourReview.belongsTo(TourInquiry, { foreignKey: "tour_booking_id", as: "inquiry" });
+    Customer.hasMany(TourReview, { foreignKey: "customer_id", as: "tourReviews", onDelete: "CASCADE" });
+    TourReview.belongsTo(Customer, { foreignKey: "customer_id", as: "customer" });
 
     // Room -> BookedRoom
     Room.hasMany(BookedRoom, {
@@ -111,7 +132,6 @@ export function initModels() {
         foreignKey: "customer_id",
     });
 
-
     // Booking -> AirPortPickup
     Booking.hasOne(AirPortPickup, {
         foreignKey: "booking_id",
@@ -135,7 +155,6 @@ export function initModels() {
     RoomAmenities.belongsTo(Room, {
         foreignKey: "roomId",
     });
-
 
     // Amenities -> RoomAmenities
     Amenities.hasMany(RoomAmenities, {
@@ -248,7 +267,6 @@ export function initModels() {
         as: "customer",
     });
 
-
     //StaffMember -> Role (Many-to-One)
     StaffMember.belongsTo(Role, {
         foreignKey: "roleId"
@@ -258,7 +276,7 @@ export function initModels() {
         foreignKey: "roleId"
     });
 
-    // ── VehicleType → Vehicle ─────────────────────────────────────────────────────
+    // VehicleType → Vehicle
     VehicleType.hasMany(Vehicle, {
         foreignKey: 'vehicleTypeId',
         as: 'vehicles',
@@ -270,44 +288,39 @@ export function initModels() {
         as: 'vehicleType',
     });
 
-    // ── Vehicle Booking Associations ──────────────────────────────────────────────
-    // Vehicle → VehicleBooking
+    // Vehicle Booking Associations
     Vehicle.hasMany(VehicleBooking, { foreignKey: 'vehicleId', as: 'bookings', onDelete: 'RESTRICT' });
     VehicleBooking.belongsTo(Vehicle, { foreignKey: 'vehicleId', as: 'vehicle' });
 
-    // Customer → VehicleBooking
     Customer.hasMany(VehicleBooking, { foreignKey: 'customerId', as: 'vehicleBookings', onDelete: 'CASCADE' });
     VehicleBooking.belongsTo(Customer, { foreignKey: 'customerId', as: 'customer' });
 
-    // Driver → VehicleBooking
     Driver.hasMany(VehicleBooking, { foreignKey: 'driverId', as: 'bookings' });
     VehicleBooking.belongsTo(Driver, { foreignKey: 'driverId', as: 'driver' });
 
-    // VehicleBooking → Payment
     VehicleBooking.hasMany(Payment, { foreignKey: 'booking_id', as: 'payments', onDelete: 'CASCADE' });
     Payment.belongsTo(VehicleBooking, { foreignKey: 'booking_id', as: 'booking' });
 
-    // Customer → Payment
     Customer.hasMany(Payment, { foreignKey: 'customer_id', as: 'vehiclePayments', onDelete: 'CASCADE' });
     Payment.belongsTo(Customer, { foreignKey: 'customer_id', as: 'customer' });
 
-    // ── Vehicle → VehicleServiceLog ───────────────────────────────────────────────
+    // Vehicle → VehicleServiceLog
     Vehicle.hasMany(VehicleServiceLog, { foreignKey: 'vehicleId', as: 'serviceLogs', onDelete: 'CASCADE' });
     VehicleServiceLog.belongsTo(Vehicle, { foreignKey: 'vehicleId', as: 'vehicle' });
 
-    // ── Vehicle → VehicleChecklist ────────────────────────────────────────────────
+    // Vehicle → VehicleChecklist
     Vehicle.hasMany(VehicleChecklist, { foreignKey: 'vehicleId', as: 'checklists', onDelete: 'CASCADE' });
     VehicleChecklist.belongsTo(Vehicle, { foreignKey: 'vehicleId', as: 'vehicle' });
 
-    // ── VehicleBooking → VehicleChecklist ─────────────────────────────────────────
+    // VehicleBooking → VehicleChecklist
     VehicleBooking.hasMany(VehicleChecklist, { foreignKey: 'bookingId', as: 'checklists', onDelete: 'CASCADE' });
     VehicleChecklist.belongsTo(VehicleBooking, { foreignKey: 'bookingId', as: 'booking' });
 
-    // ── VehicleBooking → VehicleFinalBill ─────────────────────────────────────────
+    // VehicleBooking → VehicleFinalBill
     VehicleBooking.hasOne(VehicleFinalBill, { foreignKey: 'bookingId', as: 'finalBill', onDelete: 'CASCADE' });
     VehicleFinalBill.belongsTo(VehicleBooking, { foreignKey: 'bookingId', as: 'booking' });
 
-    // RoomPrice associations: link pricing to occupancy/room/board/season types
+    // RoomPrice associations
     OccupancyType.hasMany(RoomPrice, {
         foreignKey: 'occupancyTypeId',
         as: 'roomPrices',
@@ -504,6 +517,28 @@ export function initModels() {
         as: "approver"
     });
 
-    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourPayment, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, ServiceCharge, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance, AttendanceEditLog, BookingRefund, BookingRefundItem, LeaveRequest, LeaveType, AirportPickupVehicle };
+    // Role Leave Limits
+    Role.hasMany(RoleLeaveLimit, {
+        foreignKey: "roleId",
+        as: "leaveLimits"
+    });
+
+    RoleLeaveLimit.belongsTo(Role, {
+        foreignKey: "roleId",
+        as: "role"
+    });
+
+    LeaveType.hasMany(RoleLeaveLimit, {
+        foreignKey: "leaveTypeId",
+        as: "roleLimits"
+    });
+
+    RoleLeaveLimit.belongsTo(LeaveType, {
+        foreignKey: "leaveTypeId",
+        as: "leaveType"
+    });
+
+    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourPayment, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, ServiceCharge, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance, AttendanceEditLog, BookingRefund, BookingRefundItem, LeaveRequest, LeaveType, AirportPickupVehicle, RoomReview, VehicleReview, TourReview, RoleLeaveLimit };
 }
-export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourPayment, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, ServiceCharge, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance, AttendanceEditLog, BookingRefund, BookingRefundItem, RoomStayReview, LeaveRequest, LeaveType, AirportPickupVehicle };
+
+export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, TourPayment, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, ServiceCharge, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance, AttendanceEditLog, BookingRefund, BookingRefundItem, RoomReview, VehicleReview, TourReview, LeaveRequest, LeaveType, AirportPickupVehicle, RoleLeaveLimit };

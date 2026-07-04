@@ -30,24 +30,7 @@ import DashboardModals from "./DashboardModals";
 // DUMMY DATA DEFINITIONS
 // ==========================================
 
-const INITIAL_REVIEWS = [
-  {
-    id: "REV-101",
-    propertyName: "The Kyoto Imperial Ryokan",
-    location: "Kyoto, Japan",
-    rating: 5,
-    comment: "An absolutely breathtaking cultural sanctuary. The personal hot spring Onsen and kaiseki dinner service were beyond premium. Exemplary hospitality that reflects true gold-standard luxury.",
-    date: "2026-05-02"
-  },
-  {
-    id: "REV-102",
-    propertyName: "Mandarin Oriental New York",
-    location: "New York, USA",
-    rating: 4,
-    comment: "Stunning skyline views of Central Park and an exceptional thermal spa. Check-in had a minor delay, but the head concierge immediately resolved it and sent customized signature champagne to our suite.",
-    date: "2026-02-18"
-  }
-];
+
 
 const INITIAL_NOTIFICATIONS = [
   {
@@ -97,7 +80,7 @@ export default function CustomerDashboard() {
   const [vehicles, setVehicles] = useState([]);
   const [payments, setPayments] = useState([]);
   const [paymentSummary, setPaymentSummary] = useState({ totalPaid: 0, totalRefunded: 0, totalPending: 0, totalTransactions: 0 });
-  const [reviews, setReviews] = useState(INITIAL_REVIEWS);
+  const [reviews, setReviews] = useState([]);
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
 
   // Control UI State
@@ -186,12 +169,13 @@ export default function CustomerDashboard() {
         const headers = { Authorization: `Bearer ${token}` };
         const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-        const [profileRes, bookingsRes, rentalsRes, toursRes, paymentsRes] = await Promise.all([
+        const [profileRes, bookingsRes, rentalsRes, toursRes, paymentsRes, reviewsRes] = await Promise.all([
           axios.get(`${backendUrl}/customers/profile`, { headers }),
           axios.get(`${backendUrl}/customers/bookings`, { headers }),
           axios.get(`${backendUrl}/customers/rentals`, { headers }),
           axios.get(`${backendUrl}/customers/tours`, { headers }),
-          axios.get(`${backendUrl}/customers/payments`, { headers })
+          axios.get(`${backendUrl}/customers/payments`, { headers }),
+          axios.get(`${backendUrl}/customers/reviews`, { headers })
         ]);
 
         const pData = profileRes.data.data;
@@ -300,20 +284,46 @@ export default function CustomerDashboard() {
 
         // 3. Fetch Rentals (Vehicles)
         const rawRentals = rentalsRes.data.data || [];
-        const mappedRentals = rawRentals.map(r => ({
-          id: `BB-CAR-${r.id}`,
-          realId: r.id,
-          model: r.vehicle ? `${r.vehicle.brand} ${r.vehicle.model}` : "Premium Fleet Vehicle",
-          type: r.vehicle?.capacity ? `${r.vehicle.capacity} Seater` : "Luxury Car",
-          image: r.vehicle?.image || "https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?auto=format&fit=crop&w=600&q=80",
-          pickupLocation: r.pickupLocation || "Airport Terminal",
-          dropoffLocation: r.dropoffLocation || "Airport Terminal",
-          startDate: r.pickupDatetime,
-          endDate: r.returnDatetime,
-          status: r.status.replace("_", " ").toUpperCase(),
-          price: parseFloat(r.totalPayable),
-          unlimitedMileage: true
-        }));
+        const mappedRentals = rawRentals.map(r => {
+          const rawStatus = r.status;
+          const successPayment = r.payments?.find(p => p.status === "success");
+          let displayStatus = rawStatus.replace(/_/g, " ");
+          displayStatus = displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1);
+          if (r.refund) displayStatus = `Refund ${r.refund.status.charAt(0).toUpperCase() + r.refund.status.slice(1)}`;
+
+          return {
+            id: `BB-CAR-${r.id}`,
+            realId: r.id,
+            bookingNo: r.bookingNo,
+            model: r.vehicle ? `${r.vehicle.brand} ${r.vehicle.model}` : "Premium Fleet Vehicle",
+            brand: r.vehicle?.brand || "",
+            vehicleModel: r.vehicle?.model || "",
+            type: r.vehicle?.capacity ? `${r.vehicle.capacity} Seater` : "Luxury Car",
+            image: r.vehicle?.image || "https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?auto=format&fit=crop&w=600&q=80",
+            pickupLocation: r.pickupLocation || "Airport Terminal",
+            dropoffLocation: r.dropoffLocation || "Airport Terminal",
+            startDate: r.pickupDatetime,
+            endDate: r.returnDatetime,
+            numDays: r.numDays,
+            hireType: r.hireType,
+            status: displayStatus,
+            rawStatus,
+            price: parseFloat(r.totalPayable),
+            depositAmount: parseFloat(r.depositAmount || 0),
+            balanceAmount: parseFloat(r.balanceAmount || 0),
+            specialRequirements: r.specialRequirements || "",
+            cancellationReason: r.cancellationReason || "",
+            payment: successPayment ? {
+              amount: parseFloat(successPayment.amount),
+              currency: successPayment.currency || "LKR",
+              method: successPayment.method || "Online",
+              status: successPayment.status
+            } : null,
+            refund: r.refund || null,
+            review: r.review || null,
+            unlimitedMileage: true
+          };
+        });
         setVehicles(mappedRentals);
 
         // 4. Fetch Tours
@@ -356,6 +366,7 @@ export default function CustomerDashboard() {
             address: t.address || "",
             conciergeNotes: reply,
             refund: t.refund || null,
+            review: t.review || null,
             lastUpdated: new Date(t.updatedAt).toLocaleDateString()
           };
         });
@@ -365,6 +376,8 @@ export default function CustomerDashboard() {
         if (paymentsRes.data.summary) {
           setPaymentSummary(paymentsRes.data.summary);
         }
+
+        setReviews(reviewsRes.data.data || []);
 
         // Update empty state flag if nothing exists
         if (mappedBookings.length === 0 && mappedRentals.length === 0 && mappedTours.length === 0) {
@@ -744,6 +757,7 @@ export default function CustomerDashboard() {
               {activeTab === "rentals" && (
                 <RentalsTab
                   vehicles={vehicles}
+                  setVehicles={setVehicles}
                   isEmptyState={isEmptyState}
                   filterList={filterList}
                 />

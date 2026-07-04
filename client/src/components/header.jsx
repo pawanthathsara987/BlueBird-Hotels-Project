@@ -126,13 +126,13 @@ export default function Header() {
   // ─── nav links ───────────────────────────────────────────────────────────
   const leftLinks = [
     { label: "HOME", to: "/" },
-    { label: "HOTELS", to: "/rooms" },
-    { label: "FAQ", to: "/faq" },
-  ];
-  const rightLinks = [
     { label: "TRAVELS", to: "/booking/tour" },
     { label: "VEHICLES", to: "/vehicles" },
-    { label: "GALLERY", to: "/" },
+  ];
+  const rightLinks = [
+    { label: "GALLERY", to: "/gallery" },
+    { label: "FAQ", to: "/faq" },
+    { label: "REVIEWS", to: "/reviews" },
     { label: "CONTACT", to: "/contact" },
   ];
 
@@ -378,11 +378,11 @@ export default function Header() {
             <nav className="flex flex-col text-sm font-medium text-gray-700 gap-1 px-3 pt-4 pb-2 flex-1 overflow-y-auto">
               {[
                 { label: "Home", to: "/" },
-                { label: "Hotels", to: "/rooms" },
+                { label: "Reviews", to: "/reviews" },
                 { label: "FAQ", to: "/faq" },
                 { label: "Travels", to: "/booking/tour" },
                 { label: "Vehicles", to: "/vehicles" },
-                { label: "Gallery", to: "/" },
+                { label: "Gallery", to: "/gallery" },
                 { label: "Contact", to: "/contact" },
               ].map((l) => (
                 <Link

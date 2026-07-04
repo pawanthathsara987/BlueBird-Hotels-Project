@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { 
   Calendar, MapPin, Check, BedDouble, Users, AlertCircle, Info, Search, Filter, 
-  FileText, Receipt, XCircle, ArrowRight, HelpCircle, User, CreditCard, Clock, 
+  FileText, XCircle, ArrowRight, HelpCircle, User, CreditCard, Clock, 
   ChevronRight, RefreshCw, Eye, ShieldCheck, Mail, Phone, Home, Ticket, Star
 } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -546,276 +546,165 @@ export default function BookingsTab({
 
   // Print Invoice layout
   const handlePrintInvoice = (booking) => {
-    const checkIn = formatDate(booking.checkIn);
-    const checkOut = formatDate(booking.checkOut);
-    const createdDate = formatDateTime(booking.raw?.createdAt);
-    const supportContact = "+94701950195";
-    const customerName = profile.name || "Valued Guest";
-    const customerEmail = profile.email || "";
-    const customerPhone = profile.phone || "";
-    const customerCountry = profile.country || "Sri Lanka";
-    const boardSummary = booking.raw?.bookedRooms?.map((room) => room.board_type || "Room Only").filter(Boolean).join(", ") || "Room Only";
-    const mealPlan = boardSummary;
+      const checkIn = formatDate(booking.checkIn);
+      const checkOut = formatDate(booking.checkOut);
+      const createdDate = formatDateTime(booking.raw?.createdAt);
+      const supportContact = process.env.VITE_SUPPORT_CONTACT || "+94701950195";
+      const customerName = profile.name || "Valued Guest";
+      const customerEmail = profile.email || "";
+      const customerPhone = profile.phone || "";
+      const customerCountry = profile.country || "Sri Lanka";
+      
+      const successPayments = booking.raw?.payments?.filter(p => p.status === "success" || p.status === "paid") || [];
+      const totalPaid = successPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+      const balanceDue = Math.max(0, booking.amount - totalPaid);
+      const totalRooms = booking.raw?.bookedRooms?.length || booking.rooms?.length || 0;
+      const totalPax = (booking.raw?.bookedRooms || []).reduce((sum, room) => sum + (room.adults || 0) + (room.kids || 0), 0) || booking.guestsSummary || "";
+      const pickupStatus = (booking.raw?.airportPickup?.status || "").toUpperCase();
+      const pickupPrice = pickupStatus !== "CANCELLED"
+        ? parseFloat(booking.raw?.airportPickup?.price || booking.airportPickupFee || 0)
+        : 0;
 
-    const successPayments = booking.raw?.payments?.filter(p => p.status === "success" || p.status === "paid") || [];
-    const totalPaid = successPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
-    const balanceDue = Math.max(0, booking.amount - totalPaid);
-    const totalRooms = booking.raw?.bookedRooms?.length || booking.rooms?.length || 0;
-    const totalPax = (booking.raw?.bookedRooms || []).reduce((sum, room) => sum + (room.adults || 0) + (room.kids || 0), 0) || booking.guestsSummary || "";
-    const pickupStatus = (booking.raw?.airportPickup?.status || "").toUpperCase();
-    const pickupPrice = pickupStatus !== "CANCELLED"
-      ? parseFloat(booking.raw?.airportPickup?.price || booking.airportPickupFee || 0)
-      : 0;
+      const priceBreakdownRows = booking.raw?.bookedRooms?.map((room, idx) => {
+        const roomTotal = parseFloat(room.price || room.totalPrice || room.pricePerNight || 0);
+        const rate = booking.nights > 0 ? roomTotal / booking.nights : roomTotal;
+        return `
+          <tr>
+            <td>Room ${idx + 1}: ${room.Room?.roomType?.type || "Deluxe Suite"} (${room.board_type || "Room Only"})</td>
+            <td style="text-align: center;">${booking.nights}</td>
+            <td style="text-align: right;">${CURRENCY} ${rate.toFixed(2)}</td>
+            <td style="text-align: right;">${CURRENCY} ${roomTotal.toFixed(2)}</td>
+          </tr>
+        `;
+      }).join("") || "";
 
-    const priceBreakdownRows = booking.raw?.bookedRooms?.map((room, idx) => {
-      const roomTotal = parseFloat(room.price || room.totalPrice || room.pricePerNight || 0);
-      const rate = booking.nights > 0 ? roomTotal / booking.nights : roomTotal;
-      return `
+      const hasPickup = booking.raw?.airportPickup;
+      const extraChargesRows = hasPickup ? `
         <tr>
-          <td>Room ${idx + 1}: ${room.Room?.roomType?.type || "Deluxe Suite"} (${room.board_type || "Room Only"})</td>
-          <td style="text-align: center;">${booking.nights}</td>
-          <td style="text-align: right;">${CURRENCY} ${rate.toFixed(2)}</td>
-          <td style="text-align: right;">${CURRENCY} ${roomTotal.toFixed(2)}</td>
+          <td colspan="3">Airport Shuttle Transfer Service (Katunayake Fixed Point)</td>
+          <td style="text-align: right;">${CURRENCY} ${pickupPrice.toFixed(2)}</td>
         </tr>
-      `;
-    }).join("") || "";
+      ` : "";
 
-    const hasPickup = booking.raw?.airportPickup;
-    const extraChargesRows = hasPickup ? `
-      <tr>
-        <td colspan="3">Airport Shuttle Transfer Service (Katunayake Fixed Point)</td>
-        <td style="text-align: right;">${CURRENCY} ${pickupPrice.toFixed(2)}</td>
-      </tr>
-    ` : "";
-
-    const baseAmount = booking.amount - (booking.tax || 0);
-    const baseWithoutPickup = Math.max(0, baseAmount - pickupPrice);
-
-    const printWindow = window.open("", "_blank");
-    printWindow.document.write(`
-      <html>
-      <head>
-        <title>Proforma Invoice - ${booking.id}</title>
-        <style>
-          * { box-sizing: border-box; }
-          body { font-family: Georgia, 'Times New Roman', serif; color: #111827; margin: 0; padding: 0; line-height: 1.35; background: #fff; }
-          .page { width: 100%; max-width: 900px; margin: 0 auto; padding: 32px 40px 28px; }
-          .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
-          .brand { width: 240px; text-align: center; }
-          .brand img { width: 120px; height: auto; display: block; margin: 0 auto 8px; }
-          .brand .company { font-size: 16px; font-weight: 700; }
-          .brand .sub { font-size: 13px; margin-top: 3px; }
-          .title-block { text-align: center; flex: 1; padding-top: 12px; }
-          .title { font-size: 28px; font-weight: 700; letter-spacing: 0.5px; }
-          .meta { width: 250px; font-size: 14px; padding-top: 14px; }
-          .meta div { margin-bottom: 1px; }
-          .top-grid { display: flex; justify-content: space-between; margin-top: 20px; gap: 24px; }
-          .top-left { width: 56%; font-size: 15px; }
-          .top-left div { margin-bottom: 2px; }
-          .top-right { width: 40%; font-size: 15px; }
-          .section-label { margin: 44px 0 12px; font-size: 17px; font-weight: 700; text-transform: uppercase; }
-          table { width: 100%; border-collapse: collapse; margin-top: 6px; }
-          th { font-size: 12px; text-transform: uppercase; text-align: left; padding: 10px 8px; border-bottom: 1px solid #111; }
-          td { font-size: 14px; padding: 10px 8px; border-bottom: 1px solid #d1d5db; vertical-align: top; }
-          .rates td { border-bottom: 0; }
-          .rate-line { display: flex; justify-content: space-between; gap: 20px; font-size: 15px; margin-bottom: 4px; }
-          .rate-desc { width: 58%; }
-          .rate-nights { width: 16%; text-align: center; }
-          .rate-amount { width: 26%; text-align: right; font-weight: 700; }
-          .totals-box { width: 360px; margin-left: auto; margin-top: 8px; font-size: 15px; }
-          .totals-row { display: flex; justify-content: space-between; padding: 4px 0; }
-          .grand-total { font-weight: 700; border-top: 1px solid #111; border-bottom: 3px double #111; padding: 6px 0; margin-top: 4px; }
-          .payment-box { margin-top: 24px; padding: 14px 16px; border: 1px solid #d1d5db; }
-          .payment-title { font-weight: 700; margin-bottom: 8px; text-transform: uppercase; }
-          .footer { margin-top: 38px; text-align: center; font-size: 15px; font-weight: 700; }
-          .support { margin-top: 18px; text-align: center; font-size: 14px; }
-          .muted { color: #374151; font-size: 13px; }
-        </style>
-      </head>
-      <body>
-        <div class="page">
-          <div class="header">
-            <div class="brand">
-              <img src="${bluebirdLogo}" alt="BlueBird logo" />
-              <div class="company">Hotels & Travels (PVT) LTD</div>
+      const printWindow = window.open("", "_blank");
+      printWindow.document.write(`
+        <html>
+        <head>
+          <title>Proforma Invoice - ${booking.id}</title>
+          <style>
+            * { box-sizing: border-box; }
+            body { font-family: Georgia, 'Times New Roman', serif; color: #111827; margin: 0; padding: 0; line-height: 1.35; background: #fff; }
+            .page { width: 100%; max-width: 900px; margin: 0 auto; padding: 32px 40px 28px; }
+            .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
+            .brand { width: 240px; text-align: center; }
+            .brand img { width: 120px; height: auto; display: block; margin: 0 auto 8px; }
+            .brand .company { font-size: 16px; font-weight: 700; }
+            .title-block { text-align: center; flex: 1; padding-top: 12px; }
+            .title { font-size: 28px; font-weight: 700; letter-spacing: 0.5px; }
+            .meta { width: 250px; font-size: 14px; padding-top: 14px; text-align: right; }
+            .top-grid { display: flex; justify-content: space-between; margin-top: 20px; gap: 24px; }
+            .top-left { width: 56%; font-size: 15px; }
+            .top-left div { margin-bottom: 2px; }
+            .top-right { width: 40%; font-size: 15px; text-align: right; }
+            .section-label { margin: 44px 0 12px; font-size: 17px; font-weight: 700; text-transform: uppercase; }
+            table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+            th { font-size: 12px; text-transform: uppercase; text-align: left; padding: 10px 8px; border-bottom: 1px solid #111; }
+            td { font-size: 14px; padding: 10px 8px; border-bottom: 1px solid #d1d5db; vertical-align: top; }
+            .totals-box { width: 360px; margin-left: auto; margin-top: 8px; font-size: 15px; }
+            .totals-row { display: flex; justify-content: space-between; padding: 4px 0; }
+            .payment-box { margin-top: 24px; padding: 14px 16px; border: 1px solid #d1d5db; }
+            .payment-title { font-weight: 700; margin-bottom: 8px; text-transform: uppercase; }
+            .footer { margin-top: 38px; text-align: center; font-size: 15px; font-weight: 700; }
+            .support { margin-top: 18px; text-align: center; font-size: 14px; }
+            .muted { color: #374151; font-size: 13px; margin-bottom: 2px; }
+          </style>
+        </head>
+        <body>
+          <div class="page">
+            <div class="header">
+              <div class="brand">
+                <img src="${bluebirdLogo}" alt="BlueBird logo" />
+                <div class="company">Hotels & Travels (PVT) LTD</div>
+              </div>
+              <div class="title-block">
+                <div class="title">PROFORMA INVOICE</div>
+              </div>
+              <div class="meta">
+                <div>Date: ${createdDate}</div>
+              </div>
             </div>
-            <div class="title-block">
-              <div class="title">PROFORMA INVOICE</div>
+
+            <div class="top-grid">
+              <div class="top-left">
+                <div><strong>Guest Name:</strong> ${customerName}</div>
+                ${customerEmail ? `<div><strong>Email:</strong> ${customerEmail}</div>` : ""}
+                ${customerPhone ? `<div><strong>Phone:</strong> ${customerPhone}</div>` : ""}
+                <div style="margin-top: 6px;"><strong>Arrival Date:</strong> ${checkIn}</div>
+                <div><strong>Departure Date:</strong> ${checkOut}</div>
+                <div><strong>No of Rooms:</strong> ${String(totalRooms).padStart(2, "0")}</div>
+                <div><strong>Pax Count:</strong> ${totalPax}</div>
+              </div>
+              <div class="top-right">
+                <div class="muted"><strong>Invoice No:</strong> INV-BB-BK-${booking.realId || booking.id}</div>
+                <div class="muted"><strong>Booking Ref:</strong> ${booking.id}</div>
+                <div class="muted"><strong>Status:</strong> ${booking.status}</div>
+                <div class="muted"><strong>Support:</strong> ${supportContact}</div>
+              </div>
             </div>
-            <div class="meta">
-              <div>Date: ${createdDate}</div>
-              <div>Agent: ${customerName}</div>
-              <div>Country: ${customerCountry}</div>
-              <div>Purpose: Holiday</div>
+
+            <div class="section-label">Room Rates:</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Service</th>
+                  <th style="text-align:center; width: 100px;">Nights</th>
+                  <th style="text-align:right; width: 160px;">Rate</th>
+                  <th style="text-align:right; width: 160px;">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${priceBreakdownRows}
+                ${extraChargesRows}
+              </tbody>
+            </table>
+
+            <div class="totals-box">
+              <div class="totals-row">
+                <span>Total Amount</span>
+                <span>:</span>
+                <span>${CURRENCY} ${booking.amount.toFixed(2)}</span>
+              </div>
+              ${hasPickup ? `
+              <div class="totals-row">
+                <span>Airport Pickup</span>
+                <span>:</span>
+                <span>${CURRENCY} ${pickupPrice.toFixed(2)}</span>
+              </div>` : ""}
+              <div class="totals-row payment-box">
+                <span class="payment-title">Payment Details</span>
+              </div>
+              <div class="totals-row">
+                <span>Amount Paid (Deposit)</span>
+                <span>:</span>
+                <span>${CURRENCY} ${totalPaid.toFixed(2)}</span>
+              </div>
+              <div class="totals-row">
+                <span>Balance Due</span>
+                <span>:</span>
+                <span>${CURRENCY} ${balanceDue.toFixed(2)}</span>
+              </div>
             </div>
-          </div>
 
-          <div class="top-grid">
-            <div class="top-left">
-              <div>Guest Name: ${customerName}</div>
-              <div>Arrival Date: ${checkIn}</div>
-              <div>Departure Date: ${checkOut}</div>
-              <div>No of Rooms: ${String(totalRooms).padStart(2, "0")}</div>
-              <div>No of Nights: ${String(booking.nights || 0).padStart(2, "0")}</div>
-              <div>Pax Count: ${totalPax || booking.guestsSummary || ""}</div>
-              <div>Meal Plan: ${mealPlan}</div>
+            <div class="footer">
+              We thank you for your stay and hope to see you again in the future....
             </div>
-            <div class="top-right">
-              <div class="muted">Invoice No: INV-${booking.realId}</div>
-              <div class="muted">Booking Ref: ${booking.id}</div>
-              <div class="muted">Status: ${booking.status}</div>
-              <div class="muted">Support: ${supportContact}</div>
-            </div>
+            <div class="support">Support Contact: ${supportContact}</div>
           </div>
-
-          <div class="section-label">Room Rates:</div>
-          <table>
-            <thead>
-              <tr>
-                <th>Service</th>
-                <th style="text-align:center; width: 100px;">Nights</th>
-                <th style="text-align:right; width: 160px;">Rate</th>
-                <th style="text-align:right; width: 160px;">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${priceBreakdownRows}
-              ${extraChargesRows}
-            </tbody>
-          </table>
-
-          <div class="totals-box">
-            <div class="totals-row">
-              <span>Total Amount</span>
-              <span>:</span>
-              <span>${CURRENCY} ${booking.amount.toFixed(2)}</span>
-            </div>
-            ${hasPickup ? `
-            <div class="totals-row">
-              <span>Airport Pickup</span>
-              <span>:</span>
-              <span>${CURRENCY} ${pickupPrice.toFixed(2)}</span>
-            </div>` : ""}
-            <div class="totals-row payment-box">
-              <span class="payment-title">Payment Details</span>
-            </div>
-            <div class="totals-row">
-              <span>Amount Paid (Deposit)</span>
-              <span>:</span>
-              <span>${CURRENCY} ${totalPaid.toFixed(2)}</span>
-            </div>
-            <div class="totals-row">
-              <span>Balance Due</span>
-              <span>:</span>
-              <span>${CURRENCY} ${balanceDue.toFixed(2)}</span>
-            </div>
-          </div>
-
-          <div class="footer">
-            We thank you for your stay and hope to see you again in the future....
-          </div>
-          <div class="support">Support Contact: ${supportContact}</div>
-        </div>
-      </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
-  };
-
-  // Print Receipt layout
-  const handlePrintReceipt = (booking) => {
-    const successPayment = booking.raw?.payments?.find(p => p.status === "success" || p.status === "paid");
-    if (!successPayment) {
-      toast.error("No active payments found. A receipt statement is only generated for paid bookings.");
-      return;
-    }
-
-    const checkIn = formatDate(booking.checkIn);
-    const checkOut = formatDate(booking.checkOut);
-    const paymentDate = formatDateTime(successPayment.createdAt);
-
-    const printWindow = window.open("", "_blank");
-    printWindow.document.write(`
-      <html>
-      <head>
-        <title>Receipt - ${successPayment.payment_no}</title>
-        <style>
-          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; margin: 40px; line-height: 1.5; }
-          .header { display: flex; justify-content: space-between; border-bottom: 2px solid #0f766e; padding-bottom: 20px; }
-          .logo { font-size: 24px; font-weight: 900; color: #0f766e; letter-spacing: 1px; }
-          .title { font-size: 28px; font-weight: 800; text-align: right; color: #1e293b; }
-          .details { display: flex; justify-content: space-between; margin-top: 30px; }
-          .section-title { font-size: 10px; font-weight: bold; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
-          .info-block { flex: 1; }
-          .payment-summary { background-color: #f0fdfa; border: 1px solid #ccfbf1; border-radius: 12px; padding: 20px; margin-top: 40px; }
-          .summary-title { font-size: 14px; font-weight: bold; color: #115e59; border-bottom: 1px solid #99f6e4; padding-bottom: 8px; margin-bottom: 15px; }
-          .summary-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 13px; color: #334155; }
-          .total-paid { font-size: 20px; font-weight: 900; color: #0f766e; border-top: 1px dashed #99f6e4; padding-top: 12px; margin-top: 8px; }
-          .footer { margin-top: 150px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div>
-            <div class="logo">BLUEBIRD RESORTS</div>
-            <div style="font-size: 12px; color: #64748b;">Galle Face, Colombo, Sri Lanka</div>
-          </div>
-          <div>
-            <div class="title">PAYMENT RECEIPT</div>
-            <div style="font-size: 13px; font-weight: bold;">Receipt No: ${successPayment.payment_no}</div>
-            <div style="font-size: 12px; color: #64748b;">Date Paid: ${paymentDate}</div>
-          </div>
-        </div>
-
-        <div class="details">
-          <div class="info-block">
-            <div class="section-title">Received From</div>
-            <div style="font-weight: bold;">${profile.name || "Valued Guest"}</div>
-            <div style="font-size: 12px;">${profile.email || ""}</div>
-            <div style="font-size: 12px;">${profile.phone || ""}</div>
-          </div>
-          <div class="info-block" style="text-align: right;">
-            <div class="section-title">Payment For Reservation</div>
-            <div style="font-weight: bold;">Booking Reference: ${booking.id}</div>
-            <div style="font-size: 12px;">Check-In: ${checkIn} to ${checkOut}</div>
-          </div>
-        </div>
-
-        <div class="payment-summary">
-          <div class="summary-title">Transaction Receipt Details</div>
-          <div class="summary-row">
-            <span>Payment Method:</span>
-            <span style="font-weight: bold; text-transform: uppercase;">${successPayment.method}</span>
-          </div>
-          <div class="summary-row">
-            <span>Transaction Reference ID:</span>
-            <span style="font-mono; font-size: 12px;">${successPayment.id}</span>
-          </div>
-          <div class="summary-row">
-            <span>Original Stay Total Price:</span>
-            <span>${CURRENCY} ${booking.amount.toFixed(2)}</span>
-          </div>
-          <div class="summary-row">
-            <span>Payment Status:</span>
-            <span style="color: #0f766e; font-weight: bold; text-transform: uppercase;">${successPayment.status}</span>
-          </div>
-          <div class="summary-row total-paid">
-            <span>Amount Paid:</span>
-            <span>${CURRENCY} ${parseFloat(successPayment.amount).toFixed(2)}</span>
-          </div>
-        </div>
-
-        <div class="footer">
-          Thank you for securing your luxury stay with us.
-          <br/>
-          For billing support, contact: billing@bluebird.lk | +94 11 234 5678
-        </div>
-      </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
   };
 
   const getTimelineSteps = (booking) => {
@@ -908,7 +797,7 @@ export default function BookingsTab({
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-200">
         <div>
           <h2 className="font-serif font-semibold text-xl md:text-2xl text-blue-950">Room Booking History</h2>
-          <p className="text-slate-500 text-xs mt-0.5 font-sans">Track billing summaries, timelines, receipts, and cancellation details.</p>
+          <p className="text-slate-500 text-xs mt-0.5 font-sans">Track billing summaries, invoice, timelines, and cancellation details.</p>
         </div>
         <button
           onClick={() => window.location.href = "/booking"}
@@ -1030,16 +919,7 @@ export default function BookingsTab({
                         >
                           <FileText size={13} />
                         </button>
-                        {b.paymentStatus.toLowerCase() === "paid" && (
-                          <button
-                            onClick={() => handlePrintReceipt(b)}
-                            title="Download paid payment receipt"
-                            className="p-1.5 bg-cyan-50 border border-cyan-100 rounded-lg text-cyan-700 hover:text-cyan-900 transition cursor-pointer"
-                          >
-                            <Receipt size={13} />
-                          </button>
-                        )}
-                        {b.status.toLowerCase() !== "cancelled" && b.status.toLowerCase() !== "completed" && b.status.toLowerCase() !== "cancellation pending" ? (
+                        {!isBookingCompleted(b) && b.status.toLowerCase() !== "cancelled" && b.status.toLowerCase() !== "completed" && b.status.toLowerCase() !== "cancellation pending" ? (
                           <button
                             onClick={() => {
                               setSelectedBooking(b);
@@ -1142,15 +1022,7 @@ export default function BookingsTab({
                   >
                     Invoice
                   </button>
-                  {b.paymentStatus.toLowerCase() === "paid" && (
-                    <button
-                      onClick={() => handlePrintReceipt(b)}
-                      className="flex-1 py-2 bg-cyan-50 border border-cyan-100 text-cyan-800 rounded-lg text-[10px] font-bold text-center cursor-pointer"
-                    >
-                      Receipt
-                    </button>
-                  )}
-                  {b.status.toLowerCase() !== "cancelled" && b.status.toLowerCase() !== "completed" && b.status.toLowerCase() !== "cancellation pending" ? (
+                  {!isBookingCompleted(b) && b.status.toLowerCase() !== "cancelled" && b.status.toLowerCase() !== "completed" && b.status.toLowerCase() !== "cancellation pending" ? (
                     <button
                       onClick={() => {
                         setSelectedBooking(b);
@@ -1490,15 +1362,6 @@ export default function BookingsTab({
                 <FileText size={13} />
                 Invoice
               </button>
-              {selectedBooking.paymentStatus.toLowerCase() === "paid" && (
-                <button
-                  onClick={() => handlePrintReceipt(selectedBooking)}
-                  className="flex-1 py-3 bg-cyan-700 hover:bg-cyan-800 text-white rounded-xl text-xs font-bold text-center cursor-pointer flex justify-center items-center gap-1.5 hover:scale-[1.02] transition-all"
-                >
-                  <Receipt size={13} />
-                  Receipt
-                </button>
-              )}
               {selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && (
                 <button
                   onClick={() => handleRequestRefundClick(null, false)}

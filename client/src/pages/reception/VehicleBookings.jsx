@@ -779,25 +779,47 @@ export default function VehicleBookings() {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex flex-col gap-0.5 text-[10px] text-slate-500 font-medium min-w-[130px]">
+                                                <div className="flex flex-col gap-0.5 text-[10px] text-slate-500 font-medium min-w-[135px]">
                                                     <span className="flex justify-between gap-4">
                                                         <span>Vehicle:</span>
-                                                        <span className="font-semibold text-slate-700 dark:text-slate-350">LKR {vehicleCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                        <span className="font-semibold text-slate-700 dark:text-slate-350">LKR {vehicleCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                     </span>
                                                     {driverCost > 0 && (
                                                         <span className="flex justify-between gap-4 text-teal-650 dark:text-teal-400">
                                                             <span>Driver:</span>
-                                                            <span className="font-semibold">+ LKR {driverCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                            <span className="font-semibold">+ LKR {driverCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                         </span>
                                                     )}
                                                     <div className="border-t border-slate-200 dark:border-slate-800 my-0.5"></div>
                                                     <span className="flex justify-between gap-4 font-black text-slate-900 dark:text-white text-xs">
                                                         <span>Total:</span>
-                                                        <span className={currentAccent.text}>LKR {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                        <span className={currentAccent.text}>LKR {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                     </span>
-                                                    <div className="text-[9px] text-slate-400 mt-1">
-                                                        Paid: LKR {b.balancePaidAt ? total.toLocaleString() : parseFloat(b.depositAmount).toLocaleString()} ({b.balancePaidAt ? "Full" : "50% Dep"})
-                                                    </div>
+                                                    
+                                                    {/* Half / Full details */}
+                                                    {b.id ? (
+                                                        <div className="mt-1 pt-1 border-t border-dashed border-slate-200 dark:border-slate-800 space-y-0.5 text-[9px] font-bold">
+                                                            <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                                                                <span>Deposit (50%):</span>
+                                                                <span>LKR {parseFloat(b.depositAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                            </div>
+                                                            {b.balancePaidAt ? (
+                                                                <div className="flex justify-between text-blue-500 dark:text-blue-400 font-black">
+                                                                    <span>Remaining ({b.balancePaymentMethod}):</span>
+                                                                    <span>Paid</span>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex justify-between text-rose-500 dark:text-rose-400">
+                                                                    <span>Balance Due:</span>
+                                                                    <span>LKR {parseFloat(b.remainingAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="mt-1 pt-1 border-t border-dashed border-slate-200 dark:border-slate-800 text-amber-500 dark:text-amber-400 font-bold text-[9px] text-center">
+                                                            Awaiting Deposit
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">

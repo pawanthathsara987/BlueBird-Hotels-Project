@@ -1,9 +1,9 @@
 import { Model, DataTypes } from "sequelize";
 import sequelize from "../../config/database.js";
 
-class RoomReview extends Model {}
+class VehicleReview extends Model {}
 
-RoomReview.init(
+VehicleReview.init(
   {
     id: {
       type: DataTypes.INTEGER,
@@ -11,20 +11,25 @@ RoomReview.init(
       primaryKey: true,
       allowNull: false,
     },
-    booking_id: {
+    vehicle_booking_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       unique: true,
-      references: { model: "booking", key: "id" },
+      references: { model: "vehicle_booking", key: "id" },
     },
     customer_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: { model: "customer", key: "id" },
     },
-    hotel_rating: {
+    vehicle_rating: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      validate: { min: 1, max: 5 },
+    },
+    driver_rating: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
       validate: { min: 1, max: 5 },
     },
     comment: {
@@ -34,10 +39,10 @@ RoomReview.init(
   },
   {
     sequelize,
-    modelName: "RoomReview",
-    tableName: "room_reviews",
+    modelName: "VehicleReview",
+    tableName: "vehicle_reviews",
     timestamps: true,
   }
 );
 
-export default RoomReview;
+export default VehicleReview;

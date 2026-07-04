@@ -319,13 +319,20 @@ export const getAttendanceRecords = async (query) => {
         ]
     });
 
+    const allMatching = await Attendance.findAll({
+        where: whereClause,
+        include: [staffInclude]
+    });
+    const totalWorkingHours = allMatching.reduce((sum, row) => sum + (row.workingHours || 0), 0);
+
     return {
         success: true,
         data: rows,
         totalItems: count,
         totalPages: Math.ceil(count / parseInt(limit)),
         currentPage: parseInt(page),
-        limit: parseInt(limit)
+        limit: parseInt(limit),
+        totalWorkingHours: Number(totalWorkingHours.toFixed(2))
     };
 };
 
