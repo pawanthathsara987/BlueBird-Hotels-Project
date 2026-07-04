@@ -461,6 +461,13 @@ export const collectVehicleBalancePayment = async (req, res) => {
       });
     }
 
+    if (booking.hireType === "with_driver" && !booking.driverId) {
+      return res.status(400).json({
+        success: false,
+        message: "Chauffeur must be assigned by the manager before balance payment can be collected."
+      });
+    }
+
     let balanceCollectedBy = null;
     if (req.user?.id) {
       const staffObj = await StaffMember.findOne({
@@ -480,7 +487,9 @@ export const collectVehicleBalancePayment = async (req, res) => {
     booking.balancePaidAt = new Date();
     booking.balancePaymentMethod = paymentMethod;
     booking.balanceCollectedBy = balanceCollectedBy;
-    booking.status = "balance_paid";
+    if (booking.status !== "completed") {
+      booking.status = "balance_paid";
+    }
 
     await booking.save();
 
