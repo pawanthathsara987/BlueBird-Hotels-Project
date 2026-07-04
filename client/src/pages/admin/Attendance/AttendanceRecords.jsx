@@ -36,6 +36,7 @@ export default function AttendanceRecords() {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
+    const [totalWorkingHours, setTotalWorkingHours] = useState(0);
     const limit = 10;
 
     // Modal states
@@ -227,6 +228,7 @@ export default function AttendanceRecords() {
                 setRecords(response.data.data || []);
                 setTotalPages(response.data.totalPages || 1);
                 setTotalItems(response.data.totalItems || 0);
+                setTotalWorkingHours(response.data.totalWorkingHours || 0);
             }
         } catch (error) {
             console.error("Error loading attendance records:", error);
@@ -428,6 +430,15 @@ export default function AttendanceRecords() {
                         <h3 className="text-xl font-bold text-slate-800">Attendance Log Database</h3>
                         <p className="text-xs text-slate-400 mt-0.5">Found {totalItems} total records</p>
                     </div>
+                    {debouncedSearch.trim() !== "" && (
+                        <div className="flex items-center gap-3 bg-indigo-50 border border-indigo-100/50 px-4 py-2.5 rounded-2xl shadow-sm animate-fadeIn">
+                            <FaUserClock className="text-indigo-600 text-lg" />
+                            <div>
+                                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider leading-none">Total Worked Time</p>
+                                <p className="text-sm font-extrabold text-indigo-900 mt-1">{totalWorkingHours} hours</p>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div>
