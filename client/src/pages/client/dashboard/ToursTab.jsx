@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Compass, MapPin, X, Phone, Mail, Clock, Eye, Ticket, Calendar, Users, CreditCard, ShieldCheck, Check, AlertTriangle } from "lucide-react";
+import { Compass, MapPin, X, Phone, Mail, Clock, Eye, Ticket, Calendar, Users, CreditCard, ShieldCheck, Check, AlertTriangle, Star } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -16,7 +16,31 @@ export default function ToursTab({
   const [modifyModal, setModifyModal] = useState({ isOpen: false, tour: null });
   const [selectedTourForDetails, setSelectedTourForDetails] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, tourId: null, isPaid: false, isProcessing: false, reason: "" });
+  const [reviewPanel, setReviewPanel] = useState({ isOpen: false, tourId: null, tourRating: 0, guideRating: 0, comment: "", submitting: false });
   const navigate = useNavigate();
+
+  const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api").replace(/\/$/, "");
+  const getToken = () => sessionStorage.getItem("customerToken") || localStorage.getItem("customerToken");
+
+  const handleSubmitTourReview = async () => {
+    if (reviewPanel.tourRating < 1) { toast.error("Please rate the tour."); return; }
+    setReviewPanel(p => ({ ...p, submitting: true }));
+    try {
+      await axios.post(
+        `${backendBaseUrl}/customers/tours/${reviewPanel.tourId}/review`,
+        { tourRating: reviewPanel.tourRating, guideRating: reviewPanel.guideRating || undefined, comment: reviewPanel.comment },
+        { headers: { Authorization: `Bearer ${getToken()}` } }
+      );
+      toast.success("Thank you for your review!");
+      const newReview = { tour_rating: reviewPanel.tourRating, guide_rating: reviewPanel.guideRating, comment: reviewPanel.comment };
+      setTours(prev => prev.map(t => t.realId === reviewPanel.tourId ? { ...t, review: newReview } : t));
+      if (selectedTourForDetails?.realId === reviewPanel.tourId) setSelectedTourForDetails(prev => ({ ...prev, review: newReview }));
+      setReviewPanel({ isOpen: false, tourId: null, tourRating: 0, guideRating: 0, comment: "", submitting: false });
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Failed to submit review.");
+      setReviewPanel(p => ({ ...p, submitting: false }));
+    }
+  };
 
   const supportContact = import.meta.env.VITE_SUPPORT_CONTACT || "+94 11 234 5678";
   const supportEmail = import.meta.env.VITE_SUPPORT_EMAIL || "concierge@bluebirdhotels.com";
@@ -493,6 +517,48 @@ export default function ToursTab({
 
               {/* Modal Footer */}
               <div className="p-4 border-t border-slate-200 bg-slate-50 space-y-2">
+                {/* Write Review — accepted tours with no review yet */}
+                {selectedTourForDetails.rawStatus === "accepted" && !selectedTourForDetails.review && (
+                  <button
+                    onClick={() => setReviewPanel({ isOpen: true, tourId: selectedTourForDetails.realId, tourRating: 0, guideRating: 0, comment: "", submitting: false })}
+                    className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
+                  >
+                    <Star size={13} /> Write a Review
+                  </button>
+                )}
+                {/* Review submitted display */}
+                {selectedTourForDetails.review && (
+                  <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl text-xs space-y-1">
+                    <p className="font-bold text-amber-800 flex items-center gap-1">
+                      <Star size={11} className="fill-amber-500 text-amber-500" /> Your Review
+                    </p>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[11px] text-amber-900">
+                        <span>Tour Rating:</span>
+                        <div className="flex gap-0.5">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star key={i} size={10} className={i < selectedTourForDetails.review.tour_rating ? "fill-amber-400 text-amber-400" : "text-slate-200"} />
+                          ))}
+                        </div>
+                      </div>
+                      {selectedTourForDetails.review.guide_rating && (
+                        <div className="flex justify-between text-[11px] text-amber-900">
+                          <span>Guide Rating:</span>
+                          <div className="flex gap-0.5">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <Star key={i} size={10} className={i < selectedTourForDetails.review.guide_rating ? "fill-amber-400 text-amber-400" : "text-slate-200"} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {selectedTourForDetails.review.comment && (
+                        <p className="italic text-amber-700 text-[11px] mt-1 border-t border-amber-100 pt-1">
+                          "{selectedTourForDetails.review.comment}"
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {/* Refund & Cancel action — only for accepted (paid) tours without an existing refund */}
                 {selectedTourForDetails.rawStatus === "accepted" && !selectedTourForDetails.refund && (
                   <button
@@ -580,6 +646,101 @@ export default function ToursTab({
                   }`}
                 >
                   {confirmDialog.isProcessing ? "Processing..." : confirmDialog.isPaid ? "Confirm Refund & Cancel" : "Yes, Cancel"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* TOUR REVIEW DIALOG */}
+      {reviewPanel.isOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-[60]"
+            onClick={() => !reviewPanel.submitting && setReviewPanel({ isOpen: false, tourId: null, tourRating: 0, guideRating: 0, comment: "", submitting: false })}
+          />
+          <div className="fixed inset-0 z-[61] flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 space-y-5">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto">
+                <Star size={24} className="text-amber-500 fill-amber-500" />
+              </div>
+              <div className="text-center space-y-2">
+                <h3 className="font-serif text-base font-bold text-blue-950">Write an Excursion Review</h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Share your experience on this tour to help our other travelers.
+                </p>
+              </div>
+
+              {/* Tour Rating Stars */}
+              <div className="space-y-2 text-center">
+                <span className="text-[11px] font-bold text-slate-600 uppercase block">Tour Experience *</span>
+                <div className="flex justify-center gap-1.5">
+                  {[1, 2, 3, 4, 5].map(val => (
+                    <button
+                      key={val}
+                      onClick={() => setReviewPanel(prev => ({ ...prev, tourRating: val }))}
+                      disabled={reviewPanel.submitting}
+                      className="text-slate-200 hover:scale-110 transition cursor-pointer"
+                    >
+                      <Star
+                        size={22}
+                        className={val <= reviewPanel.tourRating ? "fill-amber-400 text-amber-400" : "text-slate-200"}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Guide Rating Stars */}
+              <div className="space-y-2 text-center">
+                <span className="text-[11px] font-bold text-slate-600 uppercase block">Tour Guide Service (Optional)</span>
+                <div className="flex justify-center gap-1.5">
+                  {[1, 2, 3, 4, 5].map(val => (
+                    <button
+                      key={val}
+                      onClick={() => setReviewPanel(prev => ({ ...prev, guideRating: val }))}
+                      disabled={reviewPanel.submitting}
+                      className="text-slate-200 hover:scale-110 transition cursor-pointer"
+                    >
+                      <Star
+                        size={20}
+                        className={val <= reviewPanel.guideRating ? "fill-amber-400 text-amber-400" : "text-slate-200"}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Comment text */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-600">Review Comments</label>
+                <textarea
+                  value={reviewPanel.comment}
+                  onChange={e => setReviewPanel(prev => ({ ...prev, comment: e.target.value }))}
+                  disabled={reviewPanel.submitting}
+                  placeholder="Share your thoughts about the locations, transport, itinerary..."
+                  rows={3}
+                  maxLength={500}
+                  className="w-full text-xs text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300 placeholder:text-slate-400 disabled:opacity-60 transition"
+                />
+                <p className="text-[10px] text-slate-400 text-right">{reviewPanel.comment.length}/500</p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setReviewPanel({ isOpen: false, tourId: null, tourRating: 0, guideRating: 0, comment: "", submitting: false })}
+                  disabled={reviewPanel.submitting}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitTourReview}
+                  disabled={reviewPanel.submitting}
+                  className="flex-1 py-2.5 bg-blue-950 hover:bg-blue-900 text-white font-semibold text-xs rounded-xl transition-all disabled:opacity-50"
+                >
+                  {reviewPanel.submitting ? "Submitting..." : "Submit Review"}
                 </button>
               </div>
             </div>

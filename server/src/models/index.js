@@ -36,7 +36,9 @@ import Attendance from "./attendance/Attendance.js";
 import AttendanceEditLog from "./attendance/AttendanceEditLog.js";
 import BookingRefund from "./booking/bookingRefund.js";
 import BookingRefundItem from "./booking/bookingRefundItem.js";
-import RoomStayReview from "./booking/roomStayReview.js";
+import RoomReview from "./booking/roomStayReview.js";
+import VehicleReview from "./vehicle/vehicleReview.js";
+import TourReview from "./tour_package/tourReview.js";
 import AttendanceSetting from "./attendance/AttendanceSetting.js";
 import LeaveType from "./leave/LeaveType.js";
 import LeaveRequest from "./leave/LeaveRequest.js";
@@ -63,29 +65,51 @@ export function initModels() {
         as: "booking",
     });
 
-    Booking.hasOne(RoomStayReview, {
+    Booking.hasOne(RoomReview, {
         foreignKey: "booking_id",
         as: "stayReview",
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
     });
 
-    RoomStayReview.belongsTo(Booking, {
+    RoomReview.belongsTo(Booking, {
         foreignKey: "booking_id",
         as: "booking",
     });
 
-    Customer.hasMany(RoomStayReview, {
+    Customer.hasMany(RoomReview, {
         foreignKey: "customer_id",
         as: "stayReviews",
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
     });
 
-    RoomStayReview.belongsTo(Customer, {
+    RoomReview.belongsTo(Customer, {
         foreignKey: "customer_id",
         as: "customer",
     });
+
+    // VehicleBooking -> VehicleReview
+    VehicleBooking.hasOne(VehicleReview, {
+        foreignKey: "vehicle_booking_id",
+        as: "review",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+    });
+    VehicleReview.belongsTo(VehicleBooking, { foreignKey: "vehicle_booking_id", as: "booking" });
+    Customer.hasMany(VehicleReview, { foreignKey: "customer_id", as: "vehicleReviews", onDelete: "CASCADE" });
+    VehicleReview.belongsTo(Customer, { foreignKey: "customer_id", as: "customer" });
+
+    // TourInquiry -> TourReview
+    TourInquiry.hasOne(TourReview, {
+        foreignKey: "tour_booking_id",
+        as: "review",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+    });
+    TourReview.belongsTo(TourInquiry, { foreignKey: "tour_booking_id", as: "inquiry" });
+    Customer.hasMany(TourReview, { foreignKey: "customer_id", as: "tourReviews", onDelete: "CASCADE" });
+    TourReview.belongsTo(Customer, { foreignKey: "customer_id", as: "customer" });
 
     // Room -> BookedRoom
     Room.hasMany(BookedRoom, {
@@ -479,6 +503,6 @@ export function initModels() {
         as: "approver"
     });
 
-    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, ServiceCharge, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance, AttendanceEditLog, BookingRefund, BookingRefundItem, LeaveRequest, LeaveType, AirportPickupVehicle };
+    return { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, ServiceCharge, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance, AttendanceEditLog, BookingRefund, BookingRefundItem, LeaveRequest, LeaveType, AirportPickupVehicle, RoomReview, VehicleReview, TourReview };
 }
-export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, ServiceCharge, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance, AttendanceEditLog, BookingRefund, BookingRefundItem, RoomStayReview, LeaveRequest, LeaveType, AirportPickupVehicle };
+export { AirPortPickup, Customer, BookedRoom, Booking, Reservation, Room, StaffMember, Amenities, UserRegisterModel, RoomAmenities, Tour, TourItem, TourInquiry, Vehicle, VehicleType, VehicleRentalPolicy, Role, OccupancyType, RoomType, BoardType, RoomPrice, SeasonalDiscount, RoomTypeAmenities, DriverPricingSetting, VehicleBooking, Driver, Payment, ServiceCharge, Policy, VehicleServiceLog, VehicleChecklist, VehicleFinalBill, RoomPayment, ShopItem, Attendance, AttendanceEditLog, BookingRefund, BookingRefundItem, RoomReview, VehicleReview, TourReview, LeaveRequest, LeaveType, AirportPickupVehicle };

@@ -300,20 +300,46 @@ export default function CustomerDashboard() {
 
         // 3. Fetch Rentals (Vehicles)
         const rawRentals = rentalsRes.data.data || [];
-        const mappedRentals = rawRentals.map(r => ({
-          id: `BB-CAR-${r.id}`,
-          realId: r.id,
-          model: r.vehicle ? `${r.vehicle.brand} ${r.vehicle.model}` : "Premium Fleet Vehicle",
-          type: r.vehicle?.capacity ? `${r.vehicle.capacity} Seater` : "Luxury Car",
-          image: r.vehicle?.image || "https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?auto=format&fit=crop&w=600&q=80",
-          pickupLocation: r.pickupLocation || "Airport Terminal",
-          dropoffLocation: r.dropoffLocation || "Airport Terminal",
-          startDate: r.pickupDatetime,
-          endDate: r.returnDatetime,
-          status: r.status.replace("_", " ").toUpperCase(),
-          price: parseFloat(r.totalPayable),
-          unlimitedMileage: true
-        }));
+        const mappedRentals = rawRentals.map(r => {
+          const rawStatus = r.status;
+          const successPayment = r.payments?.find(p => p.status === "success");
+          let displayStatus = rawStatus.replace(/_/g, " ");
+          displayStatus = displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1);
+          if (r.refund) displayStatus = `Refund ${r.refund.status.charAt(0).toUpperCase() + r.refund.status.slice(1)}`;
+
+          return {
+            id: `BB-CAR-${r.id}`,
+            realId: r.id,
+            bookingNo: r.bookingNo,
+            model: r.vehicle ? `${r.vehicle.brand} ${r.vehicle.model}` : "Premium Fleet Vehicle",
+            brand: r.vehicle?.brand || "",
+            vehicleModel: r.vehicle?.model || "",
+            type: r.vehicle?.capacity ? `${r.vehicle.capacity} Seater` : "Luxury Car",
+            image: r.vehicle?.image || "https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?auto=format&fit=crop&w=600&q=80",
+            pickupLocation: r.pickupLocation || "Airport Terminal",
+            dropoffLocation: r.dropoffLocation || "Airport Terminal",
+            startDate: r.pickupDatetime,
+            endDate: r.returnDatetime,
+            numDays: r.numDays,
+            hireType: r.hireType,
+            status: displayStatus,
+            rawStatus,
+            price: parseFloat(r.totalPayable),
+            depositAmount: parseFloat(r.depositAmount || 0),
+            balanceAmount: parseFloat(r.balanceAmount || 0),
+            specialRequirements: r.specialRequirements || "",
+            cancellationReason: r.cancellationReason || "",
+            payment: successPayment ? {
+              amount: parseFloat(successPayment.amount),
+              currency: successPayment.currency || "LKR",
+              method: successPayment.method || "Online",
+              status: successPayment.status
+            } : null,
+            refund: r.refund || null,
+            review: r.review || null,
+            unlimitedMileage: true
+          };
+        });
         setVehicles(mappedRentals);
 
         // 4. Fetch Tours
@@ -356,6 +382,7 @@ export default function CustomerDashboard() {
             address: t.address || "",
             conciergeNotes: reply,
             refund: t.refund || null,
+            review: t.review || null,
             lastUpdated: new Date(t.updatedAt).toLocaleDateString()
           };
         });
@@ -744,6 +771,7 @@ export default function CustomerDashboard() {
               {activeTab === "rentals" && (
                 <RentalsTab
                   vehicles={vehicles}
+                  setVehicles={setVehicles}
                   isEmptyState={isEmptyState}
                   filterList={filterList}
                 />

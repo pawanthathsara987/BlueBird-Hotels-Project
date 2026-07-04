@@ -11,7 +11,7 @@ import { Op } from "sequelize";
 dotenv.config();
 
 import sequelize from "../config/database.js";
-import { Booking, BookedRoom, Room, RoomType, AirPortPickup, VehicleBooking, Vehicle, TourInquiry, Tour, Payment, RoomPayment, BoardType, RoomPrice, AirportPickupVehicle, RoomStayReview } from "../models/index.js";
+import { Booking, BookedRoom, Room, RoomType, AirPortPickup, VehicleBooking, Vehicle, TourInquiry, Tour, Payment, RoomPayment, BoardType, RoomPrice, AirportPickupVehicle, RoomReview, VehicleReview, TourReview } from "../models/index.js";
 
 export async function registerCustomer(req, res) {
 
@@ -525,7 +525,7 @@ export async function getCustomerBookings(req, res) {
                     ]
                 },
                 {
-                    model: RoomStayReview,
+                    model: RoomReview,
                     as: "stayReview",
                     required: false
                 },
@@ -570,7 +570,7 @@ export async function getCustomerBookings(req, res) {
     }
 }
 
-export async function submitRoomStayReview(req, res) {
+export async function submitRoomReview(req, res) {
     const t = await sequelize.transaction();
     try {
         const customerId = req.user.id;
@@ -609,7 +609,7 @@ export async function submitRoomStayReview(req, res) {
             return res.status(400).json({ success: false, message: "You can only review a booking after check-out" });
         }
 
-        const existingReview = await RoomStayReview.findOne({
+        const existingReview = await RoomReview.findOne({
             where: { booking_id: bookingId, customer_id: customerId },
             transaction: t
         });
@@ -619,7 +619,7 @@ export async function submitRoomStayReview(req, res) {
             return res.status(409).json({ success: false, message: "A review for this booking has already been submitted" });
         }
 
-        const review = await RoomStayReview.create({
+        const review = await RoomReview.create({
             booking_id: booking.id,
             customer_id: customerId,
             hotel_rating: hotelScore,
@@ -627,18 +627,120 @@ export async function submitRoomStayReview(req, res) {
         }, { transaction: t });
 
         await t.commit();
-
-        return res.status(201).json({
-            success: true,
-            message: "Review submitted successfully",
-            data: review
-        });
+        return res.status(201).json({ success: true, message: "Review submitted successfully", data: review });
     } catch (error) {
         await t.rollback();
-        console.error("Error submitting room stay review:", error);
+        console.error("Error submitting room review:", error);
         return res.status(500).json({ success: false, message: "Internal server error" });
     }
 }
+
+export async function submitVehicleReview(req, res) {
+    const t = await sequelize.transaction();
+    try {
+        const customerId = req.user.id;
+        const { id } = req.params; // vehicle booking id
+        const { vehicleRating, driverRating, comment } = req.body;
+
+        const vScore = Number(vehicleRating);
+        const dScore = driverRating ? Number(driverRating) : null;
+
+        if (!Number.isInteger(vScore) || vScore < 1 || vScore > 5) {
+            await t.rollback();
+            return res.status(400).json({ success: false, message: "Vehicle rating must be between 1 and 5" });
+        }
+        if (dScore !== null && (!Number.isInteger(dScore) || dScore < 1 || dScore > 5)) {
+            await t.rollback();
+            return res.status(400).json({ success: false, message: "Driver rating must be between 1 and 5" });
+        }
+
+        const booking = await VehicleBooking.findOne({ where: { id, customerId }, transaction: t });
+        if (!booking) {
+            await t.rollback();
+            return res.status(404).json({ success: false, message: "Rental booking not found or not authorized" });
+        }
+        if (![ "completed", "returned" ].includes(booking.status)) {
+            await t.rollback();
+            return res.status(400).json({ success: false, message: "You can only review a completed rental" });
+        }
+
+        const existing = await VehicleReview.findOne({ where: { vehicle_booking_id: id, customer_id: customerId }, transaction: t });
+        if (existing) {
+            await t.rollback();
+            return res.status(409).json({ success: false, message: "Review already submitted for this rental" });
+        }
+
+        const review = await VehicleReview.create({
+            vehicle_booking_id: Number(id),
+            customer_id: customerId,
+            vehicle_rating: vScore,
+            driver_rating: dScore,
+            comment: comment?.trim() || null
+        }, { transaction: t });
+
+        await t.commit();
+        return res.status(201).json({ success: true, message: "Vehicle review submitted", data: review });
+    } catch (error) {
+        await t.rollback();
+        console.error("Error submitting vehicle review:", error);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+}
+
+export async function submitTourReview(req, res) {
+    const t = await sequelize.transaction();
+    try {
+        const customerId = req.user.id;
+        const { id } = req.params; // tour inquiry id
+        const { tourRating, guideRating, comment } = req.body;
+
+        const tScore = Number(tourRating);
+        const gScore = guideRating ? Number(guideRating) : null;
+
+        if (!Number.isInteger(tScore) || tScore < 1 || tScore > 5) {
+            await t.rollback();
+            return res.status(400).json({ success: false, message: "Tour rating must be between 1 and 5" });
+        }
+        if (gScore !== null && (!Number.isInteger(gScore) || gScore < 1 || gScore > 5)) {
+            await t.rollback();
+            return res.status(400).json({ success: false, message: "Guide rating must be between 1 and 5" });
+        }
+
+        const inquiry = await TourInquiry.findOne({ where: { id, customerId }, transaction: t });
+        if (!inquiry) {
+            await t.rollback();
+            return res.status(404).json({ success: false, message: "Tour booking not found or not authorized" });
+        }
+        if (inquiry.status !== "accepted") {
+            await t.rollback();
+            return res.status(400).json({ success: false, message: "You can only review a completed (accepted) tour" });
+        }
+
+        const existing = await TourReview.findOne({ where: { tour_booking_id: id, customer_id: customerId }, transaction: t });
+        if (existing) {
+            await t.rollback();
+            return res.status(409).json({ success: false, message: "Review already submitted for this tour" });
+        }
+
+        const review = await TourReview.create({
+            tour_booking_id: Number(id),
+            customer_id: customerId,
+            tour_rating: tScore,
+            guide_rating: gScore,
+            comment: comment?.trim() || null
+        }, { transaction: t });
+
+        await t.commit();
+        return res.status(201).json({ success: true, message: "Tour review submitted", data: review });
+    } catch (error) {
+        await t.rollback();
+        console.error("Error submitting tour review:", error);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+}
+
+// Keep old name as alias for backward compatibility
+export const submitRoomStayReview = submitRoomReview;
 
 export async function getCustomerRentals(req, res) {
     try {
@@ -646,14 +748,27 @@ export async function getCustomerRentals(req, res) {
         const rentals = await VehicleBooking.findAll({
             where: { customerId: customerId },
             include: [
-                {
-                    model: Vehicle,
-                    as: "vehicle"
-                }
+                { model: Vehicle, as: "vehicle" },
+                { model: Payment, as: "payments" },
+                { model: VehicleReview, as: "review", required: false }
             ],
             order: [["createdAt", "DESC"]]
         });
-        res.status(200).json({ success: true, data: rentals });
+
+        // Attach vehicle_refunds for each rental
+        const refunds = rentals.length > 0
+            ? await sequelize.query(
+                `SELECT * FROM vehicle_refunds WHERE bookingId IN (:ids)`,
+                { replacements: { ids: rentals.map(r => r.id) }, type: sequelize.QueryTypes.SELECT }
+              )
+            : [];
+
+        const data = rentals.map(r => ({
+            ...r.toJSON(),
+            refund: refunds.find(rf => rf.bookingId === r.id) || null
+        }));
+
+        res.status(200).json({ success: true, data });
     } catch (error) {
         console.error("Error fetching customer rentals:", error);
         res.status(500).json({ message: "Internal server error" });
@@ -679,6 +794,11 @@ export async function getCustomerTours(req, res) {
                 {
                     model: Tour,
                     attributes: ["packageName", "location", "price", "image"]
+                },
+                {
+                    model: TourReview,
+                    as: "review",
+                    required: false
                 }
             ],
             order: [["createdAt", "DESC"]]
@@ -699,7 +819,8 @@ export async function getCustomerTours(req, res) {
                 const jsonVal = inquiry.toJSON();
                 return {
                     ...jsonVal,
-                    refund
+                    refund,
+                    review: jsonVal.review || null
                 };
             });
 
@@ -877,10 +998,12 @@ export async function cancelCustomerRental(req, res) {
     const t = await sequelize.transaction();
     try {
         const { id } = req.params;
+        const { reason } = req.body;
         const customerId = req.user.id;
 
         const rental = await VehicleBooking.findOne({
-            where: { id, customerId: customerId },
+            where: { id, customerId },
+            include: [{ model: Payment, as: "payments" }],
             transaction: t
         });
 
@@ -889,25 +1012,73 @@ export async function cancelCustomerRental(req, res) {
             return res.status(404).json({ message: "Rental booking not found or not authorized to cancel" });
         }
 
-        if (rental.status === "cancelled" || rental.status === "completed" || rental.status === "ongoing" || rental.status === "returned") {
+        if (["cancelled", "completed", "ongoing", "returned"].includes(rental.status)) {
             await t.rollback();
-            return res.status(400).json({ message: `Cannot cancel a rental that is in status ${rental.status}` });
+            return res.status(400).json({ message: `Cannot cancel a rental in status: ${rental.status}` });
         }
 
         await rental.update({
             status: "cancelled",
             cancelledBy: customerId,
             cancelledAt: new Date(),
-            cancellationReason: "Cancelled by customer via dashboard"
+            cancellationReason: reason || "Cancelled by customer via dashboard"
         }, { transaction: t });
 
-        await Payment.update(
-            { status: "failed" },
-            {
-                where: { booking_id: id, status: "pending" },
+        // Refund eligibility: 5+ days before pickupDatetime
+        const successPayment = rental.payments?.find(p => p.status === "success");
+        if (successPayment) {
+            const pickupDate = new Date(rental.pickupDatetime);
+            const today = new Date();
+            const daysBeforePickup = Math.ceil((pickupDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
+            const isEligible = daysBeforePickup >= 5;
+            const depositAmount = parseFloat(successPayment.amount || 0);
+            const refundAmount = isEligible ? depositAmount : 0;
+            const refundRef = "VRF-" + (await import("crypto")).default.randomBytes(6).toString("hex").toUpperCase();
+
+            // Ensure vehicle_refunds table exists
+            await sequelize.query(`
+                CREATE TABLE IF NOT EXISTS vehicle_refunds (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    bookingId INT NOT NULL,
+                    bookingNo VARCHAR(50),
+                    refundRef VARCHAR(30) NOT NULL UNIQUE,
+                    isEligible TINYINT(1) NOT NULL DEFAULT 0,
+                    daysBeforePickup INT NOT NULL DEFAULT 0,
+                    depositAmount DECIMAL(10,2) NOT NULL DEFAULT 0,
+                    refundAmount DECIMAL(10,2) NOT NULL DEFAULT 0,
+                    status VARCHAR(30) NOT NULL DEFAULT 'requested',
+                    clientReason TEXT,
+                    managerNote TEXT,
+                    requestedAt DATETIME NOT NULL,
+                    processedAt DATETIME,
+                    createdAt DATETIME NOT NULL,
+                    updatedAt DATETIME NOT NULL
+                )
+            `, { transaction: t });
+
+            await sequelize.query(`
+                INSERT INTO vehicle_refunds
+                    (bookingId, bookingNo, refundRef, isEligible, daysBeforePickup, depositAmount, refundAmount,
+                     status, clientReason, requestedAt, createdAt, updatedAt)
+                VALUES
+                    (:bookingId, :bookingNo, :refundRef, :isEligible, :daysBeforePickup, :depositAmount, :refundAmount,
+                     'requested', :clientReason, NOW(), NOW(), NOW())
+            `, {
+                replacements: {
+                    bookingId: rental.id,
+                    bookingNo: rental.bookingNo,
+                    refundRef,
+                    isEligible: isEligible ? 1 : 0,
+                    daysBeforePickup: daysBeforePickup > 0 ? daysBeforePickup : 0,
+                    depositAmount,
+                    refundAmount,
+                    clientReason: reason || "Customer cancelled rental."
+                },
                 transaction: t
-            }
-        );
+            });
+
+            console.log(`[VEHICLE REFUND] Created ${refundRef} for booking ${rental.bookingNo} — eligible: ${isEligible}`);
+        }
 
         await t.commit();
         res.status(200).json({ success: true, message: "Rental booking cancelled successfully" });
