@@ -931,7 +931,8 @@ const getAvailableRoomTypesByDate = async (req, res) => {
                 cancellation_policy: "Free cancellation is allowed up to 7 days (168 hours) before check-in. Cancellations made within 7 days of check-in, or failure to check in on the reserved date (no-show), are non-refundable. The 50% advance deposit is retained as a late cancellation fee.",
                 payment_policy: "No prepayment required. Secure your booking online with a 50% advance deposit paid at the time of booking to hold your luxury stay.",
                 check_in_time: "2:00 PM",
-                check_out_time: "12:00 PM"
+                check_out_time: "12:00 PM",
+                refund_handle_business_days: 15
             });
             policiesList = [defaultPolicy];
         }
@@ -1090,6 +1091,7 @@ const getActivePolicy = async (req, res) => {
                 payment_policy: "No prepayment required. Secure your booking online with a 50% advance deposit paid at the time of booking to hold your luxury stay.",
                 check_in_time: "2:00 PM",
                 check_out_time: "12:00 PM",
+                refund_handle_business_days: 15,
                 status: true
             });
         }
