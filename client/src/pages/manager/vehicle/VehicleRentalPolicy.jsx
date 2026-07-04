@@ -148,13 +148,15 @@ export default function VehicleRentalPolicy() {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Late Return Fee (per hour)</label>
-                <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">{import.meta.env.VITE_CURRENCY_TYPE || "LKR"}</div>
+                <div className="flex bg-gray-50 border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all duration-200">
+                  <div className="flex items-center justify-center px-4 bg-gray-100 border-r border-gray-200 text-gray-500 font-semibold select-none">
+                    {import.meta.env.VITE_CURRENCY_TYPE || "LKR"}
+                  </div>
                   <input 
                     type="number" step="0.01" min="0" 
                     value={policy?.lateReturnFeePerHour ?? 0} 
                     onChange={(e) => handleChange('lateReturnFeePerHour', e.target.value)} 
-                    className="w-full pl-8 pr-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-900 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all duration-200" 
+                    className="w-full px-4 py-2.5 bg-transparent text-gray-900 outline-none" 
                   />
                 </div>
                 {errors.lateReturnFeePerHour && <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1"><AlertCircle size={12}/>{errors.lateReturnFeePerHour}</p>}
@@ -189,13 +191,15 @@ export default function VehicleRentalPolicy() {
             <div className="p-6 space-y-5">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Security Deposit Amount</label>
-                <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">{import.meta.env.VITE_CURRENCY_TYPE || "LKR"}</div>
+                <div className="flex bg-gray-50 border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all duration-200">
+                  <div className="flex items-center justify-center px-4 bg-gray-100 border-r border-gray-200 text-gray-500 font-semibold select-none">
+                    {import.meta.env.VITE_CURRENCY_TYPE || "LKR"}
+                  </div>
                   <input 
                     type="number" step="0.01" min="0" 
                     value={policy?.securityDepositAmount ?? 0} 
                     onChange={(e) => handleChange('securityDepositAmount', e.target.value)} 
-                    className="w-full pl-8 pr-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-900 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all duration-200" 
+                    className="w-full px-4 py-2.5 bg-transparent text-gray-900 outline-none" 
                   />
                 </div>
                 {errors.securityDepositAmount && <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1"><AlertCircle size={12}/>{errors.securityDepositAmount}</p>}
@@ -218,13 +222,15 @@ export default function VehicleRentalPolicy() {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Extra Mileage Fee</label>
-                <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">{import.meta.env.VITE_CURRENCY_TYPE || "LKR"}</div>
+                <div className="flex bg-gray-50 border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all duration-200">
+                  <div className="flex items-center justify-center px-4 bg-gray-100 border-r border-gray-200 text-gray-500 font-semibold select-none">
+                    {import.meta.env.VITE_CURRENCY_TYPE || "LKR"}
+                  </div>
                   <input 
                     type="number" step="0.01" min="0" 
                     value={policy?.extraMileageFee ?? 0} 
                     onChange={(e) => handleChange('extraMileageFee', e.target.value)} 
-                    className="w-full pl-8 pr-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-900 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all duration-200" 
+                    className="w-full px-4 py-2.5 bg-transparent text-gray-900 outline-none" 
                   />
                 </div>
                 {errors.extraMileageFee && <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1"><AlertCircle size={12}/>{errors.extraMileageFee}</p>}

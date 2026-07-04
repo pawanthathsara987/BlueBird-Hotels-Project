@@ -1,4 +1,5 @@
 import { TourInquiry, Tour } from "../../models/index.js";
+import sequelize from "../../config/database.js";
 import crypto from "crypto";
 import {
   validateEmail,
@@ -601,6 +602,7 @@ export const getInquiryStats = async (req, res) => {
 export const cancelInquiry = async (req, res) => {
   try {
     const { id } = req.params;
+    const { reason } = req.body;
     
     const inquiry = await TourInquiry.findByPk(id);
     
@@ -625,11 +627,62 @@ export const cancelInquiry = async (req, res) => {
       });
     }
 
-    // You could theoretically process a refund here if it was 'accepted'
-    // For now we just mark as canceled
+    const wasAccepted = inquiry.status === "accepted" || inquiry.status === "progress";
     
     inquiry.status = "canceled";
+    if (reason) inquiry.rejectionReason = reason;
     await inquiry.save();
+
+    if (wasAccepted) {
+      try {
+        // Find matching tour_bookings record
+        const bookings = await sequelize.query(
+          "SELECT * FROM tour_bookings WHERE inquiryId = :inquiryId LIMIT 1",
+          {
+            replacements: { inquiryId: inquiry.id },
+            type: sequelize.QueryTypes.SELECT
+          }
+        );
+
+        if (bookings && bookings.length > 0) {
+          const bookingRec = bookings[0];
+          const bookingId = bookingRec.id;
+          const depositAmount = parseFloat(bookingRec.depositAmount || 0);
+
+          // Calculate days before tour
+          const tourDate = new Date(inquiry.startDate);
+          const today = new Date();
+          const timeDiff = tourDate.getTime() - today.getTime();
+          const daysBeforeTour = Math.ceil(timeDiff / (1000 * 3600 * 24));
+          const isEligible = daysBeforeTour >= 3; // 3 days notice required for full refund
+          const refundAmount = isEligible ? depositAmount : 0;
+          const refundRef = "TRF-" + crypto.randomBytes(6).toString("hex").toUpperCase();
+
+          await sequelize.query(`
+            INSERT INTO tour_refunds (
+              bookingId, isEligible, daysBeforeTour, refundAmount, status, 
+              clientReason, requestedAt, refundRef, inquiryRef, createdAt, updatedAt
+            ) VALUES (
+              :bookingId, :isEligible, :daysBeforeTour, :refundAmount, 'requested',
+              :clientReason, NOW(), :refundRef, :inquiryRef, NOW(), NOW()
+            )
+          `, {
+            replacements: {
+              bookingId,
+              isEligible: isEligible ? 1 : 0,
+              daysBeforeTour: daysBeforeTour > 0 ? daysBeforeTour : 0,
+              refundAmount,
+              clientReason: reason || "Customer canceled booking.",
+              refundRef,
+              inquiryRef: inquiry.inquiryRef
+            }
+          });
+          console.log(`[REFUND CREATED] Created tour refund ${refundRef} for booking ID ${bookingId}`);
+        }
+      } catch (err) {
+        console.error("Error creating tour refund record:", err);
+      }
+    }
 
     res.status(200).json({
       success: true,

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { 
   Calendar, MapPin, Check, BedDouble, Users, AlertCircle, Info, Search, Filter, 
   FileText, Receipt, XCircle, ArrowRight, HelpCircle, User, CreditCard, Clock, 
-  ChevronRight, RefreshCw, Eye, ShieldCheck, Mail, Phone, Home, Ticket
+  ChevronRight, RefreshCw, Eye, ShieldCheck, Mail, Phone, Home, Ticket, Star
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import axios from "axios";
@@ -21,6 +21,17 @@ export default function BookingsTab({
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [roomToCancel, setRoomToCancel] = useState(null);
   const [showPickupCancelDialog, setShowPickupCancelDialog] = useState(false);
+  const [isStayReviewModalOpen, setIsStayReviewModalOpen] = useState(false);
+  const [isSubmittingStayReview, setIsSubmittingStayReview] = useState(false);
+  const [stayReviewError, setStayReviewError] = useState("");
+  const [stayReviewTarget, setStayReviewTarget] = useState(null);
+  const [stayReviewForm, setStayReviewForm] = useState({
+    bookingId: null,
+    bookedRoomId: null,
+    hotelRating: 5,
+    roomRating: 5,
+    comment: ""
+  });
 
   // Refund Module States
   const [refundEligibility, setRefundEligibility] = useState(null);
@@ -187,6 +198,90 @@ export default function BookingsTab({
       return;
     }
     setIsPickupCancelModalOpen(true);
+  };
+
+  const handleReviewStayClick = (booking) => {
+    if (!booking?.realId) return;
+
+    setSelectedBooking(booking);
+
+    setStayReviewTarget({
+      bookingLabel: booking.id,
+      hotelName: booking.hotelName || "BlueBird Luxury Hotels & Resorts",
+      roomLabel: `${booking.rooms?.length || 0} Room(s) Stay`,
+    });
+    setStayReviewForm({
+      bookingId: booking.realId,
+      bookedRoomId: null,
+      hotelRating: 5,
+      roomRating: 5,
+      comment: ""
+    });
+    setStayReviewError("");
+    setIsStayReviewModalOpen(true);
+  };
+
+  const handleSubmitStayReview = async (e) => {
+    e.preventDefault();
+
+    if (!stayReviewForm.bookingId) {
+      setStayReviewError("Booking reference not found.");
+      return;
+    }
+
+    setIsSubmittingStayReview(true);
+    setStayReviewError("");
+
+    try {
+      const token = localStorage.getItem("customerToken");
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api"}/customers/bookings/${stayReviewForm.bookingId}/reviews`,
+        {
+          hotelRating: stayReviewForm.hotelRating,
+          comment: stayReviewForm.comment
+        },
+        { headers }
+      );
+
+      if (response.data.success) {
+        const reviewData = response.data.data;
+
+        setBookings((prev) => prev.map((booking) => {
+          if (booking.realId !== stayReviewForm.bookingId) return booking;
+
+          return {
+            ...booking,
+            raw: booking.raw
+              ? {
+                  ...booking.raw,
+                  stayReview: reviewData
+                }
+              : booking.raw
+          };
+        }));
+
+        setSelectedBooking((prev) => prev ? {
+          ...prev,
+          raw: prev.raw
+            ? {
+                ...prev.raw,
+                stayReview: reviewData
+              }
+            : prev.raw
+        } : prev);
+
+        toast.success("Thank you. Your review has been submitted.");
+        setIsStayReviewModalOpen(false);
+      } else {
+        toast.error(response.data.message || "Failed to submit review.");
+      }
+    } catch (error) {
+      console.error("Error submitting stay review:", error);
+      setStayReviewError(error.response?.data?.message || "Failed to submit review.");
+    } finally {
+      setIsSubmittingStayReview(false);
+    }
   };
 
   const handleClosePickupCancelModal = () => {
@@ -386,23 +481,45 @@ export default function BookingsTab({
     });
   };
 
-  // Filter bookings locally by Status
-  const getFilteredByTab = (list) => {
+  const isBookingCompleted = (b) => {
+    const statusLower = (b.status || "").toLowerCase();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const checkInDate = new Date(b.checkIn);
+    const hasCheckedOutRoom = b.raw?.bookedRooms?.some(r => (r.status || "").toLowerCase() === "checked_out");
+    return statusLower === "completed" || statusLower === "checked_out" || hasCheckedOutRoom || (checkInDate < today && statusLower === "confirmed");
+  };
 
+  const isBookingUpcoming = (b) => {
+    const statusLower = (b.status || "").toLowerCase();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const checkInDate = new Date(b.checkIn);
+    if (statusLower === "cancelled" || statusLower === "rejected") {
+      return false;
+    }
+    if (isBookingCompleted(b)) {
+      return false;
+    }
+    return checkInDate >= today;
+  };
+
+  const isBookingCancelled = (b) => {
+    const statusLower = (b.status || "").toLowerCase();
+    return statusLower === "cancelled" || statusLower === "rejected";
+  };
+
+  // Filter bookings locally by Status
+  const getFilteredByTab = (list) => {
     return list.filter(b => {
-      const checkInDate = new Date(b.checkIn);
-      const statusLower = (b.status || "").toLowerCase();
-
       if (filterTab === "upcoming") {
-        return checkInDate >= today && statusLower !== "cancelled" && statusLower !== "rejected";
+        return isBookingUpcoming(b);
       }
       if (filterTab === "completed") {
-        return statusLower === "completed" || (checkInDate < today && statusLower === "confirmed");
+        return isBookingCompleted(b);
       }
       if (filterTab === "cancelled") {
-        return statusLower === "cancelled" || statusLower === "rejected";
+        return isBookingCancelled(b);
       }
       return true;
     });
@@ -934,6 +1051,29 @@ export default function BookingsTab({
                             <XCircle size={13} />
                           </button>
                         ) : null}
+                        {(() => {
+                          if (!isBookingCompleted(b)) return null;
+
+                          if (b.raw?.stayReview) {
+                            return (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-100 bg-emerald-50 px-2 py-1 text-[9px] font-extrabold uppercase tracking-wide text-emerald-700">
+                                <Check size={10} className="stroke-3 text-emerald-600" />
+                                Reviewed
+                              </span>
+                            );
+                          } else {
+                            return (
+                              <button
+                                onClick={() => handleReviewStayClick(b)}
+                                title="Write a review for this stay"
+                                className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-250 text-amber-700 hover:text-amber-800 rounded-lg text-[10px] font-bold transition cursor-pointer flex items-center gap-1.5 shadow-3xs"
+                              >
+                                <Star size={11} className="fill-amber-500 text-amber-500" />
+                                Review
+                              </button>
+                            );
+                          }
+                        })()}
                       </div>
                     </td>
                   </tr>
@@ -1021,6 +1161,28 @@ export default function BookingsTab({
                       <XCircle size={14} />
                     </button>
                   ) : null}
+                  {(() => {
+                    if (!isBookingCompleted(b)) return null;
+
+                    if (b.raw?.stayReview) {
+                      return (
+                        <div className="flex-1 py-2 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-lg text-[10px] font-extrabold text-center flex items-center justify-center gap-1 uppercase tracking-wider">
+                          <Check size={10} className="stroke-3" />
+                          Reviewed
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <button
+                          onClick={() => handleReviewStayClick(b)}
+                          className="flex-1 py-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 rounded-lg text-[10px] font-bold text-center cursor-pointer flex items-center justify-center gap-1 shadow-3xs"
+                        >
+                          <Star size={11} className="fill-amber-500 text-amber-500" />
+                          Review
+                        </button>
+                      );
+                    }
+                  })()}
                 </div>
               </div>
             ))}
@@ -1093,14 +1255,14 @@ export default function BookingsTab({
                 <div className="relative pl-6 space-y-4 border-l border-slate-200">
                   {getTimelineSteps(selectedBooking).map((step, idx) => (
                     <div key={idx} className="relative">
-                      <div className={`absolute -left-[34px] top-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                      <div className={`absolute -left-8.5 top-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
                         step.done 
                           ? "bg-emerald-600 border-emerald-600 text-white" 
                           : step.active 
                             ? "bg-amber-400 border-amber-400 text-white" 
                             : "bg-white border-slate-200"
                       }`}>
-                        {step.done && <Check size={8} className="stroke-[3]" />}
+                        {step.done && <Check size={8} className="stroke-3" />}
                       </div>
                       <div>
                         <p className={`text-xs font-bold ${step.done ? "text-slate-800" : "text-slate-400"}`}>{step.label}</p>
@@ -1177,7 +1339,9 @@ export default function BookingsTab({
                       </p>
                       {room.status === "cancelled" ? (
                         <span className="text-rose-600 font-extrabold text-[9px] block mt-1.5 uppercase tracking-wide">🚫 Cancelled</span>
-                      ) : (room.status === "checked_in" || room.status === "checked_out") ? (
+                      ) : room.status === "checked_out" ? (
+                        <span className="text-blue-600 font-extrabold text-[9px] block mt-1.5 uppercase tracking-wide">✓ Checked Out</span>
+                      ) : room.status === "checked_in" ? (
                         <span className="text-emerald-600 font-extrabold text-[9px] block mt-1.5 uppercase tracking-wide">✓ Checked In</span>
                       ) : (selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && selectedBooking.status.toLowerCase() !== "cancellation pending") ? (
                         <button
@@ -1354,6 +1518,22 @@ export default function BookingsTab({
                   Cancel Booking
                 </button>
               ) : null}
+              {isBookingCompleted(selectedBooking) && (
+                selectedBooking.raw?.stayReview ? (
+                  <div className="flex-1 py-3 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-xl text-xs font-bold text-center flex justify-center items-center gap-1.5 shadow-2xs">
+                    <Check size={13} className="stroke-3 text-emerald-600" />
+                    Reviewed
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleReviewStayClick(selectedBooking)}
+                    className="flex-1 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold text-center cursor-pointer flex justify-center items-center gap-1.5 hover:scale-[1.02] transition-all shadow-2xs animate-pulse"
+                  >
+                    <Star size={13} className="fill-current text-white" />
+                    Review Stay
+                  </button>
+                )
+              )}
             </div>
 
           </div>
@@ -1614,6 +1794,90 @@ export default function BookingsTab({
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {isStayReviewModalOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs z-55 animate-fadeIn"
+            onClick={() => setIsStayReviewModalOpen(false)}
+          />
+          <div className="fixed inset-0 flex items-center justify-center z-55 p-4">
+            <div className="bg-white rounded-3xl p-6 max-w-lg w-full border border-slate-100 shadow-2xl space-y-4 animate-scaleUp">
+              <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Post-checkout review</p>
+                  <h4 className="font-serif font-bold text-base text-slate-800">Rate your stay</h4>
+                </div>
+                <button
+                  onClick={() => setIsStayReviewModalOpen(false)}
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+                >
+                  <XCircle size={18} />
+                </button>
+              </div>
+
+              <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4 text-xs text-slate-700 space-y-1">
+                <p className="font-bold text-slate-900">{stayReviewTarget?.hotelName || selectedBooking?.hotelName || "BlueBird Luxury Hotels & Resorts"}</p>
+                <p>{stayReviewTarget?.bookingLabel || selectedBooking?.id || "Stay booking"}</p>
+                <p>{stayReviewTarget?.roomLabel || "Selected room"}</p>
+              </div>
+
+              {stayReviewError && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+                  {stayReviewError}
+                </div>
+              )}
+
+              <form onSubmit={handleSubmitStayReview} className="space-y-4 text-xs font-sans">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Hotel rating</label>
+                  <div className="flex items-center gap-1.5 text-amber-500">
+                    {[1, 2, 3, 4, 5].map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setStayReviewForm((prev) => ({ ...prev, hotelRating: value }))}
+                        className="p-1 hover:scale-110 transition-transform focus:outline-none"
+                        aria-label={`Rate hotel ${value} stars`}
+                      >
+                        <Star size={22} fill={value <= stayReviewForm.hotelRating ? "currentColor" : "none"} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] text-slate-400 font-bold uppercase">Share your experience</label>
+                  <textarea
+                    rows={4}
+                    placeholder="Tell us about the hotel service, cleanliness, room comfort, and overall stay experience..."
+                    value={stayReviewForm.comment}
+                    onChange={(e) => setStayReviewForm((prev) => ({ ...prev, comment: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 focus:bg-white focus:border-cyan-600 outline-none resize-none leading-relaxed"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2 font-sans">
+                  <button
+                    type="button"
+                    onClick={() => setIsStayReviewModalOpen(false)}
+                    className="flex-1 py-2 bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs rounded-xl hover:bg-slate-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingStayReview}
+                    className="flex-1 py-2 bg-linear-to-r from-blue-950 to-cyan-800 hover:from-blue-900 text-white font-semibold text-xs rounded-xl transition-all disabled:opacity-60"
+                  >
+                    {isSubmittingStayReview ? "Submitting..." : "Submit Review"}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </>
