@@ -25,13 +25,10 @@ const calculateDeposit = (totalPrice) => {
   return { depositAmount, balanceAmount };
 };
 
-const getMinDateStr = () => {
+const getMinDatetimeStr = () => {
   const today = new Date();
   today.setDate(today.getDate() + 7);
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return new Date(today.getTime() - (today.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
 };
 
 export default function VehicleBookingPage() {
@@ -120,8 +117,15 @@ export default function VehicleBookingPage() {
       return;
     }
 
+    const bookingDays = Math.max(1, Math.ceil((returnTime - pickupTime) / (1000 * 60 * 60 * 24)));
+    if (bookingDays > 30) {
+      setAvailability({ available: false, reason: "Booking duration cannot exceed 30 days.", days: 0, totalPrice: null, driverFee: null, pricePerDay: null });
+      setAvailabilityLoading(false);
+      return;
+    }
+
     // Check if pickup is at least 1 week in advance
-    if (pickupDate < getMinDateStr()) {
+    if (pickupDate < getMinDatetimeStr()) {
       setAvailability({ available: false, reason: "Bookings must be made at least 1 week in advance.", days: 0, totalPrice: null, driverFee: null, pricePerDay: null });
       setAvailabilityLoading(false);
       return;
@@ -182,6 +186,20 @@ export default function VehicleBookingPage() {
     !availabilityLoading &&
     !bookingLoading
   );
+
+  const handlePickupChange = (e) => {
+    const newPickup = e.target.value;
+    setPickupDate(newPickup);
+    if (newPickup) {
+      const d = new Date(newPickup);
+      if (!Number.isNaN(d.getTime())) {
+        d.setDate(d.getDate() + 1);
+        const offset = d.getTimezoneOffset() * 60000;
+        const newReturn = new Date(d.getTime() - offset).toISOString().slice(0, 16);
+        setReturnDate(newReturn);
+      }
+    }
+  };
 
   const handleBookSubmit = (e) => {
     e.preventDefault();
@@ -305,22 +323,22 @@ export default function VehicleBookingPage() {
                   </div>
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <div>
-                      <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Pickup Date *</label>
+                      <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Pickup Date & Time *</label>
                       <input
                         required
-                        type="date"
-                        min={getMinDateStr()}
+                        type="datetime-local"
+                        min={getMinDatetimeStr()}
                         value={pickupDate}
-                        onChange={(e) => setPickupDate(e.target.value)}
+                        onChange={handlePickupChange}
                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Return Date *</label>
+                      <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Return Date & Time *</label>
                       <input
                         required
-                        type="date"
-                        min={pickupDate || getMinDateStr()}
+                        type="datetime-local"
+                        min={pickupDate || getMinDatetimeStr()}
                         value={returnDate}
                         onChange={(e) => setReturnDate(e.target.value)}
                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"

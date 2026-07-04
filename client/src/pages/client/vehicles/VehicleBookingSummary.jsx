@@ -81,13 +81,13 @@ export default function VehicleBookingSummary() {
                   <CalendarDays className="w-4 h-4" /> Reservation Dates
                 </h3>
                 <div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Pickup</span>
-                    <span className="text-sm font-semibold text-slate-900">{pickupDate}</span>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Pickup</span>
+                    <span className="text-sm font-semibold text-slate-900">{new Date(pickupDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
                   </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Return</span>
-                    <span className="text-sm font-semibold text-slate-900">{returnDate}</span>
+                  <div className="flex flex-col border-l border-slate-100 pl-4">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Return</span>
+                    <span className="text-sm font-semibold text-slate-900">{new Date(returnDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
                   </div>
                   <div className="col-span-2 pt-2 border-t border-slate-200/60 mt-1">
                     <span className="text-sm font-semibold text-slate-700">{availability?.days} Days Total</span>

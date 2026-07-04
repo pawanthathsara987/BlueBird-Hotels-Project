@@ -80,7 +80,7 @@ export default function RentalsTab({
                       <MapPin size={10} className="text-slate-400" />
                       {v.pickupLocation}
                     </span>
-                    <span className="text-[10px] text-slate-500 font-medium block mt-0.5">{new Date(v.startDate).toLocaleDateString()}</span>
+                    <span className="text-[10px] text-slate-500 font-medium block mt-0.5">{new Date(v.startDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
                   </div>
                   <div>
                     <span className="text-[9px] text-slate-400 font-bold block mb-1">DROPOFF LOCATION</span>
@@ -88,7 +88,7 @@ export default function RentalsTab({
                       <MapPin size={10} className="text-slate-400" />
                       {v.dropoffLocation}
                     </span>
-                    <span className="text-[10px] text-slate-500 font-medium block mt-0.5">{new Date(v.endDate).toLocaleDateString()}</span>
+                    <span className="text-[10px] text-slate-500 font-medium block mt-0.5">{new Date(v.endDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
                   </div>
                 </div>
 

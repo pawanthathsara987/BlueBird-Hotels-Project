@@ -545,11 +545,11 @@ export default function VehiclePaymentPage() {
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-stone-100">
                   <div>
                     <span className="block text-[10px] font-black text-stone-500 uppercase tracking-widest mb-1 flex items-center gap-1"><CalendarDays className="h-3 w-3"/> Pickup</span>
-                    <span className="text-xs font-bold text-stone-900">{pickupDate}</span>
+                    <span className="text-xs font-bold text-stone-900">{new Date(pickupDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
                   </div>
                   <div>
                     <span className="block text-[10px] font-black text-stone-500 uppercase tracking-widest mb-1 flex items-center gap-1"><CalendarDays className="h-3 w-3"/> Return</span>
-                    <span className="text-xs font-bold text-stone-900">{returnDate}</span>
+                    <span className="text-xs font-bold text-stone-900">{new Date(returnDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
                   </div>
                 </div>
 
