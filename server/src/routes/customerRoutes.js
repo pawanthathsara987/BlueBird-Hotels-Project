@@ -20,7 +20,8 @@ import {
     cancelCustomerBooking,
     cancelCustomerRental,
     cancelSingleBookedRoom,
-    cancelAirportPickup
+    cancelAirportPickup,
+    handleContactInquiry
 } from "../controllers/customerController.js";
 import { requireAuth, requireRole } from "../middleware/authMiddleware.js";
 
@@ -34,6 +35,7 @@ customerRouter.post("/reset-password", verifyOTPAndResetPassword);
 customerRouter.post("/google-login", googleLogin);
 customerRouter.post("/refresh", refreshToken);
 customerRouter.post("/logout", logoutCustomer);
+customerRouter.post("/contact", handleContactInquiry);
 
 // ── PROTECTED routes (valid customer JWT required) ────────────────────────────
 customerRouter.put("/update-profile",  requireAuth, requireRole("customer"), updateCustomerProfile);
