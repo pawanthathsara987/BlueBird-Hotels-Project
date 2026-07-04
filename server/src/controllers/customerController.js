@@ -11,7 +11,7 @@ import { Op } from "sequelize";
 dotenv.config();
 
 import sequelize from "../config/database.js";
-import { Booking, BookedRoom, Room, RoomType, AirPortPickup, VehicleBooking, Vehicle, TourInquiry, Tour, Payment, RoomPayment, BoardType, RoomPrice, AirportPickupVehicle } from "../models/index.js";
+import { Booking, BookedRoom, Room, RoomType, AirPortPickup, VehicleBooking, Vehicle, TourInquiry, Tour, Payment, RoomPayment, BoardType, RoomPrice, AirportPickupVehicle, RoomStayReview } from "../models/index.js";
 
 export async function registerCustomer(req, res) {
 
@@ -525,6 +525,11 @@ export async function getCustomerBookings(req, res) {
                     ]
                 },
                 {
+                    model: RoomStayReview,
+                    as: "stayReview",
+                    required: false
+                },
+                {
                     model: RoomPayment,
                     as: "payments",
                     attributes: ["id", "payment_no", "amount", "currency", "method", "status", "createdAt"],
@@ -562,6 +567,76 @@ export async function getCustomerBookings(req, res) {
     } catch (error) {
         console.error("Error fetching customer bookings:", error);
         res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export async function submitRoomStayReview(req, res) {
+    const t = await sequelize.transaction();
+    try {
+        const customerId = req.user.id;
+        const { bookingId } = req.params;
+        const { hotelRating, comment } = req.body;
+
+        const hotelScore = Number(hotelRating);
+
+        if (!bookingId) {
+            await t.rollback();
+            return res.status(400).json({ success: false, message: "bookingId is required" });
+        }
+
+        if (!Number.isInteger(hotelScore) || hotelScore < 1 || hotelScore > 5) {
+            await t.rollback();
+            return res.status(400).json({ success: false, message: "Hotel rating must be between 1 and 5" });
+        }
+
+        const booking = await Booking.findOne({
+            where: { id: bookingId, customer_id: customerId },
+            include: [{ model: BookedRoom, as: 'bookedRooms' }],
+            transaction: t
+        });
+
+        if (!booking) {
+            await t.rollback();
+            return res.status(404).json({ success: false, message: "Booking not found or not authorized" });
+        }
+
+        const hasCheckedOutRoom = booking.bookedRooms?.some(r => (r.status || "").toLowerCase() === "checked_out");
+        const statusLower = (booking.status || "").toLowerCase();
+        const isCompleted = statusLower === "completed" || statusLower === "checked_out" || hasCheckedOutRoom;
+
+        if (!isCompleted) {
+            await t.rollback();
+            return res.status(400).json({ success: false, message: "You can only review a booking after check-out" });
+        }
+
+        const existingReview = await RoomStayReview.findOne({
+            where: { booking_id: bookingId, customer_id: customerId },
+            transaction: t
+        });
+
+        if (existingReview) {
+            await t.rollback();
+            return res.status(409).json({ success: false, message: "A review for this booking has already been submitted" });
+        }
+
+        const review = await RoomStayReview.create({
+            booking_id: booking.id,
+            customer_id: customerId,
+            hotel_rating: hotelScore,
+            comment: comment?.trim() || null
+        }, { transaction: t });
+
+        await t.commit();
+
+        return res.status(201).json({
+            success: true,
+            message: "Review submitted successfully",
+            data: review
+        });
+    } catch (error) {
+        await t.rollback();
+        console.error("Error submitting room stay review:", error);
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 }
 
@@ -609,7 +684,29 @@ export async function getCustomerTours(req, res) {
             order: [["createdAt", "DESC"]]
         });
 
-        res.status(200).json({ success: true, data: inquiries });
+        if (inquiries.length > 0) {
+            const inquiryRefs = inquiries.map(i => i.inquiryRef);
+            const refunds = await sequelize.query(
+                `SELECT * FROM tour_refunds WHERE inquiryRef IN (:inquiryRefs)`,
+                {
+                    replacements: { inquiryRefs },
+                    type: sequelize.QueryTypes.SELECT
+                }
+            );
+
+            const inquiriesWithRefunds = inquiries.map(inquiry => {
+                const refund = refunds.find(r => r.inquiryRef === inquiry.inquiryRef) || null;
+                const jsonVal = inquiry.toJSON();
+                return {
+                    ...jsonVal,
+                    refund
+                };
+            });
+
+            res.status(200).json({ success: true, data: inquiriesWithRefunds });
+        } else {
+            res.status(200).json({ success: true, data: [] });
+        }
     } catch (error) {
         console.error("Error fetching customer tours:", error);
         res.status(500).json({ message: "Internal server error" });
@@ -636,6 +733,17 @@ export async function getCustomerPayments(req, res) {
             ],
             order: [["createdAt", "DESC"]]
         });
+
+        const tourPayments = await sequelize.query(
+            `SELECT tp.*, ti.inquiryRef 
+             FROM tour_payments tp 
+             JOIN tour_inquiries ti ON tp.inquiry_id = ti.id 
+             WHERE tp.customer_id = :customerId`,
+            {
+                replacements: { customerId },
+                type: sequelize.QueryTypes.SELECT
+            }
+        );
 
         const mappedRoomPayments = roomPayments.map(p => ({
             id: `PAY-RM-${p.id}`,
@@ -671,7 +779,21 @@ export async function getCustomerPayments(req, res) {
             };
         });
 
-        const allPayments = [...mappedRoomPayments, ...mappedVehiclePayments].sort(
+        const mappedTourPayments = tourPayments.map(p => ({
+            id: `PAY-TR-${p.id}`,
+            refNo: p.payment_no || `TR-${p.id}`,
+            date: p.createdAt,
+            category: "Tour Package",
+            description: "Tour Package Advance Payment",
+            bookingRef: `#${p.inquiryRef || p.inquiry_id}`,
+            method: p.method || "online",
+            currency: p.currency || "LKR",
+            amount: parseFloat(p.amount),
+            isRefund: false,
+            status: p.status === "success" ? "Succeeded" : p.status === "pending" ? "Pending" : "Failed"
+        }));
+
+        const allPayments = [...mappedRoomPayments, ...mappedVehiclePayments, ...mappedTourPayments].sort(
             (a, b) => new Date(b.date) - new Date(a.date)
         );
 
