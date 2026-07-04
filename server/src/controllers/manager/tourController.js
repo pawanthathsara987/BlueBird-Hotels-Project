@@ -398,7 +398,7 @@ export const deleteTour = async (req, res) => {
 export const getConfirmedTourBookings = async (req, res) => {
   try {
     const bookings = await sequelize.query(
-      `SELECT tb.*, ti.fullName, ti.email, ti.phone, ti.nationality, ti.numberOfAdults, ti.numberOfChildren,
+      `SELECT tb.*, ti.inquiryRef, ti.fullName, ti.email, ti.phone, ti.nationality, ti.nic, ti.passportId, ti.pickupLocation, ti.specialRequests, ti.numberOfAdults, ti.numberOfChildren,
               t.packageName, t.duration
        FROM tour_bookings tb
        LEFT JOIN tour_inquiries ti ON tb.inquiryId = ti.id
