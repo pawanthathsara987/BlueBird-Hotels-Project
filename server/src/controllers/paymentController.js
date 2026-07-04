@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import sequelize from '../config/database.js';
-import { Reservation, Customer, BookedRoom, Room, RoomType, RoomPayment, AirPortPickup, VehicleBooking, Payment, TourInquiry, Tour } from "../models/index.js";
+import { Reservation, Customer, BookedRoom, Room, RoomType, RoomPayment, AirPortPickup, VehicleBooking, Payment, TourInquiry, Tour, TourPayment } from "../models/index.js";
 import { sendBookingConfirmationEmail, sendPersonalRequestEmail } from "../services/emailService.js";
 
 // Helper to generate MD5 hash
@@ -139,6 +139,24 @@ export const handlePayHereNotification = async (req, res) => {
             }
 
             if (isTour) {
+                try {
+                    const existingPayment = await TourPayment.findOne({ where: { payment_no: payment_id } });
+                    if (!existingPayment) {
+                        await TourPayment.create({
+                            inquiry_id: Number(actualOrderId),
+                            customer_id: booking.customerId,
+                            payment_no: payment_id,
+                            amount: receivedAmount,
+                            currency: payhere_currency,
+                            method: 'online',
+                            status: 'success',
+                            raw_payload: req.body
+                        });
+                    }
+                } catch (dbErr) {
+                    console.error("[PAYHERE ERROR] Failed to record tour payment:", dbErr);
+                }
+
                 if (booking.status === "progress") {
                     console.log(`[PAYHERE SUCCESS] Tour #${actualOrderId} verified. Updating status to accepted.`);
                     await booking.update({ status: "accepted" });
@@ -249,6 +267,31 @@ export const handlePayHereNotification = async (req, res) => {
         } else {
             console.log(`[PAYHERE UPDATE] Non-successful status code received: ${status_code} for Booking #${order_id}`);
             const isVehicle = String(order_id).startsWith("VEHICLE_");
+            const isTour = String(order_id).startsWith("TOUR_");
+
+            if (isTour) {
+                const actualOrderId = String(order_id).replace("TOUR_", "");
+                const t = await sequelize.transaction();
+                try {
+                    const booking = await TourInquiry.findByPk(actualOrderId, { transaction: t });
+                    if (booking && booking.status === "progress") {
+                        console.log(`[PAYHERE FAILURE] Tour #${order_id} failed. Transitioning status to pending.`);
+                        await booking.update({ status: "pending" }, { transaction: t });
+                        
+                        await TourPayment.update(
+                            { status: "failed" },
+                            { where: { inquiry_id: Number(actualOrderId), status: "pending" }, transaction: t }
+                        );
+                        await t.commit();
+                    } else {
+                        await t.rollback();
+                    }
+                } catch (dbErr) {
+                    await t.rollback();
+                    console.error("[PAYHERE DB ERROR] Failed to handle failed tour payment:", dbErr);
+                }
+                return res.status(200).send("OK");
+            }
 
             if (isVehicle) {
                 const actualOrderId = String(order_id).replace("VEHICLE_", "");
