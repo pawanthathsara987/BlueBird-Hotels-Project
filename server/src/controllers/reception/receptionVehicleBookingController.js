@@ -447,6 +447,13 @@ export const collectVehicleBalancePayment = async (req, res) => {
       });
     }
 
+    if (booking.status === "pending_payment") {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot collect balance payment for an unpaid booking. The customer must pay the advance deposit first."
+      });
+    }
+
     if (booking.balancePaidAt) {
       return res.status(400).json({
         success: false,

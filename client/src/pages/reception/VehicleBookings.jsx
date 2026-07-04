@@ -1320,30 +1320,39 @@ export default function VehicleBookings() {
                                     <div className="flex items-center gap-1.5 text-rose-550 dark:text-rose-400 font-bold uppercase tracking-wider text-[10px]">
                                         <span>💵 Collect Remaining Balance Payment</span>
                                     </div>
-                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-bold">
-                                        The customer must pay the remaining balance of <span className="text-rose-500 font-extrabold">LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> to check-in/start the vehicle rental.
-                                    </p>
-                                    <div className="flex flex-col sm:flex-row gap-3 items-end">
-                                        <div className="flex-1 w-full">
-                                            <label className="block text-[10px] text-slate-450 uppercase mb-1.5 font-bold">Select Payment Method</label>
-                                            <select
-                                                value={collectPaymentMethod}
-                                                onChange={(e) => setCollectPaymentMethod(e.target.value)}
-                                                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 outline-none font-bold text-xs cursor-pointer"
-                                            >
-                                                <option value="cash">Cash</option>
-                                                <option value="card">Card Payment</option>
-                                                <option value="bank_transfer">Bank Transfer</option>
-                                            </select>
+                                    {selectedBooking.status === "pending_payment" ? (
+                                        <div className="flex items-start gap-2 p-3 bg-amber-500/10 text-amber-500 border border-amber-500/25 rounded-lg font-bold text-[11px]">
+                                            <span className="mt-0.5">⚠️</span>
+                                            <span>Advance Deposit Unpaid: The customer has not paid the online deposit (50%) for this booking yet. The remaining balance can only be collected after the deposit is paid and status becomes confirmed.</span>
                                         </div>
-                                        <button
-                                            onClick={() => handleCollectBalance(selectedBooking.id)}
-                                            disabled={isCollecting}
-                                            className="px-5 py-2.5 text-xs font-black text-white bg-rose-600 hover:bg-rose-700 disabled:bg-slate-400 rounded-lg transition shadow-sm cursor-pointer select-none whitespace-nowrap h-9 flex items-center justify-center"
-                                        >
-                                            {isCollecting ? "Recording..." : `Confirm Payment (LKR ${parseFloat(selectedBooking.balanceAmount || 0).toLocaleString()})`}
-                                        </button>
-                                    </div>
+                                    ) : (
+                                        <>
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-bold">
+                                                The customer must pay the remaining balance of <span className="text-rose-500 font-extrabold">LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> to check-in/start the vehicle rental.
+                                            </p>
+                                            <div className="flex flex-col sm:flex-row gap-3 items-end">
+                                                <div className="flex-1 w-full">
+                                                    <label className="block text-[10px] text-slate-450 uppercase mb-1.5 font-bold">Select Payment Method</label>
+                                                    <select
+                                                        value={collectPaymentMethod}
+                                                        onChange={(e) => setCollectPaymentMethod(e.target.value)}
+                                                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 outline-none font-bold text-xs cursor-pointer"
+                                                    >
+                                                        <option value="cash">Cash</option>
+                                                        <option value="card">Card Payment</option>
+                                                        <option value="bank_transfer">Bank Transfer</option>
+                                                    </select>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleCollectBalance(selectedBooking.id)}
+                                                    disabled={isCollecting}
+                                                    className="px-5 py-2.5 text-xs font-black text-white bg-rose-600 hover:bg-rose-700 disabled:bg-slate-400 rounded-lg transition shadow-sm cursor-pointer select-none whitespace-nowrap h-9 flex items-center justify-center"
+                                                >
+                                                    {isCollecting ? "Recording..." : `Confirm Payment (LKR ${parseFloat(selectedBooking.balanceAmount || 0).toLocaleString()})`}
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             )}
 
