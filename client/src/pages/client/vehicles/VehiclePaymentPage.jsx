@@ -126,6 +126,102 @@ export default function VehiclePaymentPage() {
     }
   };
 
+  const handlePayment = async () => {
+    setBookingLoading(true);
+    setBookingError("");
+
+    try {
+      const token = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
+      if (!token) {
+        setBookingError("User not authenticated");
+        setBookingLoading(false);
+        return;
+      }
+
+      const successDeposit = Number(bookingSuccess.depositAmount || depositAmount || 0);
+      const orderId = `VEHICLE_${bookingSuccess.bookingId}`;
+
+      // Fetch PayHere hash
+      const hashRes = await axios.post(
+        `${backendBaseUrl}/payment/payhere-hash`,
+        {
+          orderId: orderId,
+          amount: successDeposit,
+          currency: "LKR"
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      if (!hashRes.data?.success || !hashRes.data?.hash) {
+        throw new Error("Failed to generate payment signature hash");
+      }
+
+      const { hash, merchantId } = hashRes.data;
+
+      // Initialize PayHere
+      setTimeout(() => {
+        if (!window.payhere) {
+          setBookingError("Payment portal failed to initialize. Please refresh the page and try again.");
+          setBookingLoading(false);
+          return;
+        }
+
+        window.payhere.onCompleted = function onCompleted(completedOrderId) {
+          console.log("Payment completed. OrderID:" + completedOrderId);
+          alert("Payment completed successfully!");
+          navigate('/vehicles');
+        };
+
+        window.payhere.onDismissed = function onDismissed() {
+          console.log("Payment dismissed");
+          setBookingError("Payment window was closed. You can retry payment.");
+          setBookingLoading(false);
+        };
+
+        window.payhere.onError = function onError(error) {
+          console.error("PayHere Error:", error);
+          setBookingError("Payment transaction failed. Please try again.");
+          setBookingLoading(false);
+        };
+
+        const cleanBackendUrl = String(import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api").endsWith('/')
+          ? (import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api")
+          : `${(import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api")}/`;
+
+        const payment = {
+          sandbox: true,
+          merchant_id: merchantId,
+          return_url: `${window.location.origin}/vehicles`,
+          cancel_url: window.location.href,
+          notify_url: import.meta.env.VITE_NOTIFY_URL
+            ? `${import.meta.env.VITE_NOTIFY_URL}/api/payment/notify`
+            : `${cleanBackendUrl}payment/notify`,
+          order_id: orderId,
+          items: `BlueBird Vehicle Booking ${bookingSuccess.bookingNo}`,
+          amount: Number(successDeposit).toFixed(2),
+          currency: "LKR",
+          hash: hash,
+          first_name: customerForm.name.split(' ')[0] || "Guest",
+          last_name: customerForm.name.split(' ').slice(1).join(' ') || "Customer",
+          email: customerForm.email,
+          phone: customerForm.phone,
+          address: customerForm.addressLine1,
+          city: customerForm.city,
+          country: customerForm.country
+        };
+
+        window.payhere.startPayment(payment);
+      }, 1000);
+
+    } catch (err) {
+      console.error('PayHere Redirection error:', err);
+      setBookingError(err.response?.data?.message || err.message || 'Payment initiation failed. Please try again.');
+      setBookingLoading(false);
+    }
+  };
+
   if (bookingSuccess) {
     const successDeposit = Number(bookingSuccess.depositAmount || depositAmount || 0);
     const successBalance = Number(bookingSuccess.balanceAmount || balanceAmount || 0);
@@ -141,6 +237,12 @@ export default function VehiclePaymentPage() {
             Your booking reference is <strong className="text-stone-900">{bookingSuccess.bookingNo}</strong>.
           </p>
 
+          {bookingError && (
+            <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800 shadow-sm">
+              {bookingError}
+            </div>
+          )}
+
           <div className="mt-8 rounded-2xl border border-stone-200 bg-stone-50 p-6 text-center">
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-550">Advance deposit required</div>
             <div className="mt-3 text-4xl font-black text-stone-900">{formatMoney(successDeposit)}</div>
@@ -149,8 +251,12 @@ export default function VehiclePaymentPage() {
             </p>
           </div>
 
-          <button className="mt-6 w-full rounded-xl bg-emerald-700 px-4 py-4 text-sm font-extrabold uppercase tracking-wider text-white transition hover:bg-emerald-800 shadow-[0_4px_14px_0_rgba(4,120,87,0.39)]" onClick={() => alert("PayHere Gateway Integration Pending")}>
-            Pay Deposit Now
+          <button 
+            disabled={bookingLoading}
+            className="mt-6 w-full flex items-center justify-center rounded-xl bg-emerald-700 px-4 py-4 text-sm font-extrabold uppercase tracking-wider text-white transition hover:bg-emerald-800 shadow-[0_4px_14px_0_rgba(4,120,87,0.39)] disabled:opacity-70" 
+            onClick={handlePayment}
+          >
+            {bookingLoading ? "Initializing Portal..." : "Pay Deposit Now"}
           </button>
           <Link to="/vehicles" className="mt-4 inline-flex w-full items-center justify-center rounded-xl border border-stone-200 bg-white px-4 py-4 text-sm font-extrabold uppercase tracking-wider text-stone-700 transition hover:bg-stone-50 hover:text-stone-900">
             Return to Fleet
