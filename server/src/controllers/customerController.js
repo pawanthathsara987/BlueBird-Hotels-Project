@@ -11,7 +11,7 @@ import { Op } from "sequelize";
 dotenv.config();
 
 import sequelize from "../config/database.js";
-import { Booking, BookedRoom, Room, RoomType, AirPortPickup, VehicleBooking, Vehicle, TourInquiry, Tour, Payment, RoomPayment, BoardType, RoomPrice, ServiceCharge } from "../models/index.js";
+import { Booking, BookedRoom, Room, RoomType, AirPortPickup, VehicleBooking, Vehicle, TourInquiry, Tour, Payment, RoomPayment, BoardType, RoomPrice, AirportPickupVehicle } from "../models/index.js";
 
 export async function registerCustomer(req, res) {
 
@@ -110,7 +110,8 @@ export async function loginCustomer(req, res) {
             idType: customer.idType,
             idNumber: customer.idNumber,
             address: customer.address,
-            googleAuth: customer.googleAuth
+            googleAuth: customer.googleAuth,
+            role: "customer"
         };
 
         const accessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "30m" });
@@ -166,7 +167,8 @@ export async function refreshToken(req, res) {
                 idType: customer.idType,
                 idNumber: customer.idNumber,
                 address: customer.address,
-                googleAuth: customer.googleAuth
+                googleAuth: customer.googleAuth,
+                role: "customer"
             };
 
             const newAccessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "15m" });
@@ -335,7 +337,8 @@ export async function googleLogin(req, res) {
             idType: activeUser.idType,
             idNumber: activeUser.idNumber,
             address: activeUser.address,
-            googleAuth: activeUser.googleAuth
+            googleAuth: activeUser.googleAuth,
+            role: "customer"
         };
 
         const accessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "15m" });
@@ -395,7 +398,8 @@ export async function updateCustomerProfile(req, res) {
             idType: customer.idType,
             idNumber: customer.idNumber,
             address: customer.address,
-            googleAuth: customer.googleAuth
+            googleAuth: customer.googleAuth,
+            role: "customer"
         };
 
         const accessToken = jwt.sign(userResponse, process.env.JWT_SECRET_KEY, { expiresIn: "15m" });
@@ -544,10 +548,10 @@ export async function getCustomerBookings(req, res) {
             }]
         });
 
-        const pickupCharge = await ServiceCharge.findOne({
-            where: { service_Code: "AIRPORT_PICKUP", status: true }
+        const pickupVehicle = await AirportPickupVehicle.findOne({
+            order: [["price", "ASC"]]
         });
-        const airportPickupFee = pickupCharge ? parseFloat(pickupCharge.price) : 15000;
+        const airportPickupFee = pickupVehicle ? parseFloat(pickupVehicle.price) : 15000;
 
         res.status(200).json({
             success: true,
@@ -979,17 +983,11 @@ export async function cancelAirportPickup(req, res) {
         // 3. Update pickup status to CANCELLED
         await pickup.update({ status: "CANCELLED" }, { transaction: t });
 
-        // 4. Retrieve the airport pickup price
-        const pickupPrice = pickup.price > 0 ? parseFloat(pickup.price) : 15000.00;
-
-        // 5. Subtract price from booking total
+        // 4. Pickup is paid at the hotel, so cancelling it must not change the room booking total
+        const pickupPrice = 0;
         const currentTotal = parseFloat(booking.total_price);
-        const newTotal = Math.max(0, currentTotal - pickupPrice);
-        
-        let newTax = 0;
-        if (booking.tax_percentage > 0) {
-            newTax = newTotal * (booking.tax_percentage / 100);
-        }
+        const newTotal = currentTotal;
+        const newTax = booking.tax || 0;
 
         await booking.update({
             total_price: newTotal,

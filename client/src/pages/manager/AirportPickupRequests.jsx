@@ -77,9 +77,8 @@ export default function AirportPickupRequests() {
             return (
               <div
                 key={request.id}
-                className={`rounded-2xl p-5 shadow-sm border ${
-                  isExpired ? "bg-red-50 border-red-300" : "bg-white border-gray-200"
-                }`}
+                className={`rounded-2xl p-5 shadow-sm border ${isExpired ? "bg-red-50 border-red-300" : "bg-white border-gray-200"
+                  }`}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div>
@@ -91,9 +90,8 @@ export default function AirportPickupRequests() {
                       Order #{index + 1}
                     </span>
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        isExpired ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
-                      }`}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${isExpired ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+                        }`}
                     >
                       {isExpired ? "Expired Request" : "Pickup Request"}
                     </span>
