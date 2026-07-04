@@ -18,7 +18,7 @@ export const getChecklists = async (req, res) => {
       where,
       include: [
         { model: Vehicle, as: 'vehicle', attributes: ['id', 'plateNumber', 'brand', 'model'] },
-        { model: VehicleBooking, as: 'booking', attributes: ['id', 'pickupDatetime', 'returnDatetime', 'status'] },
+        { model: VehicleBooking, as: 'booking', attributes: ['id', 'bookingNo', 'pickupDatetime', 'returnDatetime', 'status'] },
       ],
       order: [['inspectedAt', 'DESC']],
     });
@@ -36,7 +36,7 @@ export const getChecklist = async (req, res) => {
     const checklist = await VehicleChecklist.findByPk(req.params.id, {
       include: [
         { model: Vehicle, as: 'vehicle', attributes: ['id', 'plateNumber', 'brand', 'model'] },
-        { model: VehicleBooking, as: 'booking', attributes: ['id', 'pickupDatetime', 'returnDatetime', 'status'] },
+        { model: VehicleBooking, as: 'booking', attributes: ['id', 'bookingNo', 'pickupDatetime', 'returnDatetime', 'status'] },
       ],
     });
 

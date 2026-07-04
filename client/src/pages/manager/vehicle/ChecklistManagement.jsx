@@ -73,7 +73,7 @@ export default function ChecklistManagement() {
         const q = search.toLowerCase();
         const v = c.vehicle;
         const b = c.booking;
-        const text = `${c.inspectedBy} ${v?.plateNumber} ${v?.brand} ${v?.model} BKG-${c.bookingId}`.toLowerCase();
+        const text = `${c.inspectedBy} ${v?.plateNumber} ${v?.brand} ${v?.model} ${c.booking?.bookingNo || ''} BKG-${c.bookingId}`.toLowerCase();
         if (!text.includes(q)) return false;
       }
       return true;
@@ -193,7 +193,7 @@ export default function ChecklistManagement() {
             <tbody>
               {filtered.map((chk) => (
                 <tr key={chk.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition">
-                  <td className="px-4 py-3 font-medium text-slate-900">BKG-{chk.bookingId}</td>
+                  <td className="px-4 py-3 font-medium text-slate-900">{chk.booking?.bookingNo || `BKG-${chk.bookingId}`}</td>
                   <td className="px-4 py-3 font-medium text-slate-900">{chk.vehicle?.plateNumber}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${chk.type === 'pickup' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
@@ -237,7 +237,9 @@ export default function ChecklistManagement() {
                   <select required disabled={!!editingId} value={form.bookingId} onChange={(e) => handleBookingChange(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400 disabled:bg-slate-50">
                     <option value="">Select booking</option>
                     {bookings.map(b => (
-                      <option key={b.id} value={b.id}>BKG-{b.id} (Vehicle #{b.vehicleId})</option>
+                      <option key={b.id} value={b.id}>
+                        {b.bookingNo} ({b.vehicle?.brand} {b.vehicle?.model} - {b.vehicle?.plateNumber})
+                      </option>
                     ))}
                   </select>
                 </div>
