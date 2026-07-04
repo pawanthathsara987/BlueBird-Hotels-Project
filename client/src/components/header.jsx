@@ -132,7 +132,7 @@ export default function Header() {
   const rightLinks = [
     { label: "TRAVELS", to: "/booking/tour" },
     { label: "VEHICLES", to: "/vehicles" },
-    { label: "GALLERY", to: "/" },
+    { label: "GALLERY", to: "/gallery" },
     { label: "CONTACT", to: "/contact" },
   ];
 
@@ -382,7 +382,7 @@ export default function Header() {
                 { label: "FAQ", to: "/faq" },
                 { label: "Travels", to: "/booking/tour" },
                 { label: "Vehicles", to: "/vehicles" },
-                { label: "Gallery", to: "/" },
+                { label: "Gallery", to: "/gallery" },
                 { label: "Contact", to: "/contact" },
               ].map((l) => (
                 <Link
