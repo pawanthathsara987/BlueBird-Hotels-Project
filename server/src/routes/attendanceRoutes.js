@@ -8,13 +8,17 @@ import {
     getStaffAttendanceHistory,
     markAbsentees,
     getAttendanceSettings,
-    updateAttendanceSettings
+    updateAttendanceSettings,
+    getRoleAttendanceSettings,
+    updateRoleAttendanceSettings
 } from "../controllers/admin/attendanceController.js";
 
 const router = express.Router();
 
 router.get("/settings", getAttendanceSettings);
 router.put("/settings", updateAttendanceSettings);
+router.get("/role-settings", getRoleAttendanceSettings);
+router.put("/role-settings", updateRoleAttendanceSettings);
 router.post("/scan", scanAttendance);
 router.post("/mark-absentees", markAbsentees);
 router.get("/records", getAttendanceRecords);
