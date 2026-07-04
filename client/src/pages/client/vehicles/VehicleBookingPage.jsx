@@ -12,6 +12,9 @@ const formatMoney = (value) => {
   return `${currency} ${amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 };
 
+import Header from "../../../components/header";
+import Footer from "../../../components/footer";
+
 const calculateDeposit = (totalPrice) => {
   const amount = Number(totalPrice);
   if (!Number.isFinite(amount)) return { depositAmount: null, balanceAmount: null };
@@ -202,12 +205,20 @@ export default function VehicleBookingPage() {
   };
 
   if (vehicleLoading) {
-    return <div className="min-h-screen p-8">Loading booking page...</div>;
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <Header />
+        <div className="flex-1 p-8">Loading booking page...</div>
+        <Footer />
+      </div>
+    );
   }
 
   if (vehicleError) {
     return (
-      <div className="min-h-screen bg-slate-50 p-6 sm:p-8">
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <Header />
+        <div className="flex-1 p-6 sm:p-8">
         <div className="mx-auto max-w-2xl rounded-3xl border border-slate-100 bg-white p-8 shadow-xl">
           <p className="text-sm font-semibold text-slate-500">Vehicle booking</p>
           <h1 className="mt-2 text-2xl font-black text-slate-950">Unable to load this vehicle</h1>
@@ -216,6 +227,8 @@ export default function VehicleBookingPage() {
             Return to fleet
           </Link>
         </div>
+        </div>
+        <Footer />
       </div>
     );
   }
@@ -225,8 +238,10 @@ export default function VehicleBookingPage() {
     const successBalance = Number(bookingSuccess.balanceAmount || pricing.balanceAmount || 0);
 
     return (
-      <div className="min-h-screen bg-slate-50 px-4 py-12 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-3xl rounded-4xl border border-emerald-100 bg-white p-8 shadow-xl">
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
+        <Header />
+        <div className="flex-1 px-4 py-12 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-3xl rounded-4xl border border-emerald-100 bg-white p-8 shadow-xl">
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-3xl text-emerald-600">✓</div>
           <h2 className="mt-6 text-center text-3xl font-black text-slate-950">Booking reserved</h2>
           <p className="mt-2 text-center text-slate-600">
@@ -247,7 +262,9 @@ export default function VehicleBookingPage() {
           <Link to="/vehicles" className="mt-4 inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 px-4 py-4 font-semibold text-slate-700 transition hover:bg-slate-50">
             Return to Fleet
           </Link>
+          </div>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -479,6 +496,7 @@ export default function VehicleBookingPage() {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }
