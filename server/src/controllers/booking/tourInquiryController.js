@@ -579,6 +579,7 @@ export const getInquiryStats = async (req, res) => {
       progress: await TourInquiry.count({ where: { status: "progress" } }),
       accepted: await TourInquiry.count({ where: { status: "accepted" } }),
       rejected: await TourInquiry.count({ where: { status: "rejected" } }),
+      canceled: await TourInquiry.count({ where: { status: "canceled" } }),
     };
 
     res.status(200).json({
@@ -592,6 +593,56 @@ export const getInquiryStats = async (req, res) => {
       success: false,
       message: "Error fetching inquiry stats",
       error: error.message,
+    });
+  }
+};
+
+// Cancel inquiry by customer
+export const cancelInquiry = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const inquiry = await TourInquiry.findByPk(id);
+    
+    if (!inquiry) {
+      return res.status(404).json({
+        success: false,
+        message: "Inquiry not found"
+      });
+    }
+
+    if (inquiry.customerId !== req.user.id) {
+       return res.status(403).json({
+         success: false,
+         message: "Not authorized to cancel this inquiry"
+       });
+    }
+
+    if (inquiry.status === 'canceled' || inquiry.status === 'rejected') {
+      return res.status(400).json({
+        success: false,
+        message: `Inquiry is already ${inquiry.status}`
+      });
+    }
+
+    // You could theoretically process a refund here if it was 'accepted'
+    // For now we just mark as canceled
+    
+    inquiry.status = "canceled";
+    await inquiry.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Inquiry canceled successfully, and any eligible refunds will be processed.",
+      data: inquiry
+    });
+
+  } catch (error) {
+    console.error("Error canceling inquiry:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error canceling inquiry",
+      error: error.message
     });
   }
 };

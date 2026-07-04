@@ -87,7 +87,7 @@ export default function CustomerDashboard() {
     country: "",
     idType: "NIC",
     idNumber: "",
-    currency: "USD ($)",
+    currency: `${import.meta.env.VITE_CURRENCY_TYPE || "LKR"}`,
     language: "English (US)",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80",
     googleAuth: false
@@ -122,7 +122,7 @@ export default function CustomerDashboard() {
     country: "",
     idType: "NIC",
     idNumber: "",
-    currency: "USD ($)",
+    currency: `${import.meta.env.VITE_CURRENCY_TYPE || "LKR"}`,
     language: "English (US)",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80",
     googleAuth: false
@@ -200,7 +200,7 @@ export default function CustomerDashboard() {
           country: pData.country || "Not Provided",
           idType: pData.idType || "NIC",
           idNumber: pData.idNumber || "",
-          currency: "USD ($)",
+          currency: `${import.meta.env.VITE_CURRENCY_TYPE || "LKR"}`,
           language: "English (US)",
           avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80",
           googleAuth: pData.googleAuth || false

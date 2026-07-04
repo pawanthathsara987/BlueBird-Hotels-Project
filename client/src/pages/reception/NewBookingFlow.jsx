@@ -816,7 +816,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
 
                         <div className="flex justify-between items-end border-t border-slate-800 pt-4 mb-6">
                             <span className="text-slate-400 font-bold">Total Amount</span>
-                            <span className="text-3xl font-black text-green-400">{process.env.CURRENCY_TYPE || "LKR"} {totalPrice.toLocaleString()}</span>
+                            <span className="text-3xl font-black text-green-400">{import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {totalPrice.toLocaleString()}</span>
                         </div>
 
                         <button
