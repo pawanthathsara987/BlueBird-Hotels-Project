@@ -200,7 +200,7 @@ export default function VehicleManagement() {
           <StatCard label="Maintenance" value={stats.maintenance} accent="border-amber-200" />
           <StatCard
             label="Average Price / Day"
-            value={`$${stats.averagePrice.toFixed(0)}`}
+            value={`${import.meta.env.VITE_CURRENCY_TYPE || "LKR"} ${stats.averagePrice.toFixed(0)}`}
             accent="border-blue-200"
           />
         </div>
@@ -324,7 +324,7 @@ export default function VehicleManagement() {
                       <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Rate / Day</span>
                       <span className="font-bold text-blue-600 flex items-center gap-1">
                         <Banknote className="w-3.5 h-3.5" />
-                        ${Number(vehicle.pricePerDay || 0).toFixed(0)}
+                        {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {Number(vehicle.pricePerDay || 0).toFixed(0)}
                       </span>
                     </div>
                   </div>

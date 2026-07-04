@@ -3,7 +3,7 @@ import { getCountries, getCountryCallingCode, isValidPhoneNumber } from "libphon
 import Logo from "../../assets/bluebird logo.png";
 import axios from "axios";
 import { toast } from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { FaUser, FaEnvelope, FaGlobe, FaPhone, FaLock, FaEye, FaEyeSlash, FaIdCard, FaMapMarkerAlt, FaArrowLeft } from "react-icons/fa";
 import { validateSriLankanNIC, validatePassport } from "../../utils/validation";
 
@@ -41,6 +41,7 @@ export default function CustomerRegister() {
     const [country, setCountry] = useState("");
 
     const navigate = useNavigate();
+    const location = useLocation();
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -162,7 +163,7 @@ export default function CustomerRegister() {
                 }
             );
             toast.success("Registration successful! Please log in.");
-            navigate("/customerLogin");
+            navigate("/customerLogin", { state: location.state });
         } catch (error) {
             toast.error(error.response?.data?.message || "Registration failed");
         } finally {
@@ -571,7 +572,7 @@ export default function CustomerRegister() {
                     <span>Already have an account?</span>
                     <button
                         type="button"
-                        onClick={() => navigate("/customerLogin")}
+                        onClick={() => navigate("/customerLogin", { state: location.state })}
                         disabled={loading}
                         className="font-bold text-amber-400 hover:text-amber-300 hover:underline transition-colors cursor-pointer"
                     >

@@ -12,6 +12,9 @@ const formatMoney = (value) => {
   return `${currency} ${amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 };
 
+import Header from "../../../components/header";
+import Footer from "../../../components/footer";
+
 export default function VehicleDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -37,9 +40,33 @@ export default function VehicleDetailsPage() {
     if (id) load();
   }, [id]);
 
-  if (loading) return <div className="min-h-screen p-8">Loading vehicle...</div>;
-  if (error) return <div className="min-h-screen p-8 text-rose-600">{error}</div>;
-  if (!vehicle) return <div className="min-h-screen p-8">Vehicle not found.</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center p-12 text-slate-500">Loading details...</div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error || !vehicle) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <Header />
+        <div className="flex-1 p-6 sm:p-8">
+          <div className="mx-auto max-w-2xl rounded-3xl border border-slate-100 bg-white p-8 shadow-xl text-center">
+            <h1 className="text-2xl font-black text-slate-950">Vehicle unavailable</h1>
+            <p className="mt-3 text-slate-600">{error || "This vehicle could not be loaded."}</p>
+            <Link to="/vehicles" className="mt-6 inline-flex items-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
+              Return to fleet
+            </Link>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   const features = Array.isArray(vehicle.features)
     ? vehicle.features
@@ -48,8 +75,9 @@ export default function VehicleDetailsPage() {
       : [];
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
+      <Header />
+      <div className="flex-1 mx-auto max-w-5xl w-full px-4 py-8 sm:px-6 lg:px-8">
         <Link to="/vehicles" className="inline-block text-sm font-semibold text-sky-700 mb-4">← Back to fleet</Link>
 
         <div className="rounded-3xl bg-white p-6 shadow">
@@ -128,6 +156,7 @@ export default function VehicleDetailsPage() {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

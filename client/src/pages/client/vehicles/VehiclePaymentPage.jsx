@@ -140,8 +140,24 @@ export default function VehiclePaymentPage() {
           return;
         }
 
-        window.payhere.onCompleted = function onCompleted(orderRef) {
+        window.payhere.onCompleted = async function onCompleted(orderRef) {
           console.log("Vehicle payment completed. OrderID:", orderRef);
+          try {
+            await axios.post(
+              `${backendBaseUrl}/payment/vehicle-confirm`,
+              {
+                bookingId: bookingSuccess.bookingId,
+                paymentNo: orderRef || `PAY_PAYHERE_VEHICLE_${bookingSuccess.bookingId}`,
+                amount: amount,
+                currency: import.meta.env.VITE_CURRENCY_TYPE || "LKR"
+              },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            alert("Payment completed successfully! Your vehicle booking is confirmed.");
+          } catch (err) {
+            console.error("Error confirming vehicle payment:", err);
+            alert("Payment completed on gateway, but failed to log to server. Please contact reception.");
+          }
           setPaymentLoading(false);
           navigate("/customer/dashboard", { replace: true });
         };
@@ -270,9 +286,25 @@ export default function VehiclePaymentPage() {
           return;
         }
 
-        window.payhere.onCompleted = function onCompleted(completedOrderId) {
+        window.payhere.onCompleted = async function onCompleted(completedOrderId) {
           console.log("Payment completed. OrderID:" + completedOrderId);
-          alert("Payment completed successfully!");
+          try {
+            const token = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
+            await axios.post(
+              `${backendBaseUrl}/payment/vehicle-confirm`,
+              {
+                bookingId: bookingSuccess.bookingId,
+                paymentNo: completedOrderId || `PAY_PAYHERE_VEHICLE_${bookingSuccess.bookingId}`,
+                amount: Number(successDeposit).toFixed(2),
+                currency: "LKR"
+              },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            alert("Payment completed successfully!");
+          } catch (err) {
+            console.error("Error confirming vehicle payment:", err);
+            alert("Payment completed on gateway, but failed to log to server. Please contact reception.");
+          }
           navigate('/vehicles');
         };
 
@@ -406,7 +438,7 @@ export default function VehiclePaymentPage() {
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-8 lg:px-14">
         <form onSubmit={handleBookSubmit} className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          
+
           {/* Left Column: Form Details */}
           <div className="lg:col-span-2 space-y-6">
             {bookingError && (
@@ -652,12 +684,12 @@ export default function VehiclePaymentPage() {
 
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-stone-100">
                   <div>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-black text-stone-500 uppercase tracking-widest mb-1"><CalendarDays className="h-3 w-3"/> Pickup</span>
-                    <span className="text-xs font-bold text-stone-900">{pickupDate}</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-black text-stone-500 uppercase tracking-widest mb-1"><CalendarDays className="h-3 w-3" /> Pickup</span>
+                    <span className="text-xs font-bold text-stone-900">{new Date(pickupDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
                   </div>
                   <div>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-black text-stone-500 uppercase tracking-widest mb-1"><CalendarDays className="h-3 w-3"/> Return</span>
-                    <span className="text-xs font-bold text-stone-900">{returnDate}</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-black text-stone-500 uppercase tracking-widest mb-1"><CalendarDays className="h-3 w-3" /> Return</span>
+                    <span className="text-xs font-bold text-stone-900">{new Date(returnDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
                   </div>
                 </div>
 
