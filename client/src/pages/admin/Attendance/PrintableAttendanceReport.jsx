@@ -51,10 +51,16 @@ const PrintableAttendanceReport = forwardRef(({ reportRecords, reportTitle, repo
                 </div>
 
                 {/* Stats Summary Panel */}
-                <div className="grid grid-cols-4 gap-4 mb-8">
+                <div className="grid grid-cols-5 gap-3 mb-8">
                     <div className="border border-slate-200 rounded-xl p-3 text-center bg-slate-50/30">
                         <p className="text-[10px] uppercase font-bold text-slate-400">Total Entries</p>
                         <h3 className="text-lg font-black text-slate-800 mt-1">{reportRecords.length}</h3>
+                    </div>
+                    <div className="border border-slate-200 rounded-xl p-3 text-center bg-slate-50/30">
+                        <p className="text-[10px] uppercase font-bold text-slate-400">Total Hours Worked</p>
+                        <h3 className="text-lg font-black text-indigo-600 mt-1">
+                            {Number(reportRecords.reduce((sum, r) => sum + (r.workingHours || 0), 0).toFixed(2))}h
+                        </h3>
                     </div>
                     <div className="border border-slate-200 rounded-xl p-3 text-center bg-slate-50/30">
                         <p className="text-[10px] uppercase font-bold text-slate-400">Present (On Time)</p>
