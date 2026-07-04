@@ -18,6 +18,7 @@ import {
     submitVehicleReview,
     submitTourReview,
     getCustomerDashboardReviews,
+    getPublicReviews,
     cancelCustomerBooking,
     cancelCustomerRental,
     cancelSingleBookedRoom,
@@ -37,6 +38,7 @@ customerRouter.post("/google-login", googleLogin);
 customerRouter.post("/refresh", refreshToken);
 customerRouter.post("/logout", logoutCustomer);
 customerRouter.post("/contact", handleContactInquiry);
+customerRouter.get("/public-reviews", getPublicReviews);
 
 // ── PROTECTED routes (valid customer JWT required) ────────────────────────────
 customerRouter.put("/update-profile",  requireAuth, requireRole("customer"), updateCustomerProfile);

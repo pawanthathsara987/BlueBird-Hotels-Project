@@ -115,6 +115,7 @@ import VehiclePaymentPage from "./pages/client/vehicles/VehiclePaymentPage";
 import CustomerDetailsPage from "./pages/client/booking/roombooking/CustomerDetailsPage";
 import RoomTypeDetails from "./pages/client/RoomTypeDetails";
 import FaqPage from "./pages/Faq";
+import TestimonialsPage from './pages/reviewPage'
 
 function ScrollToTop() {
     const { pathname } = useLocation();
@@ -261,6 +262,7 @@ export default function App() {
                         <Route path="/customer-reset-password" element={<CustomerPasswordResetPage />} />
                         <Route path="/contact" element={<ContactPage />} />
                         <Route path="/faq" element={<FaqPage />} />
+                        <Route path="/reviews" element={<TestimonialsPage />} />
                         <Route path="/customer/dashboard" element={<CustomerDashboard />} />
                         <Route path="/vehicles" element={<VehicleCatalogPage />} />
                         <Route path="/vehicles/:id" element={<VehicleDetailsPage />} />
