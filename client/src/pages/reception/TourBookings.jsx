@@ -62,7 +62,7 @@ export default function TourBookings() {
         numberOfAdults: 1,
         numberOfChildren: 0,
         startDate: getMinStartDate(),
-        pickupLocation: "Hotel Lobby",
+        pickupLocation: "BlueBird Hotel Lobby",
         specialRequests: ""
     });
 
