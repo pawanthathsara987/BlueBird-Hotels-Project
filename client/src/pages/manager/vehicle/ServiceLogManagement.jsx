@@ -41,7 +41,8 @@ const typeBadgeColor = (val) => {
 
 const money = (v) => {
   const n = Number(v);
-  return Number.isFinite(n) ? `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—";
+  const currency = import.meta.env.VITE_CURRENCY_TYPE || "LKR";
+  return Number.isFinite(n) ? `${currency} ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—";
 };
 
 const EMPTY_FORM = {
