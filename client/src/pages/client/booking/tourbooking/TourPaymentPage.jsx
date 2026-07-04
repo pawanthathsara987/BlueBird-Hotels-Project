@@ -23,7 +23,7 @@ export default function TourPaymentPage() {
 
   useEffect(() => {
     if (!tour || !inquiry) {
-      navigate('/dashboard', { replace: true });
+      navigate('/customer/dashboard', { replace: true });
     }
   }, [tour, inquiry, navigate]);
 
@@ -93,23 +93,32 @@ export default function TourPaymentPage() {
         }
 
         window.payhere.onCompleted = async function (oid) {
+          const finalOid = oid || `PAY_PAYHERE_TOUR_${inquiry.realId}`;
           try {
             await axios.post(
               `${backendBaseUrl}/payment/tour-confirm`,
               {
                 inquiryId: inquiry.realId,
-                paymentNo: oid || `PAY_PAYHERE_TOUR_${inquiry.realId}`,
+                paymentNo: finalOid,
                 amount: advanceAmount,
                 currency: import.meta.env.VITE_CURRENCY_TYPE || "LKR"
               },
               { headers: { Authorization: `Bearer ${token}` } }
             );
-            alert("Payment completed successfully! Your tour is confirmed.");
           } catch (err) {
             console.error("Error confirming tour payment:", err);
-            alert("Payment completed on gateway, but failed to log to server. Please contact concierge.");
           }
-          navigate('/dashboard');
+          navigate('/tour-confirm', {
+            state: {
+              tour,
+              inquiry,
+              paymentNo: finalOid,
+              amountPaid: advanceAmount,
+              totalAmount: tour.price * inquiry.adults,
+              balanceDue: (tour.price * inquiry.adults) - advanceAmount,
+              billing
+            }
+          });
         };
         window.payhere.onDismissed = function () {
           setProcessing(false);
@@ -122,8 +131,8 @@ export default function TourPaymentPage() {
         window.payhere.startPayment({
           sandbox: true,
           merchant_id: merchantId,
-          return_url: `${window.location.origin}/dashboard`,
-          cancel_url: `${window.location.origin}/dashboard`,
+          return_url: `${window.location.origin}/customer/dashboard`,
+          cancel_url: `${window.location.origin}/customer/dashboard`,
           notify_url: import.meta.env.VITE_NOTIFY_URL || "https://bluebird.com/notify",
           order_id: orderId,
           items: `Advance Payment - ${tour.packageName || 'Tour Package'}`,
