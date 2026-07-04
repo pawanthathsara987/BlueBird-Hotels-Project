@@ -140,8 +140,24 @@ export default function VehiclePaymentPage() {
           return;
         }
 
-        window.payhere.onCompleted = function onCompleted(orderRef) {
+        window.payhere.onCompleted = async function onCompleted(orderRef) {
           console.log("Vehicle payment completed. OrderID:", orderRef);
+          try {
+            await axios.post(
+              `${backendBaseUrl}/payment/vehicle-confirm`,
+              {
+                bookingId: bookingSuccess.bookingId,
+                paymentNo: orderRef || `PAY_PAYHERE_VEHICLE_${bookingSuccess.bookingId}`,
+                amount: amount,
+                currency: import.meta.env.VITE_CURRENCY_TYPE || "LKR"
+              },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            alert("Payment completed successfully! Your vehicle booking is confirmed.");
+          } catch (err) {
+            console.error("Error confirming vehicle payment:", err);
+            alert("Payment completed on gateway, but failed to log to server. Please contact reception.");
+          }
           setPaymentLoading(false);
           navigate("/customer/dashboard", { replace: true });
         };
@@ -270,9 +286,25 @@ export default function VehiclePaymentPage() {
           return;
         }
 
-        window.payhere.onCompleted = function onCompleted(completedOrderId) {
+        window.payhere.onCompleted = async function onCompleted(completedOrderId) {
           console.log("Payment completed. OrderID:" + completedOrderId);
-          alert("Payment completed successfully!");
+          try {
+            const token = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
+            await axios.post(
+              `${backendBaseUrl}/payment/vehicle-confirm`,
+              {
+                bookingId: bookingSuccess.bookingId,
+                paymentNo: completedOrderId || `PAY_PAYHERE_VEHICLE_${bookingSuccess.bookingId}`,
+                amount: Number(successDeposit).toFixed(2),
+                currency: "LKR"
+              },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            alert("Payment completed successfully!");
+          } catch (err) {
+            console.error("Error confirming vehicle payment:", err);
+            alert("Payment completed on gateway, but failed to log to server. Please contact reception.");
+          }
           navigate('/vehicles');
         };
 

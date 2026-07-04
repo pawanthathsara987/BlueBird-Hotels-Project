@@ -533,3 +533,75 @@ export const confirmTourPayment = async (req, res) => {
         return res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
+
+/**
+ * Client-side fallback to confirm and log vehicle payments immediately.
+ * Called from the frontend when PayHere onCompleted fires.
+ * This ensures payment is saved even when the PayHere webhook cannot reach localhost.
+ */
+export const confirmVehiclePayment = async (req, res) => {
+    try {
+        const customerId = req.user.id;
+        const { bookingId, paymentNo, amount, currency } = req.body;
+
+        if (!bookingId || !paymentNo || !amount) {
+            return res.status(400).json({ success: false, message: "Missing required fields" });
+        }
+
+        const booking = await VehicleBooking.findByPk(bookingId);
+        if (!booking) {
+            return res.status(404).json({ success: false, message: "Vehicle Booking not found" });
+        }
+
+        // Verify ownership
+        if (booking.customerId !== customerId) {
+            return res.status(403).json({ success: false, message: "Not authorized" });
+        }
+
+        // 1. Create vehicle_payment record if not exists
+        const [existingPayment] = await sequelize.query(
+            'SELECT id FROM vehicle_payment WHERE payment_no = :payment_no LIMIT 1',
+            {
+                replacements: { payment_no: paymentNo },
+                type: sequelize.QueryTypes.SELECT
+            }
+        );
+
+        if (!existingPayment) {
+            await sequelize.query(
+                `INSERT INTO vehicle_payment (booking_id, customer_id, payment_no, amount, currency, method, status, raw_payload, createdAt, updatedAt) 
+                 VALUES (:booking_id, :customer_id, :payment_no, :amount, :currency, :method, :status, :raw_payload, NOW(), NOW())`,
+                {
+                    replacements: {
+                        booking_id: Number(bookingId),
+                        customer_id: customerId,
+                        payment_no: paymentNo,
+                        amount: Number(amount),
+                        currency: currency || 'LKR',
+                        method: 'online',
+                        status: 'success',
+                        raw_payload: JSON.stringify({ type: 'client-confirmed', ...req.body })
+                    }
+                }
+            );
+            console.log(`[VEHICLE CONFIRM] Payment record created for Booking #${bookingId}`);
+        }
+
+        // 2. Update booking status to confirmed if still pending_payment
+        if (booking.status === "pending_payment") {
+            await booking.update({
+                status: "confirmed",
+                depositPaidAt: new Date(),
+                payhereOrderId: `VEHICLE_${bookingId}`,
+                payherePaymentId: paymentNo,
+                paymentMethod: 'online'
+            });
+            console.log(`[VEHICLE CONFIRM] Booking #${bookingId} status updated to confirmed`);
+        }
+
+        return res.status(200).json({ success: true, message: "Vehicle payment logged successfully" });
+    } catch (error) {
+        console.error("Error confirming vehicle payment:", error);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
