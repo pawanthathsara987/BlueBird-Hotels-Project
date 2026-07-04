@@ -160,7 +160,8 @@ export const handlePayHereNotification = async (req, res) => {
 
                     if (!existingTourBooking) {
                         const trackingToken = crypto.randomBytes(16).toString("hex");
-                        const bookingRef = `TI-${booking.inquiryRef || actualOrderId}-BK`;
+                        const cleanInquiryRef = (booking.inquiryRef || String(actualOrderId)).replace(/^TI-/, '');
+                        const bookingRef = `TB-${cleanInquiryRef}`;
 
                         await sequelize.query(
                             `INSERT INTO tour_bookings (bookingRef, inquiryId, tourStartDate, totalAmount, depositAmount, remainingAmount, status, trackingToken, acceptedAt, createdAt, updatedAt) 
@@ -468,7 +469,8 @@ export const confirmTourPayment = async (req, res) => {
 
         if (!existingTourBooking) {
             const trackingToken = crypto.randomBytes(16).toString("hex");
-            const bookingRef = `TI-${booking.inquiryRef || inquiryId}-BK`;
+            const cleanInquiryRef = (booking.inquiryRef || String(inquiryId)).replace(/^TI-/, '');
+            const bookingRef = `TB-${cleanInquiryRef}`;
 
             await sequelize.query(
                 `INSERT INTO tour_bookings (bookingRef, inquiryId, tourStartDate, totalAmount, depositAmount, remainingAmount, status, trackingToken, acceptedAt, createdAt, updatedAt) 
