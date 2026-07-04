@@ -30,24 +30,7 @@ import DashboardModals from "./DashboardModals";
 // DUMMY DATA DEFINITIONS
 // ==========================================
 
-const INITIAL_REVIEWS = [
-  {
-    id: "REV-101",
-    propertyName: "The Kyoto Imperial Ryokan",
-    location: "Kyoto, Japan",
-    rating: 5,
-    comment: "An absolutely breathtaking cultural sanctuary. The personal hot spring Onsen and kaiseki dinner service were beyond premium. Exemplary hospitality that reflects true gold-standard luxury.",
-    date: "2026-05-02"
-  },
-  {
-    id: "REV-102",
-    propertyName: "Mandarin Oriental New York",
-    location: "New York, USA",
-    rating: 4,
-    comment: "Stunning skyline views of Central Park and an exceptional thermal spa. Check-in had a minor delay, but the head concierge immediately resolved it and sent customized signature champagne to our suite.",
-    date: "2026-02-18"
-  }
-];
+
 
 const INITIAL_NOTIFICATIONS = [
   {
@@ -97,7 +80,7 @@ export default function CustomerDashboard() {
   const [vehicles, setVehicles] = useState([]);
   const [payments, setPayments] = useState([]);
   const [paymentSummary, setPaymentSummary] = useState({ totalPaid: 0, totalRefunded: 0, totalPending: 0, totalTransactions: 0 });
-  const [reviews, setReviews] = useState(INITIAL_REVIEWS);
+  const [reviews, setReviews] = useState([]);
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
 
   // Control UI State
@@ -186,12 +169,13 @@ export default function CustomerDashboard() {
         const headers = { Authorization: `Bearer ${token}` };
         const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-        const [profileRes, bookingsRes, rentalsRes, toursRes, paymentsRes] = await Promise.all([
+        const [profileRes, bookingsRes, rentalsRes, toursRes, paymentsRes, reviewsRes] = await Promise.all([
           axios.get(`${backendUrl}/customers/profile`, { headers }),
           axios.get(`${backendUrl}/customers/bookings`, { headers }),
           axios.get(`${backendUrl}/customers/rentals`, { headers }),
           axios.get(`${backendUrl}/customers/tours`, { headers }),
-          axios.get(`${backendUrl}/customers/payments`, { headers })
+          axios.get(`${backendUrl}/customers/payments`, { headers }),
+          axios.get(`${backendUrl}/customers/reviews`, { headers })
         ]);
 
         const pData = profileRes.data.data;
@@ -392,6 +376,8 @@ export default function CustomerDashboard() {
         if (paymentsRes.data.summary) {
           setPaymentSummary(paymentsRes.data.summary);
         }
+
+        setReviews(reviewsRes.data.data || []);
 
         // Update empty state flag if nothing exists
         if (mappedBookings.length === 0 && mappedRentals.length === 0 && mappedTours.length === 0) {

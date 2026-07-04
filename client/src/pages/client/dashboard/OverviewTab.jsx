@@ -5,32 +5,34 @@ import {
   Car,
   CheckCircle2,
   MapPin,
-  ChevronRight
+  ChevronRight,
+  Sparkles,
+  ShieldCheck
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 export default function OverviewTab({
-  profile,
-  bookings,
-  tours,
-  vehicles,
-  isEmptyState,
+  profile = {},
+  bookings = [],
+  tours = [],
+  vehicles = [],
+  isEmptyState = false,
   setActiveTab
 }) {
   // Local Empty State Renderer
   const renderEmptyState = (title, message, iconComponent, buttonText, onClickAction) => (
-    <div className="flex flex-col items-center justify-center py-16 px-4 bg-white/60 backdrop-blur-md border border-blue-50/50 rounded-3xl text-center space-y-5">
-      <div className="p-4 bg-cyan-50 rounded-full text-cyan-600 animate-bounce">
+    <div className="flex flex-col items-center justify-center py-16 px-4 bg-white/40 backdrop-blur-md border border-slate-200/50 rounded-3xl text-center space-y-5 shadow-inner">
+      <div className="p-4 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-full text-cyan-600 animate-pulse">
         {iconComponent}
       </div>
       <div className="space-y-2 max-w-md">
-        <h3 className="text-xl font-semibold text-blue-950">{title}</h3>
+        <h3 className="text-xl font-serif font-medium text-blue-950">{title}</h3>
         <p className="text-slate-500 text-sm leading-relaxed">{message}</p>
       </div>
       {buttonText && (
         <button
           onClick={onClickAction}
-          className="px-6 py-2.5 bg-gradient-to-r from-blue-900 to-cyan-700 hover:from-blue-800 hover:to-cyan-600 text-white font-medium text-sm rounded-xl transition-all duration-300 shadow-md shadow-blue-900/10 hover:shadow-blue-900/20 active:scale-95"
+          className="px-6 py-2.5 bg-gradient-to-r from-blue-950 via-blue-900 to-cyan-900 hover:from-blue-900 hover:to-cyan-800 text-white font-medium text-xs tracking-wider uppercase rounded-xl transition-all duration-300 shadow-md shadow-blue-950/10 hover:shadow-blue-950/20 active:scale-95"
         >
           {buttonText}
         </button>
@@ -38,205 +40,256 @@ export default function OverviewTab({
     </div>
   );
 
-  // Compute summary stats
-  const upcomingStays = bookings.filter(b => b.status.toLowerCase() !== "cancelled" && b.status.toLowerCase() !== "completed");
-  const nextStay = upcomingStays[0];
+  // Dynamic Time-of-Day Greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    return "Good evening";
+  };
+
+  // Compute summary stats safely
+  const upcomingStays = bookings.filter(
+    b => b?.status?.toLowerCase() !== "cancelled" && b?.status?.toLowerCase() !== "completed"
+  );
+  
+  // Target the first upcoming stay, or fallback to the most recent booking if none are active
+  const nextStay = upcomingStays[0] || bookings[0];
+  
   const nextCheckIn = nextStay?.checkIn
     ? new Date(nextStay.checkIn).toLocaleDateString("en-US", { month: "short", day: "numeric" })
     : null;
+    
   const daysUntilCheckIn = nextStay?.checkIn
     ? Math.max(0, Math.ceil((new Date(nextStay.checkIn) - new Date()) / (1000 * 60 * 60 * 24)))
     : null;
-  const tripProgress = daysUntilCheckIn != null ? Math.min(100, Math.max(0, 100 - (daysUntilCheckIn / 365) * 100)) : 0;
+
+  // Visual Progress representation toward the next trip milestone (capped smoothly)
+  const tripProgress = daysUntilCheckIn !== null 
+    ? Math.min(100, Math.max(0, 100 - (daysUntilCheckIn * 2.5))) 
+    : 0;
+
+  const pendingToursCount = tours.filter(t => t?.status === "Pending Review").length;
+  const totalServicesCount = bookings.length + tours.length + vehicles.length;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
+    <div className="space-y-8 animate-in fade-in duration-500 ease-out">
+      
       {/* Greetings / Elite Header Banner */}
-      <div className="relative bg-gradient-to-r from-blue-950 via-blue-900 to-cyan-950 rounded-3xl p-6 md:p-8 text-white overflow-hidden shadow-lg shadow-blue-950/20">
-        <div className="absolute right-0 top-0 opacity-10 pointer-events-none transform translate-x-12 -translate-y-6">
-          <Compass size={350} className="text-white" />
+      <div className="relative bg-gradient-to-r from-blue-950 via-slate-900 to-cyan-950 rounded-3xl p-6 md:p-10 text-white overflow-hidden shadow-xl shadow-blue-950/10 border border-white/5">
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none transform translate-x-16">
+          <Compass size={400} className="text-white stroke-[1]" />
         </div>
-        <div className="relative z-10 max-w-2xl space-y-2">
-          <span className="text-[10px] tracking-[0.25em] text-cyan-400 font-bold uppercase block">
-            WELCOME BACK
-          </span>
-          <h1 className="font-serif font-semibold text-2xl md:text-3xl leading-tight">
-            Your Next Journey Awaits, {profile.name}
+        <div className="relative z-10 max-w-2xl space-y-3">
+          <div className="flex items-center space-x-2">
+            <span className="text-[10px] tracking-[0.3em] text-cyan-400 font-bold uppercase block">
+              {profile?.tier || "ELITE MEMBER"}
+            </span>
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+          </div>
+          <h1 className="font-serif font-normal text-2xl md:text-4xl leading-tight tracking-wide">
+            {getGreeting()}, {profile?.name || "Guest"}
           </h1>
-          <p className="text-blue-200/80 text-xs md:text-sm leading-relaxed font-light">
-            {nextStay
-              ? `Your upcoming stay at ${nextStay.hotelName} is ${daysUntilCheckIn === 0 ? 'today!' : `${daysUntilCheckIn} day${daysUntilCheckIn !== 1 ? 's' : ''} away.`} Our 24/7 concierge team is ready for you.`
-              : "Welcome to your luxury dashboard. Browse our premium rooms, tours, and vehicle rentals to plan your next journey."}
+          <p className="text-slate-300/90 text-xs md:text-sm leading-relaxed font-light">
+            {nextStay && upcomingStays.length > 0
+              ? `Your upcoming stay at ${nextStay.hotelName} is ${daysUntilCheckIn === 0 ? 'today!' : `${daysUntilCheckIn} day${daysUntilCheckIn !== 1 ? 's' : ''} away.`} Our 24/7 dedicated concierge team has curated everything for your arrival.`
+              : "Welcome to your luxury sanctuary dashboard. Explore boutique retreats, experiential private tours, and premium transport to design your next holiday."}
           </p>
         </div>
       </div>
 
       {/* Premium Analytics / Overview Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        
         {/* Upcoming Stays */}
-        <div className="bg-white/80 backdrop-blur-md border border-blue-50/50 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all duration-300 flex items-center space-x-4">
-          <div className="p-3 bg-cyan-50 rounded-xl text-cyan-600">
-            <Calendar size={22} />
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-xs hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex items-center space-x-4">
+          <div className="p-3.5 bg-cyan-50/70 rounded-xl text-cyan-700">
+            <Calendar size={20} className="stroke-[1.75]" />
           </div>
           <div>
-            <span className="text-[10px] text-slate-400 font-semibold tracking-wider block">UPCOMING STAYS</span>
-            <span className="text-base font-bold text-blue-950 block">
-              {upcomingStays.length > 0 ? `${upcomingStays.length} Booked` : "None Booked"}
+            <span className="text-[9px] text-slate-400 font-bold tracking-widest block uppercase">UPCOMING STAYS</span>
+            <span className="text-lg font-semibold text-slate-900 block mt-0.5">
+              {upcomingStays.length > 0 ? `${upcomingStays.length} Reserved` : "None Booked"}
             </span>
-            <span className="text-[10px] text-slate-500 font-medium font-sans">
-              {nextCheckIn ? `Next: ${nextCheckIn}` : "Book your retreat"}
+            <span className="text-[11px] text-slate-500 font-light block mt-0.5">
+              {nextCheckIn ? `Next Arriving: ${nextCheckIn}` : "Explore retreats"}
             </span>
           </div>
         </div>
 
         {/* Active Vehicle Rentals */}
-        <div className="bg-white/80 backdrop-blur-md border border-blue-50/50 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all duration-300 flex items-center space-x-4">
-          <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600">
-            <Car size={22} />
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-xs hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex items-center space-x-4">
+          <div className="p-3.5 bg-indigo-50/70 rounded-xl text-indigo-700">
+            <Car size={20} className="stroke-[1.75]" />
           </div>
           <div>
-            <span className="text-[10px] text-slate-400 font-semibold tracking-wider block">RENTAL CARS</span>
-            <span className="text-base font-bold text-blue-950 block">
-              {vehicles.length > 0 ? `${vehicles.length} Booking${vehicles.length > 1 ? 's' : ''}` : "None"}
+            <span className="text-[9px] text-slate-400 font-bold tracking-widest block uppercase">RENTAL VEHICLES</span>
+            <span className="text-lg font-semibold text-slate-900 block mt-0.5">
+              {vehicles.length > 0 ? `${vehicles.length} Vehicle${vehicles.length > 1 ? 's' : ''}` : "None"}
             </span>
-            <span className="text-[10px] text-slate-500 font-medium font-sans">
-              {vehicles.length > 0 ? vehicles[0].model : "Browse vehicles"}
+            <span className="text-[11px] text-slate-500 font-light block mt-0.5">
+              {vehicles.length > 0 ? vehicles[0]?.model : "Reserve transport"}
             </span>
           </div>
         </div>
 
         {/* Pending Tour Inquiries */}
-        <div className="bg-white/80 backdrop-blur-md border border-blue-50/50 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all duration-300 flex items-center space-x-4">
-          <div className="p-3 bg-amber-50 rounded-xl text-amber-600">
-            <Compass size={22} />
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-xs hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex items-center space-x-4">
+          <div className="p-3.5 bg-amber-50/70 rounded-xl text-amber-700">
+            <Compass size={20} className="stroke-[1.75]" />
           </div>
           <div>
-            <span className="text-[10px] text-slate-400 font-semibold tracking-wider block">PENDING TOURS</span>
-            <span className="text-base font-bold text-blue-950 block">
-              {tours.filter(t => t.status === "Pending Review").length > 0
-                ? `${tours.filter(t => t.status === "Pending Review").length} Pending`
-                : "None"}
+            <span className="text-[9px] text-slate-400 font-bold tracking-widest block uppercase">EXPERIENCES</span>
+            <span className="text-lg font-semibold text-slate-900 block mt-0.5">
+              {pendingToursCount > 0 ? `${pendingToursCount} Pending` : "Arranged"}
             </span>
-            <span className="text-[10px] text-amber-600 font-medium font-sans">
-              {tours.length > 0 ? `${tours.length} Total Inquiries` : "Explore excursions"}
+            <span className="text-[11px] text-amber-700/90 font-medium block mt-0.5">
+              {tours.length > 0 ? `${tours.length} Curated Itineraries` : "Discover activities"}
             </span>
           </div>
         </div>
 
         {/* Total Bookings */}
-        <div className="bg-white/80 backdrop-blur-md border border-blue-50/50 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all duration-300 flex items-center space-x-4">
-          <div className="p-3 bg-blue-50 rounded-xl text-blue-600">
-            <CheckCircle2 size={22} />
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-xs hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex items-center space-x-4">
+          <div className="p-3.5 bg-emerald-50/70 rounded-xl text-emerald-700">
+            <CheckCircle2 size={20} className="stroke-[1.75]" />
           </div>
           <div>
-            <span className="text-[10px] text-slate-400 font-semibold tracking-wider block">TOTAL SERVICES</span>
-            <span className="text-base font-bold text-blue-950 block">
-              {bookings.length + tours.length + vehicles.length}
+            <span className="text-[9px] text-slate-400 font-bold tracking-widest block uppercase">TOTAL RESERVATIONS</span>
+            <span className="text-lg font-semibold text-slate-900 block mt-0.5">
+              {totalServicesCount}
             </span>
-            <span className="text-[10px] text-slate-500 font-medium font-sans">All bookings & inquiries</span>
+            <span className="text-[11px] text-slate-500 font-light block mt-0.5">Active portfolio additions</span>
           </div>
         </div>
       </div>
 
-      {/* Main Grid: Stay Progress Card */}
-      <div className="grid grid-cols-1 gap-6">
-        <div className="bg-white/80 backdrop-blur-md border border-blue-50/50 rounded-3xl p-6 shadow-xs flex flex-col justify-between">
-          {isEmptyState || bookings.length === 0 ? (
-            renderEmptyState(
-              "Discover Luxury Retreats",
-              "You have no upcoming stays. Our premium collection of beachfront villas, mountain ski chalets, and historic boutique ryokans are ready for your reservation.",
-              <Compass size={36} />,
-              "Search Retreats",
-              () => toast.success("Redirecting to Search...")
-            )
-          ) : (
-            <>
-              <div className="flex justify-between items-start">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold tracking-widest text-amber-500 uppercase">UPCOMING SOJOURN</span>
-                  <h3 className="font-serif font-semibold text-lg text-blue-950 leading-tight">
-                    {bookings[0].hotelName}
-                  </h3>
-                  <p className="text-slate-400 text-xs flex items-center gap-1">
-                    <MapPin size={12} className="text-slate-400" />
-                    {bookings[0].location}
+      {/* Main Content Area */}
+      <div className="w-full">
+        {isEmptyState || bookings.length === 0 ? (
+          renderEmptyState(
+            "Discover Tailored Luxury Retreats",
+            "You have no upcoming itineraries planned. Our collection of ultra-luxury beachfront estates, mountain chalets, and historic boutique villas are curated and awaiting your reservation details.",
+            <Compass size={36} className="stroke-[1.5]" />,
+            "Explore Destinations",
+            () => toast.success("Opening premium destination finder...")
+          )
+        ) : (
+          <div className="bg-white border border-slate-100 rounded-3xl p-6 md:p-8 shadow-xs hover:shadow-sm transition-all duration-300">
+            
+            {/* Stay Info Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b border-slate-100">
+              <div className="space-y-1">
+                <div className="flex items-center space-x-2">
+                  <span className="text-[9px] font-bold tracking-widest text-amber-600 uppercase bg-amber-50 px-2 py-0.5 rounded">
+                    CURRENT ITINERARY
+                  </span>
+                </div>
+                <h3 className="font-serif font-normal text-xl md:text-2xl text-slate-900 pt-1">
+                  {nextStay?.hotelName}
+                </h3>
+                <p className="text-slate-400 text-xs flex items-center gap-1">
+                  <MapPin size={13} className="text-slate-400 shrink-0" />
+                  {nextStay?.location}
+                </p>
+              </div>
+              <span className="px-3 py-1.5 bg-blue-50/60 text-blue-950 font-semibold text-[10px] rounded-full uppercase tracking-wider border border-blue-100/50 self-start sm:self-center">
+                {nextStay?.status || "Confirmed"}
+              </span>
+            </div>
+
+            {/* Visual Overview Matrix */}
+            <div className="my-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+              
+              {/* Hotel Imagery Panel */}
+              <div className="lg:col-span-5 relative rounded-2xl overflow-hidden h-56 shadow-md group">
+                {nextStay?.image ? (
+                  <img
+                    src={nextStay.image}
+                    alt={nextStay.hotelName || "Resort"}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000 ease-out"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400">
+                    No Image Found
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
+                <div className="absolute bottom-4 left-4 right-4 text-white">
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-cyan-400">
+                    {nextStay?.checkIn
+                      ? new Date(nextStay.checkIn).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                      : ""} – {nextStay?.checkOut
+                      ? new Date(nextStay.checkOut).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                      : ""}
+                  </p>
+                  <p className="text-base font-serif font-light text-white mt-0.5">
+                    {nextStay?.nights || 0} Night Stay
                   </p>
                 </div>
-                <span className="px-3 py-1 bg-blue-50 text-blue-900 font-bold text-[10px] rounded-full uppercase tracking-wider border border-blue-100">
-                  {bookings[0].status}
-                </span>
               </div>
 
-                <div className="my-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-center font-sans">
-                  <div className="relative rounded-2xl overflow-hidden h-48 group">
-                    <img
-                      src={bookings[0].image}
-                      alt={bookings[0].hotelName}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
-                    <div className="absolute bottom-4 left-4 text-white">
-                      <p className="text-[10px] uppercase font-bold tracking-wide text-amber-400">
-                        {bookings[0].checkIn
-                          ? new Date(bookings[0].checkIn).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-                          : ""} – {bookings[0].checkOut
-                          ? new Date(bookings[0].checkOut).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-                          : ""}
-                      </p>
-                      <p className="text-sm font-semibold text-white">{bookings[0].nights} Night{bookings[0].nights !== 1 ? "s" : ""} Stay</p>
-                    </div>
+              {/* Progress Tracker & Details Matrix */}
+              <div className="lg:col-span-7 space-y-6">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs tracking-wide">
+                    <span className="text-slate-400 font-medium uppercase text-[10px]">Countdown Status</span>
+                    <span className="font-semibold text-slate-900">
+                      {daysUntilCheckIn !== null
+                        ? (daysUntilCheckIn === 0 ? "Arriving Today" : `${daysUntilCheckIn} days remaining`)
+                        : "—"}
+                    </span>
                   </div>
-
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-xs text-slate-500">
-                        <span>TRIP PROGRESS</span>
-                        <span className="font-semibold text-blue-950">
-                          {daysUntilCheckIn != null
-                            ? (daysUntilCheckIn === 0 ? "Today!" : `${daysUntilCheckIn} days until check-in`)
-                            : "—"}
-                        </span>
-                      </div>
-                      <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                        <div className="bg-blue-900 h-full rounded-full transition-all duration-700" style={{ width: `${tripProgress}%` }}></div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 text-xs">
-                      <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-100/60">
-                        <span className="text-[9px] text-slate-400 block font-semibold">ROOMS BOOKED</span>
-                        <span className="font-bold text-blue-950 text-sm">{bookings[0].rooms.length} Room{bookings[0].rooms.length !== 1 ? "s" : ""}</span>
-                      </div>
-                      <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-100/60">
-                        <span className="text-[9px] text-slate-400 block font-semibold">AIRPORT TRANSFER</span>
-                        <span className="font-bold text-blue-950 text-sm text-[10px] leading-snug">{bookings[0].airportTransfer === "Not Requested" ? "Not Requested" : "Requested"}</span>
-                      </div>
-                    </div>
+                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden shadow-inner">
+                    <div 
+                      className="bg-gradient-to-r from-blue-900 to-cyan-700 h-full rounded-full transition-all duration-1000 ease-out shadow-xs" 
+                      style={{ width: `${tripProgress}%` }}
+                    />
                   </div>
                 </div>
 
-              <div className="flex flex-col md:flex-row gap-3 pt-4 border-t border-slate-100">
-                <button
-                  onClick={() => setActiveTab("bookings")}
-                  className="flex-1 py-2.5 bg-gradient-to-r from-blue-950 to-blue-800 text-white font-semibold text-xs rounded-xl hover:from-blue-900 hover:to-blue-700 transition-all text-center flex items-center justify-center gap-1.5 shadow-sm active:scale-98"
-                >
-                  <span>Manage Reservations</span>
-                  <ChevronRight size={12} />
-                </button>
-                <button
-                  onClick={() => {
-                    toast.success("Upgrade request submitted. Our team will contact you shortly.", {
-                      style: { borderRadius: '8px', background: '#1e3a8a', color: '#fff' }
-                    });
-                  }}
-                  className="px-4 py-2.5 bg-white border border-blue-900/30 text-blue-950 font-semibold text-xs rounded-xl hover:bg-blue-50/30 transition-all text-center"
-                >
-                  Request Upgrade / Spa
-                </button>
+                {/* Micro Details Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-slate-50/60 p-4 rounded-xl border border-slate-100 flex flex-col justify-between">
+                    <span className="text-[9px] text-slate-400 block font-bold tracking-wider uppercase">ACCOMMODATIONS</span>
+                    <span className="font-semibold text-slate-900 text-sm mt-1 flex items-center gap-1.5">
+                      <Sparkles size={14} className="text-cyan-600" />
+                      {nextStay?.rooms?.length || 0} Luxury Suite{nextStay?.rooms?.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <div className="bg-slate-50/60 p-4 rounded-xl border border-slate-100 flex flex-col justify-between">
+                    <span className="text-[9px] text-slate-400 block font-bold tracking-wider uppercase">AIRPORT SERVICE</span>
+                    <span className="font-semibold text-slate-900 text-sm mt-1 flex items-center gap-1.5">
+                      <ShieldCheck size={14} className="text-emerald-600" />
+                      {nextStay?.airportTransfer === "Not Requested" ? "Private Car Available" : "Chauffeur Confirmed"}
+                    </span>
+                  </div>
+                </div>
               </div>
-            </>
-          )}
-        </div>
+            </div>
+
+            {/* Quick Action Interactive Footer */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-5 border-t border-slate-100">
+              <button
+                onClick={() => setActiveTab("bookings")}
+                className="flex-1 py-3 bg-gradient-to-r from-slate-900 to-blue-950 text-white font-medium text-xs uppercase tracking-wider rounded-xl hover:from-slate-800 hover:to-blue-900 transition-all text-center flex items-center justify-center gap-2 shadow-xs active:scale-[0.99]"
+              >
+                <span>Manage Entire Itinerary</span>
+                <ChevronRight size={14} />
+              </button>
+              <button
+                onClick={() => {
+                  toast.success("Priority upgrade signal transmitted. Your concierge agent will reach out momentarily.", {
+                    style: { borderRadius: '12px', background: '#020617', color: '#fff', fontSize: '13px' }
+                  });
+                }}
+                className="px-5 py-3 bg-white border border-slate-200 text-slate-800 font-medium text-xs uppercase tracking-wider rounded-xl hover:bg-slate-50/80 transition-all text-center"
+              >
+                Request Suite Upgrade / Spa VIP
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

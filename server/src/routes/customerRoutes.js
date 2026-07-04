@@ -17,6 +17,7 @@ import {
     submitRoomStayReview,
     submitVehicleReview,
     submitTourReview,
+    getCustomerDashboardReviews,
     cancelCustomerBooking,
     cancelCustomerRental,
     cancelSingleBookedRoom,
@@ -46,6 +47,7 @@ customerRouter.get("/bookings",  requireAuth, requireRole("customer"), getCustom
 customerRouter.get("/rentals",   requireAuth, requireRole("customer"), getCustomerRentals);
 customerRouter.get("/tours",     requireAuth, requireRole("customer"), getCustomerTours);
 customerRouter.get("/payments",  requireAuth, requireRole("customer"), getCustomerPayments);
+customerRouter.get("/reviews",   requireAuth, requireRole("customer"), getCustomerDashboardReviews);
 
 customerRouter.post("/bookings/:id/cancel",                            requireAuth, requireRole("customer"), cancelCustomerBooking);
 customerRouter.post("/bookings/:bookingId/rooms/:bookedRoomId/cancel", requireAuth, requireRole("customer"), cancelSingleBookedRoom);

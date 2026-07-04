@@ -742,6 +742,120 @@ export async function submitTourReview(req, res) {
 // Keep old name as alias for backward compatibility
 export const submitRoomStayReview = submitRoomReview;
 
+
+export async function getCustomerDashboardReviews(req, res) {
+    try {
+        const customerId = req.user.id;
+
+        // Fetch all three review types simultaneously from their respective tables
+        const [roomReviews, tourReviews, vehicleReviews] = await Promise.all([
+            RoomReview.findAll({
+                where: { customer_id: customerId },
+                include: [
+                    {
+                        model: Booking,
+                        as: "booking",
+                        attributes: ["id"]
+                    }
+                ],
+                order: [["createdAt", "DESC"]]
+            }),
+            TourReview.findAll({
+                where: { customer_id: customerId },
+                include: [
+                    {
+                        model: TourInquiry,
+                        as: "inquiry",
+                        include: [
+                            {
+                                model: Tour,
+                                attributes: ["packageName"]
+                            }
+                        ]
+                    }
+                ],
+                order: [["createdAt", "DESC"]]
+            }),
+            VehicleReview.findAll({
+                where: { customer_id: customerId },
+                include: [
+                    {
+                        model: VehicleBooking,
+                        as: "booking",
+                        include: [
+                            {
+                                model: Vehicle,
+                                as: "vehicle",
+                                attributes: ["brand", "model"]
+                            }
+                        ]
+                    }
+                ],
+                order: [["createdAt", "DESC"]]
+            })
+        ]);
+
+        // 1. Normalize Room / Hotel Stay Reviews
+        const formattedRoomReviews = roomReviews.map(rev => ({
+            id: `room-${rev.id}`,
+            type: "Room",
+            title: "Hotel Stay Accommodation",
+            subtitle: rev.booking_id ? `Booking Ref: #${rev.booking_id}` : "Verified Stay",
+            rating: rev.hotel_rating,
+            secondaryRating: null,
+            secondaryRatingLabel: null,
+            comment: rev.comment ? rev.comment.trim() : null,
+            date: rev.createdAt
+        }));
+
+        // 2. Normalize Tour Package Reviews
+        const formattedTourReviews = tourReviews.map(rev => ({
+            id: `tour-${rev.id}`,
+            type: "Tour",
+            title: rev.inquiry?.Tour?.packageName || "Custom Tour Excursion",
+            subtitle: rev.tour_booking_id ? `Tour Ref: #${rev.tour_booking_id}` : "Guided Tour Journey",
+            rating: rev.tour_rating,
+            secondaryRating: rev.guide_rating,
+            secondaryRatingLabel: "Guide",
+            comment: rev.comment ? rev.comment.trim() : null,
+            date: rev.createdAt
+        }));
+
+        // 3. Normalize Vehicle Rental Reviews
+        const formattedVehicleReviews = vehicleReviews.map(rev => {
+            const vehicle = rev.booking?.vehicle;
+            const carTitle = vehicle ? `${vehicle.brand} ${vehicle.model}` : "Private Transport Rental";
+            return {
+                id: `vehicle-${rev.id}`,
+                type: "Vehicle",
+                title: carTitle,
+                subtitle: rev.vehicle_booking_id ? `Rental Ref: #${rev.vehicle_booking_id}` : "Vehicle Service Logistics",
+                rating: rev.vehicle_rating,
+                secondaryRating: rev.driver_rating,
+                secondaryRatingLabel: "Driver",
+                comment: rev.comment ? rev.comment.trim() : null,
+                date: rev.createdAt
+            };
+        });
+
+        // Merge and sort combined datasets chronologically
+        const integratedReviews = [
+            ...formattedRoomReviews,
+            ...formattedTourReviews,
+            ...formattedVehicleReviews
+        ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        return res.status(200).json({
+            success: true,
+            data: integratedReviews
+        });
+
+    } catch (error) {
+        console.error("Error fetching aggregated dashboard reviews:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+}
+
 export async function getCustomerRentals(req, res) {
     try {
         const customerId = req.user.id;
