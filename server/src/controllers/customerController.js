@@ -684,7 +684,29 @@ export async function getCustomerTours(req, res) {
             order: [["createdAt", "DESC"]]
         });
 
-        res.status(200).json({ success: true, data: inquiries });
+        if (inquiries.length > 0) {
+            const inquiryRefs = inquiries.map(i => i.inquiryRef);
+            const refunds = await sequelize.query(
+                `SELECT * FROM tour_refunds WHERE inquiryRef IN (:inquiryRefs)`,
+                {
+                    replacements: { inquiryRefs },
+                    type: sequelize.QueryTypes.SELECT
+                }
+            );
+
+            const inquiriesWithRefunds = inquiries.map(inquiry => {
+                const refund = refunds.find(r => r.inquiryRef === inquiry.inquiryRef) || null;
+                const jsonVal = inquiry.toJSON();
+                return {
+                    ...jsonVal,
+                    refund
+                };
+            });
+
+            res.status(200).json({ success: true, data: inquiriesWithRefunds });
+        } else {
+            res.status(200).json({ success: true, data: [] });
+        }
     } catch (error) {
         console.error("Error fetching customer tours:", error);
         res.status(500).json({ message: "Internal server error" });

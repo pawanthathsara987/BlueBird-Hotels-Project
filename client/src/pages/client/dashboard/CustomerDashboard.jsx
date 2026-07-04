@@ -336,7 +336,17 @@ export default function CustomerDashboard() {
             location: t.Tour?.location || "Sri Lanka Coastline",
             requestedDate: t.startDate,
             groupSize: `${t.numberOfAdults} Adults` + (t.numberOfChildren > 0 ? `, ${t.numberOfChildren} Kids` : ""),
-            status: t.status === "accepted" ? "Approved" : t.status === "progress" ? "Awaiting Payment" : t.status === "rejected" ? "Declined" : "Pending Review",
+            status: t.refund 
+              ? `Refund ${t.refund.status.charAt(0).toUpperCase() + t.refund.status.slice(1)}` 
+              : t.status === "accepted" 
+                ? "Approved" 
+                : t.status === "progress" 
+                  ? "Awaiting Payment" 
+                  : t.status === "rejected" 
+                    ? "Declined" 
+                    : t.status === "canceled" 
+                      ? "Canceled" 
+                      : "Pending Review",
             rawStatus: t.status,
             adults: t.numberOfAdults || 1,
             price: parseFloat(t.Tour?.price || 0),
@@ -345,6 +355,7 @@ export default function CustomerDashboard() {
             phone: t.phone || "",
             address: t.address || "",
             conciergeNotes: reply,
+            refund: t.refund || null,
             lastUpdated: new Date(t.updatedAt).toLocaleDateString()
           };
         });
@@ -724,6 +735,7 @@ export default function CustomerDashboard() {
                 <ToursTab
                   tours={tours}
                   setTours={setTours}
+                  payments={payments}
                   isEmptyState={isEmptyState}
                   filterList={filterList}
                 />
