@@ -2086,36 +2086,34 @@ const RoomSelector = () => {
 
           {/* Card B: Personal & Special Requests */}
           <div
-            className={`border rounded-2xl p-6 transition-all duration-350 shadow-3xs flex flex-col justify-between ${personalRequest.trim().length > 0
+            className={`border rounded-2xl p-6 transition-all duration-350 shadow-3xs flex flex-col h-fit md:self-start ${personalRequest.trim().length > 0
               ? "border-emerald-600 bg-emerald-50/5 ring-4 ring-emerald-500/5"
               : "border-stone-200 bg-stone-50/30 hover:border-emerald-600/30"
               }`}
           >
-            <div className="flex flex-col h-full justify-between">
-              <div>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className={`p-2 rounded-xl border ${personalRequest.trim().length > 0 ? "bg-emerald-100 border-emerald-250 text-emerald-800" : "bg-white border-stone-200 text-stone-500"}`}>
-                    <Sparkles className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-extrabold text-stone-850 text-sm sm:text-base leading-tight">Special & Personal Requests</h4>
-                    <p className="text-xs text-stone-400 font-semibold mt-0.5">Let us personalize your sanctuary stay</p>
-                  </div>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-xl border ${personalRequest.trim().length > 0 ? "bg-emerald-100 border-emerald-250 text-emerald-800" : "bg-white border-stone-200 text-stone-500"}`}>
+                  <Sparkles className="w-5 h-5" />
                 </div>
-
-                <p className="text-xs text-stone-500 leading-relaxed font-medium mb-4">
-                  Do you have dietary preferences, allergies, require specific bedding configs, or celebrating a special occasion? Let us know below.
-                </p>
+                <div>
+                  <h4 className="font-extrabold text-stone-850 text-sm sm:text-base leading-tight">Special & Personal Requests</h4>
+                  <p className="text-xs text-stone-400 font-semibold mt-0.5">Let us personalize your sanctuary stay</p>
+                </div>
               </div>
 
-              <div className="space-y-1.5 mt-auto">
+              <p className="text-xs text-stone-500 leading-relaxed font-medium">
+                Do you have dietary preferences, allergies, require specific bedding configs, or celebrating a special occasion? Let us know below.
+              </p>
+
+              <div className="space-y-1.5">
                 <textarea
                   value={personalRequest}
                   onChange={(e) => setPersonalRequest(e.target.value)}
                   placeholder="e.g., Allergen-free feather pillows, celebrating our wedding anniversary, arrival cake setup, extra child bed option..."
                   maxLength={500}
-                  rows={5}
-                  className="w-full text-xs font-semibold text-stone-750 bg-white border border-stone-200 hover:border-stone-300 rounded-xl p-3.5 focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-600 transition placeholder-stone-400 outline-hidden resize-none shadow-3xs"
+                  rows={6}
+                  className="w-full min-h-[180px] text-xs font-semibold text-stone-750 bg-white border border-stone-400 hover:border-stone-300 rounded-xl p-3.5 focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-600 transition placeholder-stone-400 outline-hidden resize-y shadow-3xs"
                 />
                 <div className="flex justify-between items-center text-[10px] text-stone-400 font-bold px-1">
                   <span>We do our best to accommodate all guest desires.</span>

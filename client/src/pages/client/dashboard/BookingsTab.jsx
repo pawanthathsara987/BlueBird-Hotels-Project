@@ -451,14 +451,14 @@ export default function BookingsTab({
       : 0;
 
     const priceBreakdownRows = booking.raw?.bookedRooms?.map((room, idx) => {
-      const rate = parseFloat(room.Room?.roomPrices?.[0]?.price || room.pricePerNight || 0);
-      const rowTotal = rate * booking.nights;
+      const roomTotal = parseFloat(room.price || room.totalPrice || room.pricePerNight || 0);
+      const rate = booking.nights > 0 ? roomTotal / booking.nights : roomTotal;
       return `
         <tr>
           <td>Room ${idx + 1}: ${room.Room?.roomType?.type || "Deluxe Suite"} (${room.board_type || "Room Only"})</td>
           <td style="text-align: center;">${booking.nights}</td>
           <td style="text-align: right;">${CURRENCY} ${rate.toFixed(2)}</td>
-          <td style="text-align: right;">${CURRENCY} ${rowTotal.toFixed(2)}</td>
+          <td style="text-align: right;">${CURRENCY} ${roomTotal.toFixed(2)}</td>
         </tr>
       `;
     }).join("") || "";
@@ -1171,6 +1171,9 @@ export default function BookingsTab({
                       </p>
                       <p className="text-slate-500 text-[10px]">
                         Room Assigned: <span className="font-bold text-slate-700">{room.Room?.room_number ? `Room ${room.Room.room_number}` : "Assigning upon arrival"}</span>
+                      </p>
+                      <p className="text-slate-500 text-[10px] mt-1">
+                        Room Price: <span className="font-bold text-slate-700">{CURRENCY} {parseFloat(room.price || room.totalPrice || room.pricePerNight || 0).toFixed(2)}</span>
                       </p>
                       {room.status === "cancelled" ? (
                         <span className="text-rose-600 font-extrabold text-[9px] block mt-1.5 uppercase tracking-wide">🚫 Cancelled</span>

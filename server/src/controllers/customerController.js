@@ -970,17 +970,11 @@ export async function cancelAirportPickup(req, res) {
         // 3. Update pickup status to CANCELLED
         await pickup.update({ status: "CANCELLED" }, { transaction: t });
 
-        // 4. Retrieve the airport pickup price
-        const pickupPrice = pickup.price > 0 ? parseFloat(pickup.price) : 15000.00;
-
-        // 5. Subtract price from booking total
+        // 4. Pickup is paid at the hotel, so cancelling it must not change the room booking total
+        const pickupPrice = 0;
         const currentTotal = parseFloat(booking.total_price);
-        const newTotal = Math.max(0, currentTotal - pickupPrice);
-        
-        let newTax = 0;
-        if (booking.tax_percentage > 0) {
-            newTax = newTotal * (booking.tax_percentage / 100);
-        }
+        const newTotal = currentTotal;
+        const newTax = booking.tax || 0;
 
         await booking.update({
             total_price: newTotal,
