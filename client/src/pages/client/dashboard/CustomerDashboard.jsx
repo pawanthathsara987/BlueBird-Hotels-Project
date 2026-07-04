@@ -186,8 +186,14 @@ export default function CustomerDashboard() {
         const headers = { Authorization: `Bearer ${token}` };
         const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-        // 1. Fetch Profile
-        const profileRes = await axios.get(`${backendUrl}/customers/profile`, { headers });
+        const [profileRes, bookingsRes, rentalsRes, toursRes, paymentsRes] = await Promise.all([
+          axios.get(`${backendUrl}/customers/profile`, { headers }),
+          axios.get(`${backendUrl}/customers/bookings`, { headers }),
+          axios.get(`${backendUrl}/customers/rentals`, { headers }),
+          axios.get(`${backendUrl}/customers/tours`, { headers }),
+          axios.get(`${backendUrl}/customers/payments`, { headers })
+        ]);
+
         const pData = profileRes.data.data;
         const profileObj = {
           name: `${pData.firstName || ""} ${pData.lastName || ""}`.trim() || "Valued Guest",
@@ -209,8 +215,7 @@ export default function CustomerDashboard() {
         setEditProfileForm(profileObj);
 
         // 2. Fetch Bookings (Hotel stays)
-        const bookingsRes = await axios.get(`${backendUrl}/customers/bookings`, { headers });
-        const rawBookings = bookingsRes.data.data;
+        const rawBookings = bookingsRes.data.data || [];
         const mappedBookings = rawBookings.map(b => {
           // Dates: pull from first booked room's checkIn/checkOut
           const firstRoom = b.bookedRooms?.[0];
@@ -294,8 +299,7 @@ export default function CustomerDashboard() {
         setBookings(mappedBookings);
 
         // 3. Fetch Rentals (Vehicles)
-        const rentalsRes = await axios.get(`${backendUrl}/customers/rentals`, { headers });
-        const rawRentals = rentalsRes.data.data;
+        const rawRentals = rentalsRes.data.data || [];
         const mappedRentals = rawRentals.map(r => ({
           id: `BB-CAR-${r.id}`,
           realId: r.id,
@@ -313,8 +317,7 @@ export default function CustomerDashboard() {
         setVehicles(mappedRentals);
 
         // 4. Fetch Tours
-        const toursRes = await axios.get(`${backendUrl}/customers/tours`, { headers });
-        const rawTours = toursRes.data.data;
+        const rawTours = toursRes.data.data || [];
         const mappedTours = rawTours.map(t => {
           const notes = t.specialRequests || "No special requests submitted.";
           const reply = t.status === "accepted" 
@@ -347,8 +350,6 @@ export default function CustomerDashboard() {
         });
         setTours(mappedTours);
 
-        // 5. Fetch Payments
-        const paymentsRes = await axios.get(`${backendUrl}/customers/payments`, { headers });
         setPayments(paymentsRes.data.data || []);
         if (paymentsRes.data.summary) {
           setPaymentSummary(paymentsRes.data.summary);
