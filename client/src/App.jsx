@@ -265,6 +265,8 @@ export default function App() {
                         <Route path="/vehicles" element={<VehicleCatalogPage />} />
                         <Route path="/vehicles/:id" element={<VehicleDetailsPage />} />
                         <Route path="/vehicles/:id/book" element={<VehicleBookingPage />} />
+                        <Route path="/vehicles/:id/summary" element={<VehicleBookingSummary />} />
+                        <Route path="/vehicles/:id/payment" element={<VehiclePaymentPage />} />
 
                         {/* Redirections for staff routes from booking subdomain */}
                         <Route path="/admin/*" element={<RedirectToSubdomain subdomain="admin" path="/admin" />} />

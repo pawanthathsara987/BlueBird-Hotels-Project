@@ -22,6 +22,15 @@ const calculateDeposit = (totalPrice) => {
   return { depositAmount, balanceAmount };
 };
 
+const getMinDateStr = () => {
+  const today = new Date();
+  today.setDate(today.getDate() + 7);
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function VehicleBookingPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -109,12 +118,7 @@ export default function VehicleBookingPage() {
     }
 
     // Check if pickup is at least 1 week in advance
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const minPickupTime = new Date(today);
-    minPickupTime.setDate(today.getDate() + 7);
-    
-    if (pickupTime < minPickupTime.getTime()) {
+    if (pickupDate < getMinDateStr()) {
       setAvailability({ available: false, reason: "Bookings must be made at least 1 week in advance.", days: 0, totalPrice: null, driverFee: null, pricePerDay: null });
       setAvailabilityLoading(false);
       return;
@@ -288,7 +292,7 @@ export default function VehicleBookingPage() {
                       <input
                         required
                         type="date"
-                        min={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
+                        min={getMinDateStr()}
                         value={pickupDate}
                         onChange={(e) => setPickupDate(e.target.value)}
                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
@@ -299,7 +303,7 @@ export default function VehicleBookingPage() {
                       <input
                         required
                         type="date"
-                        min={pickupDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
+                        min={pickupDate || getMinDateStr()}
                         value={returnDate}
                         onChange={(e) => setReturnDate(e.target.value)}
                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
