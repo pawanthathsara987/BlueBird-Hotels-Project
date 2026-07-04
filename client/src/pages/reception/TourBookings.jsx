@@ -28,6 +28,8 @@ export default function TourBookings() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
+    const [collectPaymentMethod, setCollectPaymentMethod] = useState("cash");
+    const [isCollecting, setIsCollecting] = useState(false);
 
     // Rejection state
     const [rejectingInquiry, setRejectingInquiry] = useState(null);
@@ -317,6 +319,30 @@ export default function TourBookings() {
         }
     };
 
+    const handleCollectBalance = async (inquiryId) => {
+        setIsCollecting(true);
+        try {
+            const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/reception/tour-bookings/${inquiryId}/collect-balance`, {
+                paymentMethod: collectPaymentMethod
+            });
+            if (res.data.success) {
+                toast.success("Tour balance payment collected successfully!");
+                setSelectedInquiry(prev => ({
+                    ...prev,
+                    balancePaidAt: new Date().toISOString(),
+                    balancePaymentMethod: collectPaymentMethod,
+                    bookingStatus: "fully_paid"
+                }));
+                fetchData();
+            }
+        } catch (error) {
+            console.error("Error collecting tour balance:", error);
+            toast.error(error.response?.data?.message || "Failed to collect tour balance payment.");
+        } finally {
+            setIsCollecting(false);
+        }
+    };
+
     // Helper to format date nicely
     const formatDate = (dateStr) => {
         try {
@@ -524,13 +550,17 @@ export default function TourBookings() {
     const filteredInquiries = inquiries.filter((inq) => {
         const matchesSearch = inq.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
             inq.inquiryRef?.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = statusFilter === "all" ? true : inq.status === statusFilter;
+        const matchesStatus = statusFilter === "all" ? true : (
+            statusFilter === "canceled"
+                ? (inq.status === "canceled" || inq.status === "rejected")
+                : inq.status === statusFilter
+        );
         return matchesSearch && matchesStatus;
     });
 
     const getStatusColor = (status) => {
         if (status === "accepted") return "bg-emerald-500/10 text-emerald-500 border border-emerald-500/25";
-        if (status === "rejected") return "bg-rose-500/10 text-rose-500 border border-rose-500/25";
+        if (status === "rejected" || status === "canceled") return "bg-rose-500/10 text-rose-500 border border-rose-500/25";
         return "bg-amber-500/10 text-amber-500 border border-amber-500/25";
     };
 
@@ -685,6 +715,15 @@ export default function TourBookings() {
                     >
                         Accepted
                     </button>
+                    <button
+                        onClick={() => setStatusFilter("canceled")}
+                        className={`flex-1 md:flex-none px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer border ${statusFilter === "canceled"
+                                ? `${currentAccent.bg} text-white border-transparent`
+                                : "bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-slate-600 dark:text-slate-300"
+                            }`}
+                    >
+                        Cancelled
+                    </button>
                 </div>
             </div>
 
@@ -759,7 +798,7 @@ export default function TourBookings() {
                                                  {(() => {
                                                      const { tourPrice, extraPrice, totalPrice } = getRowPriceParts(inq);
                                                      return (
-                                                         <div className="flex flex-col gap-0.5 text-[10px] text-slate-500 font-medium min-w-[120px] text-left">
+                                                         <div className="flex flex-col gap-0.5 text-[10px] text-slate-500 font-medium min-w-[130px] text-left">
                                                              <span className="flex justify-between gap-4">
                                                                  <span>Tour:</span>
                                                                  <span className="font-semibold text-slate-700 dark:text-slate-350">LKR {tourPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -775,6 +814,31 @@ export default function TourBookings() {
                                                                  <span>Total:</span>
                                                                  <span className={currentAccent.text}>LKR {totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                              </span>
+                                                             
+                                                             {/* Half / Full details */}
+                                                             {inq.bookingId ? (
+                                                                 <div className="mt-1 pt-1 border-t border-dashed border-slate-200 dark:border-slate-800 space-y-0.5 text-[9px] font-bold">
+                                                                     <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                                                                         <span>Deposit (50%):</span>
+                                                                         <span>LKR {parseFloat(inq.depositAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                                     </div>
+                                                                     {inq.balancePaidAt ? (
+                                                                         <div className="flex justify-between text-blue-500 dark:text-blue-400 font-black">
+                                                                             <span>Remaining ({inq.balancePaymentMethod}):</span>
+                                                                             <span>Paid</span>
+                                                                         </div>
+                                                                     ) : (
+                                                                         <div className="flex justify-between text-rose-500 dark:text-rose-400">
+                                                                             <span>Balance Due:</span>
+                                                                             <span>LKR {parseFloat(inq.remainingAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                                         </div>
+                                                                     )}
+                                                                 </div>
+                                                             ) : (
+                                                                 <div className="mt-1 pt-1 border-t border-dashed border-slate-200 dark:border-slate-800 text-amber-500 dark:text-amber-400 font-bold text-[9px] text-center">
+                                                                     Awaiting Deposit
+                                                                 </div>
+                                                             )}
                                                          </div>
                                                      );
                                                  })()}
@@ -1273,6 +1337,8 @@ export default function TourBookings() {
                                 </h4>
                                 {(() => {
                                     const { tourPrice, extraPrice, totalPrice } = getRowPriceParts(selectedInquiry);
+                                    const hasBooking = !!selectedInquiry.bookingId;
+                                    const isPaid = !!selectedInquiry.balancePaidAt;
                                     return (
                                         <div className="space-y-2 max-w-md">
                                             <div className="flex justify-between">
@@ -1286,14 +1352,88 @@ export default function TourBookings() {
                                                 </div>
                                             )}
                                             <div className="border-t border-slate-200 dark:border-slate-800 my-1"></div>
-                                            <div className="flex justify-between text-sm font-black text-slate-900 dark:text-white">
-                                                <span>Estimated Total:</span>
-                                                <span className={currentAccent.text}>LKR {totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                                            </div>
+                                            
+                                            {hasBooking ? (
+                                                <>
+                                                    <div className="flex justify-between text-slate-600 dark:text-slate-350 font-bold">
+                                                        <span>Total Payable:</span>
+                                                        <span>LKR {parseFloat(selectedInquiry.totalAmount || totalPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-emerald-600 dark:text-emerald-450 font-bold">
+                                                        <span>Advance Paid (Deposit):</span>
+                                                        <span>LKR {parseFloat(selectedInquiry.depositAmount || (totalPrice * 0.5)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                    </div>
+                                                    {isPaid ? (
+                                                        <>
+                                                            <div className="flex justify-between text-teal-600 dark:text-teal-450 font-extrabold text-sm border-t border-dashed dark:border-slate-800 pt-1.5">
+                                                                <span>Remaining Balance (Paid):</span>
+                                                                <span>LKR {parseFloat(selectedInquiry.remainingAmount || (totalPrice * 0.5)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                            </div>
+                                                            <div className="text-[9px] text-slate-400 mt-1 font-bold">
+                                                                Balance collected on {new Date(selectedInquiry.balancePaidAt).toLocaleString()} via {selectedInquiry.balancePaymentMethod?.toUpperCase()}
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <div className="flex justify-between text-rose-600 dark:text-rose-400 font-extrabold text-sm border-t border-dashed dark:border-slate-800 pt-1.5">
+                                                                <span>Remaining Balance Due:</span>
+                                                                <span>LKR {parseFloat(selectedInquiry.remainingAmount || (totalPrice * 0.5)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <div className="flex justify-between text-sm font-black text-slate-900 dark:text-white">
+                                                    <span>Estimated Total:</span>
+                                                    <span className={currentAccent.text}>LKR {totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })()}
                             </div>
+
+                            {/* Collect Balance Payment Panel (Reception desk) */}
+                            {!selectedInquiry.balancePaidAt && selectedInquiry.status !== "rejected" && selectedInquiry.status !== "canceled" && (
+                                <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/5 dark:bg-rose-500/2 space-y-3.5">
+                                    <div className="flex items-center gap-1.5 text-rose-550 dark:text-rose-400 font-bold uppercase tracking-wider text-[10px]">
+                                        <span>💵 Collect Remaining Balance Payment</span>
+                                    </div>
+                                    {!selectedInquiry.bookingId ? (
+                                        <div className="flex items-start gap-2 p-3 bg-amber-500/10 text-amber-500 border border-amber-500/25 rounded-lg font-bold text-[11px]">
+                                            <span className="mt-0.5">⚠️</span>
+                                            <span>Advance Deposit Unpaid: The customer has not paid the online deposit (50%) for this excursion booking yet. The remaining balance can only be collected after the deposit is paid and status becomes confirmed.</span>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-bold">
+                                                The customer must pay the remaining balance of <span className="text-rose-500 font-extrabold">LKR {parseFloat(selectedInquiry.remainingAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> to check-in/start the excursion tour.
+                                            </p>
+                                            <div className="flex flex-col sm:flex-row gap-3 items-end">
+                                                <div className="flex-1 w-full">
+                                                    <label className="block text-[10px] text-slate-450 uppercase mb-1.5 font-bold">Select Payment Method</label>
+                                                    <select
+                                                        value={collectPaymentMethod}
+                                                        onChange={(e) => setCollectPaymentMethod(e.target.value)}
+                                                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 outline-none font-bold text-xs cursor-pointer"
+                                                    >
+                                                        <option value="cash">Cash</option>
+                                                        <option value="card">Card Payment</option>
+                                                        <option value="bank_transfer">Bank Transfer</option>
+                                                    </select>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleCollectBalance(selectedInquiry.id)}
+                                                    disabled={isCollecting}
+                                                    className="px-5 py-2.5 text-xs font-black text-white bg-rose-600 hover:bg-rose-700 disabled:bg-slate-400 rounded-lg transition shadow-sm cursor-pointer select-none whitespace-nowrap h-9 flex items-center justify-center"
+                                                >
+                                                    {isCollecting ? "Recording..." : `Confirm Payment (LKR ${parseFloat(selectedInquiry.remainingAmount || 0).toLocaleString()})`}
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Special Requirements */}
                             {selectedInquiry.specialRequests && (
