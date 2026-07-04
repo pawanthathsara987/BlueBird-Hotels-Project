@@ -1,7 +1,87 @@
 import { col, fn, Op, QueryTypes } from "sequelize";
 import sequelize from "../../config/database.js";
 import { sendEmail, sendBookingConfirmationEmail, sendPersonalRequestEmail } from "../../services/emailService.js";
-import { Customer, Room, BookedRoom, Reservation, AirPortPickup, ServiceCharge, RoomType, Amenities, Policy, BoardType, OccupancyType, RoomPrice, SeasonalDiscount, RoomPayment } from "../../models/index.js";
+import { Customer, Room, BookedRoom, Reservation, AirPortPickup, ServiceCharge, RoomType, Amenities, Policy, BoardType, OccupancyType, RoomPrice, SeasonalDiscount, RoomPayment, AirportPickupVehicle } from "../../models/index.js";
+
+export const calculateOptimalPickup = async (passengerCount, baggageCount) => {
+    const vehicles = await AirportPickupVehicle.findAll();
+    if (vehicles.length === 0) {
+        return { totalPrice: 15000.00, details: "1 Car" };
+    }
+
+    const targetP = Number(passengerCount) || 1;
+    const targetB = Number(baggageCount) || 0;
+
+    const maxCapP = Math.max(...vehicles.map(v => v.passenger_count));
+    const maxCapB = Math.max(...vehicles.map(v => v.baggage_count));
+
+    const limitP = targetP + maxCapP;
+    const limitB = targetB + maxCapB;
+
+    // dp[p][b] = min price to cover at least p passengers and b baggage
+    const dp = Array.from({ length: limitP + 1 }, () => Array(limitB + 1).fill(Infinity));
+    const parent = Array.from({ length: limitP + 1 }, () => Array(limitB + 1).fill(null));
+
+    dp[0][0] = 0;
+
+    for (let p = 0; p <= limitP; p++) {
+        for (let b = 0; b <= limitB; b++) {
+            if (dp[p][b] === Infinity) continue;
+            for (const v of vehicles) {
+                const nextP = Math.min(limitP, p + v.passenger_count);
+                const nextB = Math.min(limitB, b + v.baggage_count);
+                const cost = dp[p][b] + parseFloat(v.price);
+                if (cost < dp[nextP][nextB]) {
+                    dp[nextP][nextB] = cost;
+                    parent[nextP][nextB] = { prevP: p, prevB: b, vehicle: v };
+                }
+            }
+        }
+    }
+
+    // Find the cell with p >= targetP and b >= targetB that minimizes cost
+    let minCost = Infinity;
+    let bestP = targetP;
+    let bestB = targetB;
+
+    for (let p = targetP; p <= limitP; p++) {
+        for (let b = targetB; b <= limitB; b++) {
+            if (dp[p][b] < minCost) {
+                minCost = dp[p][b];
+                bestP = p;
+                bestB = b;
+            }
+        }
+    }
+
+    // Backtrack to find vehicles used
+    const counts = {};
+    let currP = bestP;
+    let currB = bestB;
+
+    while ((currP > 0 || currB > 0) && parent[currP][currB]) {
+        const step = parent[currP][currB];
+        const vType = step.vehicle.vehicle_type;
+        counts[vType] = (counts[vType] || 0) + 1;
+        currP = step.prevP;
+        currB = step.prevB;
+    }
+
+    const vehicleNames = {
+        car: "Car",
+        mini_van: "Mini Van",
+        mini_bus: "Mini Bus"
+    };
+
+    const details = Object.entries(counts)
+        .map(([type, qty]) => `${qty} ${vehicleNames[type] || type}`)
+        .join(" + ");
+
+    return {
+        totalPrice: minCost,
+        details: details || "None"
+    };
+};
 
 /**
  * Helper to calculate dynamic price for a room stay based on RoomType, OccupancyType, BoardType and SeasonalDiscount.
@@ -304,7 +384,6 @@ const createBooking = async (req, res) => {
             });
         }
 
-        // Validate airport pickup selection (1-day advance cutoff rule)
         if (airportPickup?.enabled) {
             if (!airportPickup.pickupDate || !airportPickup.pickupTime) {
                 return res.status(400).json({
@@ -315,13 +394,14 @@ const createBooking = async (req, res) => {
 
             const datePart = airportPickup.pickupDate.split('T')[0];
             const pickupDateTime = new Date(`${datePart}T${airportPickup.pickupTime}`);
+
             const cutoffTime = new Date();
-            cutoffTime.setDate(cutoffTime.getDate() + 1); // must be at least 24 hours (1 day) in the future
+            cutoffTime.setMinutes(cutoffTime.getMinutes() + 690); // 11h 30m = 690 minutes
 
             if (isNaN(pickupDateTime.getTime()) || pickupDateTime < cutoffTime) {
                 return res.status(400).json({
                     success: false,
-                    message: "Pickup not available for selected time"
+                    message: "Pickup must be booked at least 11 hours 30 minutes in advance"
                 });
             }
         }
@@ -415,12 +495,11 @@ const createBooking = async (req, res) => {
             if (!airportPickup.pickupDate || !airportPickup.pickupTime) {
                 throw new Error("Airport pickup date and time are required");
             }
-            const pickupPriceRecord = await ServiceCharge.findOne({
-                where: { service_Code: "AIRPORT_PICKUP", status: true },
-                transaction: t
-            });
-            pickupPrice = pickupPriceRecord ? parseFloat(pickupPriceRecord.price) : 50.00;
-            calculatedTotalPrice += pickupPrice;
+
+            const count = Number(airportPickup.passengerCount) || 1;
+            const bags = Number(airportPickup.baggageCount) || 0;
+            const { totalPrice } = await calculateOptimalPickup(count, bags);
+            pickupPrice = totalPrice;
         }
 
         // Compare price discrepancy (tolerance of $1.50 for minor floating point rounding differences)
@@ -462,9 +541,11 @@ const createBooking = async (req, res) => {
             await AirPortPickup.create(
                 {
                     booking_id: reservation.id,
-                    pickup_date: airportPickup.pickupDate,
-                    pickup_time: airportPickup.pickupTime,
-                    passenger_count: totalPassengers,
+                    pickup_date: airportPickup.pickupDate || checkInDate,
+                    pickup_time: airportPickup.pickupTime || "12:00",
+                    passenger_count: Number(airportPickup.passengerCount) || totalPassengers,
+                    flight_number: airportPickup.flightNumber || null,
+                    baggage_count: Number(airportPickup.baggageCount) || 0,
                     pickup_location: "Katunayake Airport",
                     status: "CONFIRMED",
                     price: pickupPrice
@@ -975,12 +1056,10 @@ const checkBookingPrice = async (req, res) => {
 
         let airportPickupSurcharge = 0;
         if (airportPickup?.enabled) {
-            const pickupPriceRecord = await ServiceCharge.findOne({
-                where: { service_Code: "AIRPORT_PICKUP", status: true }
-            });
-            const pickupPrice = pickupPriceRecord ? parseFloat(pickupPriceRecord.price) : 50.00;
-            calculatedTotalPrice += pickupPrice;
-            airportPickupSurcharge = pickupPrice;
+            const count = Number(airportPickup.passengerCount) || 1;
+            const bags = Number(airportPickup.baggageCount) || 0;
+            const { totalPrice } = await calculateOptimalPickup(count, bags);
+            airportPickupSurcharge = totalPrice;
         }
 
         return res.status(200).json({
@@ -1019,6 +1098,25 @@ const getActivePolicy = async (req, res) => {
         return res.status(500).json({ success: false, message: "Error fetching policy", error: error.message });
     }
 };
+
+export async function getAirportPickupVehicles(req, res) {
+    try {
+        const vehicles = await AirportPickupVehicle.findAll({
+            order: [['passenger_count', 'ASC']]
+        });
+        return res.status(200).json({
+            success: true,
+            data: vehicles
+        });
+    } catch (error) {
+        console.error("Error fetching airport pickup vehicles:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to load airport pickup vehicles",
+            error: error.message
+        });
+    }
+}
 
 export {
     createBooking,

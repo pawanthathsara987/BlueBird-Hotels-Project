@@ -357,7 +357,7 @@ export default function BookingManagement() {
             <thead>
               <tr>
                 <th>Charge Description</th>
-                <th class="val-col">Amount ($)</th>
+                <th class="val-col">Amount (${import.meta.env.VITE_CURRENCY_TYPE || "LKR"})</th>
               </tr>
             </thead>
             <tbody>

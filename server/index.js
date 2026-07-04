@@ -25,6 +25,37 @@ async function startServer() {
       await sequelize.query("ALTER TABLE tour_inquiries ADD COLUMN passportId VARCHAR(50) NULL;");
       console.log('✅ Added passportId column to tour_inquiries');
     } catch (e) {}
+    try {
+      await sequelize.query("ALTER TABLE airport_pickup ADD COLUMN flight_number VARCHAR(100) NULL;");
+      console.log('✅ Added flight_number column to airport_pickup');
+    } catch (e) {}
+    try {
+      await sequelize.query("ALTER TABLE airport_pickup ADD COLUMN baggage_count INT NULL DEFAULT 0;");
+      console.log('✅ Added baggage_count column to airport_pickup');
+    } catch (e) {}
+    try {
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS airport_pickup_vehicles (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          vehicle_type VARCHAR(100) NOT NULL,
+          passenger_count INT NOT NULL,
+          baggage_count INT NOT NULL,
+          price DOUBLE NOT NULL
+        );
+      `);
+      console.log('✅ Created airport_pickup_vehicles table if not exists');
+      
+      const [results] = await sequelize.query("SELECT COUNT(*) as count FROM airport_pickup_vehicles;");
+      if (results[0].count === 0) {
+        await sequelize.query(`
+          INSERT INTO airport_pickup_vehicles (vehicle_type, passenger_count, baggage_count, price) VALUES
+          ('car', 4, 3, 25.00),
+          ('mini_van', 8, 8, 45.00),
+          ('mini_bus', 15, 15, 80.00);
+        `);
+        console.log('✅ Seeded default airport_pickup_vehicles');
+      }
+    } catch (e) {}
 
     await seedDefaultSettings();
 

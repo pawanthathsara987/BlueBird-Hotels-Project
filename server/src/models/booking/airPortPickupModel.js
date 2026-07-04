@@ -32,6 +32,15 @@ AirPortPickup.init(
             allowNull: false,
             defaultValue: 1,
         },
+        flight_number: {
+            type: DataTypes.STRING(100),
+            allowNull: true,
+        },
+        baggage_count: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            defaultValue: 0,
+        },
         pickup_location: {
             type: DataTypes.STRING,
             allowNull: false,

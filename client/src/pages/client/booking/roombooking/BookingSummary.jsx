@@ -1,18 +1,22 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ArrowLeft, Calendar, Users, DollarSign, Car, Sparkles, Clock } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const BookingSummary = () => {
-    const CURRENCY = process.env.CURRENCY_TYPE || "LKR";
+    const CURRENCY = import.meta.env.VITE_CURRENCY_TYPE || "LKR";
     const location = useLocation();
     const navigate = useNavigate();
     const [isProcessing, setIsProcessing] = useState(false);
 
     const bookingData = location.state?.bookingData || {};
     const selectedRooms = location.state?.selectedRooms || [];
+    const airportPickupFromState = location.state?.airportPickup || null;
 
     const [airportPickup] = useState(() => {
+        if (airportPickupFromState) {
+            return airportPickupFromState;
+        }
         try {
             return JSON.parse(localStorage.getItem("airportPickUp")) || null;
         } catch {
@@ -23,6 +27,99 @@ const BookingSummary = () => {
     const [personalRequest] = useState(() => {
         return localStorage.getItem("personalRequest") || "";
     });
+
+    const [airportVehicles, setAirportVehicles] = useState([]);
+
+    useEffect(() => {
+        const fetchVehicles = async () => {
+            try {
+                const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api").trim().replace(/\/$/, "");
+                const response = await fetch(`${backendBaseUrl}/roombook/airport-vehicles`);
+                const result = await response.json();
+                if (result && result.success && Array.isArray(result.data)) {
+                    setAirportVehicles(result.data);
+                }
+            } catch (err) {
+                console.error("Failed to load airport pickup vehicles from backend:", err);
+            }
+        };
+        fetchVehicles();
+    }, []);
+
+    const getAirportPickupVehicleDescription = (passengerCount, baggageCount) => {
+        if (!airportVehicles || airportVehicles.length === 0) {
+            return "1 Car";
+        }
+
+        const targetP = Number(passengerCount) || 1;
+        const targetB = Number(baggageCount) || 0;
+
+        const maxCapP = Math.max(...airportVehicles.map(v => v.passenger_count));
+        const maxCapB = Math.max(...airportVehicles.map(v => v.baggage_count));
+
+        const limitP = targetP + maxCapP;
+        const limitB = targetB + maxCapB;
+
+        const dp = Array.from({ length: limitP + 1 }, () => Array(limitB + 1).fill(Infinity));
+        const parent = Array.from({ length: limitP + 1 }, () => Array(limitB + 1).fill(null));
+        dp[0][0] = 0;
+
+        for (let p = 0; p <= limitP; p++) {
+            for (let b = 0; b <= limitB; b++) {
+                if (dp[p][b] === Infinity) continue;
+                for (const v of airportVehicles) {
+                    const nextP = Math.min(limitP, p + v.passenger_count);
+                    const nextB = Math.min(limitB, b + v.baggage_count);
+                    const cost = dp[p][b] + parseFloat(v.price);
+                    if (cost < dp[nextP][nextB]) {
+                        dp[nextP][nextB] = cost;
+                        parent[nextP][nextB] = { prevP: p, prevB: b, vehicle: v };
+                    }
+                }
+            }
+        }
+
+        let minCost = Infinity;
+        let bestP = targetP;
+        let bestB = targetB;
+
+        for (let p = targetP; p <= limitP; p++) {
+            for (let b = targetB; b <= limitB; b++) {
+                if (dp[p][b] < minCost) {
+                    minCost = dp[p][b];
+                    bestP = p;
+                    bestB = b;
+                }
+            }
+        }
+
+        const counts = {};
+        let currP = bestP;
+        let currB = bestB;
+
+        while ((currP > 0 || currB > 0) && parent[currP][currB]) {
+            const step = parent[currP][currB];
+            const vType = step.vehicle.vehicle_type;
+            counts[vType] = (counts[vType] || 0) + 1;
+            currP = step.prevP;
+            currB = step.prevB;
+        }
+
+        const vehicleNames = {
+            car: "Car",
+            mini_van: "Mini Van",
+            mini_bus: "Mini Bus"
+        };
+
+        return Object.entries(counts)
+            .map(([type, qty]) => {
+                const matchingVehicle = airportVehicles.find(v => v.vehicle_type === type);
+                const maxGuests = matchingVehicle ? matchingVehicle.passenger_count : 4;
+                const maxBags = matchingVehicle ? matchingVehicle.baggage_count : 3;
+                return `${qty} ${vehicleNames[type] || type} (Max ${maxGuests} guests / ${maxBags} bags)`;
+            })
+            .join(" + ");
+    };
 
     const {
         checkInDate,
@@ -44,8 +141,8 @@ const BookingSummary = () => {
     const hasDiscount = (room) => Number(room.discount || 0) > 0 && Number(room.originalTotalPrice || 0) > Number(room.totalPrice || 0);
 
     const shuttleCost = airportPickup?.enabled ? (parseFloat(airportPickup.price) || 50.00) : 0.00;
-    const totalCost = selectedRooms.reduce((sum, room) => sum + calculateRoomTotal(room), 0) + shuttleCost;
-    const originalTotalCost = selectedRooms.reduce((sum, room) => sum + calculateOriginalRoomTotal(room), 0) + shuttleCost;
+    const totalCost = selectedRooms.reduce((sum, room) => sum + calculateRoomTotal(room), 0);
+    const originalTotalCost = selectedRooms.reduce((sum, room) => sum + calculateOriginalRoomTotal(room), 0);
     const totalSavings = Math.max(0, originalTotalCost - totalCost);
 
     const handleGoBack = () => {
@@ -53,6 +150,7 @@ const BookingSummary = () => {
             state: {
                 bookingData,
                 selectedRooms,
+                airportPickup,
             }
         });
     };
@@ -65,9 +163,10 @@ const BookingSummary = () => {
                 state: {
                     bookingData,
                     selectedRooms,
+                    airportPickup,
                 }
             });
-            
+
         } catch (error) {
             console.error('Booking error:', error);
         } finally {
@@ -159,7 +258,7 @@ const BookingSummary = () => {
                                     <Sparkles className="h-5 w-5 text-emerald-750" />
                                     Guest Services & Requests
                                 </h2>
-                                
+
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {/* Airport Pickup Column */}
                                     {airportPickup?.enabled ? (
@@ -173,15 +272,38 @@ const BookingSummary = () => {
                                             <div className="text-sm font-semibold text-stone-900 space-y-1">
                                                 <p className="flex justify-between">
                                                     <span className="text-stone-500 text-xs">Shuttle Date:</span>
-                                                    <span className="font-bold text-xs">{checkIn ? format(checkIn, 'dd MMM yyyy') : 'Check-in Date'}</span>
+                                                    <span className="font-bold text-xs">
+                                                        {airportPickup.pickupDate 
+                                                            ? format(new Date(airportPickup.pickupDate), 'dd MMM yyyy') 
+                                                            : (checkIn ? format(checkIn, 'dd MMM yyyy') : 'Check-in Date')
+                                                        }
+                                                    </span>
                                                 </p>
                                                 <p className="flex justify-between items-center">
-                                                    <span className="flex items-center gap-1 text-stone-500 text-xs"><Clock className="h-3.5 w-3.5 text-stone-400" /> Pickup Time:</span>
+                                                    <span className="flex items-center gap-1 text-stone-500 text-xs"><Clock className="h-3.5 w-3.5 text-stone-400" /> Landing Time:</span>
                                                     <span className="font-bold bg-emerald-100/50 text-emerald-950 px-2 py-0.5 rounded text-xs">{airportPickup.time || '12:00'}</span>
+                                                </p>
+                                                {airportPickup.flightNo && (
+                                                    <p className="flex justify-between">
+                                                        <span className="text-stone-500 text-xs">Flight Number:</span>
+                                                        <span className="font-bold text-xs">{airportPickup.flightNo}</span>
+                                                    </p>
+                                                )}
+                                                <p className="flex justify-between">
+                                                    <span className="text-stone-500 text-xs">Baggage Count:</span>
+                                                    <span className="font-bold text-xs">{airportPickup.baggageCount || 0} Bags</span>
+                                                </p>
+                                                <p className="flex justify-between">
+                                                    <span className="text-stone-500 text-xs">Passengers:</span>
+                                                    <span className="font-bold text-xs">{airportPickup.passengerCount || 1} Guests</span>
+                                                </p>
+                                                <p className="flex justify-between">
+                                                    <span className="text-stone-500 text-xs">Vehicle(s):</span>
+                                                    <span className="font-bold text-xs text-indigo-750">{getAirportPickupVehicleDescription(airportPickup.passengerCount, airportPickup.baggageCount)}</span>
                                                 </p>
                                                 <p className="flex justify-between text-xs pt-1.5 border-t border-emerald-100 text-emerald-800 font-bold">
                                                     <span>Shuttle Fee:</span>
-                                                    <span className="font-extrabold">{CURRENCY} {shuttleCost.toFixed(2)} (One-time)</span>
+                                                    <span className="font-extrabold text-amber-800">{CURRENCY} {shuttleCost.toFixed(2)} (Pay at Hotel)</span>
                                                 </p>
                                             </div>
                                         </div>
@@ -289,34 +411,34 @@ const BookingSummary = () => {
                                                     </div>
                                                 </div>
 
-                                                                                                {
-                                                                                                    (() => {
-                                                                                                        const ages = Array.isArray(room.actualKidAges) && room.actualKidAges.length > 0
-                                                                                                            ? room.actualKidAges
-                                                                                                            : Array.isArray(room.kidAges) && room.kidAges.length > 0
-                                                                                                                ? room.kidAges
-                                                                                                                : [];
+                                                {
+                                                    (() => {
+                                                        const ages = Array.isArray(room.actualKidAges) && room.actualKidAges.length > 0
+                                                            ? room.actualKidAges
+                                                            : Array.isArray(room.kidAges) && room.kidAges.length > 0
+                                                                ? room.kidAges
+                                                                : [];
 
-                                                                                                        if (ages.length === 0) return null;
+                                                        if (ages.length === 0) return null;
 
-                                                                                                        return (
-                                                                                                            <div>
-                                                                                                                <p className="text-xs font-bold uppercase tracking-wider text-stone-500 mb-2">Kid Ages</p>
-                                                                                                                <div className="flex flex-wrap items-center gap-2">
-                                                                                                                  {ages.map((age, ageIndex) => (
-                                                                                                                    <span
-                                                                                                                      key={ageIndex}
-                                                                                                                      className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800 border border-emerald-100"
-                                                                                                                    >
-                                                                                                                      <span className="flex w-4 h-4 rounded-full bg-emerald-300 text-white text-[11px] font-bold items-center justify-center">{ageIndex+1}</span>
-                                                                                                                      <span>Age {age}</span>
-                                                                                                                    </span>
-                                                                                                                  ))}
-                                                                                                                </div>
-                                                                                                            </div>
-                                                                                                        );
-                                                                                                    })()
-                                                                                                }
+                                                        return (
+                                                            <div>
+                                                                <p className="text-xs font-bold uppercase tracking-wider text-stone-500 mb-2">Kid Ages</p>
+                                                                <div className="flex flex-wrap items-center gap-2">
+                                                                    {ages.map((age, ageIndex) => (
+                                                                        <span
+                                                                            key={ageIndex}
+                                                                            className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800 border border-emerald-100"
+                                                                        >
+                                                                            <span className="flex w-4 h-4 rounded-full bg-emerald-300 text-white text-[11px] font-bold items-center justify-center">{ageIndex + 1}</span>
+                                                                            <span>Age {age}</span>
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })()
+                                                }
                                             </div>
                                         </div>
                                     );

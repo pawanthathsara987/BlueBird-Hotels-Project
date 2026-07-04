@@ -22,7 +22,7 @@ export default function VisitorBooking() {
             roomType: "Deluxe",
             nights: 3,
             checkInTime: "14:30",
-            price: "$250",
+            price: `${import.meta.env.VITE_CURRENCY_TYPE || "LKR"} 250`,
         },
         {
             id: 2,
@@ -32,7 +32,7 @@ export default function VisitorBooking() {
             roomType: "Standard",
             nights: 2,
             checkInTime: "15:45",
-            price: "$180",
+            price: `${import.meta.env.VITE_CURRENCY_TYPE || "LKR"} 180`,
         },
     ];
 
