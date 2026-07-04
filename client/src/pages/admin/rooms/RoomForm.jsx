@@ -49,6 +49,24 @@ function RoomForm() {
         }
     }, [isEditMode, selectedRoom]);
 
+    const filteredRoomTypes = occupancyTypeId
+        ? roomTypes.filter((rt) => String(rt.occupancy_type_id ?? rt.occupancyType?.id) === String(occupancyTypeId))
+        : [];
+
+    const handleOccupancyTypeChange = (e) => {
+        const newOccupancyTypeId = e.target.value;
+        setOccupancyTypeId(newOccupancyTypeId);
+        
+        // Reset selected room type if it's not compatible with the new occupancy type
+        if (roomTypeId) {
+            const currentRoomType = roomTypes.find((rt) => String(rt.id) === String(roomTypeId));
+            const rtOccupancyId = currentRoomType ? String(currentRoomType.occupancy_type_id ?? currentRoomType.occupancyType?.id) : "";
+            if (rtOccupancyId !== String(newOccupancyTypeId)) {
+                setRoomTypeId("");
+            }
+        }
+    };
+
     const selectedRoomType = roomTypes.find((roomType) => String(roomType.id) === String(roomTypeId));
     const availableAmenities = selectedRoomType?.Amenities || [];
     const enteredRoomNumber = Number(roomNumber);
@@ -258,7 +276,7 @@ function RoomForm() {
                             <label className="block text-sm font-bold text-slate-700">Occupancy Type</label>
                             <select
                                 value={occupancyTypeId}
-                                onChange={(e) => setOccupancyTypeId(e.target.value)}
+                                onChange={handleOccupancyTypeChange}
                                 disabled={isLoading}
                                 className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 text-slate-600 font-semibold transition disabled:opacity-50 cursor-pointer"
                             >
@@ -276,11 +294,13 @@ function RoomForm() {
                             <select
                                 value={roomTypeId}
                                 onChange={(e) => setRoomTypeId(e.target.value)}
-                                disabled={isLoading}
+                                disabled={isLoading || !occupancyTypeId}
                                 className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 text-slate-600 font-semibold transition disabled:opacity-50 cursor-pointer"
                             >
-                                <option value="">Select Room Type</option>
-                                {roomTypes.map((roomType) => (
+                                <option value="">
+                                    {!occupancyTypeId ? "Please select Occupancy Type first" : "Select Room Type"}
+                                </option>
+                                {filteredRoomTypes.map((roomType) => (
                                     <option key={roomType.id} value={roomType.id}>
                                         {roomType.type}
                                     </option>

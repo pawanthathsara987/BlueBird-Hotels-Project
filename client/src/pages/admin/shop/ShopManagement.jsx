@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import Loader from "../../../components/Loader";
 
 import useShopItems from "./hooks/useShopItems";
+import useShopCategories from "./hooks/useShopCategories";
 import ShopHeader from "./components/ShopHeader";
 import ShopStats from "./components/ShopStats";
 import ShopFilters from "./components/ShopFilters";
@@ -12,9 +13,18 @@ import ShopTable from "./components/ShopTable";
 import AddEditItemModal from "./modals/AddEditItemModal";
 import ViewItemDetailsModal from "./modals/ViewItemDetailsModal";
 import ConfirmDeleteModal from "./modals/ConfirmDeleteModal";
+import ManageCategoriesModal from "./modals/ManageCategoriesModal";
 
 export default function ShopManagement() {
   const { items, loading, fetchItems } = useShopItems();
+  const {
+    categories,
+    loading: loadingCategories,
+    fetchCategories,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+  } = useShopCategories();
   
   // Filter/Sort states
   const [searchTerm, setSearchTerm] = useState("");
@@ -23,6 +33,7 @@ export default function ShopManagement() {
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [viewingItem, setViewingItem] = useState(null);
 
@@ -31,6 +42,23 @@ export default function ShopManagement() {
   const [itemToDelete, setItemToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Category change handlers to keep items list in sync
+  const handleAddCategory = async (name, description) => {
+    return await addCategory(name, description);
+  };
+
+  const handleUpdateCategory = async (id, name, description) => {
+    const success = await updateCategory(id, name, description);
+    if (success) {
+      fetchItems(); // Reload items because their category names may have changed
+    }
+    return success;
+  };
+
+  const handleDeleteCategory = async (id) => {
+    return await deleteCategory(id);
+  };
 
   // Handle modal triggers
   const handleOpenAddModal = () => {
@@ -146,7 +174,10 @@ export default function ShopManagement() {
   return (
     <div className="p-4 md:p-6 space-y-6 text-slate-700">
       {/* Header section */}
-      <ShopHeader onAddClick={handleOpenAddModal} />
+      <ShopHeader 
+        onAddClick={handleOpenAddModal} 
+        onManageCategoriesClick={() => setIsCategoriesModalOpen(true)}
+      />
 
       {/* Metrics Banner */}
       <ShopStats items={items} />
@@ -159,6 +190,7 @@ export default function ShopManagement() {
         setCategoryFilter={setCategoryFilter}
         sortBy={sortBy}
         setSortBy={setSortBy}
+        categories={categories}
       />
 
       {/* List / Table Area */}
@@ -190,6 +222,7 @@ export default function ShopManagement() {
         editingItem={editingItem}
         onSubmit={handleFormSubmit}
         isSubmitting={isSubmitting}
+        categories={categories}
       />
 
       {/* Delete Confirmation Modal */}
@@ -204,6 +237,17 @@ export default function ShopManagement() {
         }
         message="This action is permanent and cannot be undone. All associated image assets in Supabase storage will also be deleted."
         isLoading={isDeleting}
+      />
+
+      {/* Categories Management Modal */}
+      <ManageCategoriesModal
+        isOpen={isCategoriesModalOpen}
+        onClose={() => setIsCategoriesModalOpen(false)}
+        categories={categories}
+        loadingCategories={loadingCategories}
+        onAddCategory={handleAddCategory}
+        onUpdateCategory={handleUpdateCategory}
+        onDeleteCategory={handleDeleteCategory}
       />
     </div>
   );

@@ -115,6 +115,8 @@ import VehiclePaymentPage from "./pages/client/vehicles/VehiclePaymentPage";
 import CustomerDetailsPage from "./pages/client/booking/roombooking/CustomerDetailsPage";
 import RoomTypeDetails from "./pages/client/RoomTypeDetails";
 import FaqPage from "./pages/Faq";
+import ShopCatalogPage from "./pages/client/shop/ShopCatalogPage";
+import ShopItemDetailsPage from "./pages/client/shop/ShopItemDetailsPage";
 import TestimonialsPage from './pages/reviewPage'
 
 function ScrollToTop() {
@@ -269,6 +271,8 @@ export default function App() {
                         <Route path="/vehicles/:id/book" element={<VehicleBookingPage />} />
                         <Route path="/vehicles/:id/summary" element={<VehicleBookingSummary />} />
                         <Route path="/vehicles/:id/payment" element={<VehiclePaymentPage />} />
+                        <Route path="/shop" element={<ShopCatalogPage />} />
+                        <Route path="/shop/:id" element={<ShopItemDetailsPage />} />
 
                         {/* Redirections for staff routes from booking subdomain */}
                         <Route path="/admin/*" element={<RedirectToSubdomain subdomain="admin" path="/admin" />} />
