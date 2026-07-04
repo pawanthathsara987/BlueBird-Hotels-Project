@@ -324,6 +324,42 @@ export default function Reports() {
                         )}
                     </div>
 
+                    {/* Revenue Stream Breakdown Card */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print:grid-cols-3 print:gap-2">
+                        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs flex items-center gap-3">
+                            <span className="text-2xl p-2 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-500 rounded-xl">🏨</span>
+                            <div>
+                                <span className="text-[10px] uppercase font-black text-slate-500 block">Room Bookings</span>
+                                <span className="text-lg font-black text-slate-800 dark:text-white block mt-0.5">
+                                    Rs. {Math.round(reportData.roomRevenue || 0).toLocaleString()}
+                                </span>
+                                <span className="text-[9px] text-slate-650 dark:text-slate-400 font-bold block">{reportData.roomBookingsCount || 0} reservations filed</span>
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs flex items-center gap-3">
+                            <span className="text-2xl p-2 bg-blue-50 dark:bg-blue-950/20 text-blue-500 rounded-xl">🚗</span>
+                            <div>
+                                <span className="text-[10px] uppercase font-black text-slate-500 block">Vehicle Hires</span>
+                                <span className="text-lg font-black text-slate-800 dark:text-white block mt-0.5">
+                                    Rs. {Math.round(reportData.vehicleRevenue || 0).toLocaleString()}
+                                </span>
+                                <span className="text-[9px] text-slate-650 dark:text-slate-400 font-bold block">{reportData.vehicleBookingsCount || 0} rentals recorded</span>
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs flex items-center gap-3">
+                            <span className="text-2xl p-2 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-500 rounded-xl">⛰️</span>
+                            <div>
+                                <span className="text-[10px] uppercase font-black text-slate-500 block">Tour Packages</span>
+                                <span className="text-lg font-black text-slate-800 dark:text-white block mt-0.5">
+                                    Rs. {Math.round(reportData.tourRevenue || 0).toLocaleString()}
+                                </span>
+                                <span className="text-[9px] text-slate-650 dark:text-slate-400 font-bold block">{reportData.tourBookingsCount || 0} bookings handled</span>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Monthly chart breakdown (only visible on screen, not in print) */}
                     {reportType === "monthly" && reportData.dailyBreakdown?.length > 0 && (
                         <div className={`${getCardStyle()} no-print`}>
@@ -354,10 +390,10 @@ export default function Reports() {
                         </div>
                     )}
 
-                    {/* Bookings table */}
+                    {/* Room Reservations table */}
                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden print-full">
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center no-print">
-                            <h4 className="text-sm font-black text-slate-800 dark:text-white">Reservations File</h4>
+                            <h4 className="text-sm font-black text-slate-800 dark:text-white">Room Reservations File</h4>
                             <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded font-bold text-slate-600 dark:text-slate-400">
                                 {reportData.bookings?.length || 0} entries
                             </span>
@@ -441,6 +477,167 @@ export default function Reports() {
                                         <tr>
                                             <td colSpan="7" className="px-4 py-12 text-center text-slate-400 font-medium">
                                                 No reservations recorded for this report range.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Vehicle Bookings Table */}
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden print-full">
+                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center no-print">
+                            <h4 className="text-sm font-black text-slate-800 dark:text-white">Vehicle Rentals File</h4>
+                            <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded font-bold text-slate-600 dark:text-slate-400">
+                                {reportData.vehicleBookings?.length || 0} entries
+                            </span>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                                <thead>
+                                    <tr className="bg-slate-50 dark:bg-slate-800/40 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
+                                        <th className="px-4 py-3 text-left">Booking No</th>
+                                        <th className="px-4 py-3 text-left">Guest Name</th>
+                                        <th className="px-4 py-3 text-left">Vehicle Details</th>
+                                        <th className="px-4 py-3 text-left">Pickup Date</th>
+                                        <th className="px-4 py-3 text-left">Return Date</th>
+                                        <th className="px-4 py-3 text-left">Status</th>
+                                        <th className="px-4 py-3 text-right">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                    {reportData.vehicleBookings?.length > 0 ? (
+                                        reportData.vehicleBookings.map((b) => {
+                                            let badgeBg, badgeText;
+                                            const status = b.bookingStatus?.toLowerCase();
+                                            if (status === "completed" || status === "balance_paid") {
+                                                badgeBg = "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-950/30";
+                                                badgeText = "Completed";
+                                            } else if (status === "ongoing") {
+                                                badgeBg = "bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-950/30";
+                                                badgeText = "Ongoing";
+                                            } else if (status === "confirmed" || status === "driver_assigned") {
+                                                badgeBg = "bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-950/30";
+                                                badgeText = "Confirmed";
+                                            } else if (status === "cancelled") {
+                                                badgeBg = "bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-950/30";
+                                                badgeText = "Cancelled";
+                                            } else {
+                                                badgeBg = "bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-950/30";
+                                                badgeText = "Awaiting Payment";
+                                            }
+
+                                            return (
+                                                <tr key={b.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition duration-150">
+                                                    <td className="px-4 py-3 font-bold text-slate-700 dark:text-slate-300">
+                                                        {b.bookingNo}
+                                                    </td>
+                                                    <td className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-200">
+                                                        {b.firstName || b.lastName ? `${b.firstName || ""} ${b.lastName || ""}` : "Walk-in Guest"}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-slate-650 dark:text-slate-350 font-bold">
+                                                        {b.brand && b.model ? `${b.brand} ${b.model}` : "Custom Vehicle"}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400 font-medium">
+                                                        {b.pickupDatetime ? new Date(b.pickupDatetime).toLocaleString() : "—"}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400 font-medium">
+                                                        {b.returnDatetime ? new Date(b.returnDatetime).toLocaleString() : "—"}
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <span className={`${badgeBg} px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider`}>
+                                                            {badgeText}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right font-black text-slate-800 dark:text-slate-100">
+                                                        Rs. {Number(b.totalPayable || 0).toLocaleString()}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="7" className="px-4 py-12 text-center text-slate-400 font-medium">
+                                                No vehicle rentals recorded for this report range.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Tour Bookings Table */}
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden print-full">
+                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center no-print">
+                            <h4 className="text-sm font-black text-slate-800 dark:text-white">Tour Bookings File</h4>
+                            <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded font-bold text-slate-600 dark:text-slate-400">
+                                {reportData.tourBookings?.length || 0} entries
+                            </span>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                                <thead>
+                                    <tr className="bg-slate-50 dark:bg-slate-800/40 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
+                                        <th className="px-4 py-3 text-left">Booking Ref</th>
+                                        <th className="px-4 py-3 text-left">Guest Name</th>
+                                        <th className="px-4 py-3 text-left">Tour Title</th>
+                                        <th className="px-4 py-3 text-left">Start Date</th>
+                                        <th className="px-4 py-3 text-left">Status</th>
+                                        <th className="px-4 py-3 text-right">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                    {reportData.tourBookings?.length > 0 ? (
+                                        reportData.tourBookings.map((b) => {
+                                            let badgeBg, badgeText;
+                                            const status = b.bookingStatus?.toLowerCase();
+                                            if (status === "completed") {
+                                                badgeBg = "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-950/30";
+                                                badgeText = "Completed";
+                                            } else if (status === "half_paid") {
+                                                badgeBg = "bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-950/30";
+                                                badgeText = "Half Paid";
+                                            } else if (status === "cancelled" || status === "rejected") {
+                                                badgeBg = "bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-950/30";
+                                                badgeText = "Cancelled";
+                                            } else {
+                                                badgeBg = "bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-950/30";
+                                                badgeText = "Awaiting Deposit";
+                                            }
+
+                                            return (
+                                                <tr key={b.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition duration-150">
+                                                    <td className="px-4 py-3 font-bold text-slate-700 dark:text-slate-300">
+                                                        {b.bookingRef}
+                                                    </td>
+                                                    <td className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-200">
+                                                        {b.firstName || b.lastName ? `${b.firstName || ""} ${b.lastName || ""}` : "Guest"}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-slate-650 dark:text-slate-350 font-bold">
+                                                        {b.tourTitle || "Custom Tour"}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400 font-medium">
+                                                        {b.tourStartDate ? new Date(b.tourStartDate).toLocaleDateString() : "—"}
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <span className={`${badgeBg} px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider`}>
+                                                            {badgeText}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right font-black text-slate-800 dark:text-slate-100">
+                                                        Rs. {Number(b.totalAmount || 0).toLocaleString()}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="6" className="px-4 py-12 text-center text-slate-400 font-medium">
+                                                No tour bookings recorded for this report range.
                                             </td>
                                         </tr>
                                     )}
