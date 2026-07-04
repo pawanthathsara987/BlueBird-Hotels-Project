@@ -26,6 +26,20 @@ async function startServer() {
       console.log('✅ Added passportId column to tour_inquiries');
     } catch (e) {}
     try {
+      await sequelize.query("ALTER TABLE roles ADD COLUMN officeStartTime VARCHAR(5) NULL;");
+      console.log('✅ Added officeStartTime column to roles');
+    } catch (e) {}
+    try {
+      await sequelize.query("ALTER TABLE roles ADD COLUMN officeEndTime VARCHAR(5) NULL;");
+      console.log('✅ Added officeEndTime column to roles');
+    } catch (e) {}
+    try {
+      await sequelize.query("ALTER TABLE roles ADD COLUMN gracePeriodMinutes INT NULL;");
+      console.log('✅ Added gracePeriodMinutes column to roles');
+    } catch (e) {}
+    try {
+      await sequelize.query("ALTER TABLE roles ADD COLUMN standardWorkingHours DECIMAL(4,1) NULL;");
+      console.log('✅ Added standardWorkingHours column to roles');
       await sequelize.query("ALTER TABLE airport_pickup ADD COLUMN flight_number VARCHAR(100) NULL;");
       console.log('✅ Added flight_number column to airport_pickup');
     } catch (e) {}
