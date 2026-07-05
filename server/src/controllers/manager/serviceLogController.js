@@ -1,6 +1,6 @@
 import { Op } from 'sequelize';
 import multer from 'multer';
-import supabase from '../../config/supabaseClient.js';
+import { supabaseTour as supabase } from '../../config/supabaseClient.js';
 import VehicleServiceLog from '../../models/vehicle/vehicleServiceLogModel.js';
 import Vehicle from '../../models/vehicle/vehicleModel.js';
 

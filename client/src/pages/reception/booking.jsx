@@ -1252,7 +1252,6 @@ export default function Booking() {
                     </div>
                 );
             })()}
-            )}
 
             {/* CHECK-IN VERIFICATION MODAL */}
             {checkInModal && (

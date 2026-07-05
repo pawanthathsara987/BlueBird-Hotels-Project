@@ -4,7 +4,7 @@ import multer from 'multer';
 import sequelize from '../../config/database.js';
 import Vehicle from '../../models/vehicle/vehicleModel.js';
 import VehicleBooking from '../../models/vehicle/VehicleBookingModel.js';
-import supabase from '../../config/supabaseClient.js';
+import { supabaseTour as supabase } from '../../config/supabaseClient.js';
 import DriverPricingSetting from '../../models/vehicle/driverPricingModel.js';
 import VehicleRentalPolicy from '../../models/vehicle/vehicleRentalPolicyModel.js';
 

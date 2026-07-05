@@ -1,5 +1,5 @@
 import sequelize from "../../config/database.js";
-import supabase from "../../config/supabaseClient.js";
+import { supabaseTour as supabase } from "../../config/supabaseClient.js";
 import { Tour, TourItem } from "../../models/index.js";
 import multer from "multer";
 

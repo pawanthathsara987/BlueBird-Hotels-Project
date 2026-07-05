@@ -9,7 +9,7 @@ import VehicleChecklist from '../../models/vehicle/vehicleChecklistModel.js';
 import VehicleFinalBill from '../../models/vehicle/vehicleFinalBillModel.js';
 import sequelize from '../../config/database.js';
 import { Op } from 'sequelize';
-import supabase from '../../config/supabaseClient.js';
+import { supabaseTour as supabase } from '../../config/supabaseClient.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
