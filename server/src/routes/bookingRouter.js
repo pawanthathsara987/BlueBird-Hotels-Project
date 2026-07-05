@@ -23,7 +23,9 @@ import {
    getPendingRefunds,
    actionRefundRequest,
    getBookingRefundHistory,
-   getRefundReports
+   getRefundReports,
+   getAllPendingRefunds,
+   actionCategoryRefundRequest
 } from '../controllers/booking/refundController.js';
 
 const router = express.Router();
@@ -48,7 +50,9 @@ router.get('/refunds/eligibility/:bookingId', requireAuth, getRefundEligibility)
 router.post('/refunds/calculate', requireAuth, calculateRefund);
 router.post('/refunds', requireAuth, createRefundRequest);
 router.get('/refunds/pending', requireAuth, getPendingRefunds);
+router.get('/refunds/all-pending', requireAuth, getAllPendingRefunds);
 router.post('/refunds/:refundId/action', requireAuth, actionRefundRequest);
+router.post('/refunds/:category/:refundId/action', requireAuth, actionCategoryRefundRequest);
 router.get('/refunds/history/:bookingId', requireAuth, getBookingRefundHistory);
 router.get('/refunds/reports', requireAuth, getRefundReports);
 
