@@ -1,6 +1,6 @@
 import PropTypes from "prop-types";
 import { Image as ImageIcon, Eye, Edit3, Trash2, AlertCircle } from "lucide-react";
-import { formatPrice } from "../utils/shopHelpers";
+import { formatPrice, getCategoryStyle } from "../utils/shopHelpers";
 
 export default function ShopTableRow({ item, onView, onEdit, onDelete }) {
   const hasImages = item.images && item.images.length > 0;
@@ -30,13 +30,7 @@ export default function ShopTableRow({ item, onView, onEdit, onDelete }) {
         </div>
       </td>
       <td className="px-6 py-3.5">
-        <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full border tracking-wide uppercase ${
-          item.category === "Clothes"
-            ? "bg-sky-50 text-sky-600 border-sky-100"
-            : item.category === "Accessories"
-            ? "bg-amber-50 text-amber-600 border-amber-100"
-            : "bg-purple-50 text-purple-600 border-purple-100"
-        }`}>
+        <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full border tracking-wide uppercase ${getCategoryStyle(item.category)}`}>
           {item.category}
         </span>
       </td>

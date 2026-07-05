@@ -123,11 +123,12 @@ export default function Header() {
     .toUpperCase()
     .slice(0, 2);
 
-  // ─── nav links ───────────────────────────────────────────────────────────
+  // ─── nav links ───────────────────────────
   const leftLinks = [
     { label: "HOME", to: "/" },
     { label: "TRAVELS", to: "/booking/tour" },
     { label: "VEHICLES", to: "/vehicles" },
+    { label: "SHOP", to: "/shop" },
   ];
   const rightLinks = [
     { label: "GALLERY", to: "/gallery" },
@@ -382,6 +383,7 @@ export default function Header() {
                 { label: "FAQ", to: "/faq" },
                 { label: "Travels", to: "/booking/tour" },
                 { label: "Vehicles", to: "/vehicles" },
+                { label: "Shop", to: "/shop" },
                 { label: "Gallery", to: "/gallery" },
                 { label: "Contact", to: "/contact" },
               ].map((l) => (

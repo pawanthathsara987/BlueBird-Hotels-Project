@@ -13,6 +13,7 @@ import { upload } from "../controllers/admin/imageUploadController.js";
 import { getAllRoomPrices, getRoomPriceMetadata, createRoomPrice, updateRoomPrice, deleteRoomPrice } from "../controllers/admin/roomPriceController.js";
 import { getAllServiceCharges, updateServiceCharge } from "../controllers/admin/serviceChargeController.js";
 import { getAllShopItems, getShopItemById, createShopItem, updateShopItem, deleteShopItem } from "../controllers/admin/shopController.js";
+import { getAllShopCategories, createShopCategory, updateShopCategory, deleteShopCategory } from "../controllers/admin/shopCategoryController.js";
 
 const router = express.Router();
 
@@ -32,6 +33,7 @@ router.get('/occupancy-types',       getAllOccupancyTypes);
 router.get('/board-types',           getAllBoardTypes);
 router.get('/shop-items',            getAllShopItems);
 router.get('/shop-items/:id',        getShopItemById);
+router.get('/shop-categories',       getAllShopCategories);
 
 // ── All routes below require a valid admin JWT ────────────────────────────────
 router.use(requireAuth);
@@ -70,6 +72,11 @@ router.put('/service-charges/:id', updateServiceCharge);
 router.post('/shop-items', upload.array('images'), createShopItem);
 router.put('/shop-items/:id', upload.array('images'), updateShopItem);
 router.delete('/shop-items/:id', deleteShopItem);
+
+// Shop Categories routes (write operations — admin only)
+router.post('/shop-categories', createShopCategory);
+router.put('/shop-categories/:id', updateShopCategory);
+router.delete('/shop-categories/:id', deleteShopCategory);
 
 
 export default router;

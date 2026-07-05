@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from 'axios';
 import toast from "react-hot-toast";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Trash, Plus, Star } from "lucide-react";
+import { Trash, Plus, Star, X, ArrowLeft, ArrowRight, Upload } from "lucide-react";
 
 function RoomTypeForm() {
     const navigate = useNavigate();
@@ -10,10 +10,7 @@ function RoomTypeForm() {
     const selectedRoomType = location.state?.selectedPackage || null;
 
     const [typeName, setTypeName] = useState("");
-    const [images, setImages] = useState([]); // Array of existing public URLs from Supabase
-    const [newFiles, setNewFiles] = useState([]); // Array of { file, preview, name }
-    const [coverUrl, setCoverUrl] = useState(""); // URL of the existing cover image
-    const [coverNewFileName, setCoverNewFileName] = useState(""); // name of the new cover file
+    const [roomImages, setRoomImages] = useState([]); // Array of { type: "existing"|"new", url, file }
     const [isLoading, setIsLoading] = useState(false);
     const [occupancyTypeId, setOccupancyTypeId] = useState("");
     const [occupancyTypes, setOccupancyTypes] = useState([]);
@@ -32,8 +29,14 @@ function RoomTypeForm() {
             if (data) {
                 setTypeName(data.type || "");
                 setOccupancyTypeId(String(data.occupancy_type_id ?? data.occupancyType?.id ?? ""));
-                setCoverUrl(data.image_url || "");
-                setImages(data.images || []);
+                
+                // Keep unique image URLs, placing the cover image at index 0
+                const allUrls = [...new Set([data.image_url, ...(data.images || [])])].filter(Boolean);
+                const existingImages = allUrls.map((url) => ({
+                    type: "existing",
+                    url,
+                }));
+                setRoomImages(existingImages);
             }
         } catch (error) {
             console.error("Error fetching room type details:", error);
@@ -49,10 +52,7 @@ function RoomTypeForm() {
             fetchRoomTypeDetails();
         } else {
             setTypeName("");
-            setImages([]);
-            setCoverUrl("");
-            setCoverNewFileName("");
-            setNewFiles([]);
+            setRoomImages([]);
             setOccupancyTypeId("");
         }
     }, [isEditMode, selectedRoomType]);
@@ -71,87 +71,55 @@ function RoomTypeForm() {
         fetchOccupancyTypes();
     }, []);
 
-    // Handle multiple file selections
+    // Handle multiple file selections with size validation
     const handleFilesChange = (e) => {
-        const files = Array.from(e.target.files);
-        const validFiles = files.filter(file => {
-            if (!file.type.startsWith("image/")) {
-                toast.error(`${file.name} is not an image file`);
-                return false;
-            }
-            return true;
-        });
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
 
-        const newItems = validFiles.map(file => ({
+        // Check file size (5MB limit)
+        const MAX_SIZE = 5 * 1024 * 1024;
+        const oversizedFiles = files.filter(file => file.size > MAX_SIZE);
+        if (oversizedFiles.length > 0) {
+            toast.error(`File too large: "${oversizedFiles[0].name}" exceeds the 5MB limit.`);
+            return;
+        }
+
+        const newImages = files.map((file) => ({
+            type: "new",
+            url: URL.createObjectURL(file),
             file,
-            preview: URL.createObjectURL(file),
-            name: file.name
         }));
 
-        setNewFiles(prev => {
-            const updated = [...prev, ...newItems];
-            // Default first uploaded image as cover if there is no cover set
-            if (!coverUrl && !coverNewFileName && updated.length > 0) {
-                setCoverNewFileName(updated[0].name);
+        setRoomImages((prev) => [...prev, ...newImages]);
+
+        // Reset input
+        e.target.value = "";
+    };
+
+    // Handle image removal locally (deferred server deletion)
+    const handleRemoveImage = (index) => {
+        setRoomImages((prev) => {
+            const target = prev[index];
+            if (target.type === "new" && target.url) {
+                URL.revokeObjectURL(target.url);
             }
+            return prev.filter((_, i) => i !== index);
+        });
+    };
+
+    // Move image in array (reorder)
+    const handleMoveImage = (index, direction) => {
+        if (direction === "left" && index === 0) return;
+        if (direction === "right" && index === roomImages.length - 1) return;
+
+        const newIndex = direction === "left" ? index - 1 : index + 1;
+        setRoomImages((prev) => {
+            const updated = [...prev];
+            const temp = updated[index];
+            updated[index] = updated[newIndex];
+            updated[newIndex] = temp;
             return updated;
         });
-    };
-
-    // Remove file from pending selection list
-    const removePendingFile = (name) => {
-        setNewFiles(prev => {
-            const filtered = prev.filter(f => f.name !== name);
-            if (coverNewFileName === name) {
-                if (filtered.length > 0) {
-                    setCoverNewFileName(filtered[0].name);
-                } else if (images.length > 0) {
-                    setCoverUrl(images[0]);
-                    setCoverNewFileName("");
-                } else {
-                    setCoverNewFileName("");
-                    setCoverUrl("");
-                }
-            }
-            return filtered;
-        });
-    };
-
-    // Delete existing gallery image
-    const handleDeleteExistingImage = async (url) => {
-        if (!window.confirm("Are you sure you want to delete this image from the gallery?")) return;
-        try {
-            setIsLoading(true);
-            const response = await axios.delete(
-                `${import.meta.env.VITE_BACKEND_URL}/admin/room-type/${selectedRoomType.id}/image`,
-                { data: { imageUrl: url } }
-            );
-            toast.success("Image deleted successfully");
-            const data = response.data?.data;
-            if (data) {
-                setImages(data.images || []);
-                setCoverUrl(data.image_url || "");
-            }
-        } catch (error) {
-            console.error("Error deleting image:", error);
-            toast.error(error.response?.data?.message || "Failed to delete image");
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    // Set an existing gallery image as the cover image
-    const makeCoverExisting = (url) => {
-        setCoverUrl(url);
-        setCoverNewFileName("");
-        toast.success("Designated as cover image");
-    };
-
-    // Set a newly selected file as the cover image
-    const makeCoverPending = (name) => {
-        setCoverNewFileName(name);
-        setCoverUrl("");
-        toast.success("Designated as cover image");
     };
 
     // Submit save/update
@@ -163,23 +131,52 @@ function RoomTypeForm() {
                 return;
             }
 
+            if (!occupancyTypeId) {
+                toast.error("Please select an occupancy type");
+                return;
+            }
+
             setIsLoading(true);
 
             const formData = new FormData();
             formData.append("type", typeName.trim());
             formData.append("occupancy_type_id", occupancyTypeId);
 
-            // Append multiple files
-            newFiles.forEach(item => {
-                formData.append("images", item.file);
-            });
+            if (isEditMode) {
+                const keptExistingImages = roomImages
+                    .filter((img) => img.type === "existing")
+                    .map((img) => img.url);
 
-            // Append cover image selectors
-            if (coverUrl) {
-                formData.append("cover_url", coverUrl);
-            }
-            if (coverNewFileName) {
-                formData.append("coverImageName", coverNewFileName);
+                formData.append("existingImages", JSON.stringify(keptExistingImages));
+
+                roomImages
+                    .filter((img) => img.type === "new")
+                    .forEach((img) => {
+                        formData.append("images", img.file);
+                    });
+
+                // Determine cover image (first image in the array)
+                if (roomImages.length > 0) {
+                    const firstImg = roomImages[0];
+                    if (firstImg.type === "existing") {
+                        formData.append("cover_url", firstImg.url);
+                    } else {
+                        formData.append("coverImageName", firstImg.file.name);
+                    }
+                }
+            } else {
+                roomImages.forEach((img) => {
+                    if (img.file) {
+                        formData.append("images", img.file);
+                    }
+                });
+
+                if (roomImages.length > 0) {
+                    const firstImg = roomImages[0];
+                    if (firstImg.file) {
+                        formData.append("coverImageName", firstImg.file.name);
+                    }
+                }
             }
 
             const endpoint = isEditMode
@@ -201,10 +198,7 @@ function RoomTypeForm() {
 
             // Reset states
             setTypeName("");
-            setImages([]);
-            setNewFiles([]);
-            setCoverUrl("");
-            setCoverNewFileName("");
+            setRoomImages([]);
             setOccupancyTypeId("");
 
         } catch (error) {
@@ -261,6 +255,7 @@ function RoomTypeForm() {
                                 <select
                                     value={occupancyTypeId}
                                     onChange={(e) => setOccupancyTypeId(e.target.value)}
+                                    required
                                     disabled={isLoading}
                                     className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 text-slate-600 font-semibold transition disabled:opacity-50 cursor-pointer"
                                 >
@@ -274,106 +269,14 @@ function RoomTypeForm() {
                                 <p className="text-[11px] text-slate-400">Select the occupancy configuration associated with this room type.</p>
                             </div>
                         </div>
-
                         {/* Room Gallery Section */}
                         <div className="space-y-4 pt-4 border-t border-slate-100">
                             <div>
                                 <label className="block text-sm font-bold text-slate-700">Room Gallery & Images</label>
-                                <p className="text-xs text-slate-450 mt-1">Manage room type images. Designate one image as the main cover image by clicking "Set Cover".</p>
+                                <p className="text-xs text-slate-400 mt-1">Manage room type images. Use the left/right arrows to reorder. The first image will be the primary cover image.</p>
                             </div>
 
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                                {/* Render existing images */}
-                                {images.map((url, index) => {
-                                    const isCover = url === coverUrl;
-                                    return (
-                                        <div key={`existing-${index}`} className={`relative group aspect-video sm:aspect-square rounded-2xl overflow-hidden border bg-slate-50 shadow-sm transition-all duration-355 ${isCover ? 'border-blue-500 ring-4 ring-blue-500/10' : 'border-slate-200 hover:border-slate-300'}`}>
-                                            <img src={url} alt="Room" className="w-full h-full object-cover" />
-                                            
-                                            {/* Action overlays */}
-                                            <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-3">
-                                                <div className="flex justify-end">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleDeleteExistingImage(url)}
-                                                        className="p-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-lg transition-transform hover:scale-105 shadow cursor-pointer"
-                                                        title="Delete Image"
-                                                    >
-                                                        <Trash size={15} />
-                                                    </button>
-                                                </div>
-                                                
-                                                <div>
-                                                    {!isCover && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => makeCoverExisting(url)}
-                                                            className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] rounded-lg transition uppercase tracking-wider cursor-pointer"
-                                                        >
-                                                            Set Cover
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {isCover && (
-                                                <div className="absolute bottom-2 left-2 bg-blue-650 text-white px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 shadow-md">
-                                                    <Star size={10} className="fill-white" />
-                                                    <span>Cover</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-
-                                {/* Render newly selected images pending upload */}
-                                {newFiles.map((item, index) => {
-                                    const isCover = item.name === coverNewFileName;
-                                    return (
-                                        <div key={`pending-${index}`} className={`relative group aspect-video sm:aspect-square rounded-2xl overflow-hidden border bg-slate-50 shadow-sm transition-all duration-355 ${isCover ? 'border-blue-500 ring-4 ring-blue-500/10' : 'border-slate-200 hover:border-slate-300'}`}>
-                                            <img src={item.preview} alt="Pending upload" className="w-full h-full object-cover opacity-80" />
-                                            
-                                            {/* Pending badge */}
-                                            <div className="absolute top-2 left-2 bg-amber-500/90 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-md uppercase tracking-wider shadow">
-                                                Pending
-                                            </div>
-
-                                            {/* Action overlays */}
-                                            <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-3">
-                                                <div className="flex justify-end">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removePendingFile(item.name)}
-                                                        className="p-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-lg transition-transform hover:scale-105 shadow cursor-pointer"
-                                                        title="Remove File"
-                                                    >
-                                                        <Trash size={15} />
-                                                    </button>
-                                                </div>
-                                                
-                                                <div>
-                                                    {!isCover && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => makeCoverPending(item.name)}
-                                                            className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] rounded-lg transition uppercase tracking-wider cursor-pointer"
-                                                        >
-                                                            Set Cover
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {isCover && (
-                                                <div className="absolute bottom-2 left-2 bg-blue-650 text-white px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 shadow-md">
-                                                    <Star size={10} className="fill-white" />
-                                                    <span>Cover</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-
                                 {/* Add New Images box */}
                                 <label className="relative flex flex-col items-center justify-center border-2 border-dashed border-slate-200 hover:border-blue-500 hover:bg-blue-50/5 rounded-2xl aspect-video sm:aspect-square text-center cursor-pointer transition group p-4">
                                     <input
@@ -384,14 +287,75 @@ function RoomTypeForm() {
                                         disabled={isLoading}
                                         className="hidden"
                                     />
-                                    <Plus size={22} className="text-slate-400 group-hover:text-blue-500 transition-colors" />
-                                    <span className="text-[11px] font-bold text-slate-655 mt-2 block group-hover:text-blue-600 transition-colors">
+                                    <Upload size={22} className="text-slate-400 group-hover:text-blue-500 transition-colors" />
+                                    <span className="text-[11px] font-bold text-slate-600 mt-2 block group-hover:text-blue-600 transition-colors">
                                         Upload Images
                                     </span>
                                     <span className="text-[9px] text-slate-400 mt-1 block">
                                         Select multiple files
                                     </span>
                                 </label>
+
+                                {/* Render images previews */}
+                                {roomImages.map((image, index) => {
+                                    const isCover = index === 0;
+                                    return (
+                                        <div key={`${image.type}-${index}`} className={`relative group aspect-video sm:aspect-square rounded-2xl overflow-hidden border bg-slate-50 shadow-sm transition-all duration-300 ${isCover ? 'border-blue-500 ring-4 ring-blue-500/10' : 'border-slate-200 hover:border-slate-300'}`}>
+                                            <img src={image.url} alt="Room preview" className="w-full h-full object-cover" />
+                                            
+                                            {/* Pending/New badge */}
+                                            {image.type === "new" && (
+                                                <div className="absolute top-2 left-2 bg-amber-500/90 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-md uppercase tracking-wider shadow">
+                                                    Pending
+                                                </div>
+                                            )}
+
+                                            {/* Action overlays */}
+                                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-3">
+                                                <div className="flex justify-end">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveImage(index)}
+                                                        className="p-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg transition-transform hover:scale-105 shadow cursor-pointer"
+                                                        title="Remove Image"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                                
+                                                {/* Reordering and index position */}
+                                                <div className="flex items-center justify-between w-full mt-auto">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleMoveImage(index, "left")}
+                                                        disabled={index === 0}
+                                                        className="p-1 bg-slate-800 text-slate-300 rounded-md hover:text-white disabled:opacity-30 disabled:hover:bg-slate-800 transition cursor-pointer"
+                                                    >
+                                                        <ArrowLeft className="w-3.5 h-3.5" />
+                                                    </button>
+                                                    <span className="text-[10px] font-bold bg-slate-905 text-slate-200 px-2 py-0.5 rounded">
+                                                        {index + 1}
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleMoveImage(index, "right")}
+                                                        disabled={index === roomImages.length - 1}
+                                                        className="p-1 bg-slate-800 text-slate-300 rounded-md hover:text-white disabled:opacity-30 disabled:hover:bg-slate-800 transition cursor-pointer"
+                                                    >
+                                                        <ArrowRight className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {isCover && (
+                                                <div className="absolute bottom-2 left-2 bg-blue-600 text-white px-2.5 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 shadow-md">
+                                                    <Star size={10} className="fill-white" />
+                                                    <span>Cover</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
 

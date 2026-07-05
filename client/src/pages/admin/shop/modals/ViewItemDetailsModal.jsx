@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { ShoppingBag, X, Image as ImageIcon, Package } from "lucide-react";
-import { formatPrice, formatDate } from "../utils/shopHelpers";
+import { formatPrice, formatDate, getCategoryStyle } from "../utils/shopHelpers";
 
 export default function ViewItemDetailsModal({ isOpen, onClose, item }) {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -88,13 +88,7 @@ export default function ViewItemDetailsModal({ isOpen, onClose, item }) {
                 <h3 className="text-xl font-extrabold text-slate-800 leading-tight">
                   {item.name}
                 </h3>
-                <span className={`inline-block mt-2 px-2.5 py-0.5 text-[10px] font-bold rounded-full border tracking-wide uppercase ${
-                  item.category === "Clothes"
-                    ? "bg-sky-50 text-sky-600 border-sky-100"
-                    : item.category === "Accessories"
-                    ? "bg-amber-50 text-amber-600 border-amber-100"
-                    : "bg-purple-50 text-purple-600 border-purple-100"
-                }`}>
+                <span className={`inline-block mt-2 px-2.5 py-0.5 text-[10px] font-bold rounded-full border tracking-wide uppercase ${getCategoryStyle(item.category)}`}>
                   {item.category}
                 </span>
               </div>

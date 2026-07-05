@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { NavLink, Routes, Route, useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
+import axios from "axios";
 import { logout } from "../../utils/logout";
 import { MdAdminPanelSettings, MdDashboard, MdBedroomParent, MdBookOnline, MdPeople, MdSettings, MdLogout, MdMenu, MdClose, MdShoppingBag, MdCoPresent, MdEventNote } from "react-icons/md";
 import RoomManagement from "./rooms/roomManagement";
@@ -23,6 +24,7 @@ import AdminProfileSettings from "./AdminProfileSettings";
 export default function AdminPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [authorized, setAuthorized] = useState(false);
+    const [adminImageUrl, setAdminImageUrl] = useState(() => localStorage.getItem("adminImageUrl") || "");
     const navigate = useNavigate();
 
     // ── Route Guard ─────────────────────────────────────────────────────────
@@ -49,6 +51,26 @@ export default function AdminPage() {
         }
     }, [navigate]);
     // ────────────────────────────────────────────────────────────────────────
+
+    // Fetch admin profile image
+    useEffect(() => {
+        const fetchAdminImage = async () => {
+            const token = localStorage.getItem("token");
+            if (!token) return;
+            try {
+                const decoded = jwtDecode(token);
+                const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/users/getAll`);
+                const adminData = res.data.find((user) => user.userId === decoded.id);
+                if (adminData?.imageUrl) {
+                    setAdminImageUrl(adminData.imageUrl);
+                    localStorage.setItem("adminImageUrl", adminData.imageUrl);
+                }
+            } catch {
+                // silently ignore — avatar will fall back to initials
+            }
+        };
+        fetchAdminImage();
+    }, []);
 
     // Block render until the auth check is complete
     if (!authorized) return null;
@@ -88,15 +110,31 @@ export default function AdminPage() {
 
             {/* Sidebar */}
             <div className={`fixed md:static z-30 w-72 h-full bg-[#0f172a] text-slate-100 border-r border-slate-800/80 transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 flex flex-col`}>
-                {/* Branding Header */}
-                <div className="px-6 py-8 border-b border-slate-800/80 flex items-center gap-4">
-                    <div className="relative flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-md shadow-blue-500/20">
-                        <MdAdminPanelSettings className="text-2xl text-white animate-pulse" />
-                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-[#0f172a] rounded-full" />
+                {/* Admin Profile Header */}
+                <div className="w-full py-7 flex flex-col items-center justify-center px-4 flex-shrink-0 border-b border-slate-800/80">
+                    <div className="relative group">
+                        {adminImageUrl ? (
+                            <img
+                                src={adminImageUrl}
+                                alt={adminName}
+                                className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover border-4 border-slate-800 shadow-md transition-transform duration-300 group-hover:scale-105"
+                            />
+                        ) : (
+                            <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border-4 border-slate-700 bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-xl shadow-md">
+                                {adminInitials}
+                            </div>
+                        )}
+                        {/* Online indicator */}
+                        <span className="absolute bottom-1 right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-[#0f172a] rounded-full" />
                     </div>
-                    <div>
-                        <div className="text-[10px] font-semibold text-blue-400 tracking-widest uppercase">BlueBird Hotels</div>
-                        <h1 className="text-lg font-bold text-slate-100 leading-tight">{adminName}</h1>
+                    {/* Role badge & name */}
+                    <div className="text-center mt-3.5 space-y-1">
+                        <span className="inline-block px-2.5 py-0.5 text-[10px] font-bold rounded-full tracking-wider uppercase text-blue-300 bg-blue-500/10 border border-blue-500/20">
+                            Administrator
+                        </span>
+                        <h2 className="text-sm md:text-base font-bold tracking-wide truncate max-w-[200px] text-slate-100">
+                            {adminName}
+                        </h2>
                     </div>
                 </div>
 

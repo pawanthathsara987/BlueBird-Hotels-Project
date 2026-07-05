@@ -5,9 +5,17 @@ export default function ShopStats({ items }) {
   const totalItems = items.length;
   const outOfStockItems = items.filter((i) => i.availableQuantity === 0).length;
   const totalValue = items.reduce((sum, item) => sum + parseFloat(item.price) * item.availableQuantity, 0);
-  const clothesCount = items.filter((i) => i.category === "Clothes").length;
-  const accessoriesCount = items.filter((i) => i.category === "Accessories").length;
-  const otherCount = items.filter((i) => i.category === "Other").length;
+  const uniqueCategories = [...new Set(items.map((i) => i.category))];
+  const totalCategoriesCount = uniqueCategories.length;
+  
+  const categoryCounts = items.reduce((acc, item) => {
+    acc[item.category] = (acc[item.category] || 0) + 1;
+    return acc;
+  }, {});
+  const summaryStr = Object.entries(categoryCounts)
+    .slice(0, 3)
+    .map(([cat, cnt]) => `${cat.substring(0, 3)}: ${cnt}`)
+    .join(" | ") || "No items";
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 animate-fadeIn">
@@ -51,8 +59,9 @@ export default function ShopStats({ items }) {
         </div>
         <div>
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Categories</p>
-          <p className="text-xs text-slate-505 font-bold mt-1 text-slate-500">
-            Clothes: {clothesCount} | Acc: {accessoriesCount} | Oth: {otherCount}
+          <h4 className="text-xl font-bold text-slate-700 mt-0.5">{totalCategoriesCount}</h4>
+          <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wide">
+            {summaryStr}
           </p>
         </div>
       </div>

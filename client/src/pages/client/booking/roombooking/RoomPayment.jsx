@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Lock, AlertCircle, Check, ArrowLeft, Loader } from 'lucide-react';
+import { Lock, AlertCircle, Check, ArrowLeft, Loader } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
@@ -10,7 +10,6 @@ const RoomPayment = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const bookingData = location.state?.bookingData || null;
-  const bookingConfirmation = location.state?.bookingConfirmation || null;
   const airportPickupFromState = location.state?.airportPickup || null;
 
   const [processing, setProcessing] = useState(false);
@@ -35,13 +34,6 @@ const RoomPayment = () => {
       return;
     }
 
-    let saved = {};
-    try {
-      saved = JSON.parse(localStorage.getItem("bookingDetails")) || {};
-    } catch {
-      saved = {};
-    }
-
     let token = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
     if (token === "undefined" || token === "null") {
       localStorage.removeItem("customerToken");
@@ -55,15 +47,55 @@ const RoomPayment = () => {
       } catch { }
     }
 
+    // Initialize with token values/defaults before fetching full profile
     setBillingDetails({
-      firstName: saved.firstName || guest.firstName || 'Guest',
-      lastName: saved.lastName || guest.lastName || 'Customer',
-      email: saved.email || guest.email || 'guest@bluebird.com',
-      phone: saved.phone || guest.phoneNumber || '0771234567',
-      address: `${saved.addressLine1 || ""} ${saved.addressLine2 || ""}`.trim() || 'No 1, Galle Road',
-      city: saved.city || 'Colombo',
-      country: saved.country || 'Sri Lanka'
+      firstName: guest.firstName || 'Guest',
+      lastName: guest.lastName || 'Customer',
+      email: guest.email || 'guest@bluebird.com',
+      phone: guest.phoneNumber || '0771234567',
+      address: 'No 1, Galle Road',
+      city: 'Colombo',
+      country: 'Sri Lanka',
     });
+
+    // If logged in, fetch the real, up-to-date user profile from the backend database
+    if (token) {
+      axios.get(`${import.meta.env.VITE_BACKEND_URL}/customers/profile`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+      ).then(response => {
+        if (response.data && response.data.success && response.data.data) {
+          const profile = response.data.data;
+
+          // Parse city from address line if possible
+          const addr = profile.address || '';
+          const parts = addr.split(',').map(p => p.trim()).filter(Boolean);
+          let extractedCity = 'Colombo';
+          if (parts.length >= 2) {
+            const lastPart = parts[parts.length - 1];
+            if (/^\d+$/.test(lastPart) && parts.length >= 3) {
+              extractedCity = parts[parts.length - 2];
+            } else {
+              extractedCity = lastPart;
+            }
+          }
+
+          setBillingDetails({
+            firstName: profile.firstName || 'Guest',
+            lastName: profile.lastName || 'Customer',
+            email: profile.email || 'guest@bluebird.com',
+            phone: profile.phoneNumber || '0771234567',
+            address: profile.address || 'No 1, Galle Road',
+            city: extractedCity,
+            country: profile.country || 'Sri Lanka',
+          });
+        }
+      }).catch(err => {
+        console.error("Error fetching customer profile for billing:", err);
+      });
+    }
   }, []);
 
   const selectedRooms = location.state?.selectedRooms || [];
@@ -343,10 +375,6 @@ const RoomPayment = () => {
                       <p className="font-semibold text-stone-800">{billingDetails.phone}</p>
                     </div>
                     <div>
-                      <p className="text-stone-500 text-xs">Destination City & Country</p>
-                      <p className="font-semibold text-stone-800">{billingDetails.city}, {billingDetails.country}</p>
-                    </div>
-                    <div className="md:col-span-2">
                       <p className="text-stone-500 text-xs">Billing Address</p>
                       <p className="font-semibold text-stone-800">{billingDetails.address}</p>
                     </div>
@@ -488,12 +516,18 @@ const RoomPayment = () => {
                     <span className="text-stone-600">Subtotal:</span>
                     <span className="text-stone-900">{CURRENCY} {totalAmount.toFixed(2)}</span>
                   </div>
-                  {totalSavings > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-stone-600">Discount Savings:</span>
-                      <span className="font-semibold text-emerald-700">-{CURRENCY} {totalSavings.toFixed(2)}</span>
-                    </div>
-                  )}
+                  {totalSavings > 0 && (() => {
+                    const firstDiscountRoom = selectedRooms.find(r => r.discountName);
+                    const discountLabel = firstDiscountRoom?.discountName
+                      ? `Discount (${firstDiscountRoom.discountName}):`
+                      : "Discount Savings:";
+                    return (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-stone-600">{discountLabel}</span>
+                        <span className="font-semibold text-emerald-700">-{CURRENCY} {totalSavings.toFixed(2)}</span>
+                      </div>
+                    );
+                  })()}
                   <div className="flex justify-between text-sm">
                     <span className="text-stone-600">Advance (50%):</span>
                     <span className="font-semibold text-emerald-700">{CURRENCY} {advanceAmount.toFixed(2)}</span>
