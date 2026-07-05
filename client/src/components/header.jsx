@@ -126,6 +126,7 @@ export default function Header() {
   // ─── nav links ───────────────────────────────────────────────────────────
   const leftLinks = [
     { label: "HOME", to: "/" },
+    { label: "ABOUT", to: "/about" },
     { label: "HOTELS", to: "/rooms" },
     { label: "FAQ", to: "/faq" },
   ];
@@ -378,6 +379,7 @@ export default function Header() {
             <nav className="flex flex-col text-sm font-medium text-gray-700 gap-1 px-3 pt-4 pb-2 flex-1 overflow-y-auto">
               {[
                 { label: "Home", to: "/" },
+                { label: "About Us", to: "/about" },
                 { label: "Hotels", to: "/rooms" },
                 { label: "FAQ", to: "/faq" },
                 { label: "Travels", to: "/booking/tour" },
