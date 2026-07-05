@@ -85,7 +85,7 @@ export default function LeaveTypesTab() {
                     <Loader />
                 </div>
             ) : (
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-50 border-b border-slate-200/60 text-slate-500 text-sm">

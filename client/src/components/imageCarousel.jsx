@@ -51,19 +51,19 @@ export default function ImageCarousel() {
         {slides.map((slide, index) => (
           <div key={index}>
 
-            <div className="relative w-full overflow-hidden">
+            <div className="relative w-full overflow-hidden h-[320px] sm:h-[400px] md:h-[500px] lg:h-[600px]">
 
-              <img src={slide.img} className="w-full aspect-[16/7] object-cover block" />
+              <img src={slide.img} className="w-full h-full object-cover block" />
 
               <div className="absolute inset-0 bg-black/40" />
 
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center px-4">
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center px-6">
 
-                <h1 className="text-3xl md:text-5xl font-bold mb-4">
+                <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-3 md:mb-4">
                   {slide.title}
                 </h1>
 
-                <p className="mb-6 max-w-xl">
+                <p className="text-xs sm:text-sm md:text-base mb-6 max-w-xl leading-relaxed">
                   {slide.desc}
                 </p>
 

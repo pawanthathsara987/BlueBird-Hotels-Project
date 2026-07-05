@@ -19,7 +19,7 @@ ShopItem.init(
             allowNull: true
         },
         category: {
-            type: DataTypes.ENUM('Clothes', 'Accessories', 'Other'),
+            type: DataTypes.STRING(100),
             allowNull: false
         },
         price: {

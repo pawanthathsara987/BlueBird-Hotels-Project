@@ -292,11 +292,11 @@ export default function AttendanceRecords() {
                     </p>
                 </div>
                 {activeTab === "logs" && (
-                    <div className="flex flex-row items-center gap-3">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
                         <button
                             type="button"
                             onClick={() => setIsExportModalOpen(true)}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-semibold px-4 py-2 text-sm transition-all duration-250 shadow-md hover:shadow-lg active:scale-98 cursor-pointer"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-semibold px-4 py-2.5 text-sm transition-all duration-250 shadow-md hover:shadow-lg active:scale-98 cursor-pointer w-full sm:w-auto"
                         >
                             <FaFilePdf className="text-xs text-rose-400" /> Generate PDF Report
                         </button>
@@ -304,13 +304,13 @@ export default function AttendanceRecords() {
                             type="button"
                             onClick={() => setIsConfirmMarkModalOpen(true)}
                             disabled={marking}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white font-semibold px-4 py-2 text-sm transition-all duration-250 shadow-md hover:shadow-lg active:scale-98 disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white font-semibold px-4 py-2.5 text-sm transition-all duration-250 shadow-md hover:shadow-lg active:scale-98 disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer w-full sm:w-auto"
                         >
                             <FaTimes className="text-xs" /> Mark Today's Absentees
                         </button>
                         <Link
                             to="/attendance"
-                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 text-sm transition-all duration-250 shadow-md hover:shadow-lg active:scale-98"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2.5 text-sm transition-all duration-250 shadow-md hover:shadow-lg active:scale-98 w-full sm:w-auto"
                         >
                             <FaQrcode className="text-xs animate-pulse" /> Open Scanner App
                         </Link>
@@ -319,10 +319,10 @@ export default function AttendanceRecords() {
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b border-slate-200 mb-6">
+            <div className="flex border-b border-slate-200 mb-6 overflow-x-auto scrollbar-hide whitespace-nowrap">
                 <button
                     onClick={() => setActiveTab("logs")}
-                    className={`pb-3 px-4 font-bold text-sm border-b-2 transition-all duration-200 cursor-pointer ${
+                    className={`flex-shrink-0 pb-3 px-4 font-bold text-sm border-b-2 transition-all duration-200 cursor-pointer ${
                         activeTab === "logs"
                             ? "border-blue-600 text-blue-600"
                             : "border-transparent text-slate-400 hover:text-slate-600"
@@ -332,7 +332,7 @@ export default function AttendanceRecords() {
                 </button>
                 <button
                     onClick={() => setActiveTab("settings")}
-                    className={`pb-3 px-4 font-bold text-sm border-b-2 transition-all duration-200 cursor-pointer ${
+                    className={`flex-shrink-0 pb-3 px-4 font-bold text-sm border-b-2 transition-all duration-200 cursor-pointer ${
                         activeTab === "settings"
                             ? "border-blue-600 text-blue-600"
                             : "border-transparent text-slate-400 hover:text-slate-600"
@@ -449,7 +449,7 @@ export default function AttendanceRecords() {
                     ) : (
                         <>
                             {/* Desktop Table view */}
-                            <div className="overflow-x-auto">
+                            <div className="hidden md:block overflow-x-auto">
                                 <table className="w-full border-collapse">
                                     <thead>
                                         <tr className="border-b border-slate-100 text-slate-400 text-left text-xs font-bold uppercase tracking-wider">
@@ -552,6 +552,91 @@ export default function AttendanceRecords() {
                                         )}
                                     </tbody>
                                 </table>
+                            </div>
+
+                            {/* Mobile Layout (Cards) */}
+                            <div className="space-y-4 md:hidden">
+                                {records.length > 0 ? (
+                                    records.map((record, index) => (
+                                        <div key={index} className="rounded-2xl border border-slate-100 bg-slate-50/50 p-5 shadow-sm hover:shadow-md transition-all duration-200 animate-fadeIn">
+                                            <div className="flex flex-col gap-4">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <p className="text-base font-bold text-slate-800 leading-tight">
+                                                            {record.StaffMember?.name || "Unknown Staff"}
+                                                        </p>
+                                                        <p className="text-xs text-slate-400 mt-1">{record.staffId}</p>
+                                                    </div>
+                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border ${
+                                                        record.status === "Present"
+                                                            ? "bg-emerald-50 border-emerald-100 text-emerald-700"
+                                                            : record.status === "Late"
+                                                            ? "bg-amber-50 border-amber-100 text-amber-700"
+                                                            : "bg-rose-50 border-rose-100 text-rose-700"
+                                                    }`}>
+                                                        {record.status === "Present" && <FaCheckCircle className="text-[10px]" />}
+                                                        {record.status === "Late" && <FaExclamationCircle className="text-[10px]" />}
+                                                        {record.status === "Absent" && <FaTimes className="text-[10px]" />}
+                                                        {record.status}
+                                                    </span>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-xs border-t border-b border-slate-100/80 py-3">
+                                                    <div>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date</p>
+                                                        <p className="font-semibold text-slate-700 mt-1 flex items-center gap-1.5">
+                                                            <FaCalendarAlt className="text-slate-400 text-xs" />
+                                                            {record.attendanceDate}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Worked Time</p>
+                                                        <p className="font-bold text-indigo-600 mt-1">
+                                                            {formatDuration(record.workingMinutes)}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Check In</p>
+                                                        <p className="font-semibold text-slate-700 mt-1">
+                                                            {formatTime(record.checkInTime)}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Check Out</p>
+                                                        <p className="font-semibold text-slate-700 mt-1">
+                                                            {formatTime(record.checkOutTime)}
+                                                        </p>
+                                                    </div>
+                                                    {record.lateMinutes > 0 && (
+                                                        <div className="col-span-2">
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Late Minutes</p>
+                                                            <p className="font-semibold text-amber-600 mt-1">
+                                                                {record.lateMinutes} mins
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex justify-end">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setSelectedAttendanceId(record.attendanceId);
+                                                            setIsEditModalOpen(true);
+                                                        }}
+                                                        className="flex items-center justify-center gap-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-600 font-semibold px-4 py-2.5 text-xs transition-all duration-200 active:scale-98 cursor-pointer"
+                                                    >
+                                                        <FaEdit className="text-[10px]" /> Edit Log
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="py-12 text-center text-sm font-semibold text-slate-400 border border-dashed border-slate-200 rounded-2xl bg-slate-50/20">
+                                        No attendance logs found matching your criteria.
+                                    </div>
+                                )}
                             </div>
 
                             {/* Pagination Controls */}
