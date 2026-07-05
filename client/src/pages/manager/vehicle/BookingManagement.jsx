@@ -271,12 +271,12 @@ export default function BookingManagement() {
     if (!selectedBooking || !targetStatus) return;
     try {
       setSubmitting(true);
-      await axios.put(
+      const res = await axios.put(
         `${backendBaseUrl}/manager/vehicle-bookings/${selectedBooking.id}/status`,
         { status: targetStatus },
         config
       );
-      toast.success(`Booking status updated to ${formatStatusText(targetStatus)}`);
+      toast.success(res.data.message || `Booking status updated to ${formatStatusText(targetStatus)}`);
       setShowStatusModal(false);
       fetchBookings();
     } catch (err) {
@@ -289,12 +289,12 @@ export default function BookingManagement() {
   const handleMarkReturned = async (booking) => {
     if (!window.confirm(`Mark booking ${booking.bookingNo} as returned? This indicates the vehicle has been physically returned and is ready for inspection.`)) return;
     try {
-      await axios.put(
+      const res = await axios.put(
         `${backendBaseUrl}/manager/vehicle-bookings/${booking.id}/status`,
         { status: 'returned' },
         config
       );
-      toast.success("Vehicle marked as returned. You can now inspect and generate the final bill.");
+      toast.success(res.data.message || "Vehicle marked as returned. You can now inspect and generate the final bill.");
       fetchBookings();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to mark as returned");
@@ -489,7 +489,9 @@ export default function BookingManagement() {
 
   const openStatusModal = (booking) => {
     setSelectedBooking(booking);
-    const validNext = VALID_TRANSITIONS[booking.status] || [];
+    const validNext = (VALID_TRANSITIONS[booking.status] || [])
+      .filter(s => s !== "confirmed" && s !== "balance_paid")
+      .filter(s => !(booking.hireType === "without_driver" && s === "driver_assigned"));
     setTargetStatus(validNext.length > 0 ? validNext[0] : booking.status);
     setShowStatusModal(true);
   };
@@ -704,25 +706,7 @@ export default function BookingManagement() {
                         </button>
                       )}
 
-                      {(!booking.balancePaidAt && ["confirmed", "driver_assigned", "ongoing", "returned"].includes(booking.status)) && (
-                        <button
-                          onClick={() => openPaymentModal(booking)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs rounded-xl border border-emerald-200 transition"
-                        >
-                          <DollarSign className="w-3.5 h-3.5" />
-                          Collect Balance
-                        </button>
-                      )}
 
-                      {booking.status === "completed" && hasRemainingBalance && (
-                        <button
-                          onClick={() => openPaymentModal(booking)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs rounded-xl border border-emerald-200 transition shadow-sm"
-                        >
-                          <DollarSign className="w-3.5 h-3.5" />
-                          Collect Final Payment
-                        </button>
-                      )}
 
                       {booking.status === "ongoing" && (
                         <button
@@ -1089,7 +1073,9 @@ export default function BookingManagement() {
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Target Status</label>
                 {(() => {
-                  const validNext = VALID_TRANSITIONS[selectedBooking.status] || [];
+                  const validNext = (VALID_TRANSITIONS[selectedBooking.status] || [])
+                    .filter(s => s !== "confirmed" && s !== "balance_paid")
+                    .filter(s => !(selectedBooking.hireType === "without_driver" && s === "driver_assigned"));
                   return validNext.length === 0 ? (
                     <p className="text-sm text-slate-500 py-2 px-3 bg-slate-50 rounded-xl border border-slate-100 italic">
                       This booking is in a terminal state ({formatStatusText(selectedBooking.status)}). No further transitions are available.

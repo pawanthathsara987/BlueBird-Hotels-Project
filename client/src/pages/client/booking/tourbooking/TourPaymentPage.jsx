@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Lock, ArrowLeft, Check, Shield } from 'lucide-react';
+import { CreditCard, Lock, ArrowLeft, Check, Shield, AlertCircle } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Header from '../../../../components/header';
@@ -104,6 +104,7 @@ export default function TourPaymentPage() {
 
         window.payhere.onCompleted = async function (oid) {
           const finalOid = oid || `PAY_PAYHERE_TOUR_${inquiry.realId}`;
+          let syncWarning = "";
           try {
             await axios.post(
               `${backendBaseUrl}/payment/tour-confirm`,
@@ -117,25 +118,31 @@ export default function TourPaymentPage() {
             );
           } catch (err) {
             console.error("Error confirming tour payment:", err);
+            syncWarning = "Logged payment on gateway, but server synchronization is delayed. Please keep order reference details.";
+          } finally {
+            setProcessing(false);
+            navigate('/tour-confirm', {
+              state: {
+                tour,
+                inquiry,
+                paymentNo: finalOid,
+                amountPaid: advanceAmount,
+                totalAmount: discountedSubtotal,
+                balanceDue: discountedSubtotal - advanceAmount,
+                originalSubtotal,
+                discountPercentage,
+                discountAmount,
+                billing,
+                warning: syncWarning
+              }
+            });
           }
-          navigate('/tour-confirm', {
-            state: {
-              tour,
-              inquiry,
-              paymentNo: finalOid,
-              amountPaid: advanceAmount,
-              totalAmount: discountedSubtotal,
-              balanceDue: discountedSubtotal - advanceAmount,
-              originalSubtotal,
-              discountPercentage,
-              discountAmount,
-              billing
-            }
-          });
         };
+        
         window.payhere.onDismissed = function () {
           setProcessing(false);
         };
+        
         window.payhere.onError = function () {
           setError("Payment failed. Please try again.");
           setProcessing(false);
@@ -168,137 +175,160 @@ export default function TourPaymentPage() {
     }
   };
 
-  const inputCls = "w-full px-4 py-3 border border-gray-200 rounded-xl text-sm bg-gray-50 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition";
+  const inputCls = "w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white outline-none focus:border-cyan-600 transition";
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900">
       <Header />
-      <div className="max-w-5xl mx-auto px-4 py-10">
-        {/* Back */}
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-gray-500 hover:text-blue-700 mb-6 transition">
-          <ArrowLeft size={16} /> Back to Tour Details
-        </button>
+      
+      <div className="flex-1 max-w-5xl w-full mx-auto px-4 py-10 flex flex-col justify-center">
+        <div className="space-y-6">
+          
+          {/* Back button */}
+          <button 
+            onClick={() => navigate(-1)} 
+            className="inline-flex items-center gap-2 text-sm font-bold text-slate-700 hover:text-blue-650 transition bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-xs cursor-pointer"
+          >
+            <ArrowLeft size={15} /> Back to Tour Details
+          </button>
 
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Complete Your Payment</h1>
-        <p className="text-gray-500 text-sm mb-8">Review your details and pay the 50% advance to confirm your tour booking.</p>
-
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          {/* Left — Customer Details */}
-          <div className="lg:col-span-3 space-y-6">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
-              <h2 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2">
-                <CreditCard size={20} className="text-blue-600" /> Billing Details
-              </h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1.5">Full Name</label>
-                  <input type="text" value={billing.fullName} onChange={(e) => setBilling({...billing, fullName: e.target.value})} className={inputCls} placeholder="John Doe" />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1.5">Email</label>
-                    <input type="email" value={billing.email} onChange={(e) => setBilling({...billing, email: e.target.value})} className={inputCls} placeholder="john@example.com" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1.5">Phone</label>
-                    <input type="tel" value={billing.phone} onChange={(e) => setBilling({...billing, phone: e.target.value})} className={inputCls} placeholder="+94 77 123 4567" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1.5">Address</label>
-                  <input type="text" value={billing.address} onChange={(e) => setBilling({...billing, address: e.target.value})} className={inputCls} placeholder="No.1, Galle Road, Colombo" />
-                </div>
-              </div>
-            </div>
-
-            {/* Trust Badges */}
-            <div className="flex flex-wrap items-center gap-4 text-xs text-gray-400">
-              {[
-                { icon: <Lock size={12} />, text: '256-bit SSL Encryption' },
-                { icon: <Shield size={12} />, text: 'Secured by PayHere' },
-                { icon: <Check size={12} />, text: 'Instant Confirmation' },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-1.5">
-                  <span className="text-blue-500">{item.icon}</span>
-                  <span>{item.text}</span>
-                </div>
-              ))}
-            </div>
+          <div>
+            <span className="inline-block bg-blue-50 text-blue-750 border border-blue-200 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md mb-2">
+              Deposit Payment Desk
+            </span>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Complete Deposit Payment</h1>
+            <p className="text-sm text-slate-500 font-medium mt-1 leading-relaxed">Review your booking coordinates and submit the 50% reservation deposit.</p>
           </div>
 
-          {/* Right — Order Summary */}
-          <div className="lg:col-span-2">
-            <div className="sticky top-5 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="bg-blue-900 px-6 py-5">
-                <h3 className="text-white font-bold text-lg">Order Summary</h3>
-                <p className="text-white/60 text-xs mt-1">{tour.packageName || inquiry.destination}</p>
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
+            
+            {/* Left Column — Billing details form (3/5 cols) */}
+            <div className="lg:col-span-3 space-y-6">
+              <div className="bg-white rounded-3xl border border-slate-205 p-6 md:p-8 shadow-xs">
+                <h2 className="text-lg font-bold text-slate-900 mb-5 flex items-center gap-2 border-b border-slate-100 pb-3">
+                  <CreditCard size={18} className="text-cyan-600" /> Billing Specifications
+                </h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">Full Name</label>
+                    <input type="text" value={billing.fullName} onChange={(e) => setBilling({...billing, fullName: e.target.value})} className={inputCls} placeholder="John Doe" />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">Email Address</label>
+                      <input type="email" value={billing.email} onChange={(e) => setBilling({...billing, email: e.target.value})} className={inputCls} placeholder="john@example.com" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">Phone Number</label>
+                      <input type="tel" value={billing.phone} onChange={(e) => setBilling({...billing, phone: e.target.value})} className={inputCls} placeholder="+94 77 123 4567" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">Billing Address</label>
+                    <input type="text" value={billing.address} onChange={(e) => setBilling({...billing, address: e.target.value})} className={inputCls} placeholder="No.1, Galle Road, Colombo" />
+                  </div>
+                </div>
               </div>
-              <div className="px-6 py-5 space-y-3 text-sm">
-                <div className="flex justify-between text-gray-600">
-                  <span>Tour Price (per person)</span>
-                  <div className="text-right">
-                    {discountPercentage > 0 && (
-                      <span className="text-xs text-gray-400 line-through mr-1.5">
-                        {import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {originalPricePerPerson.toLocaleString()}
-                      </span>
-                    )}
-                    <span className="font-semibold text-gray-900">
-                      {import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {discountedPricePerPerson.toLocaleString()}
+
+              {/* Secure payments trust flags */}
+              <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 font-semibold px-2">
+                {[
+                  { icon: <Lock size={12} />, text: '256-bit SSL secure payment validation' },
+                  { icon: <Shield size={12} />, text: 'Encrypted Gateway confirmation' },
+                  { icon: <Check size={12} />, text: 'Immediate coordination status update' },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-1.5">
+                    <span className="text-emerald-500">{item.icon}</span>
+                    <span>{item.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right Column — Pricing details block (2/5 cols) */}
+            <div className="lg:col-span-2">
+              <div className="sticky top-5 bg-white rounded-3xl shadow-sm border border-slate-205 overflow-hidden">
+                
+                {/* Order Summary Header */}
+                <div className="bg-slate-900 px-6 py-5.5 text-white">
+                  <span className="text-[9px] font-black text-cyan-300 uppercase tracking-wider block">Excursion Invoice</span>
+                  <h3 className="text-white font-black text-lg tracking-tight mt-0.5">Booking Invoice</h3>
+                  <p className="text-slate-400 text-xs mt-1 truncate">{tour.packageName || inquiry.destination}</p>
+                </div>
+                
+                {/* Pricing Breakdown Body */}
+                <div className="px-6 py-6 space-y-3.5 text-xs text-slate-500 font-semibold">
+                  <div className="flex justify-between">
+                    <span>Excursion Base Rate</span>
+                    <span className="text-slate-800 font-bold">
+                      {import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {originalPricePerPerson.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Total Adults Guest count</span>
+                    <span className="text-slate-800 font-bold">{inquiry.adults} Guest(s)</span>
+                  </div>
+
+                  {discountPercentage > 0 && (
+                    <>
+                      <div className="flex justify-between pt-2 border-t border-slate-150">
+                        <span>Original Subtotal</span>
+                        <span className="text-slate-800 font-bold">
+                          {import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {originalSubtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-emerald-700">
+                        <span>Discount ({discountPercentage}%)</span>
+                        <span className="font-bold">
+                          -{import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </>
+                  )}
+
+                  <div className="flex justify-between pt-3.5 border-t border-slate-150">
+                    <span>Total Balance Invoice</span>
+                    <span className="text-slate-800 font-bold">
+                      {import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {discountedSubtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-baseline pt-4.5 border-t border-slate-200">
+                    <span className="font-black text-cyan-800 uppercase tracking-wide">50% Advance Due</span>
+                    <span className="text-2xl font-black text-slate-900">
+                      {import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {advanceAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>
-                <div className="flex justify-between text-gray-600">
-                  <span>No. of Adults</span>
-                  <span className="font-semibold text-gray-900">{inquiry.adults}</span>
+
+                {/* Payment Trigger Section */}
+                <div className="px-6 pb-6 space-y-3.5">
+                  {error && (
+                    <div className="flex items-center gap-2 bg-rose-50 border border-rose-100 text-rose-800 text-xs font-semibold px-3.5 py-2.5 rounded-xl">
+                      <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                      <span>{error}</span>
+                    </div>
+                  )}
+                  
+                  <button
+                    onClick={handlePayment}
+                    disabled={processing}
+                    className="w-full py-4 rounded-2xl text-xs font-black uppercase tracking-wider bg-slate-900 hover:bg-slate-800 text-white shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {processing ? 'Processing Payment...' : `Confirm & Pay ${import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {advanceAmount.toLocaleString()} Now`}
+                  </button>
+                  
+                  <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-wider">
+                    Remaining 50% payable on guide pickup departure.
+                  </p>
                 </div>
 
-                {discountPercentage > 0 && (
-                  <>
-                    <div className="flex justify-between text-gray-600 pt-2 border-t border-gray-100">
-                      <span>Original Subtotal</span>
-                      <span className="font-semibold text-gray-800">
-                        {import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {originalSubtotal.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-emerald-700">
-                      <span className="font-medium">Discount ({discountPercentage}%)</span>
-                      <span className="font-bold">
-                        -{import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {discountAmount.toLocaleString()}
-                      </span>
-                    </div>
-                  </>
-                )}
-
-                <div className="flex justify-between text-gray-600 pt-2 border-t border-gray-100">
-                  <span>Subtotal</span>
-                  <span className="font-semibold text-gray-900">
-                    {import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {discountedSubtotal.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between items-baseline pt-3 border-t border-gray-200">
-                  <span className="font-bold text-blue-800">50% Advance</span>
-                  <span className="text-2xl font-bold text-blue-900">
-                    {import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {advanceAmount.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-              <div className="px-6 pb-6 space-y-3">
-                {error && (
-                  <p className="text-red-500 text-xs bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>
-                )}
-                <button
-                  onClick={handlePayment}
-                  disabled={processing}
-                  className="w-full py-3.5 rounded-xl text-sm font-bold tracking-wide bg-gradient-to-r from-blue-700 to-indigo-700 hover:from-blue-600 hover:to-indigo-600 text-white transition-all shadow-lg shadow-blue-200 disabled:opacity-50"
-                >
-                  {processing ? 'Processing...' : `Pay ${import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} ${advanceAmount.toLocaleString()} Now`}
-                </button>
-                <p className="text-[10px] text-center text-gray-400">Remaining 50% payable on the day of the tour</p>
               </div>
             </div>
+
           </div>
         </div>
       </div>
+      
       <Footer />
     </div>
   );

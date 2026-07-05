@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
-import { Loader, Calendar, MapPin, Search, ChevronDown, CheckCircle, Package } from 'lucide-react';
+import { Loader, Calendar, MapPin, Search, ChevronDown, CheckCircle, Package, X, User, Mail, Phone, Globe, FileText, CreditCard, Users } from 'lucide-react';
 
 export default function TourBookingsManagement() {
   const [bookings, setBookings] = useState([]);
@@ -8,6 +8,8 @@ export default function TourBookingsManagement() {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3002/api').replace(/\/$/, '');
 
@@ -56,6 +58,7 @@ export default function TourBookingsManagement() {
       const matchSearch = searchTerm === '' || 
         (booking.fullName && booking.fullName.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (booking.bookingRef && booking.bookingRef.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (booking.inquiryRef && booking.inquiryRef.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (booking.packageName && booking.packageName.toLowerCase().includes(searchTerm.toLowerCase()));
       
       const matchStatus = statusFilter === 'all' || booking.status === statusFilter;
@@ -164,15 +167,24 @@ export default function TourBookingsManagement() {
           </div>
         ) : (
           filteredBookings.map((booking) => (
-            <div key={booking.id} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+            <div 
+              key={booking.id} 
+              onClick={() => { setSelectedBooking(booking); setShowDetailsModal(true); }}
+              className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:border-blue-200 hover:shadow-md transition-all cursor-pointer"
+            >
               <div className="flex flex-col lg:flex-row justify-between gap-6">
                 
                 {/* Left col: Core info */}
                 <div className="flex-1 space-y-4">
-                  <div className="flex items-start justify-between sm:justify-start gap-4">
+                  <div className="flex items-center flex-wrap gap-2.5">
                     <div className="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg text-xs font-bold tracking-wide">
-                      {booking.bookingRef}
+                      Booking: {booking.bookingRef}
                     </div>
+                    {booking.inquiryRef && (
+                      <div className="bg-slate-100 text-slate-700 px-3 py-1 rounded-lg text-xs font-bold tracking-wide">
+                        Inquiry: {booking.inquiryRef}
+                      </div>
+                    )}
                     <div className={`px-3 py-1 rounded-lg text-xs font-bold tracking-wide flex items-center gap-1 ${
                       booking.status === 'half_paid' ? 'bg-orange-50 text-orange-700' : 
                       booking.status === 'full_paid' ? 'bg-emerald-50 text-emerald-700' : 
@@ -232,6 +244,169 @@ export default function TourBookingsManagement() {
         )}
       </div>
       </div>
+
+      {/* Tour Booking Details Dialog Popup Modal */}
+      {showDetailsModal && selectedBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 border border-slate-100">
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-blue-600 tracking-wider bg-blue-50 px-2.5 py-1 rounded-full uppercase">
+                    Booking: {selectedBooking.bookingRef}
+                  </span>
+                  {selectedBooking.inquiryRef && (
+                    <span className="text-[10px] font-bold text-slate-650 tracking-wider bg-slate-100 px-2.5 py-1 rounded-full uppercase">
+                      Inquiry: {selectedBooking.inquiryRef}
+                    </span>
+                  )}
+                </div>
+                <h3 className="font-black text-xl text-slate-800 mt-2.5">Tour Booking Details</h3>
+              </div>
+              <button 
+                onClick={() => { setShowDetailsModal(false); setSelectedBooking(null); }}
+                className="text-slate-400 hover:text-slate-650 hover:bg-slate-100 p-2 rounded-xl transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+              
+              {/* Row 1: Tour Information */}
+              <div className="bg-blue-50/30 rounded-2xl p-5 border border-blue-100/30 space-y-3.5">
+                <div className="flex items-center gap-1.5 text-blue-700 font-bold uppercase tracking-wider text-[10px]">
+                  <Package size={14} /> <span>Selected Excursion Package</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-black text-slate-800 text-lg leading-snug">{selectedBooking.packageName}</h4>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">Duration: {selectedBooking.duration || "N/A"}</p>
+                  </div>
+                  <div className="space-y-1 md:text-right">
+                    <span className="text-[10px] text-slate-450 block font-bold uppercase">Tour Departure Date</span>
+                    <span className="font-extrabold text-slate-800 text-sm flex items-center md:justify-end gap-1.5">
+                      <Calendar size={14} className="text-slate-400" />
+                      {formatDate(selectedBooking.tourStartDate)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2: Customer / Passenger Details */}
+              <div className="space-y-3">
+                <h4 className="font-black text-slate-900 border-b border-slate-100 pb-2 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                  <User size={14} className="text-slate-400" /> Guest Details
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6 text-sm">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block">Contact Name</span>
+                    <span className="font-bold text-slate-800 mt-0.5 block">{selectedBooking.fullName}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block">Nationality</span>
+                    <span className="font-bold text-slate-800 mt-0.5 block">{selectedBooking.nationality || "N/A"}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block">Email Address</span>
+                    <span className="font-bold text-slate-850 mt-0.5 block flex items-center gap-1.5">
+                      <Mail size={13} className="text-slate-400" /> {selectedBooking.email}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block">Phone Number</span>
+                    <span className="font-bold text-slate-850 mt-0.5 block flex items-center gap-1.5">
+                      <Phone size={13} className="text-slate-400" /> {selectedBooking.phone || "Not Provided"}
+                    </span>
+                  </div>
+                  {selectedBooking.nic && (
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">NIC (National Identity Card)</span>
+                      <span className="font-bold text-slate-800 mt-0.5 block">{selectedBooking.nic}</span>
+                    </div>
+                  )}
+                  {selectedBooking.passportId && (
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">Passport ID</span>
+                      <span className="font-bold text-slate-800 mt-0.5 block">{selectedBooking.passportId}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-[10px] text-slate-400 block">Passenger Breakdown</span>
+                    <span className="font-bold text-slate-850 mt-0.5 block flex items-center gap-1.5">
+                      <Users size={13} className="text-slate-400" />
+                      {selectedBooking.numberOfAdults || 1} Adult(s) {selectedBooking.numberOfChildren > 0 && `, ${selectedBooking.numberOfChildren} Child(ren)`}
+                    </span>
+                  </div>
+                  {selectedBooking.pickupLocation && (
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">Pickup Location</span>
+                      <span className="font-bold text-slate-800 mt-0.5 block flex items-center gap-1.5 text-blue-650">
+                        <MapPin size={13} className="text-blue-500" /> {selectedBooking.pickupLocation}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Row 3: Special Requests */}
+              {selectedBooking.specialRequests && (
+                <div className="space-y-2">
+                  <h4 className="font-black text-slate-900 border-b border-slate-100 pb-2 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                    <FileText size={14} className="text-slate-400" /> Special Requests & Notes
+                  </h4>
+                  <div className="p-3 bg-slate-50 border border-slate-200/60 rounded-xl text-xs font-semibold text-slate-700 italic leading-relaxed">
+                    "{selectedBooking.specialRequests}"
+                  </div>
+                </div>
+              )}
+
+              {/* Row 4: Billing & Payments */}
+              <div className="space-y-3">
+                <h4 className="font-black text-slate-900 border-b border-slate-100 pb-2 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                  <CreditCard size={14} className="text-slate-400" /> Billing & Payments
+                </h4>
+                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 space-y-3">
+                  <div className="flex justify-between items-center text-sm font-semibold text-slate-550">
+                    <span>Tour Price Package:</span>
+                    <span>{formatCurrency(selectedBooking.totalAmount)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm font-semibold text-emerald-600">
+                    <span>Deposit Paid (Online):</span>
+                    <span>{formatCurrency(selectedBooking.depositAmount)}</span>
+                  </div>
+                  <div className="h-px bg-slate-200 w-full" />
+                  <div className="flex justify-between items-center text-sm font-black">
+                    <span className="text-slate-700">Remaining Balance:</span>
+                    <span className={parseFloat(selectedBooking.remainingAmount) > 0 ? "text-orange-600" : "text-emerald-600"}>
+                      {formatCurrency(selectedBooking.remainingAmount)}
+                    </span>
+                  </div>
+                  {selectedBooking.balancePaidAt && (
+                    <div className="text-[10px] text-slate-450 mt-1 border-t border-slate-200/50 pt-2 flex justify-between">
+                      <span>Cleared: {new Date(selectedBooking.balancePaidAt).toLocaleString()}</span>
+                      <span>Method: {selectedBooking.balancePaymentMethod?.toUpperCase()}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="px-6 py-4 border-t border-slate-100 flex justify-end bg-slate-50/50">
+              <button 
+                onClick={() => { setShowDetailsModal(false); setSelectedBooking(null); }}
+                className="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs transition"
+              >
+                Close Details
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

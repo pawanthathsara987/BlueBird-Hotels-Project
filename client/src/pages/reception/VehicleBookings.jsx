@@ -459,6 +459,44 @@ export default function VehicleBookings() {
                             <td style="text-align: right; font-weight: bold;">LKR ${(parseFloat(booking.driverRatePerDay) * booking.numDays).toLocaleString()}</td>
                         </tr>
                         ` : ''}
+                        ${booking.finalBill ? `
+                        <tr>
+                            <td colspan="3" style="text-align: left; font-weight: bold; background-color: #f8fafc; font-size: 11px; text-transform: uppercase; color: #475569; padding: 8px 12px; border-top: 1.5px solid #cbd5e1;">Returned Vehicle Inspection & Fees</td>
+                            <td style="background-color: #f8fafc; border-top: 1.5px solid #cbd5e1;"></td>
+                        </tr>
+                        ${parseFloat(booking.finalBill.lateFee || 0) > 0 ? `
+                        <tr>
+                            <td><strong>Late Return Fee</strong><br/><span style="font-size: 11px; color: #64748b;">Fee for delayed vehicle return</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td style="text-align: right; font-weight: bold;">LKR ${parseFloat(booking.finalBill.lateFee).toLocaleString()}</td>
+                        </tr>
+                        ` : ''}
+                        ${parseFloat(booking.finalBill.extraMileageFee || 0) > 0 ? `
+                        <tr>
+                            <td><strong>Extra Mileage Fee</strong><br/><span style="font-size: 11px; color: #64748b;">Charge for exceeding mileage limit</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td style="text-align: right; font-weight: bold;">LKR ${parseFloat(booking.finalBill.extraMileageFee).toLocaleString()}</td>
+                        </tr>
+                        ` : ''}
+                        ${parseFloat(booking.finalBill.damageFee || 0) > 0 ? `
+                        <tr>
+                            <td><strong style="color: #ef4444;">Damage Assessment Fee</strong><br/><span style="font-size: 11px; color: #64748b;">Deductions for vehicle physical damages</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td style="text-align: right; font-weight: bold; color: #ef4444;">LKR ${parseFloat(booking.finalBill.damageFee).toLocaleString()}</td>
+                        </tr>
+                        ` : ''}
+                        ${parseFloat(booking.finalBill.fuelFee || 0) > 0 ? `
+                        <tr>
+                            <td><strong>Refueling Fee</strong><br/><span style="font-size: 11px; color: #64748b;">Charges for missing fuel on return</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td style="text-align: right; font-weight: bold;">LKR ${parseFloat(booking.finalBill.fuelFee).toLocaleString()}</td>
+                        </tr>
+                        ` : ''}
+                        ` : ''}
                     </tbody>
                 </table>
                 
@@ -471,10 +509,25 @@ export default function VehicleBookings() {
                         <span style="color: #64748b;">Security Deposit (Refundable):</span>
                         <span style="font-weight: bold;">LKR ${securityDeposit.toLocaleString()}</span>
                     </div>
+                    ${booking.finalBill ? `
+                    <div class="total-row">
+                        <span style="color: #64748b;">Total Extra Charges:</span>
+                        <span style="font-weight: bold;">LKR ${parseFloat(booking.finalBill.totalExtraCharges).toLocaleString()}</span>
+                    </div>
+                    <div class="total-row">
+                        <span style="color: #64748b;">Applied Security Deposit:</span>
+                        <span style="font-weight: bold;">-LKR ${parseFloat(booking.finalBill.securityDepositCollected).toLocaleString()}</span>
+                    </div>
+                    <div class="total-row grand-total">
+                        <span>Final Balance Due:</span>
+                        <span>LKR ${parseFloat(booking.finalBill.finalAmountOwed).toLocaleString()}</span>
+                    </div>
+                    ` : `
                     <div class="total-row grand-total">
                         <span>Invoice Total:</span>
                         <span>LKR ${totalPayable.toLocaleString()}</span>
                     </div>
+                    `}
                 </div>
                 
                 <div class="footer">
@@ -501,8 +554,14 @@ export default function VehicleBookings() {
         const guestName = `${booking.customer?.firstName || ""} ${booking.customer?.lastName || ""}` || "Guest";
         
         const total = parseFloat(booking.totalPayable || 0);
-        const paidAmount = booking.balancePaidAt ? total : parseFloat(booking.depositAmount || 0);
-        const receiptType = booking.balancePaidAt ? "FULL PAYMENT RECEIPT" : "DEPOSIT RECEIPT";
+        
+        let paidAmount = booking.balancePaidAt ? total : parseFloat(booking.depositAmount || 0);
+        let receiptType = booking.balancePaidAt ? "FULL PAYMENT RECEIPT" : "DEPOSIT RECEIPT";
+        
+        if (booking.status === "completed" && booking.finalBill) {
+            receiptType = "FINAL SETTLEMENT RECEIPT";
+            paidAmount = parseFloat(booking.finalBill.finalAmountOwed || 0);
+        }
         
         printWindow.document.write(`
             <html>
@@ -510,7 +569,7 @@ export default function VehicleBookings() {
                 <title>Receipt - ${booking.bookingNo}</title>
                 <style>
                     body { font-family: 'Segoe UI', Roboto, sans-serif; color: #333; margin: 40px; line-height: 1.5; }
-                    .receipt-container { max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); }
+                    .receipt-container { max-width: 650px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); }
                     .header { text-align: center; border-bottom: 2px dashed #0d9488; padding-bottom: 20px; margin-bottom: 20px; }
                     .logo { font-size: 20px; font-weight: 900; color: #0d9488; letter-spacing: 1px; }
                     .title { font-size: 22px; font-weight: 850; color: #1e293b; margin-top: 10px; }
@@ -547,8 +606,48 @@ export default function VehicleBookings() {
                         <span>Transaction Date:</span>
                         <span style="font-weight: bold;">${new Date().toLocaleString()}</span>
                     </div>
+                    
+                    ${booking.finalBill ? `
+                    <div class="receipt-row" style="background-color: #f8fafc; font-weight: bold; padding: 6px 10px; margin-top: 15px; font-size: 11px;">
+                        <span>RETURN INSPECTION & FEES BREAKDOWN</span>
+                        <span></span>
+                    </div>
+                    ${parseFloat(booking.finalBill.lateFee || 0) > 0 ? `
+                    <div class="receipt-row">
+                        <span>Late Return Fee:</span>
+                        <span>LKR ${parseFloat(booking.finalBill.lateFee).toLocaleString()}</span>
+                    </div>
+                    ` : ''}
+                    ${parseFloat(booking.finalBill.extraMileageFee || 0) > 0 ? `
+                    <div class="receipt-row">
+                        <span>Extra Mileage Fee:</span>
+                        <span>LKR ${parseFloat(booking.finalBill.extraMileageFee).toLocaleString()}</span>
+                    </div>
+                    ` : ''}
+                    ${parseFloat(booking.finalBill.damageFee || 0) > 0 ? `
+                    <div class="receipt-row" style="color: #ef4444;">
+                        <span>Damage Assessment Fee:</span>
+                        <span>LKR ${parseFloat(booking.finalBill.damageFee).toLocaleString()}</span>
+                    </div>
+                    ` : ''}
+                    ${parseFloat(booking.finalBill.fuelFee || 0) > 0 ? `
+                    <div class="receipt-row">
+                        <span>Refueling Fee:</span>
+                        <span>LKR ${parseFloat(booking.finalBill.fuelFee).toLocaleString()}</span>
+                    </div>
+                    ` : ''}
+                    <div class="receipt-row" style="font-weight: bold; color: #475569;">
+                        <span>Total Extra Charges:</span>
+                        <span>LKR ${parseFloat(booking.finalBill.totalExtraCharges).toLocaleString()}</span>
+                    </div>
+                    <div class="receipt-row" style="font-size: 11px; color: #64748b;">
+                        <span>Applied Security Deposit:</span>
+                        <span>-LKR ${parseFloat(booking.finalBill.securityDepositCollected).toLocaleString()}</span>
+                    </div>
+                    ` : ''}
+
                     <div class="receipt-row total">
-                        <span>Paid Amount:</span>
+                        <span>${booking.status === "completed" ? "Settled Amount:" : "Paid Amount:"}</span>
                         <span>LKR ${paidAmount.toLocaleString()}</span>
                     </div>
                     
@@ -1328,21 +1427,67 @@ export default function VehicleBookings() {
                                                 <span>Remaining Balance (Paid):</span>
                                                 <span>LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                             </div>
-                                            <div className="text-[9px] text-slate-400 mt-1">
+                                            <div className="text-[9px] text-slate-455 mt-1">
                                                 Balance collected on {new Date(selectedBooking.balancePaidAt).toLocaleString()} via {selectedBooking.balancePaymentMethod?.toUpperCase()}
                                             </div>
                                         </>
+                                    )}
+
+                                    {selectedBooking.finalBill && (
+                                        <div className="mt-3 p-3 bg-slate-100 dark:bg-slate-800/40 rounded-lg text-xs space-y-1.5 border border-slate-200/40">
+                                            <div className="font-bold text-slate-700 dark:text-slate-350 uppercase text-[9px] mb-1">Final Bill Details (Vehicle Returned)</div>
+                                            {parseFloat(selectedBooking.finalBill.lateFee || 0) > 0 && (
+                                                <div className="flex justify-between text-slate-550 dark:text-slate-400">
+                                                    <span>Late Return Fee:</span>
+                                                    <span>LKR {parseFloat(selectedBooking.finalBill.lateFee).toLocaleString()}</span>
+                                                </div>
+                                            )}
+                                            {parseFloat(selectedBooking.finalBill.extraMileageFee || 0) > 0 && (
+                                                <div className="flex justify-between text-slate-550 dark:text-slate-400">
+                                                    <span>Extra Mileage Fee:</span>
+                                                    <span>LKR {parseFloat(selectedBooking.finalBill.extraMileageFee).toLocaleString()}</span>
+                                                </div>
+                                            )}
+                                            {parseFloat(selectedBooking.finalBill.damageFee || 0) > 0 && (
+                                                <div className="flex justify-between text-rose-600 dark:text-rose-400 font-semibold">
+                                                    <span>Damage Assessment Fee:</span>
+                                                    <span>LKR {parseFloat(selectedBooking.finalBill.damageFee).toLocaleString()}</span>
+                                                </div>
+                                            )}
+                                            {parseFloat(selectedBooking.finalBill.fuelFee || 0) > 0 && (
+                                                <div className="flex justify-between text-slate-550 dark:text-slate-400">
+                                                    <span>Refueling Fee:</span>
+                                                    <span>LKR {parseFloat(selectedBooking.finalBill.fuelFee).toLocaleString()}</span>
+                                                </div>
+                                            )}
+                                            <div className="flex justify-between font-bold border-t border-dashed dark:border-slate-800 pt-1 mt-1 text-slate-800 dark:text-slate-200">
+                                                <span>Total Extra Charges:</span>
+                                                <span>LKR {parseFloat(selectedBooking.finalBill.totalExtraCharges).toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex justify-between text-slate-500 font-medium text-[10px]">
+                                                <span>Applied Security Deposit:</span>
+                                                <span>-LKR {parseFloat(selectedBooking.finalBill.securityDepositCollected).toLocaleString()}</span>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
                             </div>
 
                             {/* Collect Balance Payment Panel (Reception desk) */}
-                            {!selectedBooking.balancePaidAt && !["cancelled", "completed", "returned"].includes(selectedBooking.status) && (
+                            {!selectedBooking.balancePaidAt && (
+                                (!["cancelled", "completed", "returned"].includes(selectedBooking.status)) ||
+                                (selectedBooking.status === "completed" && parseFloat(selectedBooking.balanceAmount || 0) > 0.01)
+                            ) && (
                                 <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/5 dark:bg-rose-500/2 space-y-3.5">
                                     <div className="flex items-center gap-1.5 text-rose-550 dark:text-rose-400 font-bold uppercase tracking-wider text-[10px]">
-                                        <span>💵 Collect Remaining Balance Payment</span>
+                                        <span>💵 {selectedBooking.status === "completed" ? "Collect Final Settlement Payment" : "Collect Remaining Balance Payment"}</span>
                                     </div>
-                                    {selectedBooking.status === "pending_payment" ? (
+                                    {selectedBooking.hireType === "with_driver" && !selectedBooking.driverId ? (
+                                        <div className="flex items-start gap-2 p-3 bg-amber-500/10 text-amber-500 border border-amber-500/25 rounded-lg font-bold text-[11px]">
+                                            <span className="mt-0.5">⚠️</span>
+                                            <span>Chauffeur Unassigned: The manager must assign a chauffeur to this booking before the balance payment can be collected by reception.</span>
+                                        </div>
+                                    ) : selectedBooking.status === "pending_payment" ? (
                                         <div className="flex items-start gap-2 p-3 bg-amber-500/10 text-amber-500 border border-amber-500/25 rounded-lg font-bold text-[11px]">
                                             <span className="mt-0.5">⚠️</span>
                                             <span>Advance Deposit Unpaid: The customer has not paid the online deposit (50%) for this booking yet. The remaining balance can only be collected after the deposit is paid and status becomes confirmed.</span>
@@ -1350,7 +1495,11 @@ export default function VehicleBookings() {
                                     ) : (
                                         <>
                                             <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-bold">
-                                                The customer must pay the remaining balance of <span className="text-rose-500 font-extrabold">LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> to check-in/start the vehicle rental.
+                                                {selectedBooking.status === "completed" ? (
+                                                    <span>The customer has a pending outstanding bill of <span className="text-rose-500 font-extrabold">LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> for extra mileage, damages, or late return fees. Confirm payment to clear this booking.</span>
+                                                ) : (
+                                                    <span>The customer must pay the remaining balance of <span className="text-rose-500 font-extrabold">LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> to check-in/start the vehicle rental.</span>
+                                                )}
                                             </p>
                                             <div className="flex flex-col sm:flex-row gap-3 items-end">
                                                 <div className="flex-1 w-full">
