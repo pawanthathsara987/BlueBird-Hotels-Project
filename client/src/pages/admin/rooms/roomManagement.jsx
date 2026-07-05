@@ -36,10 +36,10 @@ export default function RoomManagement() {
                     </div>
 
                     {/* Premium Sliding Pill Tab Switcher */}
-                    <div className="flex items-center p-1.5 bg-slate-100/80 backdrop-blur-md rounded-2xl border border-slate-200/50 w-fit self-start lg:self-center shadow-inner">
+                    <div className="flex items-center p-1.5 bg-slate-100/80 backdrop-blur-md rounded-2xl border border-slate-200/50 w-full sm:w-fit overflow-x-auto scrollbar-hide whitespace-nowrap self-start lg:self-center shadow-inner">
                         <button
                             onClick={() => saveSelectBtn('room')}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 cursor-pointer ${
+                            className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 cursor-pointer ${
                                 selectBtn === 'room'
                                     ? "bg-white text-blue-600 shadow-md shadow-slate-200/50 scale-[1.02]"
                                     : "text-slate-500 hover:text-slate-800 hover:bg-slate-50/50"
@@ -50,7 +50,7 @@ export default function RoomManagement() {
                         </button>
                         <button
                             onClick={() => saveSelectBtn('amenities')}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 cursor-pointer ${
+                            className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 cursor-pointer ${
                                 selectBtn === 'amenities'
                                     ? "bg-white text-blue-600 shadow-md shadow-slate-200/50 scale-[1.02]"
                                     : "text-slate-500 hover:text-slate-800 hover:bg-slate-50/50"
@@ -61,7 +61,7 @@ export default function RoomManagement() {
                         </button>
                         <button
                             onClick={() => saveSelectBtn('packages')}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 cursor-pointer ${
+                            className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 cursor-pointer ${
                                 selectBtn === 'packages'
                                     ? "bg-white text-blue-600 shadow-md shadow-slate-200/50 scale-[1.02]"
                                     : "text-slate-500 hover:text-slate-800 hover:bg-slate-50/50"
@@ -72,7 +72,7 @@ export default function RoomManagement() {
                         </button>
                         <button
                             onClick={() => saveSelectBtn('prices')}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 cursor-pointer ${
+                            className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 cursor-pointer ${
                                 selectBtn === 'prices'
                                     ? "bg-white text-blue-600 shadow-md shadow-slate-200/50 scale-[1.02]"
                                     : "text-slate-500 hover:text-slate-800 hover:bg-slate-50/50"

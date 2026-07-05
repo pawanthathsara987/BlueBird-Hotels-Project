@@ -169,7 +169,7 @@ export default function ManageCategoriesModal({
                   No categories found. Create one above to get started.
                 </div>
               ) : (
-                <div className="border border-slate-100 rounded-2xl overflow-hidden bg-white">
+                <div className="border border-slate-100 rounded-2xl overflow-hidden bg-white overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50/50 border-b border-slate-100">
