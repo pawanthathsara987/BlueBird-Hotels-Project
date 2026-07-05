@@ -23,11 +23,9 @@ export default function ProfileTab({
         {/* Profile Card Banner */}
         <div className="bg-white/80 backdrop-blur-md border border-blue-50/50 rounded-3xl p-6 shadow-xs flex flex-col items-center text-center space-y-4">
           <div className="relative">
-            <img
-              src={profile.avatar}
-              alt={profile.name}
-              className="w-24 h-24 rounded-full object-cover border-4 border-blue-950/10 shadow-sm"
-            />
+            <div className="w-24 h-24 rounded-full bg-blue-600/10 border border-blue-500/20 shadow-sm flex items-center justify-center text-2xl font-bold text-blue-800 uppercase">
+              {profile.name ? (profile.name.trim().split(/\s+/).map(n => n[0]).join("").substring(0, 2)) : "G"}
+            </div>
           </div>
 
           <div className="space-y-1">
