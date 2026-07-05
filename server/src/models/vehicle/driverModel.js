@@ -65,7 +65,7 @@ Driver.init(
     languageSkills: {
     type: DataTypes.JSON,
     allowNull: true,
-    defaultValue: [],   // e.g. ["English", "Chinese", "German"]
+    defaultValue: [], 
     },
     driverImage: {
       type: DataTypes.STRING(500),

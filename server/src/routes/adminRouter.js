@@ -17,14 +17,6 @@ import { getAllShopCategories, createShopCategory, updateShopCategory, deleteSho
 
 const router = express.Router();
 
-// ── Auth Strategy ─────────────────────────────────────────────────────────────
-// Some GET endpoints are intentionally PUBLIC because they serve the customer-
-// facing booking pages (home carousel, room details, shop display).
-// All write operations (POST/PUT/DELETE) and admin-only reads are PROTECTED.
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ── PUBLIC read-only endpoints (no token required) ───────────────────────────
-// Used by: RoomTypeCarousel (home page), RoomTypeDetails, booking flow
 router.get('/room-types',            getAllRoomTypes);
 router.get('/room-type/:id',         getRoomTypeById);
 router.get('/room-prices',           getAllRoomPrices);

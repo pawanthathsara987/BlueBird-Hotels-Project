@@ -3,16 +3,12 @@ import { ShopItem } from "../../models/index.js";
 
 const SHOP_BUCKET = "shop-items";
 
-/**
- * Helper to parse image URL field
- */
 const parseImageUrls = (imageUrlField) => {
   if (!imageUrlField) return [];
   try {
     const parsed = JSON.parse(imageUrlField);
     return Array.isArray(parsed) ? parsed : [imageUrlField];
   } catch {
-    // If it's not a JSON array, return it as a single-element array (backward compatibility)
     return [imageUrlField];
   }
 };
