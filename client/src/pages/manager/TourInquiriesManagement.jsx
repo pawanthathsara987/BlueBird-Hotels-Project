@@ -518,30 +518,30 @@ export default function TourInquiriesManagement() {
 
                       {/* Actions */}
                       {inquiry.status === 'pending' && (
-                        <div className="flex flex-col gap-3 md:flex-row">
+                        <div className="flex flex-col gap-3.5 md:flex-row">
                           <button
                             onClick={() => handleAccept(inquiry.id)}
                             disabled={processing === inquiry.id}
-                            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:bg-gray-400"
+                            className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white disabled:bg-slate-200 py-3.5 text-xs font-black uppercase tracking-wider transition shadow-xs cursor-pointer"
                           >
                             {processing === inquiry.id ? (
-                              <Loader className="w-4 h-4 animate-spin" />
+                              <Loader className="w-4 h-4 animate-spin text-white" />
                             ) : (
-                              <Check className="w-4 h-4" />
+                              <Check className="w-4 h-4 text-white" />
                             )}
                             {processing === inquiry.id ? 'Processing...' : 'Accept & Create Booking'}
                           </button>
                           <button
                             onClick={() => handleReject(inquiry.id)}
                             disabled={processing === inquiry.id}
-                            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-3 font-semibold text-white shadow-sm transition-colors hover:bg-rose-700 disabled:bg-gray-400"
+                            className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white hover:bg-rose-50 hover:text-rose-700 hover:border-rose-250 text-slate-600 disabled:bg-slate-100 py-3.5 text-xs font-black uppercase tracking-wider transition cursor-pointer"
                           >
                             {processing === inquiry.id ? (
                               <Loader className="w-4 h-4 animate-spin" />
                             ) : (
                               <X className="w-4 h-4" />
                             )}
-                            {processing === inquiry.id ? 'Processing...' : 'Reject'}
+                            {processing === inquiry.id ? 'Processing...' : 'Reject Inquiry'}
                           </button>
                         </div>
                       )}
@@ -552,7 +552,7 @@ export default function TourInquiriesManagement() {
                             <button
                               onClick={() => openEmailForm(inquiry)}
                               disabled={processing === inquiry.id}
-                              className="w-full flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white shadow-sm transition-colors hover:bg-slate-800 disabled:bg-gray-400"
+                              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white disabled:bg-slate-200 py-3.5 text-xs font-black uppercase tracking-wider transition shadow-xs cursor-pointer"
                             >
                               {processing === inquiry.id ? (
                                 <Loader className="w-4 h-4 animate-spin" />
@@ -562,73 +562,72 @@ export default function TourInquiriesManagement() {
                               {hasAcceptedEmailSent(inquiry) ? 'Send Email Again' : 'Send Email to Guest'}
                             </button>
                           ) : (
-                            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                              <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+                              <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                                 <div>
-                                  <h4 className="text-lg font-semibold text-slate-900">Customize Quote Email</h4>
-                                  <p className="text-sm text-slate-500">Adjust the quote, guest count, date, and note before sending.</p>
+                                  <h4 className="text-base font-bold text-slate-900">Customize Quote Email</h4>
+                                  <p className="text-xs text-slate-450 font-medium mt-0.5">Adjust the quote parameters and note before sending.</p>
                                 </div>
-                                <div className="flex flex-wrap gap-2 text-xs">
-                                  <span className="rounded-full bg-slate-100 px-3 py-1.5 font-medium text-slate-700">Ref {inquiry.inquiryRef}</span>
-                                  <span className="rounded-full bg-slate-100 px-3 py-1.5 font-medium text-slate-700">{getTourPackageName(inquiry)}</span>
+                                <div className="flex flex-wrap gap-2 text-[10px]">
+                                  <span className="rounded-full bg-slate-100 border border-slate-200 px-3 py-1 font-bold text-slate-700">Ref {inquiry.inquiryRef}</span>
+                                  <span className="rounded-full bg-slate-100 border border-slate-200 px-3 py-1 font-bold text-slate-700">{getTourPackageName(inquiry)}</span>
                                 </div>
                               </div>
 
-                              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                                 <div>
-                                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Total Package Price ({import.meta.env.VITE_CURRENCY_TYPE || 'LKR'}) *</label>
-                                  <p className="mb-2 text-xs text-slate-500">Final total for the entire package</p>
+                                  <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-400">Total Package Price ({import.meta.env.VITE_CURRENCY_TYPE || 'LKR'}) *</label>
                                   <input
                                     type="number"
                                     min="1"
                                     step="0.01"
                                     value={emailFormByInquiry[inquiry.id]?.pricePerGuest || ''}
                                     onChange={(e) => handleEmailFormChange(inquiry.id, 'pricePerGuest', e.target.value)}
-                                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-100"
+                                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-600"
                                   />
                                 </div>
                                 <div>
-                                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Adults</label>
+                                  <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-400">Adults</label>
                                   <input
                                     type="number"
                                     min="1"
                                     step="1"
                                     value={emailFormByInquiry[inquiry.id]?.numberOfAdults || '1'}
                                     onChange={(e) => handleEmailFormChange(inquiry.id, 'numberOfAdults', e.target.value)}
-                                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-100"
+                                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-600"
                                   />
                                 </div>
                                 <div>
-                                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Children</label>
+                                  <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-400">Children</label>
                                   <input
                                     type="number"
                                     min="0"
                                     step="1"
                                     value={emailFormByInquiry[inquiry.id]?.numberOfChildren || '0'}
                                     onChange={(e) => handleEmailFormChange(inquiry.id, 'numberOfChildren', e.target.value)}
-                                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-100"
+                                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-600"
                                   />
                                 </div>
                               </div>
 
                               <div>
-                                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Tour Start Date</label>
+                                <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-400">Tour Start Date</label>
                                 <input
                                   type="date"
                                   value={emailFormByInquiry[inquiry.id]?.tourStartDate || ''}
                                   onChange={(e) => handleEmailFormChange(inquiry.id, 'tourStartDate', e.target.value)}
-                                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-100"
+                                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-600"
                                 />
                               </div>
 
                               <div>
-                                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Manager Note (Optional)</label>
+                                <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-400">Manager Note (Optional)</label>
                                 <textarea
                                   rows={3}
                                   value={emailFormByInquiry[inquiry.id]?.managerNote || ''}
                                   onChange={(e) => handleEmailFormChange(inquiry.id, 'managerNote', e.target.value)}
-                                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-100"
-                                  placeholder="Add any special notes for the guest"
+                                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-600 resize-none"
+                                  placeholder="Add special instructions or greetings for the guest..."
                                 />
                               </div>
 
@@ -636,19 +635,19 @@ export default function TourInquiriesManagement() {
                                 <button
                                   onClick={() => handleSendAcceptedEmail(inquiry)}
                                   disabled={processing === inquiry.id}
-                                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 font-semibold text-white shadow-sm transition-colors hover:bg-slate-800 disabled:bg-gray-400"
+                                  className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white disabled:bg-slate-200 py-3.5 text-xs font-black uppercase tracking-wider transition shadow-xs cursor-pointer"
                                 >
                                   {processing === inquiry.id ? (
-                                    <Loader className="w-4 h-4 animate-spin" />
+                                    <Loader className="w-4 h-4 animate-spin text-white" />
                                   ) : (
-                                    <Mail className="w-4 h-4" />
+                                    <Mail className="w-4 h-4 text-white" />
                                   )}
-                                  {processing === inquiry.id ? 'Sending...' : 'Send Email'}
+                                  {processing === inquiry.id ? 'Sending...' : 'Send Quote Email'}
                                 </button>
                                 <button
                                   onClick={closeEmailForm}
                                   disabled={processing === inquiry.id}
-                                  className="flex-1 rounded-xl bg-slate-100 px-4 py-2.5 font-semibold text-slate-700 transition-colors hover:bg-slate-200 disabled:bg-slate-50"
+                                  className="flex-1 rounded-2xl bg-white hover:bg-slate-50 text-slate-600 border border-slate-250 disabled:bg-slate-50 py-3.5 text-xs font-black uppercase tracking-wider transition cursor-pointer"
                                 >
                                   Cancel
                                 </button>
