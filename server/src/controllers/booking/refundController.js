@@ -80,7 +80,7 @@ export const getRefundEligibility = async (req, res) => {
 
         // Filter eligible rooms (reserved/hold status, not checked-in/out, not already refunded)
         const eligibleRooms = (booking.bookedRooms || [])
-            .filter(room => 
+            .filter(room =>
                 (room.status === "reserved" || room.status === "hold") &&
                 !refundedRoomIds.includes(room.id)
             )
@@ -123,7 +123,7 @@ export const getRefundEligibility = async (req, res) => {
         let eligibleAirportPickup = null;
         if (booking.airportPickup && booking.airportPickup.status === "CONFIRMED" && !isPickupRefunded) {
             const pickupPrice = parseFloat(booking.airportPickup.price) || 15000;
-            
+
             // Check earliest check-in for dynamic policy cutoff
             let checkInIsLate = false;
             if (booking.bookedRooms && booking.bookedRooms.length > 0) {
@@ -211,7 +211,7 @@ export const calculateRefund = async (req, res) => {
         // 1. Calculate original total booking amount of active rooms + pickup before this cancellation
         const activeRooms = booking.bookedRooms.filter(r => r.status !== "cancelled");
         const roomsTotalValue = activeRooms.reduce((sum, r) => sum + parseFloat(r.price), 0);
-        
+
         let pickupPriceValue = 0;
         if (booking.airportPickup && booking.airportPickup.status !== "CANCELLED") {
             pickupPriceValue = parseFloat(booking.airportPickup.price) || 15000;
@@ -301,8 +301,8 @@ export const calculateRefund = async (req, res) => {
             }
         }
 
-        const refundPercentage = cancelled_value > 0 
-            ? Math.round((refund_amount / cancelled_value) * 100) 
+        const refundPercentage = cancelled_value > 0
+            ? Math.round((refund_amount / cancelled_value) * 100)
             : 0;
 
         res.status(200).json({
@@ -314,7 +314,7 @@ export const calculateRefund = async (req, res) => {
             refundAmount: refund_amount,
             remainingPayableAmount: remaining_payable,
             paymentStatus: resolvedPaymentStatus,
-            
+
             // Required step output values
             total_booking_value: totalBookingAmount,
             cancelled_value,
@@ -416,7 +416,7 @@ export const createRefundRequest = async (req, res) => {
         // 1. Calculate original total booking amount of active rooms + pickup before this cancellation
         const activeRooms = booking.bookedRooms.filter(r => r.status !== "cancelled");
         const roomsTotalValue = activeRooms.reduce((sum, r) => sum + parseFloat(r.price), 0);
-        
+
         let pickupPriceValue = 0;
         if (booking.airportPickup && booking.airportPickup.status !== "CANCELLED") {
             pickupPriceValue = parseFloat(booking.airportPickup.price) || 15000;
@@ -847,6 +847,201 @@ export const getRefundReports = async (req, res) => {
         res.status(200).json({ success: true, data: refunds });
     } catch (error) {
         console.error("Error getting refund reports:", error);
+        res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
+
+// 7. Get All Pending Refunds categorized by Room, Tour, and Vehicle
+export const getAllPendingRefunds = async (req, res) => {
+    try {
+        // 1. Fetch Room Bookings pending refunds
+        const roomRefunds = await BookingRefund.findAll({
+            where: { status: "PENDING" },
+            include: [
+                {
+                    model: Booking,
+                    as: "booking",
+                    include: [
+                        { model: Customer, attributes: ["firstName", "lastName", "email", "phoneNumber"] }
+                    ]
+                },
+                {
+                    model: BookingRefundItem,
+                    as: "items",
+                    include: [
+                        { model: BookedRoom, as: "bookedRoom", include: [{ model: Room, attributes: ["room_number"] }] }
+                    ]
+                }
+            ]
+        });
+
+        // 2. Fetch Tour Bookings pending refunds
+        let tourRefunds = [];
+        try {
+            tourRefunds = await sequelize.query(`
+                SELECT tr.*, ti.fullName, ti.email, ti.phone, ti.startDate, t.packageName 
+                FROM tour_refunds tr 
+                JOIN tour_inquiries ti ON tr.inquiryRef = ti.inquiryRef 
+                JOIN tours t ON ti.tourId = t.id 
+                WHERE tr.status = 'requested'
+            `, { type: sequelize.QueryTypes.SELECT });
+        } catch (e) {
+            console.warn("tour_refunds table not created or has no data, returning empty array.");
+        }
+
+        // 3. Fetch Vehicle Rental Bookings pending refunds
+        let vehicleRefunds = [];
+        try {
+            vehicleRefunds = await sequelize.query(`
+                SELECT vr.*, c.firstName, c.lastName, c.email, c.phoneNumber 
+                FROM vehicle_refunds vr 
+                JOIN vehicle_bookings vb ON vr.bookingId = vb.id 
+                JOIN customer c ON vb.customerId = c.id 
+                WHERE vr.status = 'PENDING'
+            `, { type: sequelize.QueryTypes.SELECT });
+        } catch (e) {
+            console.warn("vehicle_refunds table not created or has no data, returning empty array.");
+        }
+
+        res.status(200).json({
+            success: true,
+            data: {
+                roomRefunds,
+                tourRefunds,
+                vehicleRefunds
+            }
+        });
+    } catch (error) {
+        console.error("Error getting all pending refunds:", error);
+        res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
+
+// 8. Action Categorized Refund Request (Approve/Reject)
+export const actionCategoryRefundRequest = async (req, res) => {
+    if (req.params.category === "room") {
+        return actionRefundRequest(req, res);
+    }
+
+    const t = await sequelize.transaction();
+    try {
+        const { category, refundId } = req.params;
+        const { status, paymentMethod, transactionRef, reason, amount } = req.body;
+
+        if (!status || (status !== "APPROVED" && status !== "REJECTED")) {
+            await t.rollback();
+            return res.status(400).json({ success: false, message: "Invalid refund review status action" });
+        }
+
+        if (category === "tour") {
+            const tourStatus = status === "APPROVED" ? "approved" : "rejected";
+            
+            const [refund] = await sequelize.query(
+                `SELECT * FROM tour_refunds WHERE id = :refundId AND status = 'requested'`,
+                { replacements: { refundId }, type: sequelize.QueryTypes.SELECT, transaction: t }
+            );
+
+            if (!refund) {
+                await t.rollback();
+                return res.status(404).json({ success: false, message: "Tour refund request not found" });
+            }
+
+            const approvedAmount = (amount !== undefined && !isNaN(parseFloat(amount)) && parseFloat(amount) >= 0)
+                ? parseFloat(amount)
+                : parseFloat(refund.refundAmount || 0);
+
+            await sequelize.query(
+                `UPDATE tour_refunds SET status = :status, refundAmount = :refundAmount, updatedAt = NOW() WHERE id = :refundId`,
+                {
+                    replacements: { status: tourStatus, refundAmount: approvedAmount, refundId },
+                    type: sequelize.QueryTypes.UPDATE,
+                    transaction: t
+                }
+            );
+
+            // Record negative payment entry in tour_payments if tour payments exist
+            if (status === "APPROVED" && approvedAmount > 0) {
+                try {
+                    const paymentNo = `TRF-RCPT-${refund.bookingId}-${Date.now()}`;
+                    await sequelize.query(`
+                        INSERT INTO tour_payments (
+                            inquiry_id, customer_id, payment_no, amount, currency, method, status, createdAt, updatedAt
+                        ) VALUES (
+                            (SELECT inquiryId FROM tour_bookings WHERE id = :bookingId LIMIT 1),
+                            (SELECT customerId FROM tour_inquiries WHERE id = (SELECT inquiryId FROM tour_bookings WHERE id = :bookingId LIMIT 1) LIMIT 1),
+                            :paymentNo, :amount, 'LKR', :method, 'success', NOW(), NOW()
+                        )
+                    `, {
+                        replacements: {
+                            bookingId: refund.bookingId,
+                            paymentNo,
+                            amount: -approvedAmount,
+                            method: (paymentMethod || 'Cash').toLowerCase()
+                        },
+                        type: sequelize.QueryTypes.INSERT,
+                        transaction: t
+                    });
+                } catch (pe) {
+                    console.error("Error creating tour payment entry:", pe);
+                }
+            }
+        } else if (category === "vehicle") {
+            const vehicleStatus = status === "APPROVED" ? "APPROVED" : "REJECTED";
+
+            const [refund] = await sequelize.query(
+                `SELECT * FROM vehicle_refunds WHERE id = :refundId AND status = 'PENDING'`,
+                { replacements: { refundId }, type: sequelize.QueryTypes.SELECT, transaction: t }
+            );
+
+            if (!refund) {
+                await t.rollback();
+                return res.status(404).json({ success: false, message: "Vehicle refund request not found" });
+            }
+
+            const approvedAmount = (amount !== undefined && !isNaN(parseFloat(amount)) && parseFloat(amount) >= 0)
+                ? parseFloat(amount)
+                : parseFloat(refund.refundAmount || 0);
+
+            await sequelize.query(
+                `UPDATE vehicle_refunds SET status = :status, refundAmount = :refundAmount, updatedAt = NOW() WHERE id = :refundId`,
+                {
+                    replacements: { status: vehicleStatus, refundAmount: approvedAmount, refundId },
+                    type: sequelize.QueryTypes.UPDATE,
+                    transaction: t
+                }
+            );
+
+            // Record negative payment entry in vehicle payments if they exist
+            if (status === "APPROVED" && approvedAmount > 0) {
+                try {
+                    const paymentNo = `VRF-RCPT-${refund.bookingId}-${Date.now()}`;
+                    await sequelize.query(`
+                        INSERT INTO vehicle_payment (
+                            booking_id, customer_id, payment_no, amount, currency, method, status, createdAt, updatedAt
+                        ) VALUES (
+                            :bookingId, (SELECT customerId FROM vehicle_bookings WHERE id = :bookingId LIMIT 1), :paymentNo, :amount, 'LKR', :method, 'success', NOW(), NOW()
+                        )
+                    `, {
+                        replacements: {
+                            bookingId: refund.bookingId,
+                            paymentNo,
+                            amount: -approvedAmount,
+                            method: (paymentMethod || 'Cash').toLowerCase()
+                        },
+                        type: sequelize.QueryTypes.INSERT,
+                        transaction: t
+                    });
+                } catch (pe) {
+                    console.error("Error creating vehicle payment entry:", pe);
+                }
+            }
+        }
+
+        await t.commit();
+        res.status(200).json({ success: true, message: `Refund successfully processed` });
+    } catch (err) {
+        await t.rollback();
+        console.error("Error actioning category refund:", err);
         res.status(500).json({ success: false, message: "Internal server error" });
     }
 };

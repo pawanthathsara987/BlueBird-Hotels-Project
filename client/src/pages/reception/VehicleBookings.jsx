@@ -793,7 +793,7 @@ export default function VehicleBookings() {
                 </div>
 
                 <div className="flex gap-2 w-full md:w-auto overflow-x-auto">
-                    {["all", "pending_payment", "confirmed", "ongoing", "completed", "cancelled"].map((st) => (
+                    {["all", "pending_payment", "confirmed", "balance_paid", "ongoing", "completed", "cancelled"].map((st) => (
                         <button
                             key={st}
                             onClick={() => setStatusFilter(st)}
@@ -910,7 +910,7 @@ export default function VehicleBookings() {
                                                             ) : (
                                                                 <div className="flex justify-between text-rose-500 dark:text-rose-400">
                                                                     <span>Balance Due:</span>
-                                                                    <span>LKR {parseFloat(b.remainingAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                                    <span>LKR {parseFloat(b.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -1417,9 +1417,27 @@ export default function VehicleBookings() {
                                     {!selectedBooking.balancePaidAt ? (
                                         <>
                                             <div className="flex justify-between text-rose-600 dark:text-rose-400 font-extrabold text-sm border-t border-dashed dark:border-slate-800 pt-1.5">
-                                                <span>Remaining Balance Due:</span>
+                                                <span>Remaining Balance:</span>
                                                 <span>LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                             </div>
+                                            {["confirmed", "driver_assigned"].includes(selectedBooking.status) && parseFloat(policy?.securityDepositAmount || 0) > 0 && (
+                                                <>
+                                                    <div className="flex justify-between text-amber-600 dark:text-amber-400 font-extrabold text-sm">
+                                                        <span>+ Security Deposit (Refundable):</span>
+                                                        <span>LKR {parseFloat(policy?.securityDepositAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                    </div>
+                                                    <div className={`flex justify-between font-black text-base p-2 rounded-lg mt-1 ${theme.mode === "dark" ? "bg-rose-950/30 text-rose-400 border border-rose-900/40" : "bg-rose-50 text-rose-700 border border-rose-200"}`}>
+                                                        <span>Total Due Now:</span>
+                                                        <span>LKR {(parseFloat(selectedBooking.balanceAmount || 0) + parseFloat(policy?.securityDepositAmount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                    </div>
+                                                </>
+                                            )}
+                                            {!["confirmed", "driver_assigned"].includes(selectedBooking.status) && (
+                                                <div className={`flex justify-between font-black text-base p-2 rounded-lg mt-1 ${theme.mode === "dark" ? "bg-rose-950/30 text-rose-400 border border-rose-900/40" : "bg-rose-50 text-rose-700 border border-rose-200"}`}>
+                                                    <span>Total Due Now:</span>
+                                                    <span>LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                            )}
                                         </>
                                     ) : (
                                         <>
@@ -1480,7 +1498,7 @@ export default function VehicleBookings() {
                             ) && (
                                 <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/5 dark:bg-rose-500/2 space-y-3.5">
                                     <div className="flex items-center gap-1.5 text-rose-550 dark:text-rose-400 font-bold uppercase tracking-wider text-[10px]">
-                                        <span>💵 {selectedBooking.status === "completed" ? "Collect Final Settlement Payment" : "Collect Remaining Balance Payment"}</span>
+                                        <span>💵 {selectedBooking.status === "completed" ? "Collect Final Settlement Payment" : "Collect Remaining Balance + Security Deposit"}</span>
                                     </div>
                                     {selectedBooking.hireType === "with_driver" && !selectedBooking.driverId ? (
                                         <div className="flex items-start gap-2 p-3 bg-amber-500/10 text-amber-500 border border-amber-500/25 rounded-lg font-bold text-[11px]">
@@ -1494,13 +1512,31 @@ export default function VehicleBookings() {
                                         </div>
                                     ) : (
                                         <>
-                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-bold">
-                                                {selectedBooking.status === "completed" ? (
+                                            {!["confirmed", "driver_assigned"].includes(selectedBooking.status) ? (
+                                                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-bold">
                                                     <span>The customer has a pending outstanding bill of <span className="text-rose-500 font-extrabold">LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> for extra mileage, damages, or late return fees. Confirm payment to clear this booking.</span>
-                                                ) : (
-                                                    <span>The customer must pay the remaining balance of <span className="text-rose-500 font-extrabold">LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> to check-in/start the vehicle rental.</span>
-                                                )}
-                                            </p>
+                                                </p>
+                                            ) : (
+                                                <>
+                                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-bold">
+                                                        The customer must pay the remaining balance plus the refundable security deposit at vehicle pickup:
+                                                    </p>
+                                                    <div className={`rounded-lg border p-3 space-y-1.5 text-xs font-bold ${theme.mode === "dark" ? "bg-slate-800/40 border-slate-700" : "bg-white border-slate-200"}`}>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-slate-500">Remaining Balance:</span>
+                                                            <span className="text-rose-500">LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-slate-500">Security Deposit (Refundable):</span>
+                                                            <span className="text-indigo-500">LKR {parseFloat(policy?.securityDepositAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                        </div>
+                                                        <div className="flex justify-between border-t border-dashed border-slate-200 dark:border-slate-700 pt-1.5 text-sm">
+                                                            <span className="text-slate-700 dark:text-slate-200">Total to Collect:</span>
+                                                            <span className="text-rose-600 dark:text-rose-400 font-extrabold">LKR {(parseFloat(selectedBooking.balanceAmount || 0) + parseFloat(policy?.securityDepositAmount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
                                             <div className="flex flex-col sm:flex-row gap-3 items-end">
                                                 <div className="flex-1 w-full">
                                                     <label className="block text-[10px] text-slate-450 uppercase mb-1.5 font-bold">Select Payment Method</label>
@@ -1519,7 +1555,10 @@ export default function VehicleBookings() {
                                                     disabled={isCollecting}
                                                     className="px-5 py-2.5 text-xs font-black text-white bg-rose-600 hover:bg-rose-700 disabled:bg-slate-400 rounded-lg transition shadow-sm cursor-pointer select-none whitespace-nowrap h-9 flex items-center justify-center"
                                                 >
-                                                    {isCollecting ? "Recording..." : `Confirm Payment (LKR ${parseFloat(selectedBooking.balanceAmount || 0).toLocaleString()})`}
+                                                    {isCollecting ? "Recording..." : !["confirmed", "driver_assigned"].includes(selectedBooking.status)
+                                                        ? `Confirm Payment (LKR ${parseFloat(selectedBooking.balanceAmount || 0).toLocaleString()})`
+                                                        : `Confirm Payment (LKR ${(parseFloat(selectedBooking.balanceAmount || 0) + parseFloat(policy?.securityDepositAmount || 0)).toLocaleString()})`
+                                                    }
                                                 </button>
                                             </div>
                                         </>

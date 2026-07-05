@@ -9,6 +9,11 @@ import NewBookingFlow from "./NewBookingFlow";
 export default function Booking() {
     const [activeTab, setActiveTab] = useState("list");
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+    const [dateFilter, setDateFilter] = useState("date"); // "date", "month"
+    const [selectedMonth, setSelectedMonth] = useState(() => {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    });
     const [searchTerm, setSearchTerm] = useState("");
     const [allBookings, setAllBookings] = useState([]);
     const [selectedBooking, setSelectedBooking] = useState(null);
@@ -224,7 +229,7 @@ export default function Booking() {
             toast.error("Popup blocked! Please allow popups to print invoices.");
             return;
         }
-        
+
         const customer = booking.raw?.Customer || {};
         const guestName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || booking.guestName;
         const checkIn = booking.checkInDate || booking.rawBookedRoom?.checkIn;
@@ -233,7 +238,7 @@ export default function Booking() {
         const roomType = booking.roomType || 'Standard';
         const priceText = booking.price || `Rs. ${booking.raw?.total_price || 0}`;
         const bookingNo = booking.raw?.bookingNo || `RES-${booking.raw?.id || 'N/A'}`;
-        
+
         printWindow.document.write(`
             <html>
             <head>
@@ -327,13 +332,13 @@ export default function Booking() {
             toast.error("Popup blocked! Please allow popups to print receipts.");
             return;
         }
-        
+
         const customer = booking.raw?.Customer || {};
         const guestName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || booking.guestName;
         const roomNo = booking.roomNumber || 'N/A';
         const priceText = booking.price || `Rs. ${booking.raw?.total_price || 0}`;
         const bookingNo = booking.raw?.bookingNo || `RES-${booking.raw?.id || 'N/A'}`;
-        
+
         printWindow.document.write(`
             <html>
             <head>
@@ -386,13 +391,23 @@ export default function Booking() {
         printWindow.print();
     };
 
-    // Filter bookings by date
+    // Filter bookings by date or month
     const dailyBookings = useMemo(() => {
+        if (dateFilter === "month" && selectedMonth) {
+            const [y, m] = selectedMonth.split("-").map(Number);
+            const monthStart = `${y}-${String(m).padStart(2, "0")}-01`;
+            const lastDay = new Date(y, m, 0).getDate();
+            const monthEnd = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+
+            return allBookings.filter((booking) => {
+                return booking.checkOutDate >= monthStart && booking.checkInDate <= monthEnd;
+            });
+        }
         return allBookings.filter((booking) => {
             return booking.checkInDate === selectedDate || booking.checkOutDate === selectedDate ||
                 (selectedDate >= booking.checkInDate && selectedDate <= booking.checkOutDate);
         });
-    }, [selectedDate, allBookings]);
+    }, [selectedDate, dateFilter, selectedMonth, allBookings]);
 
     // Filter bookings by search and status
     const filteredBookings = useMemo(() => {
@@ -400,7 +415,7 @@ export default function Booking() {
             const matchesSearch =
                 booking.guestName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (booking.roomNumber && booking.roomNumber.toString().includes(searchTerm));
-            
+
             let matchesStatus = true;
             if (statusFilter === "checkin") {
                 matchesStatus = booking.status === "Checked In";
@@ -637,35 +652,96 @@ export default function Booking() {
                     {/* Filter Section */}
                     <div className={`rounded-2xl border p-4 md:p-6 mb-6 shadow-sm ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
                         }`}>
+                        {/* Date Mode Tabs */}
+                        <div className="flex flex-wrap gap-2 mb-4">
+                            {[
+                                { id: "date", label: "By Date" },
+                                { id: "month", label: "By Month" },
+                            ].map((mode) => {
+                                const isActive = dateFilter === mode.id;
+                                return (
+                                    <button
+                                        key={mode.id}
+                                        onClick={() => setDateFilter(mode.id)}
+                                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                                            isActive
+                                                ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                                                : (theme.mode === "dark" ? "bg-slate-800 text-slate-400 border-slate-700 hover:text-white" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50")
+                                        }`}
+                                    >
+                                        {mode.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-                            {/* Date Navigation */}
-                            <div className="flex items-center gap-2 md:gap-4">
-                                <button
-                                    onClick={handlePreviousDate}
-                                    className={`p-2 rounded-xl transition cursor-pointer ${theme.mode === "dark" ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-600"}`}
-                                    title="Previous Date"
-                                >
-                                    <MdChevronLeft className="text-xl md:text-2xl" />
-                                </button>
-                                <div className="flex-1">
-                                    <input
-                                        type="date"
-                                        value={selectedDate}
-                                        onChange={(e) => setSelectedDate(e.target.value)}
-                                        className={`w-full px-3 md:px-4 py-2 text-sm border rounded-xl focus:outline-none ${theme.mode === "dark"
-                                            ? "bg-slate-900 border-slate-800 text-white focus:border-slate-600"
-                                            : "bg-white border-slate-200 text-slate-800 focus:border-blue-500"
-                                            }`}
-                                    />
+                            {/* Date or Month Picker */}
+                            {dateFilter === "date" ? (
+                                <div className="flex items-center gap-2 md:gap-4">
+                                    <button
+                                        onClick={handlePreviousDate}
+                                        className={`p-2 rounded-xl transition cursor-pointer ${theme.mode === "dark" ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-600"}`}
+                                        title="Previous Date"
+                                    >
+                                        <MdChevronLeft className="text-xl md:text-2xl" />
+                                    </button>
+                                    <div className="flex-1">
+                                        <input
+                                            type="date"
+                                            value={selectedDate}
+                                            onChange={(e) => setSelectedDate(e.target.value)}
+                                            className={`w-full px-3 md:px-4 py-2 text-sm border rounded-xl focus:outline-none ${theme.mode === "dark"
+                                                ? "bg-slate-900 border-slate-800 text-white focus:border-slate-600"
+                                                : "bg-white border-slate-200 text-slate-800 focus:border-blue-500"
+                                                }`}
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={handleNextDate}
+                                        className={`p-2 rounded-xl transition cursor-pointer ${theme.mode === "dark" ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-600"}`}
+                                        title="Next Date"
+                                    >
+                                        <MdChevronRight className="text-xl md:text-2xl" />
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={handleNextDate}
-                                    className={`p-2 rounded-xl transition cursor-pointer ${theme.mode === "dark" ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-600"}`}
-                                    title="Next Date"
-                                >
-                                    <MdChevronRight className="text-xl md:text-2xl" />
-                                </button>
-                            </div>
+                            ) : (
+                                <div className="flex items-center gap-2 md:gap-4">
+                                    <button
+                                        onClick={() => {
+                                            const [y, m] = selectedMonth.split("-").map(Number);
+                                            const prev = new Date(y, m - 2, 1);
+                                            setSelectedMonth(`${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`);
+                                        }}
+                                        className={`p-2 rounded-xl transition cursor-pointer ${theme.mode === "dark" ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-600"}`}
+                                        title="Previous Month"
+                                    >
+                                        <MdChevronLeft className="text-xl md:text-2xl" />
+                                    </button>
+                                    <div className="flex-1">
+                                        <input
+                                            type="month"
+                                            value={selectedMonth}
+                                            onChange={(e) => setSelectedMonth(e.target.value)}
+                                            className={`w-full px-3 md:px-4 py-2 text-sm border rounded-xl focus:outline-none ${theme.mode === "dark"
+                                                ? "bg-slate-900 border-slate-800 text-white focus:border-slate-600"
+                                                : "bg-white border-slate-200 text-slate-800 focus:border-blue-500"
+                                                }`}
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            const [y, m] = selectedMonth.split("-").map(Number);
+                                            const next = new Date(y, m, 1);
+                                            setSelectedMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`);
+                                        }}
+                                        className={`p-2 rounded-xl transition cursor-pointer ${theme.mode === "dark" ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-600"}`}
+                                        title="Next Month"
+                                    >
+                                        <MdChevronRight className="text-xl md:text-2xl" />
+                                    </button>
+                                </div>
+                            )}
 
                             {/* Search Box */}
                             <div className="relative">
@@ -682,13 +758,19 @@ export default function Booking() {
                                 />
                             </div>
 
-                            {/* Date Display */}
+                            {/* Date / Month Display */}
                             <div className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl border ${theme.mode === "dark"
                                 ? "bg-teal-950/20 border-teal-900/30 text-teal-400"
                                 : "bg-blue-50 border-blue-100 text-blue-900"
                                 }`}>
                                 <MdCalendarToday className="text-lg md:text-xl flex-shrink-0" />
-                                <span className="font-extrabold text-sm md:text-base">{formatDate(selectedDate)}</span>
+                                <span className="font-extrabold text-sm md:text-base">
+                                    {dateFilter === "date" ? formatDate(selectedDate) : (() => {
+                                        const [y, m] = selectedMonth.split("-").map(Number);
+                                        const d = new Date(y, m - 1, 1);
+                                        return `All bookings for ${d.toLocaleDateString("en-US", { month: "long", year: "numeric" })}`;
+                                    })()}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -709,8 +791,8 @@ export default function Booking() {
                                 else if (tab.color === "rose") activeClass = "bg-rose-600 text-white shadow-sm border-rose-600";
                                 else activeClass = "bg-slate-700 text-white shadow-sm border-slate-700";
                             } else {
-                                activeClass = theme.mode === "dark" 
-                                    ? "bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200" 
+                                activeClass = theme.mode === "dark"
+                                    ? "bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200"
                                     : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50";
                             }
                             return (
@@ -950,9 +1032,8 @@ export default function Booking() {
                             className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-40 transition-opacity animate-fadeIn"
                             onClick={() => setSelectedBooking(null)}
                         />
-                        <div className={`fixed inset-y-0 right-0 max-w-xl w-full z-50 shadow-2xl flex flex-col justify-between overflow-y-auto animate-slideLeft ${
-                            theme.mode === "dark" ? "bg-slate-900 border-l border-slate-800 text-white" : "bg-white text-slate-800"
-                        }`}>
+                        <div className={`fixed inset-y-0 right-0 max-w-xl w-full z-50 shadow-2xl flex flex-col justify-between overflow-y-auto animate-slideLeft ${theme.mode === "dark" ? "bg-slate-900 border-l border-slate-800 text-white" : "bg-white text-slate-800"
+                            }`}>
                             {/* Drawer Header */}
                             <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-blue-950 text-white">
                                 <div>
@@ -1171,13 +1252,13 @@ export default function Booking() {
                     </div>
                 );
             })()}
+            )}
 
             {/* CHECK-IN VERIFICATION MODAL */}
             {checkInModal && (
                 <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 animate-fadeIn">
-                    <div className={`w-full max-w-3xl rounded-2xl shadow-2xl border overflow-hidden max-h-[92vh] flex flex-col ${
-                        theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-800"
-                    }`}>
+                    <div className={`w-full max-w-3xl rounded-2xl shadow-2xl border overflow-hidden max-h-[92vh] flex flex-col ${theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-800"
+                        }`}>
                         {/* Modal Header */}
                         <div className={`flex items-center justify-between px-6 py-4 border-b ${theme.mode === "dark" ? "border-slate-800 bg-emerald-950/20" : "border-slate-100 bg-emerald-50/60"}`}>
                             <div className="flex items-center gap-3">
@@ -1214,14 +1295,14 @@ export default function Booking() {
                                             <CheckCircle size={18} className="text-emerald-500 flex-shrink-0" />
                                             <div>
                                                 <p className="text-xs font-black text-emerald-700 dark:text-emerald-400">Payment Fully Settled</p>
-                                                <p className="text-[10px] text-emerald-600 dark:text-emerald-500">Total of LKR {paymentSummary.totalPaid.toLocaleString(undefined, {minimumFractionDigits:2})} received. Ready to check in.</p>
+                                                <p className="text-[10px] text-emerald-600 dark:text-emerald-500">Total of LKR {paymentSummary.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })} received. Ready to check in.</p>
                                             </div>
                                         </div>
                                     ) : (
                                         <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40">
                                             <AlertCircle size={18} className="text-amber-500 flex-shrink-0" />
                                             <div>
-                                                <p className="text-xs font-black text-amber-700 dark:text-amber-400">Balance Due: LKR {balanceDue.toLocaleString(undefined, {minimumFractionDigits:2})}</p>
+                                                <p className="text-xs font-black text-amber-700 dark:text-amber-400">Balance Due: LKR {balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                                                 <p className="text-[10px] text-amber-600 dark:text-amber-500">Collect remaining payment before completing check-in.</p>
                                             </div>
                                         </div>
@@ -1273,13 +1354,13 @@ export default function Booking() {
                                                 </div>
                                                 <div className="flex justify-between">
                                                     <span className="text-slate-500">Payment Status</span>
-                                                    <span className={`font-bold text-[10px] px-2 py-0.5 rounded-full ${bk.payment_status === "FULLY_PAID" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400" : bk.payment_status === "PAY_AT_CHECKIN" ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400" : "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400"}`}>{bk.payment_status?.replace(/_/g," ")}</span>
+                                                    <span className={`font-bold text-[10px] px-2 py-0.5 rounded-full ${bk.payment_status === "FULLY_PAID" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400" : bk.payment_status === "PAY_AT_CHECKIN" ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400" : "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400"}`}>{bk.payment_status?.replace(/_/g, " ")}</span>
                                                 </div>
                                                 {bookedRooms && bookedRooms.map(br => (
                                                     <div key={br.id} className={`mt-1 p-2 rounded-lg border ${theme.mode === "dark" ? "bg-slate-900/40 border-slate-700" : "bg-white border-slate-200"}`}>
                                                         <div className="flex justify-between font-bold">
                                                             <span>Room {br.Room?.roomNumber || br.room_id}</span>
-                                                            <span className="text-emerald-600 dark:text-emerald-400">LKR {parseFloat(br.price).toLocaleString(undefined,{minimumFractionDigits:2})}</span>
+                                                            <span className="text-emerald-600 dark:text-emerald-400">LKR {parseFloat(br.price).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                                         </div>
                                                         <div className="text-[10px] text-slate-500 mt-0.5">
                                                             {br.checkIn} → {br.checkOut} · {br.board_type} · {br.adults} Adults, {br.kids} Kids
@@ -1297,16 +1378,16 @@ export default function Booking() {
                                         <div className="grid grid-cols-3 gap-3 mb-3">
                                             <div className="text-center">
                                                 <p className="text-[10px] text-slate-500 font-bold uppercase">Total Charge</p>
-                                                <p className="text-base font-black mt-0.5">LKR {paymentSummary.totalPrice.toLocaleString(undefined,{minimumFractionDigits:2})}</p>
+                                                <p className="text-base font-black mt-0.5">LKR {paymentSummary.totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                                             </div>
                                             <div className="text-center">
                                                 <p className="text-[10px] text-slate-500 font-bold uppercase">Paid</p>
-                                                <p className="text-base font-black text-emerald-500 mt-0.5">LKR {paymentSummary.totalPaid.toLocaleString(undefined,{minimumFractionDigits:2})}</p>
+                                                <p className="text-base font-black text-emerald-500 mt-0.5">LKR {paymentSummary.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                                             </div>
                                             <div className="text-center">
                                                 <p className="text-[10px] text-slate-500 font-bold uppercase">Balance Due</p>
                                                 <p className={`text-base font-black mt-0.5 ${balanceDue > 0 ? "text-amber-500" : "text-emerald-500"}`}>
-                                                    LKR {balanceDue.toLocaleString(undefined,{minimumFractionDigits:2})}
+                                                    LKR {balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                 </p>
                                             </div>
                                         </div>
@@ -1318,7 +1399,7 @@ export default function Booking() {
                                                         <div key={i} className={`flex justify-between items-center text-[10px] px-2.5 py-1.5 rounded-lg ${theme.mode === "dark" ? "bg-slate-900/60" : "bg-white"} border ${theme.mode === "dark" ? "border-slate-700" : "border-slate-200"}`}>
                                                             <span className="text-slate-500">{new Date(p.createdAt).toLocaleDateString()} — {p.method?.toUpperCase()}</span>
                                                             <span className={`font-bold ${p.status === "success" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500"}`}>
-                                                                LKR {p.amount.toLocaleString(undefined,{minimumFractionDigits:2})}
+                                                                LKR {p.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                             </span>
                                                         </div>
                                                     ))}
