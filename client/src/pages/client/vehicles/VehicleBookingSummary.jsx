@@ -162,11 +162,11 @@ export default function VehicleBookingSummary() {
 
               <div className="space-y-4">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                  <User className="w-4 h-4 text-purple-500" /> Chauffeur Assignment
+                  <User className="w-4 h-4 text-purple-500" /> Driver Assignment
                 </h3>
                 <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4 space-y-1">
                   <p className="font-bold text-blue-800 text-sm">
-                    {driverOption === "with" ? "Professional Chauffeur Driver" : "Self-Drive Option"}
+                    {driverOption === "with" ? "Professional Driver" : "Self-Drive Option"}
                   </p>
                   <p className="text-[11px] text-blue-600/90 leading-relaxed">
                     {driverOption === "with" 
@@ -190,7 +190,7 @@ export default function VehicleBookingSummary() {
                   </div>
                   {driverOption === "with" && (
                     <div className="flex justify-between">
-                      <span className="text-slate-550">Chauffeur Service Fee</span>
+                      <span className="text-slate-550">Driver Service Fee</span>
                       <span className="font-bold text-slate-900">{formatMoney(availability?.driverFee)}</span>
                     </div>
                   )}

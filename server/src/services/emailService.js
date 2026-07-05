@@ -558,7 +558,7 @@ export const sendAcceptedInquiryQuoteEmail = async (inquiry, booking, options = 
             <div class="content">
               <div class="section">
                 <p>Dear ${inquiry.fullName},</p>
-                <p>Great news! Your inquiry has been accepted and your booking quote is now ready.</p>
+                <p>Great news! Your inquiry has been accepted. To complete your tour booking, please pay the 50% advance payment.</p>
               </div>
 
               <div class="section details">

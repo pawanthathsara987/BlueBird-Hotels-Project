@@ -54,8 +54,6 @@ const EMPTY_FORM = {
   cost: "",
   vendor: "",
   performedBy: "",
-  nextServiceDue: "",
-  nextServiceMileage: "",
   notes: "",
 };
 
@@ -144,8 +142,6 @@ export default function ServiceLogManagement() {
       cost: log.cost ?? "",
       vendor: log.vendor || "",
       performedBy: log.performedBy || "",
-      nextServiceDue: log.nextServiceDue || "",
-      nextServiceMileage: log.nextServiceMileage ?? "",
       notes: log.notes || "",
     });
     setReceiptFile(null);
@@ -205,11 +201,6 @@ export default function ServiceLogManagement() {
 
   // ── Stats ────────────────────────────────────────
   const totalCost = useMemo(() => filtered.reduce((acc, l) => acc + Number(l.cost || 0), 0), [filtered]);
-  const upcomingServices = useMemo(() => {
-    const today = new Date().toISOString().split("T")[0];
-    const thirtyDays = new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0];
-    return logs.filter((l) => l.nextServiceDue && l.nextServiceDue >= today && l.nextServiceDue <= thirtyDays);
-  }, [logs]);
 
   // ── Vehicle helper ───────────────────────────────
   const vehicleName = (log) => {
@@ -255,7 +246,7 @@ export default function ServiceLogManagement() {
       <div className="w-full max-w-7xl mx-auto space-y-6">
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="text-xs font-bold uppercase tracking-wide text-slate-400">Total Records</div>
           <div className="mt-1 text-2xl font-bold text-slate-900">{filtered.length}</div>
@@ -263,10 +254,6 @@ export default function ServiceLogManagement() {
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="text-xs font-bold uppercase tracking-wide text-slate-400">Total Cost</div>
           <div className="mt-1 text-2xl font-bold text-emerald-700">{money(totalCost)}</div>
-        </div>
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
-          <div className="text-xs font-bold uppercase tracking-wide text-amber-600">Due in 30 Days</div>
-          <div className="mt-1 text-2xl font-bold text-amber-800">{upcomingServices.length}</div>
         </div>
       </div>
 
@@ -318,7 +305,6 @@ export default function ServiceLogManagement() {
                 <th className="px-4 py-3">Mileage</th>
                 <th className="px-4 py-3">Cost</th>
                 <th className="px-4 py-3">Vendor</th>
-                <th className="px-4 py-3">Next Due</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -336,13 +322,6 @@ export default function ServiceLogManagement() {
                   <td className="px-4 py-3 text-slate-700">{log.mileageAtService ? `${Number(log.mileageAtService).toLocaleString()} km` : "—"}</td>
                   <td className="px-4 py-3 font-medium text-slate-900">{money(log.cost)}</td>
                   <td className="px-4 py-3 text-slate-600">{log.vendor || "—"}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {log.nextServiceDue ? (
-                      <span className={`text-xs font-semibold ${new Date(log.nextServiceDue) < new Date() ? "text-red-600" : "text-slate-700"}`}>
-                        {log.nextServiceDue}
-                      </span>
-                    ) : "—"}
-                  </td>
                   <td className="px-4 py-3 text-right">
                     <div className="inline-flex gap-1 items-center">
                       {log.receiptUrl && (
@@ -436,18 +415,6 @@ export default function ServiceLogManagement() {
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Performed By</label>
                   <input type="text" value={form.performedBy} onChange={(e) => setForm({ ...form, performedBy: e.target.value })} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="Mechanic name" />
-                </div>
-
-                {/* Next service due */}
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Next Service Due</label>
-                  <input type="date" value={form.nextServiceDue} onChange={(e) => setForm({ ...form, nextServiceDue: e.target.value })} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" />
-                </div>
-
-                {/* Next service mileage */}
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Next Service Mileage</label>
-                  <input type="number" min="0" value={form.nextServiceMileage} onChange={(e) => setForm({ ...form, nextServiceMileage: e.target.value })} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="e.g. 50000" />
                 </div>
               </div>
 

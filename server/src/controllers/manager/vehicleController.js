@@ -6,6 +6,7 @@ import Vehicle from '../../models/vehicle/vehicleModel.js';
 import VehicleBooking from '../../models/vehicle/VehicleBookingModel.js';
 import supabase from '../../config/supabaseClient.js';
 import DriverPricingSetting from '../../models/vehicle/driverPricingModel.js';
+import VehicleRentalPolicy from '../../models/vehicle/vehicleRentalPolicyModel.js';
 
 const BLOCKING_BOOKING_STATUSES = [
   'pending_payment',
@@ -333,8 +334,9 @@ export const checkAvailability = async (req, res) => {
       });
     }
 
-    // 1-Day Post-Return Buffer: existing booking's returnDatetime must not be within 24hrs before requested pickup
-    const pickupDateWithBuffer = new Date(pickupDate.getTime() - 24 * 60 * 60 * 1000);
+    // Same-day return check: return date of existing booking must not be on or after the day of pickup
+    const pickupDateWithBuffer = new Date(pickupDate);
+    pickupDateWithBuffer.setHours(0, 0, 0, 0);
 
     const overlappingBooking = await VehicleBooking.findOne({
       where: {
@@ -373,6 +375,9 @@ export const checkAvailability = async (req, res) => {
     const depositAmount = parseFloat(((totalPrice * depositPercentage) / 100).toFixed(2));
     const balanceAmount = parseFloat((totalPrice - depositAmount).toFixed(2));
 
+    const [policy] = await VehicleRentalPolicy.findOrCreate({ where: { id: 1 }, defaults: { id: 1 } });
+    const securityDepositAmount = parseFloat(policy?.securityDepositAmount || 200.00);
+
     res.json({
       success: true,
       data: {
@@ -384,6 +389,8 @@ export const checkAvailability = async (req, res) => {
         depositPercentage,
         depositAmount: depositAmount.toFixed(2),
         balanceAmount: balanceAmount.toFixed(2),
+        securityDepositAmount: securityDepositAmount.toFixed(2),
+        termsAndConditions: policy?.termsAndConditions,
       },
     });
   } catch (err) {

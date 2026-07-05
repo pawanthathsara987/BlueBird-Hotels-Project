@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
-import { ClipboardCheck, Plus, Search, Pencil, Trash2, X, CheckCircle, AlertTriangle, HelpCircle } from "lucide-react";
+import { ClipboardCheck, Plus, Search, Pencil, Trash2, X, CheckCircle, AlertTriangle, HelpCircle, Eye } from "lucide-react";
 
 const API = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api").replace(/\/$/, "");
 
@@ -44,6 +44,7 @@ export default function ChecklistManagement() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [viewItem, setViewItem] = useState(null);
 
   // ── Load Data ──────────────────────────────────────
   const loadData = async () => {
@@ -212,7 +213,7 @@ export default function ChecklistManagement() {
             <tbody>
               {filtered.map((chk) => (
                 <tr key={chk.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition">
-                  <td className="px-4 py-3 font-medium text-slate-900">{chk.booking?.bookingNo || `BKG-${chk.bookingId}`}</td>
+                  <td className="px-4 py-3 font-semibold text-blue-600 hover:text-blue-800 cursor-pointer" onClick={() => setViewItem(chk)}>{chk.booking?.bookingNo || `BKG-${chk.bookingId}`}</td>
                   <td className="px-4 py-3 font-medium text-slate-900">{chk.vehicle?.plateNumber}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${chk.type === 'pickup' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
@@ -230,8 +231,11 @@ export default function ChecklistManagement() {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button onClick={() => openEdit(chk)} className="rounded-lg p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition"><Pencil className="h-4 w-4" /></button>
-                    <button onClick={() => setDeleteId(chk.id)} className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 transition"><Trash2 className="h-4 w-4" /></button>
+                    <div className="inline-flex gap-1 items-center">
+                      <button onClick={() => setViewItem(chk)} className="rounded-lg p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition" title="View Details"><Eye className="h-4 w-4" /></button>
+                      <button onClick={() => openEdit(chk)} className="rounded-lg p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition" title="Edit"><Pencil className="h-4 w-4" /></button>
+                      <button onClick={() => setDeleteId(chk.id)} className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 transition" title="Delete"><Trash2 className="h-4 w-4" /></button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -332,6 +336,118 @@ export default function ChecklistManagement() {
             <div className="mt-6 flex justify-end gap-3">
               <button onClick={() => setDeleteId(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600">Cancel</button>
               <button onClick={handleDelete} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── View Details Modal ───────────────────────── */}
+      {viewItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setViewItem(null)}>
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-2xl border border-slate-100" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="sticky top-0 z-10 flex justify-between items-center border-b border-slate-100 bg-white px-6 py-5 rounded-t-3xl">
+              <div>
+                <span className={`inline-block rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider ${viewItem.type === 'pickup' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                  {viewItem.type === 'pickup' ? 'Pre-Trip Inspection' : 'Post-Trip Inspection'}
+                </span>
+                <h2 className="text-lg font-black text-slate-800 tracking-tight mt-1">
+                  Inspection Report - {viewItem.booking?.bookingNo || `BKG-${viewItem.bookingId}`}
+                </h2>
+              </div>
+              <button onClick={() => setViewItem(null)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-50 transition cursor-pointer">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              {/* Meta Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50/70 p-4 rounded-2xl border border-slate-100">
+                <div>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider text-[9px]">Inspector</span>
+                  <p className="text-sm font-semibold text-slate-700 mt-0.5">{viewItem.inspectedBy}</p>
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider text-[9px]">Date & Time</span>
+                  <p className="text-sm font-semibold text-slate-700 mt-0.5">{new Date(viewItem.inspectedAt).toLocaleString()}</p>
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider text-[9px]">Mileage</span>
+                  <p className="text-sm font-semibold text-slate-700 mt-0.5">{Number(viewItem.mileage).toLocaleString()} km</p>
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider text-[9px]">Fuel Level</span>
+                  <p className="text-sm font-semibold text-slate-700 mt-0.5">{viewItem.fuelLevel}</p>
+                </div>
+              </div>
+
+              {/* Vehicle Section */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider text-[9px]">Vehicle Details</h4>
+                <div className="flex items-center gap-3 p-4 border border-slate-100 rounded-2xl bg-white shadow-2xs">
+                  <div className="bg-blue-50 p-2.5 rounded-xl text-blue-600">
+                    <ClipboardCheck size={20} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-black text-slate-800">{viewItem.vehicle?.brand} {viewItem.vehicle?.model}</p>
+                    <p className="text-xs font-semibold text-slate-400">Plate Number: <span className="text-slate-600 font-bold">{viewItem.vehicle?.plateNumber}</span></p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Checklist Parameters */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider text-[9px]">Condition Report Checklist</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {[
+                    { key: 'exteriorBody', label: 'Exterior Body' },
+                    { key: 'tires', label: 'Tires' },
+                    { key: 'windshield', label: 'Windshield' },
+                    { key: 'lights', label: 'Lights' },
+                    { key: 'mirrors', label: 'Mirrors' },
+                    { key: 'interior', label: 'Interior' },
+                    { key: 'ac', label: 'A/C System' }
+                  ].map(param => (
+                    <div key={param.key} className="flex justify-between items-center px-4 py-3 border border-slate-100 rounded-xl bg-slate-50/20 hover:bg-slate-50/50 transition">
+                      <span className="text-xs font-bold text-slate-600">{param.label}</span>
+                      <div className="flex items-center gap-2">
+                        {STATUS_ICONS[viewItem[param.key]]}
+                        <span className="text-xs font-black uppercase text-slate-700">{viewItem[param.key]}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Damage Notes */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider text-[9px]">Damage / Inspection Notes</h4>
+                <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl text-xs text-slate-600 leading-relaxed min-h-[60px]">
+                  {viewItem.damageNotes || 'No damages or issues noted.'}
+                </div>
+              </div>
+
+              {/* Signature Status */}
+              <div className="flex items-center justify-between p-4 bg-slate-50/50 border border-slate-100 rounded-2xl">
+                <div>
+                  <h5 className="text-xs font-bold text-slate-700">Customer Signature / Sign-off</h5>
+                  <p className="text-[10px] text-slate-400 font-medium">Verify that the guest signed off the terms of this inspection sheet.</p>
+                </div>
+                <div>
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${viewItem.customerSignature ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
+                    {viewItem.customerSignature ? <CheckCircle size={12} /> : null}
+                    {viewItem.customerSignature ? 'Signed Off' : 'Not Signed'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end p-6 border-t border-slate-100 bg-slate-50/20 sticky bottom-0">
+              <button onClick={() => setViewItem(null)} className="rounded-2xl bg-slate-800 hover:bg-slate-900 px-6 py-3 text-xs font-black uppercase tracking-wider text-white transition cursor-pointer">
+                Close Report
+              </button>
             </div>
           </div>
         </div>
