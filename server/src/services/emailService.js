@@ -27,6 +27,15 @@ const transporterConfig = useGmail
 
 const transporter = nodemailer.createTransport(transporterConfig);
 
+// Verify transporter connection on startup
+transporter.verify(function (error, success) {
+  if (error) {
+    console.error("[EMAIL ERROR] Transporter connection verification failed:", error.message);
+  } else {
+    console.log("[EMAIL SUCCESS] Transporter is ready to send messages");
+  }
+});
+
 const getCurrencyType = () => process.env.CURRENCY_TYPE || 'LKR';
 
 // Helper function to send emails

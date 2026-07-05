@@ -549,7 +549,7 @@ export default function BookingsTab({
     const checkIn = formatDate(booking.checkIn);
     const checkOut = formatDate(booking.checkOut);
     const createdDate = formatDateTime(booking.raw?.createdAt);
-    const supportContact = process.env.VITE_SUPPORT_CONTACT || "+94701950195";
+    const supportContact = import.meta.env.VITE_SUPPORT_CONTACT || "+94701950195";
     const customerName = profile.name || "Valued Guest";
     const customerEmail = profile.email || "";
     const customerPhone = profile.phone || "";
