@@ -16,8 +16,7 @@ async function startServer() {
     await sequelize.authenticate();
     console.log('✅ MySQL connected (Aiven)');
 
-    await seedDefaultSettings();
-    
+    await seedDefaultSettings();    
 
     // await sequelize.sync({ alter: false }); // Keep startup read-only against existing tables
     console.log('✅ Models synced');

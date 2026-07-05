@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { ArrowLeft, CalendarDays, ShieldAlert, ShieldCheck, Star } from "lucide-react";
+import { ArrowLeft, CalendarDays, ShieldAlert, ShieldCheck, Star, Sparkles, MapPin, Info, Clock } from "lucide-react";
 
 const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api").replace(/\/$/, "");
 
@@ -296,224 +296,295 @@ export default function VehicleBookingPage() {
       : "Pricing updates automatically when you change the dates or driver option.";
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.10),transparent_40%),linear-gradient(180deg,#f8fafc_0%,#f1f5f9_100%)] py-10 px-4 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-5xl">
-        <Link to={`/vehicles/${id}`} className="mb-6 inline-flex items-center text-sm font-semibold text-sky-700 transition hover:text-sky-800">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to vehicle details
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.06),transparent_40%)] bg-slate-50 text-slate-900 flex flex-col font-sans">
+      <Header />
+      
+      <div className="flex-1 mx-auto max-w-7xl w-full px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+        
+        {/* Navigation back tracker */}
+        <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
+          <Link to="/" className="hover:text-slate-600 transition">Home</Link>
+          <span>/</span>
+          <Link to="/vehicles" className="hover:text-slate-600 transition">Fleet</Link>
+          <span>/</span>
+          <Link to={`/vehicles/${id}`} className="hover:text-slate-600 transition truncate">{vehicle?.brand} {vehicle?.model}</Link>
+          <span>/</span>
+          <span className="text-slate-600">Checkout</span>
+        </div>
+
+        {/* Back Link Button */}
+        <Link 
+          to={`/vehicles/${id}`} 
+          className="inline-flex items-center gap-2 text-sm font-bold text-slate-700 hover:text-blue-600 transition bg-white px-4 py-2.5 rounded-xl border border-slate-100 shadow-xs"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to Vehicle Details
         </Link>
 
-        <div className="overflow-hidden rounded-4xl border border-white/60 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.14)]">
-          <div className="bg-slate-950 px-6 py-8 text-white sm:px-8">
-            <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.25em] text-sky-300">
-              <Star className="h-4 w-4" /> Premium vehicle checkout
+        {/* Main Card Container wrapper */}
+        <div className="overflow-hidden rounded-3xl border border-slate-200/50 bg-white shadow-sm">
+          
+          {/* Header gradient banner */}
+          <div className="bg-slate-900 px-6 py-10 text-white sm:px-10 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900 to-blue-900/40 z-10" />
+            <div className="relative z-20 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-400">
+                <Sparkles className="h-4 w-4" /> Secure Reservations
+              </div>
+              <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Complete Your Booking</h1>
+              <p className="max-w-2xl text-xs text-slate-400 leading-relaxed">
+                Confirm your pickup times and driver preferences. Review pricing summary in the live check box on the right before checking out.
+              </p>
             </div>
-            <h1 className="mt-3 text-3xl font-black sm:text-4xl">Complete Your Booking</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-              Select your pickup and return dates here, choose whether you want a driver, and review the live price breakdown before confirming.
-            </p>
           </div>
 
-          <div className="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
-            <div className="border-b border-slate-100 p-6 sm:p-8 lg:border-b-0 lg:border-r">
+          <div className="grid gap-0 lg:grid-cols-12">
+            
+            {/* Left Column: Form details */}
+            <div className="lg:col-span-7 border-b border-slate-100 p-6 sm:p-8 lg:border-b-0 lg:border-r space-y-8">
               <form onSubmit={handleBookSubmit} className="space-y-8">
-                <section className="rounded-3xl border border-slate-100 bg-slate-50/80 p-5">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
-                    <CalendarDays className="h-4 w-4" /> Booking dates
-                  </div>
-                  <div className="mt-4 grid gap-4 md:grid-cols-2">
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Pickup Date & Time *</label>
-                      <input
-                        required
-                        type="datetime-local"
-                        min={getMinDatetimeStr()}
-                        value={pickupDate}
-                        onChange={handlePickupChange}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
-                      />
+                
+                {/* Section 1: Dates & Driver Option */}
+                <div className="space-y-5">
+                  <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
+                    <CalendarDays className="w-5 h-5 text-blue-500" /> 1. Booking Dates & Driver Options
+                  </h3>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Pickup Date & Time *</label>
+                      <div className="relative">
+                        <CalendarDays className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
+                        <input
+                          required
+                          type="datetime-local"
+                          min={getMinDatetimeStr()}
+                          value={pickupDate}
+                          onChange={handlePickupChange}
+                          className="w-full rounded-xl border border-slate-200 bg-slate-50 focus:bg-white pl-10 pr-4 py-3 text-xs outline-none transition focus:border-blue-400"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Return Date & Time *</label>
-                      <input
-                        required
-                        type="datetime-local"
-                        min={pickupDate || getMinDatetimeStr()}
-                        value={returnDate}
-                        onChange={(e) => setReturnDate(e.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
-                      />
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Return Date & Time *</label>
+                      <div className="relative">
+                        <CalendarDays className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
+                        <input
+                          required
+                          type="datetime-local"
+                          min={pickupDate || getMinDatetimeStr()}
+                          value={returnDate}
+                          onChange={(e) => setReturnDate(e.target.value)}
+                          className="w-full rounded-xl border border-slate-200 bg-slate-50 focus:bg-white pl-10 pr-4 py-3 text-xs outline-none transition focus:border-blue-400"
+                        />
+                      </div>
                     </div>
                   </div>
                   
                   {availability?.available === false && (
-                    <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm font-medium text-amber-800">
-                      <div className="font-semibold">This vehicle is unavailable for the selected dates.</div>
-                      <div className="mt-1 text-xs text-amber-700">{availability.reason || 'Please choose different dates.'}</div>
+                    <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs font-semibold text-amber-800 flex items-start gap-2.5">
+                      <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold">Vehicle is booked or unavailable</p>
+                        <p className="font-medium text-amber-700/90 mt-0.5">{availability.reason || 'Please choose different dates.'}</p>
+                      </div>
                     </div>
                   )}
 
-                  <div className="mt-5">
-                    <div className="text-xs font-bold uppercase text-slate-500 mb-3">Driver option *</div>
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Chauffeur Service Options *</label>
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <label className={`flex cursor-pointer items-center justify-between rounded-2xl border px-4 py-3 transition ${driverOption === "without" ? "border-sky-400 bg-sky-50" : "border-slate-200 bg-white"}`}>
-                        <span>
-                          <span className="block text-sm font-semibold text-slate-900">Without driver</span>
-                          <span className="block text-xs text-slate-500">Self-drive booking</span>
-                        </span>
-                        <input type="radio" name="driverOption" value="without" checked={driverOption === "without"} onChange={() => setDriverOption("without")} />
+                      <label className={`flex cursor-pointer items-center justify-between rounded-2xl border p-4 transition ${driverOption === "without" ? "border-blue-500 bg-blue-50/50" : "border-slate-200 bg-white hover:bg-slate-50"}`}>
+                        <div className="space-y-0.5">
+                          <span className="block text-sm font-bold text-slate-800">Self-Driven Hire</span>
+                          <span className="block text-[10px] text-slate-500">I will drive myself</span>
+                        </div>
+                        <input type="radio" name="driverOption" value="without" checked={driverOption === "without"} onChange={() => setDriverOption("without")} className="accent-blue-600 w-4 h-4 cursor-pointer" />
                       </label>
-                      <label className={`flex cursor-pointer items-center justify-between rounded-2xl border px-4 py-3 transition ${driverOption === "with" ? "border-sky-400 bg-sky-50" : "border-slate-200 bg-white"}`}>
-                        <span>
-                          <span className="block text-sm font-semibold text-slate-900">With driver</span>
-                          <span className="block text-xs text-slate-500">Driver fee added per day</span>
-                        </span>
-                        <input type="radio" name="driverOption" value="with" checked={driverOption === "with"} onChange={() => setDriverOption("with")} />
+                      <label className={`flex cursor-pointer items-center justify-between rounded-2xl border p-4 transition ${driverOption === "with" ? "border-blue-500 bg-blue-50/50" : "border-slate-200 bg-white hover:bg-slate-50"}`}>
+                        <div className="space-y-0.5">
+                          <span className="block text-sm font-bold text-slate-800">Professional Chauffeur</span>
+                          <span className="block text-[10px] text-slate-500">Driver fees added per day</span>
+                        </div>
+                        <input type="radio" name="driverOption" value="with" checked={driverOption === "with"} onChange={() => setDriverOption("with")} className="accent-blue-600 w-4 h-4 cursor-pointer" />
                       </label>
                     </div>
                   </div>
-                </section>
+                </div>
 
-                <section className="space-y-5">
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900 mb-4 border-b border-slate-100 pb-2">Trip Details</h3>
-                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                      <div className="md:col-span-2">
-                        <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Pickup Location *</label>
-                        <input readOnly type="text" value={bookingForm.pickupLocation} className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition bg-slate-100 text-slate-600 font-semibold cursor-not-allowed" />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Dropoff Location</label>
-                        <input readOnly type="text" value={bookingForm.dropoffLocation} className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition bg-slate-100 text-slate-600 font-semibold cursor-not-allowed" />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Special Requirements</label>
-                        <textarea rows="3" value={bookingForm.specialRequirements} onChange={(e) => setBookingForm({ ...bookingForm, specialRequirements: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-100 transition bg-slate-50/50" placeholder="Child seat, extra luggage space..."></textarea>
+                {/* Section 2: Trip Details & Locations */}
+                <div className="space-y-5">
+                  <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
+                    <MapPin className="w-5 h-5 text-teal-500" /> 2. Trip Details & Locations
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Pickup Location (Fixed)</label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
+                        <input 
+                          readOnly 
+                          type="text" 
+                          value={bookingForm.pickupLocation} 
+                          className="w-full rounded-xl border border-slate-200 pl-9 pr-4 py-3 text-xs bg-slate-100 text-slate-500 font-semibold cursor-not-allowed outline-none" 
+                        />
                       </div>
                     </div>
-                  </div>
-
-                  {bookingError && (
-                    <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm font-medium text-rose-700">
-                      {bookingError}
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Dropoff Location (Fixed)</label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
+                        <input 
+                          readOnly 
+                          type="text" 
+                          value={bookingForm.dropoffLocation} 
+                          className="w-full rounded-xl border border-slate-200 pl-9 pr-4 py-3 text-xs bg-slate-100 text-slate-500 font-semibold cursor-not-allowed outline-none" 
+                        />
+                      </div>
                     </div>
-                  )}
-
-
-
-                  {/* Rental Terms & Conditions */}
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5">
-                    <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500 mb-3">Rental Terms & Conditions</h3>
-                    <ul className="space-y-2 text-sm text-slate-700">
-                      <li className="flex items-start gap-2">
-                        <span className="mt-0.5 text-sky-500">✓</span>
-                        <span>{availability?.depositPercentage || 50}% advance deposit is <strong>non-refundable</strong> upon cancellation.</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="mt-0.5 text-sky-500">✓</span>
-                        <span>Vehicle must be returned in the <strong>same condition</strong> as received.</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="mt-0.5 text-sky-500">✓</span>
-                        <span>Vehicle must be returned with the <strong>same fuel level</strong>.</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="mt-0.5 text-sky-500">✓</span>
-                        <span>Vehicle <strong>cannot be lent</strong> to third parties under any circumstances.</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="mt-0.5 text-sky-500">✓</span>
-                        <span>Late returns may incur additional charges as per rental policy.</span>
-                      </li>
-                    </ul>
+                    <div className="md:col-span-2 space-y-1">
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Special Requests / Requirements</label>
+                      <textarea 
+                        rows="3" 
+                        value={bookingForm.specialRequirements} 
+                        onChange={(e) => setBookingForm({ ...bookingForm, specialRequirements: e.target.value })} 
+                        className="w-full rounded-xl border border-slate-200 px-4 py-3 text-xs outline-none focus:border-blue-400 focus:bg-white bg-slate-50 transition" 
+                        placeholder="Child seat, extra luggage rack, specific arrival information..."
+                      />
+                    </div>
                   </div>
+                </div>
 
-                  <div className="pt-2">
-                    <button
-                      type="submit"
-                      disabled={!canSubmit}
-                      className="flex w-full items-center justify-center rounded-2xl bg-sky-600 px-4 py-4 text-sm font-semibold text-white shadow-[0_4px_14px_0_rgba(2,132,199,0.39)] transition hover:bg-sky-700 hover:shadow-[0_6px_20px_rgba(2,132,199,0.23)] disabled:opacity-50 disabled:shadow-none"
-                    >
-                      Proceed to Summary
-                    </button>
-                    <p className="mt-4 text-center text-xs text-slate-500">
-                      By confirming, you agree to the rental terms above. You will secure this reservation by paying the {availability?.depositPercentage || 50}% advance deposit.
-                    </p>
+                {/* Terms and Conditions block */}
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-5 space-y-3">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
+                    <Info className="w-4 h-4 text-slate-400" /> Rental Terms & Conditions
+                  </h4>
+                  <ul className="text-xs text-slate-650 space-y-2">
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 font-black">✓</span>
+                      <span>{availability?.depositPercentage || 50}% advance deposit required to secure the vehicle booking.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 font-black">✓</span>
+                      <span>The vehicle must be returned with the same fuel level as checked out.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 font-black">✓</span>
+                      <span>Optional driver options are charged on a flat daily base rate.</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {bookingError && (
+                  <div className="rounded-xl border border-rose-100 bg-rose-50 p-4 text-xs font-semibold text-rose-700">
+                    {bookingError}
                   </div>
-                </section>
+                )}
+
+                {/* Submit Container */}
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={!canSubmit}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 shadow-lg shadow-blue-600/20 active:scale-[0.98] transition cursor-pointer disabled:opacity-50 disabled:shadow-none"
+                  >
+                    Proceed to Reservation Summary
+                  </button>
+                  <p className="mt-3 text-center text-[10px] text-slate-400">
+                    By checking out, you agree to our standard vehicle renting policies. Live availability responses update rates automatically.
+                  </p>
+                </div>
+
               </form>
             </div>
 
-            <aside className="space-y-6 bg-slate-50/70 p-6 sm:p-8">
-              <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
+            {/* Right Column: Reservation Invoice Summary sidebar */}
+            <aside className="lg:col-span-5 bg-slate-50/70 p-6 sm:p-8 space-y-6">
+              
+              {/* Selected Vehicle Thumbnail Card */}
+              <div className="rounded-2xl border border-slate-100 bg-white shadow-xs overflow-hidden">
                 <img
                   src={vehicle?.image || "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80"}
-                  alt={`${vehicle?.brand || "Vehicle"} ${vehicle?.model || ""}`}
-                  className="h-56 w-full object-cover"
+                  alt={`${vehicle?.brand} ${vehicle?.model}`}
+                  className="h-44 w-full object-cover"
                 />
-                <div className="p-5">
-                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Selected vehicle</p>
-                  <h2 className="mt-2 text-2xl font-black text-slate-950">
-                    {vehicle?.brand || "Premium"} {vehicle?.model || "Vehicle"}
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{vehicle?.description || "Premium rental vehicle."}</p>
+                <div className="p-4 space-y-1">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Selected Option</span>
+                  <h4 className="text-lg font-bold text-slate-800">{vehicle?.brand} {vehicle?.model}</h4>
+                  <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">{vehicle?.description || "Premium rental fleet vehicle."}</p>
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
-                  {availability?.available ? <ShieldCheck className="h-4 w-4 text-emerald-500" /> : <ShieldAlert className="h-4 w-4 text-amber-500" />}
-                  Live booking status
+              {/* Pricing breakdown card */}
+              <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-xs space-y-4">
+                
+                {/* Availability status badge */}
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-3">
+                  {availability?.available ? (
+                    <>
+                      <ShieldCheck className="h-4 w-4 text-emerald-500 animate-pulse" />
+                      <span className="text-emerald-700">Live Status: Available</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldAlert className="h-4 w-4 text-amber-500" />
+                      <span className="text-amber-700">Check Parameters</span>
+                    </>
+                  )}
                 </div>
 
-                <div className="mt-4 rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm font-semibold text-slate-900">
-                    {!pickupDate || !returnDate
-                      ? "Select your dates to start pricing."
-                      : availabilityLoading
-                        ? "Checking availability..."
-                        : availability?.available
-                          ? "Vehicle is available for the selected dates."
-                          : availability?.reason || "This vehicle is unavailable for the selected dates."}
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">{availabilityWarning}</p>
-                </div>
+                {/* Calculation Rows */}
+                <div className="space-y-2 text-xs font-medium">
+                  <div className="flex justify-between py-2 border-b border-slate-50">
+                    <span className="text-slate-500">Rental Duration</span>
+                    <span className="text-slate-800 font-bold">{availability?.days ?? "-"} Days</span>
+                  </div>
+                  
+                  <div className="flex justify-between py-2 border-b border-slate-50">
+                    <span className="text-slate-500">Base Daily Rate</span>
+                    <span className="text-slate-800 font-bold">
+                      {availability?.pricePerDay ? formatMoney(availability.pricePerDay) : formatMoney(vehicle?.pricePerDay)}
+                    </span>
+                  </div>
 
-                <div className="mt-5 space-y-3 text-sm">
-                  <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
-                    <span className="text-slate-500">Days</span>
-                    <span className="font-semibold text-slate-900">{availability?.days ?? "-"}</span>
+                  <div className="flex justify-between py-2 border-b border-slate-50">
+                    <span className="text-slate-500">Chauffeur Service Fee</span>
+                    <span className="text-slate-800 font-bold">
+                      {availability?.driverFee ? formatMoney(availability.driverFee) : driverOption === "with" ? "Calculating..." : formatMoney(0)}
+                    </span>
                   </div>
-                  <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
-                    <span className="text-slate-500">Vehicle rate</span>
-                    <span className="font-semibold text-slate-900">{availability?.pricePerDay ? formatMoney(availability.pricePerDay) : formatMoney(vehicle?.pricePerDay)}</span>
+
+                  <div className="flex justify-between items-center py-3 bg-slate-900 text-white px-3.5 rounded-xl mt-3">
+                    <span className="font-semibold text-slate-200">Total Rental Cost</span>
+                    <span className="text-base font-black">{availability?.totalPrice ? formatMoney(availability.totalPrice) : "—"}</span>
                   </div>
-                  <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
-                    <span className="text-slate-500">Driver fee</span>
-                    <span className="font-semibold text-slate-900">{availability?.driverFee ? formatMoney(availability.driverFee) : driverOption === "with" ? "Calculating..." : formatMoney(0)}</span>
+
+                  <div className="flex justify-between items-center py-2.5 bg-blue-50 text-blue-900 px-3.5 rounded-xl mt-2">
+                    <span className="font-bold text-blue-700">{availability?.depositPercentage || 50}% Advance Deposit</span>
+                    <span className="font-black">{summaryDeposit ? formatMoney(summaryDeposit) : "—"}</span>
                   </div>
-                  <div className="flex items-center justify-between rounded-2xl bg-slate-950 px-4 py-4 text-white">
-                    <span className="font-medium text-slate-200">Total price</span>
-                    <span className="text-lg font-black">{availability?.totalPrice ? formatMoney(availability.totalPrice) : "—"}</span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-2xl bg-sky-50 px-4 py-3">
-                    <span className="text-sky-900">{availability?.depositPercentage || 50}% deposit</span>
-                    <span className="font-semibold text-sky-950">{summaryDeposit ? formatMoney(summaryDeposit) : "—"}</span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-2xl bg-emerald-50 px-4 py-3">
-                    <span className="text-emerald-900">Remaining balance</span>
-                    <span className="font-semibold text-emerald-950">{summaryBalance ? formatMoney(summaryBalance) : "—"}</span>
+
+                  <div className="flex justify-between items-center py-2.5 bg-emerald-50 text-emerald-900 px-3.5 rounded-xl mt-2">
+                    <span className="font-bold text-emerald-700">Due at Pickup</span>
+                    <span className="font-black">{summaryBalance ? formatMoney(summaryBalance) : "—"}</span>
                   </div>
                 </div>
 
-                <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-4 text-xs leading-6 text-slate-500">
-                  Deposit and balance values are recalculated from the live availability response every time you change the dates or driver option.
+                {/* Recalculate hint */}
+                <div className="flex gap-2 items-start bg-slate-50 p-3 rounded-xl border border-slate-100 text-[10px] text-slate-400 mt-2 leading-relaxed">
+                  <Clock className="w-3.5 h-3.5 shrink-0 text-slate-400 mt-0.5" />
+                  <span>Invoice parameters are verified in real time when you toggle driver preferences or change pickup dates.</span>
                 </div>
+
               </div>
+
             </aside>
           </div>
+
         </div>
       </div>
+
       <Footer />
     </div>
   );

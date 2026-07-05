@@ -143,7 +143,7 @@ const validateLeaveLimit = async (staffId, leaveTypeId, totalDays, excludeLeaveI
 const syncLeaveToAttendance = async (leaveRequest) => {
     try {
         const { staffId, startDate, endDate, status } = leaveRequest;
-        
+
         // Generate list of dates in range
         const dates = [];
         let current = dayjs(startDate);
@@ -203,7 +203,7 @@ export const createLeaveRequest = async (req, res) => {
     try {
         // Assume admin creates leave on behalf of employee
         const { staffId, leaveTypeId, startDate, endDate, totalDays, reason, status } = req.body;
-        
+
         // Basic validation
         if (!staffId || !leaveTypeId || !startDate || !endDate || !totalDays) {
             return res.status(400).json({ success: false, message: "Missing required fields" });

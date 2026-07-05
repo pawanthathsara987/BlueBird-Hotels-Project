@@ -3,12 +3,12 @@ import PropTypes from "prop-types";
 import toast from "react-hot-toast";
 import { ShoppingBag, X, Upload, ArrowLeft, ArrowRight } from "lucide-react";
 
-export default function AddEditItemModal({ isOpen, onClose, editingItem, onSubmit, isSubmitting }) {
+export default function AddEditItemModal({ isOpen, onClose, editingItem, onSubmit, isSubmitting, categories = [] }) {
   // Form states
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    category: "Clothes",
+    category: categories[0]?.name || "Clothes",
     price: "",
     availableQuantity: "",
   });
@@ -38,13 +38,13 @@ export default function AddEditItemModal({ isOpen, onClose, editingItem, onSubmi
       setFormData({
         name: "",
         description: "",
-        category: "Clothes",
+        category: categories[0]?.name || "Clothes",
         price: "",
         availableQuantity: "",
       });
       setItemImages([]);
     }
-  }, [editingItem, isOpen]);
+  }, [editingItem, isOpen, categories]);
 
   if (!isOpen) return null;
 
@@ -176,9 +176,11 @@ export default function AddEditItemModal({ isOpen, onClose, editingItem, onSubmi
                 onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value }))}
                 className="w-full bg-white border border-slate-200 text-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
               >
-                <option value="Clothes">Clothes</option>
-                <option value="Accessories">Accessories</option>
-                <option value="Other">Other</option>
+                {categories.map((cat) => (
+                  <option key={cat.categoryId} value={cat.name}>
+                    {cat.name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -349,4 +351,5 @@ AddEditItemModal.propTypes = {
   editingItem: PropTypes.object,
   onSubmit: PropTypes.func.isRequired,
   isSubmitting: PropTypes.bool.isRequired,
+  categories: PropTypes.array,
 };
