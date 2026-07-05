@@ -8,11 +8,11 @@ import {
   Car,
   User,
   History,
-  Bell,
   Star,
   Sliders,
   LogOut,
   ChevronUp,
+  Home,
   X
 } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -62,8 +62,7 @@ export default function DashboardSidebar({
   ];
 
   const preferenceTabs = [
-    { id: "reviews", label: "My Reviews", icon: <Star size={16} /> },
-    { id: "notifications", label: "Notifications", icon: <Bell size={16} /> }
+    { id: "reviews", label: "My Reviews", icon: <Star size={16} /> }
   ];
 
 
@@ -76,22 +75,35 @@ export default function DashboardSidebar({
   return (
     <>
       {/* DESKTOP SIDEBAR NAVIGATION */}
-      <aside className="hidden md:flex flex-col w-72 self-stretch bg-[#0f172a] text-slate-100 border-r border-slate-800/80 shrink-0 overflow-y-auto scrollbar-hide">
+      <aside className="hidden md:flex flex-col w-72 self-stretch bg-[#0f172a] text-slate-100 border-r border-slate-800/80 shrink-0 overflow-hidden h-full">
 
         {/* Branding Header */}
         <div className="px-6 py-5 border-b border-slate-800/80 flex items-center gap-4">
-          <div className="relative flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-md shadow-blue-500/20">
-            <User className="text-2xl text-white animate-pulse" size={24} />
+          <div className="relative flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-md shadow-blue-500/20 font-bold text-white uppercase text-sm shrink-0">
+            {profile.name ? (profile.name.trim().split(/\s+/).map(n => n[0]).join("").substring(0, 2)) : "G"}
             <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-[#0f172a] rounded-full" />
           </div>
-          <div>
-            <div className="text-[10px] font-semibold text-blue-400 tracking-widest uppercase">BlueBird Hotels</div>
-            <h1 className="text-lg font-bold text-slate-100 leading-tight">Customer Portal</h1>
+          <div className="min-w-0 overflow-hidden">
+            <div className="text-[10px] font-semibold text-blue-400 tracking-widest uppercase truncate">BlueBird Hotels</div>
+            <h1 className="text-sm font-bold text-slate-100 leading-tight truncate">{profile.name}</h1>
           </div>
         </div>
 
         {/* Navigation Menu */}
-        <nav className="px-4 py-5 space-y-6">
+        <nav className="px-4 py-5 space-y-6 flex-1 overflow-y-auto scrollbar-hide">
+          {/* Main Navigation */}
+          <div>
+            <p className="px-4 text-[10px] font-semibold text-slate-500 tracking-widest uppercase mb-3">Portal Links</p>
+            <div className="space-y-1">
+              <Link
+                to="/"
+                className="flex items-center gap-3 py-3 px-4 text-xs font-semibold tracking-wide rounded-xl text-slate-400 border border-transparent hover:bg-slate-800/50 hover:text-slate-100 hover:translate-x-1 transition-all duration-300"
+              >
+                <Home size={16} />
+                <span>Back to Home</span>
+              </Link>
+            </div>
+          </div>
           {/* Workspace Group */}
           <div>
             <p className="px-4 text-[10px] font-semibold text-slate-500 tracking-widest uppercase mb-3">Workspace</p>
@@ -180,11 +192,9 @@ export default function DashboardSidebar({
             className="flex items-center justify-between w-full p-2.5 rounded-xl bg-slate-800/20 border border-slate-800/40 text-left font-sans overflow-hidden focus:outline-none hover:bg-slate-800/40 active:scale-[0.98] transition-all"
           >
             <div className="flex items-center gap-3 overflow-hidden">
-              <img
-                src={profile.avatar}
-                alt={profile.name}
-                className="w-9 h-9 rounded-lg object-cover border border-slate-800/80 shrink-0"
-              />
+              <div className="w-9 h-9 rounded-lg bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-xs font-bold text-blue-450 shrink-0 uppercase">
+                {profile.name ? (profile.name.trim().split(/\s+/).map(n => n[0]).join("").substring(0, 2)) : "G"}
+              </div>
               <div className="flex-1 min-w-0 overflow-hidden">
                 <h4 className="text-xs font-semibold text-slate-200 truncate">{profile.name}</h4>
                 <p className="text-[10px] text-slate-500 truncate">{profile.email}</p>
@@ -221,6 +231,20 @@ export default function DashboardSidebar({
 
             {/* Core navigation inside mobile drawer */}
             <nav className="flex-grow space-y-7 overflow-y-auto">
+              {/* Main Navigation */}
+              <div>
+                <p className="px-4 text-[10px] font-semibold text-slate-500 tracking-widest uppercase mb-3">Portal Links</p>
+                <div className="space-y-1">
+                  <Link
+                    to="/"
+                    onClick={() => setIsMobileSidebarOpen(false)}
+                    className="flex items-center gap-3 py-3 px-4 text-xs font-semibold tracking-wide rounded-xl text-slate-400 border border-transparent hover:bg-slate-800/50 hover:text-slate-100 transition-all duration-300"
+                  >
+                    <Home size={16} />
+                    <span>Back to Home</span>
+                  </Link>
+                </div>
+              </div>
               {/* Workspace Group */}
               <div>
                 <p className="px-4 text-[10px] font-semibold text-slate-500 tracking-widest uppercase mb-3">Workspace</p>
@@ -316,11 +340,9 @@ export default function DashboardSidebar({
                 className="flex items-center justify-between w-full p-2.5 rounded-xl bg-slate-800/20 border border-slate-800/40 text-left font-sans overflow-hidden focus:outline-none hover:bg-slate-800/40 active:scale-[0.98] transition-all"
               >
                 <div className="flex items-center gap-3 overflow-hidden">
-                  <img
-                    src={profile.avatar}
-                    alt={profile.name}
-                    className="w-9 h-9 rounded-lg object-cover border border-slate-800/80 shrink-0"
-                  />
+                  <div className="w-9 h-9 rounded-lg bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-xs font-bold text-blue-450 shrink-0 uppercase">
+                    {profile.name ? (profile.name.trim().split(/\s+/).map(n => n[0]).join("").substring(0, 2)) : "G"}
+                  </div>
                   <div className="flex-1 min-w-0 overflow-hidden">
                     <h4 className="text-xs font-semibold text-slate-200 truncate">{profile.name}</h4>
                     <p className="text-[10px] text-slate-500 truncate">{profile.email}</p>
