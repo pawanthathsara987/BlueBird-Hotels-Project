@@ -341,10 +341,18 @@ const RoomSelector = () => {
             if (!groupedRoomTypes[rtId]) {
               groupedRoomTypes[rtId] = {
                 ...item,
-                boardPrices: {} // Store all board type prices from the DB
+                boardPrices: {}, // Store all board type prices from the DB
+                originalBoardPrices: {},
+                boardDiscounts: {},
+                boardDiscountTypes: {},
+                boardDiscountNames: {}
               };
             }
             groupedRoomTypes[rtId].boardPrices[item.board_type_name.toLowerCase()] = parseFloat(item.price);
+            groupedRoomTypes[rtId].originalBoardPrices[item.board_type_name.toLowerCase()] = parseFloat(item.originalPrice || item.price);
+            groupedRoomTypes[rtId].boardDiscounts[item.board_type_name.toLowerCase()] = parseFloat(item.discount || 0);
+            groupedRoomTypes[rtId].boardDiscountTypes[item.board_type_name.toLowerCase()] = item.discountType || null;
+            groupedRoomTypes[rtId].boardDiscountNames[item.board_type_name.toLowerCase()] = item.discountName || null;
           });
 
           const uniqueTypesList = Object.values(groupedRoomTypes);
@@ -355,6 +363,10 @@ const RoomSelector = () => {
 
             // Base price is the Room Only price from the DB, fallback to rt.price or 250
             const priceVal = rt.boardPrices["room only"] || parseFloat(rt.price) || 250;
+            const originalPriceVal = rt.originalBoardPrices["room only"] || parseFloat(rt.originalPrice || rt.price) || 250;
+            const discountVal = rt.boardDiscounts["room only"] || parseFloat(rt.discount || 0);
+            const discountType = rt.boardDiscountTypes["room only"] || rt.discountType || null;
+            const discountName = rt.boardDiscountNames["room only"] || rt.discountName || null;
 
             // Determine max occupancy from backend columns
             const dbMaxAdults = Number(rt.max_adults) || 3;
@@ -421,6 +433,12 @@ const RoomSelector = () => {
               image: rt.image_url,
               images: [rt.image_url],
               price: `${import.meta.env.VITE_CURRENCY_TYPE || "LKR"} ${priceVal}`,
+              priceVal,
+              originalPriceVal,
+              originalPrice: `${import.meta.env.VITE_CURRENCY_TYPE || "LKR"} ${originalPriceVal}`,
+              discountVal,
+              discountType,
+              discountName,
               description,
               tagline,
               roomSize: size,
@@ -431,7 +449,11 @@ const RoomSelector = () => {
               features,
               availableRooms: typeAvailableRooms,
               availableRoomsCount: rt.available_rooms_count,
-              boardPrices: rt.boardPrices
+              boardPrices: rt.boardPrices,
+              originalBoardPrices: rt.originalBoardPrices,
+              boardDiscounts: rt.boardDiscounts,
+              boardDiscountTypes: rt.boardDiscountTypes,
+              boardDiscountNames: rt.boardDiscountNames
             };
           });
           setRoomTypes(mapped);
@@ -453,7 +475,9 @@ const RoomSelector = () => {
           ...r,
           categoryIndex: typeIdx >= 0 ? typeIdx : r.categoryIndex,
           packageIndex: pkgIdx >= 0 ? pkgIdx : r.packageIndex,
-          price: calculateRoomPrice(r.roomType, r.boardType)
+          price: calculateRoomPrice(r.roomType, r.boardType),
+          originalPrice: calculateOriginalRoomPrice(r.roomType, r.boardType),
+          discount: calculateRoomDiscount(r.roomType, r.boardType)
         };
       }));
     }
@@ -472,6 +496,38 @@ const RoomSelector = () => {
     }
 
     return 0;
+  };
+
+  const calculateOriginalRoomPrice = (roomType, boardType) => {
+    if (!roomType) return 0;
+    const typeObj = roomTypes.find(t => t.name === roomType);
+    if (!typeObj) return 0;
+
+    const normalizedBoardType = (boardType || "Room Only").toLowerCase();
+
+    if (typeObj.originalBoardPrices && typeObj.originalBoardPrices[normalizedBoardType] !== undefined) {
+      return typeObj.originalBoardPrices[normalizedBoardType];
+    }
+
+    return calculateRoomPrice(roomType, boardType);
+  };
+
+  const calculateRoomDiscount = (roomType, boardType) => {
+    if (!roomType) return null;
+    const typeObj = roomTypes.find(t => t.name === roomType);
+    if (!typeObj) return null;
+
+    const normalizedBoardType = (boardType || "Room Only").toLowerCase();
+
+    if (typeObj.boardDiscounts && typeObj.boardDiscounts[normalizedBoardType] !== undefined) {
+      return {
+        value: typeObj.boardDiscounts[normalizedBoardType],
+        type: typeObj.boardDiscountTypes[normalizedBoardType],
+        name: typeObj.boardDiscountNames[normalizedBoardType]
+      };
+    }
+
+    return null;
   };
 
   // Helper to fetch airport pickup price dynamically from otherPrices state
@@ -765,7 +821,9 @@ const RoomSelector = () => {
           ...r,
           categoryIndex: newIndex,
           roomType: newRoomType,
-          price: calculateRoomPrice(newRoomType, r.boardType)
+          price: calculateRoomPrice(newRoomType, r.boardType),
+          originalPrice: calculateOriginalRoomPrice(newRoomType, r.boardType),
+          discount: calculateRoomDiscount(newRoomType, r.boardType)
         };
       }
       return r;
@@ -781,7 +839,9 @@ const RoomSelector = () => {
           ...r,
           categoryIndex: newIndex,
           roomType: newRoomType,
-          price: calculateRoomPrice(newRoomType, r.boardType)
+          price: calculateRoomPrice(newRoomType, r.boardType),
+          originalPrice: calculateOriginalRoomPrice(newRoomType, r.boardType),
+          discount: calculateRoomDiscount(newRoomType, r.boardType)
         };
       }
       return r;
@@ -798,7 +858,9 @@ const RoomSelector = () => {
           ...r,
           packageIndex: newIndex,
           boardType: newBoardType,
-          price: calculateRoomPrice(r.roomType, newBoardType)
+          price: calculateRoomPrice(r.roomType, newBoardType),
+          originalPrice: calculateOriginalRoomPrice(r.roomType, newBoardType),
+          discount: calculateRoomDiscount(r.roomType, newBoardType)
         };
       }
       return r;
@@ -815,7 +877,9 @@ const RoomSelector = () => {
           ...r,
           packageIndex: newIndex,
           boardType: newBoardType,
-          price: calculateRoomPrice(r.roomType, newBoardType)
+          price: calculateRoomPrice(r.roomType, newBoardType),
+          originalPrice: calculateOriginalRoomPrice(r.roomType, newBoardType),
+          discount: calculateRoomDiscount(r.roomType, newBoardType)
         };
       }
       return r;
@@ -830,7 +894,9 @@ const RoomSelector = () => {
         ...r,
         boardType: newBoardType,
         packageIndex: pkgIdx >= 0 ? pkgIdx : r.packageIndex,
-        price: calculateRoomPrice(r.roomType, newBoardType)
+        price: calculateRoomPrice(r.roomType, newBoardType),
+        originalPrice: calculateOriginalRoomPrice(r.roomType, newBoardType),
+        discount: calculateRoomDiscount(r.roomType, newBoardType)
       } : r
     ));
   };
@@ -853,6 +919,8 @@ const RoomSelector = () => {
           roomType: newType,
           categoryIndex: typeIdx >= 0 ? typeIdx : r.categoryIndex,
           price: calculateRoomPrice(newType, r.boardType),
+          originalPrice: calculateOriginalRoomPrice(newType, r.boardType),
+          discount: calculateRoomDiscount(newType, r.boardType),
           adults: nextAdults,
           children: nextKids,
           childAges: nextAges
@@ -1059,6 +1127,7 @@ const RoomSelector = () => {
       checkOutDate: dateRange[0].endDate.toISOString(),
       nights: nights,
       totalPrice: totalNightlyRate * nights,
+      originalTotalPrice: addedRooms.reduce((sum, r) => sum + (r.originalPrice || r.price || 0), 0) * nights,
       nationality: nationality,
     };
 
@@ -1102,8 +1171,10 @@ const RoomSelector = () => {
         nights: roomNights,
         pricePerNight: roomNightlyRate,
         totalPrice: roomNightlyRate * roomNights,
-        originalTotalPrice: roomNightlyRate * roomNights,
-        discount: 0,
+        originalTotalPrice: (r.originalPrice || roomNightlyRate) * roomNights,
+        discount: r.discount ? r.discount.value : 0,
+        discountName: r.discount ? r.discount.name : null,
+        discountType: r.discount ? r.discount.type : null,
         checkInDate: dateRange[0].startDate.toISOString(),
         checkOutDate: dateRange[0].endDate.toISOString(),
       });
@@ -1573,16 +1644,35 @@ const RoomSelector = () => {
                                     </button>
 
                                     {/* Price Tag Badge */}
-                                    <div className="absolute bottom-2 left-2 bg-stone-950/85 text-white px-2.5 py-0.5 rounded text-xs font-black tracking-wider backdrop-blur-3xs">
-                                      {type.price} / night
+                                    <div className="absolute bottom-2 left-2 bg-stone-950/85 text-white px-2.5 py-1 rounded text-xs font-black tracking-wider backdrop-blur-3xs flex flex-col gap-0.5 leading-none">
+                                      {type.originalPriceVal > type.priceVal && (
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-[9px] text-stone-450 line-through font-bold">
+                                            {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {type.originalPriceVal.toFixed(2)}
+                                          </span>
+                                          <span className="text-[8px] bg-red-600 text-white font-black px-1 rounded-sm uppercase tracking-tight scale-90">
+                                            {type.discountType === "percentage" ? `${type.discountVal}% Off` : `-${import.meta.env.VITE_CURRENCY_TYPE || "LKR"} ${type.discountVal}`}
+                                          </span>
+                                        </div>
+                                      )}
+                                      <span>
+                                        {type.price} / night
+                                      </span>
                                     </div>
                                   </div>
 
                                   {/* Card metadata details */}
                                   <div className="p-3.5 flex-1 flex flex-col justify-between space-y-2">
-                                    <h5 className="font-extrabold text-stone-850 text-xs leading-tight tracking-tight group-hover:text-emerald-900 transition">
-                                      {type.name}
-                                    </h5>
+                                    <div>
+                                      <h5 className="font-extrabold text-stone-850 text-xs leading-tight tracking-tight group-hover:text-emerald-900 transition">
+                                        {type.name}
+                                      </h5>
+                                      {type.originalPriceVal > type.priceVal && type.discountName && (
+                                        <div className="text-[9px] text-red-600 font-black flex items-center gap-0.5 mt-0.5 animate-pulse">
+                                          ✨ {type.discountName}
+                                        </div>
+                                      )}
+                                    </div>
                                     <div className="flex items-center justify-between text-[11px] font-bold text-stone-400 pt-2 border-t border-stone-100">
                                       <button
                                         type="button"
@@ -2130,7 +2220,7 @@ const RoomSelector = () => {
         <div className="flex items-start gap-2.5">
           <Info className="w-4 h-4 text-stone-400 mt-0.5 shrink-0" />
           <p className="text-stone-500 text-xs leading-relaxed max-w-md">
-            Cancellation is free up to 48 hours prior to arrival. All categories are fully customizable for different room classes and guest occupancies.
+            Cancellation is free up to 7 days prior to arrival. All categories are fully customizable for different room classes and guest occupancies.
           </p>
         </div>
 

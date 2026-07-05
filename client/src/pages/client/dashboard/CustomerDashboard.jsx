@@ -9,13 +9,13 @@ import {
   User,
   Sliders,
   Activity,
+  Menu,
   X
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 // Modularized Dashboard Components
 import DashboardSidebar from "./DashboardSidebar";
-import DashboardHeader from "./DashboardHeader";
 import OverviewTab from "./OverviewTab";
 import BookingsTab from "./BookingsTab";
 import ToursTab from "./ToursTab";
@@ -23,7 +23,6 @@ import RentalsTab from "./RentalsTab";
 import PaymentsTab from "./PaymentsTab";
 import ReviewsTab from "./ReviewsTab";
 import ProfileTab from "./ProfileTab";
-import NotificationsTab from "./NotificationsTab";
 import DashboardModals from "./DashboardModals";
 
 // ==========================================
@@ -32,24 +31,7 @@ import DashboardModals from "./DashboardModals";
 
 
 
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: "NOTIF-1",
-    title: "Exclusive Complimentary Upgrade Offer",
-    message: "Your upcoming stay at Azure Velvet Sands qualifies for an exclusive Royal Overwater Suite upgrade at 40% off or complimentary beachside dining credits. Check details with your butler.",
-    time: "2 hours ago",
-    read: false,
-    type: "upgrade"
-  },
-  {
-    id: "NOTIF-2",
-    title: "Private Stellenbosch Helicopter Tour Approved",
-    message: "Your Stellenbosch Helicopter Tour and vineyard tasting has been approved and locked. View tour details to finalize confirmation.",
-    time: "1 day ago",
-    read: false,
-    type: "booking"
-  }
-];
+
 
 // ==========================================
 // CORE COMPONENT
@@ -81,14 +63,12 @@ export default function CustomerDashboard() {
   const [payments, setPayments] = useState([]);
   const [paymentSummary, setPaymentSummary] = useState({ totalPaid: 0, totalRefunded: 0, totalPending: 0, totalTransactions: 0 });
   const [reviews, setReviews] = useState([]);
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
 
   // Control UI State
   const [activeTab, setActiveTab] = useState("overview");
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isEmptyState, setIsEmptyState] = useState(false);
-  const [isNotifDropdownOpen, setIsNotifDropdownOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Modals & Dynamic Form States
@@ -418,7 +398,7 @@ export default function CustomerDashboard() {
     };
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
-  }, [navigate]);
+  }, [navigate, activeTab]);
 
   // Simulation helper to demonstrate skeleton state
   const handleTriggerSkeleton = () => {
@@ -622,11 +602,7 @@ export default function CustomerDashboard() {
     }
   };
 
-  // Notification Read Toggle
-  const handleMarkAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    toast.success("All notifications marked as read");
-  };
+
 
   // Filter helper based on search query
   const filterList = (list, key) => {
@@ -681,20 +657,7 @@ export default function CustomerDashboard() {
   return (
     <div className="h-screen overflow-hidden bg-slate-50/70 text-slate-800 flex flex-col font-sans selection:bg-cyan-500 selection:text-white antialiased">
 
-      {/* STICKY TOP HEADER */}
-      <DashboardHeader
-        profile={profile}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        notifications={notifications}
-        setNotifications={setNotifications}
-        isNotifDropdownOpen={isNotifDropdownOpen}
-        setIsNotifDropdownOpen={setIsNotifDropdownOpen}
-        setIsMobileSidebarOpen={setIsMobileSidebarOpen}
-        setActiveTab={setActiveTab}
-        handleMarkAllRead={handleMarkAllRead}
-        maskEmail={maskEmail}
-      />
+
 
       {/* MAIN CONTENT WRAPPER */}
       <div className="flex-1 flex relative overflow-hidden min-h-0">
@@ -715,10 +678,22 @@ export default function CustomerDashboard() {
 
         {/* MAIN CONTENT PANE */}
         <main className="flex-1 overflow-y-auto px-6 py-8 relative">
+          {/* Mobile Menu Toggle Button (Visible only on mobile screens since header is removed) */}
+          <div className="md:hidden mb-6 flex justify-between items-center bg-white px-4 py-3 rounded-2xl border border-slate-200/60 shadow-sm">
+            <button
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="p-2 bg-slate-100 hover:bg-slate-200 active:scale-95 rounded-lg text-slate-700 transition-all border border-slate-200/60 flex items-center gap-2"
+              aria-label="Open sidebar menu"
+            >
+              <Menu size={20} />
+              <span className="text-xs font-semibold">Menu</span>
+            </button>
+            <div className="text-xs font-semibold text-blue-900 tracking-wider uppercase">BlueBird Portal</div>
+          </div>
 
           {/* SKELETON / LOADING ROUTER */}
           {isLoading ? renderSkeleton() : (
-            <div className="space-y-8 max-w-7xl mx-auto">
+            <div className="space-y-8 w-full">
 
               {/* TAB VIEW RENDERS */}
 
@@ -780,14 +755,7 @@ export default function CustomerDashboard() {
                 />
               )}
 
-              {activeTab === "notifications" && (
-                <NotificationsTab
-                  notifications={notifications}
-                  setNotifications={setNotifications}
-                  handleMarkAllRead={handleMarkAllRead}
-                  isEmptyState={isEmptyState}
-                />
-              )}
+
 
             </div>
           )}

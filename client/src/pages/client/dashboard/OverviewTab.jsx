@@ -277,16 +277,6 @@ export default function OverviewTab({
                 <span>Manage Entire Itinerary</span>
                 <ChevronRight size={14} />
               </button>
-              <button
-                onClick={() => {
-                  toast.success("Priority upgrade signal transmitted. Your concierge agent will reach out momentarily.", {
-                    style: { borderRadius: '12px', background: '#020617', color: '#fff', fontSize: '13px' }
-                  });
-                }}
-                className="px-5 py-3 bg-white border border-slate-200 text-slate-800 font-medium text-xs uppercase tracking-wider rounded-xl hover:bg-slate-50/80 transition-all text-center"
-              >
-                Request Suite Upgrade / Spa VIP
-              </button>
             </div>
           </div>
         )}

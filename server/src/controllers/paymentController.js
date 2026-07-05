@@ -154,13 +154,20 @@ export const handlePayHereNotification = async (req, res) => {
                         }
                     );
 
-                    const totalAmount = Number(booking.Tour.price) * booking.numberOfAdults;
+                    const discountPercentage = Number(booking.Tour.discount || 0);
+                    const originalPrice = Number(booking.Tour.price || 0);
+                    const discountedPrice = discountPercentage > 0
+                        ? originalPrice - (originalPrice * discountPercentage / 100)
+                        : originalPrice;
+
+                    const totalAmount = Number((discountedPrice * booking.numberOfAdults).toFixed(2));
                     const depositAmount = receivedAmount;
-                    const remainingAmount = totalAmount - depositAmount;
+                    const remainingAmount = Number((totalAmount - depositAmount).toFixed(2));
 
                     if (!existingTourBooking) {
                         const trackingToken = crypto.randomBytes(16).toString("hex");
-                        const bookingRef = `TI-${booking.inquiryRef || actualOrderId}-BK`;
+                        const cleanInquiryRef = (booking.inquiryRef || String(actualOrderId)).replace(/^TI-/, '');
+                        const bookingRef = `TB-${cleanInquiryRef}`;
 
                         await sequelize.query(
                             `INSERT INTO tour_bookings (bookingRef, inquiryId, tourStartDate, totalAmount, depositAmount, remainingAmount, status, trackingToken, acceptedAt, createdAt, updatedAt) 
@@ -462,13 +469,20 @@ export const confirmTourPayment = async (req, res) => {
             }
         );
 
-        const totalAmount = Number(booking.Tour.price) * booking.numberOfAdults;
+        const discountPercentage = Number(booking.Tour.discount || 0);
+        const originalPrice = Number(booking.Tour.price || 0);
+        const discountedPrice = discountPercentage > 0
+            ? originalPrice - (originalPrice * discountPercentage / 100)
+            : originalPrice;
+
+        const totalAmount = Number((discountedPrice * booking.numberOfAdults).toFixed(2));
         const depositAmount = Number(amount);
-        const remainingAmount = totalAmount - depositAmount;
+        const remainingAmount = Number((totalAmount - depositAmount).toFixed(2));
 
         if (!existingTourBooking) {
             const trackingToken = crypto.randomBytes(16).toString("hex");
-            const bookingRef = `TI-${booking.inquiryRef || inquiryId}-BK`;
+            const cleanInquiryRef = (booking.inquiryRef || String(inquiryId)).replace(/^TI-/, '');
+            const bookingRef = `TB-${cleanInquiryRef}`;
 
             await sequelize.query(
                 `INSERT INTO tour_bookings (bookingRef, inquiryId, tourStartDate, totalAmount, depositAmount, remainingAmount, status, trackingToken, acceptedAt, createdAt, updatedAt) 

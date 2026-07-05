@@ -113,6 +113,13 @@ const createRoomType = async (req, res) => {
             });
         }
 
+        if (!resolvedOccupancyTypeId) {
+            return res.status(400).json({
+                success: false,
+                message: "Occupancy type is required",
+            });
+        }
+
         // Step 1 & 2: Insert into MySQL and get the generated roomTypeId
         const roomType = await RoomType.create({
             type: type.trim(),
@@ -193,6 +200,13 @@ const updateRoomType = async (req, res) => {
         const { type, occupancy_type_id, occupancyTypeId, cover_url, coverImageName } = req.body;
         const resolvedOccupancyTypeId = occupancy_type_id ?? occupancyTypeId;
 
+        if (!resolvedOccupancyTypeId) {
+            return res.status(400).json({
+                success: false,
+                message: "Occupancy type is required",
+            });
+        }
+
         const roomType = await RoomType.findByPk(id);
 
         if (!roomType) {
@@ -206,12 +220,73 @@ const updateRoomType = async (req, res) => {
         if (type) {
             updateData.type = type.trim();
         }
-        if (resolvedOccupancyTypeId !== undefined) {
-            updateData.occupancy_type_id = resolvedOccupancyTypeId ? Number(resolvedOccupancyTypeId) : null;
+        updateData.occupancy_type_id = Number(resolvedOccupancyTypeId);
+
+        // Parse existingImages from request body to identify which images the user kept
+        let existingImages = [];
+        if (req.body.existingImages) {
+            try {
+                existingImages = JSON.parse(req.body.existingImages);
+            } catch {
+                existingImages = Array.isArray(req.body.existingImages)
+                    ? req.body.existingImages
+                    : [req.body.existingImages];
+            }
+        } else {
+            // Default to keeping all current images so we don't accidentally delete anything
+            const { data: currentFiles } = await supabase.storage
+                .from(SUPABASE_BUCKET)
+                .list(id.toString());
+            
+            existingImages = (currentFiles || [])
+                .filter(file => file.name !== '.emptyFolderPlaceholder')
+                .map(file => {
+                    const { data: publicUrlData } = supabase.storage
+                        .from(SUPABASE_BUCKET)
+                        .getPublicUrl(`${id}/${file.name}`);
+                    return publicUrlData.publicUrl;
+                });
         }
 
-        // If an existing cover image is selected
-        if (cover_url) {
+        // List every file inside room_type/{roomTypeId}/ from Supabase Storage
+        const { data: files, error: listError } = await supabase.storage
+            .from(SUPABASE_BUCKET)
+            .list(id.toString());
+
+        if (listError) {
+            console.error("Error listing files for room type:", listError);
+        }
+
+        const currentUrls = (files || [])
+            .filter(file => file.name !== '.emptyFolderPlaceholder')
+            .map(file => {
+                const { data: publicUrlData } = supabase.storage
+                    .from(SUPABASE_BUCKET)
+                    .getPublicUrl(`${id}/${file.name}`);
+                return {
+                    name: file.name,
+                    url: publicUrlData.publicUrl
+                };
+            });
+
+        // Identify which current images were removed by the user, and delete them from Supabase
+        const urlsToDelete = currentUrls.filter(item => !existingImages.includes(item.url));
+        if (urlsToDelete.length > 0) {
+            const filePaths = urlsToDelete.map(item => `${id}/${item.name}`);
+            const { error: removeError } = await supabase.storage
+                .from(SUPABASE_BUCKET)
+                .remove(filePaths);
+
+            if (removeError) {
+                console.error("Error removing files from Supabase during update:", removeError);
+            }
+        }
+
+        // If all images are deleted, clear the cover image URL
+        const finalImageCount = existingImages.length + (req.files ? req.files.length : 0);
+        if (finalImageCount === 0) {
+            updateData.image_url = null;
+        } else if (cover_url) {
             updateData.image_url = cover_url;
         }
 
@@ -250,6 +325,13 @@ const updateRoomType = async (req, res) => {
                 if (coverImage) {
                     updateData.image_url = coverImage.url;
                 }
+            }
+        }
+
+        // Fallback: If we have images but cover image URL is not defined (e.g. old cover was deleted, and no new cover was explicitly chosen)
+        if (finalImageCount > 0 && !updateData.image_url && !coverImageName) {
+            if (existingImages.length > 0) {
+                updateData.image_url = existingImages[0];
             }
         }
 

@@ -273,42 +273,44 @@ export default function TourInquiriesManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="relative overflow-hidden border-b border-slate-200 bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 text-white">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.22),transparent_32%),radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.16),transparent_28%)]" />
-        <div className="relative mx-auto w-full max-w-7xl px-4 py-10 md:px-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-200">
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                Operations Dashboard
-              </div>
-              <h1 className="text-3xl font-semibold tracking-tight md:text-5xl">Tour Inquiries</h1>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300 md:text-base">
-                Review customer requests, approve or reject them, and send customized quote emails from a single control panel.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-lg">
-              {[
-                { label: 'Total', value: allInquiries.length, accent: 'from-sky-500 to-cyan-400' },
-                { label: 'Pending', value: statusCounts.pending, accent: 'from-amber-500 to-orange-400' },
-                { label: 'In Progress', value: statusCounts.progress, accent: 'from-emerald-500 to-teal-400' },
-                { label: 'Confirmed', value: statusCounts.accepted, accent: 'from-blue-500 to-indigo-400' },
-                { label: 'Rejected', value: statusCounts.rejected, accent: 'from-rose-500 to-pink-400' },
-              ].map((item) => (
-                <div key={item.label} className="rounded-2xl border border-white/10 bg-white/10 p-4 shadow-lg backdrop-blur-sm">
-                  <div className={`mb-3 h-1.5 w-12 rounded-full bg-linear-to-r ${item.accent}`} />
-                  <p className="text-xs uppercase tracking-[0.22em] text-slate-300">{item.label}</p>
-                  <p className="mt-2 text-2xl font-semibold text-white">{item.value}</p>
-                </div>
-              ))}
-            </div>
+    <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 text-slate-900">
+      {/* Premium Dashboard Header Card */}
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="space-y-2 max-w-2xl">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-indigo-600 tracking-widest uppercase bg-indigo-50 px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              Operations Panel
+            </span>
           </div>
+          <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">
+            Tour Inquiries Management
+          </h1>
+          <p className="text-xs md:text-sm text-slate-400 font-medium leading-relaxed">
+            Review customer requests, confirm bookings, reject inquiries, and generate customized quote emails from a single professional control interface.
+          </p>
+        </div>
+
+        {/* Quick Stats Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 w-full xl:w-auto shrink-0">
+          {[
+            { label: 'Total', value: allInquiries.length, bg: 'bg-slate-50 border-slate-200 text-slate-700' },
+            { label: 'Pending', value: statusCounts.pending, bg: 'bg-amber-50 border-amber-200 text-amber-700' },
+            { label: 'In Progress', value: statusCounts.progress, bg: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
+            { label: 'Confirmed', value: statusCounts.accepted, bg: 'bg-blue-50 border-blue-200 text-blue-700' },
+            { label: 'Rejected', value: statusCounts.rejected, bg: 'bg-rose-50 border-rose-200 text-rose-700' },
+          ].map((item) => (
+            <div key={item.label} className={`rounded-2xl border p-4 shadow-inner text-center bg-white ${item.bg}`}>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{item.label}</p>
+              <p className="mt-1 text-xl font-black">{item.value}</p>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 md:py-10">
+      <div className="w-full max-w-7xl mx-auto space-y-6">
         <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap gap-2">
             {['pending', 'progress', 'accepted', 'rejected', 'canceled'].map(status => (
@@ -516,30 +518,30 @@ export default function TourInquiriesManagement() {
 
                       {/* Actions */}
                       {inquiry.status === 'pending' && (
-                        <div className="flex flex-col gap-3 md:flex-row">
+                        <div className="flex flex-col gap-3.5 md:flex-row">
                           <button
                             onClick={() => handleAccept(inquiry.id)}
                             disabled={processing === inquiry.id}
-                            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:bg-gray-400"
+                            className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white disabled:bg-slate-200 py-3.5 text-xs font-black uppercase tracking-wider transition shadow-xs cursor-pointer"
                           >
                             {processing === inquiry.id ? (
-                              <Loader className="w-4 h-4 animate-spin" />
+                              <Loader className="w-4 h-4 animate-spin text-white" />
                             ) : (
-                              <Check className="w-4 h-4" />
+                              <Check className="w-4 h-4 text-white" />
                             )}
                             {processing === inquiry.id ? 'Processing...' : 'Accept & Create Booking'}
                           </button>
                           <button
                             onClick={() => handleReject(inquiry.id)}
                             disabled={processing === inquiry.id}
-                            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-3 font-semibold text-white shadow-sm transition-colors hover:bg-rose-700 disabled:bg-gray-400"
+                            className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white hover:bg-rose-50 hover:text-rose-700 hover:border-rose-250 text-slate-600 disabled:bg-slate-100 py-3.5 text-xs font-black uppercase tracking-wider transition cursor-pointer"
                           >
                             {processing === inquiry.id ? (
                               <Loader className="w-4 h-4 animate-spin" />
                             ) : (
                               <X className="w-4 h-4" />
                             )}
-                            {processing === inquiry.id ? 'Processing...' : 'Reject'}
+                            {processing === inquiry.id ? 'Processing...' : 'Reject Inquiry'}
                           </button>
                         </div>
                       )}
@@ -550,7 +552,7 @@ export default function TourInquiriesManagement() {
                             <button
                               onClick={() => openEmailForm(inquiry)}
                               disabled={processing === inquiry.id}
-                              className="w-full flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white shadow-sm transition-colors hover:bg-slate-800 disabled:bg-gray-400"
+                              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white disabled:bg-slate-200 py-3.5 text-xs font-black uppercase tracking-wider transition shadow-xs cursor-pointer"
                             >
                               {processing === inquiry.id ? (
                                 <Loader className="w-4 h-4 animate-spin" />
@@ -560,73 +562,72 @@ export default function TourInquiriesManagement() {
                               {hasAcceptedEmailSent(inquiry) ? 'Send Email Again' : 'Send Email to Guest'}
                             </button>
                           ) : (
-                            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                              <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+                              <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                                 <div>
-                                  <h4 className="text-lg font-semibold text-slate-900">Customize Quote Email</h4>
-                                  <p className="text-sm text-slate-500">Adjust the quote, guest count, date, and note before sending.</p>
+                                  <h4 className="text-base font-bold text-slate-900">Customize Quote Email</h4>
+                                  <p className="text-xs text-slate-450 font-medium mt-0.5">Adjust the quote parameters and note before sending.</p>
                                 </div>
-                                <div className="flex flex-wrap gap-2 text-xs">
-                                  <span className="rounded-full bg-slate-100 px-3 py-1.5 font-medium text-slate-700">Ref {inquiry.inquiryRef}</span>
-                                  <span className="rounded-full bg-slate-100 px-3 py-1.5 font-medium text-slate-700">{getTourPackageName(inquiry)}</span>
+                                <div className="flex flex-wrap gap-2 text-[10px]">
+                                  <span className="rounded-full bg-slate-100 border border-slate-200 px-3 py-1 font-bold text-slate-700">Ref {inquiry.inquiryRef}</span>
+                                  <span className="rounded-full bg-slate-100 border border-slate-200 px-3 py-1 font-bold text-slate-700">{getTourPackageName(inquiry)}</span>
                                 </div>
                               </div>
 
-                              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                                 <div>
-                                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Total Package Price ({import.meta.env.VITE_CURRENCY_TYPE || 'LKR'}) *</label>
-                                  <p className="mb-2 text-xs text-slate-500">Final total for the entire package</p>
+                                  <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-400">Total Package Price ({import.meta.env.VITE_CURRENCY_TYPE || 'LKR'}) *</label>
                                   <input
                                     type="number"
                                     min="1"
                                     step="0.01"
                                     value={emailFormByInquiry[inquiry.id]?.pricePerGuest || ''}
                                     onChange={(e) => handleEmailFormChange(inquiry.id, 'pricePerGuest', e.target.value)}
-                                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-100"
+                                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-600"
                                   />
                                 </div>
                                 <div>
-                                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Adults</label>
+                                  <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-400">Adults</label>
                                   <input
                                     type="number"
                                     min="1"
                                     step="1"
                                     value={emailFormByInquiry[inquiry.id]?.numberOfAdults || '1'}
                                     onChange={(e) => handleEmailFormChange(inquiry.id, 'numberOfAdults', e.target.value)}
-                                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-100"
+                                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-600"
                                   />
                                 </div>
                                 <div>
-                                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Children</label>
+                                  <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-400">Children</label>
                                   <input
                                     type="number"
                                     min="0"
                                     step="1"
                                     value={emailFormByInquiry[inquiry.id]?.numberOfChildren || '0'}
                                     onChange={(e) => handleEmailFormChange(inquiry.id, 'numberOfChildren', e.target.value)}
-                                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-100"
+                                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-600"
                                   />
                                 </div>
                               </div>
 
                               <div>
-                                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Tour Start Date</label>
+                                <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-400">Tour Start Date</label>
                                 <input
                                   type="date"
                                   value={emailFormByInquiry[inquiry.id]?.tourStartDate || ''}
                                   onChange={(e) => handleEmailFormChange(inquiry.id, 'tourStartDate', e.target.value)}
-                                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-100"
+                                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-600"
                                 />
                               </div>
 
                               <div>
-                                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Manager Note (Optional)</label>
+                                <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-400">Manager Note (Optional)</label>
                                 <textarea
                                   rows={3}
                                   value={emailFormByInquiry[inquiry.id]?.managerNote || ''}
                                   onChange={(e) => handleEmailFormChange(inquiry.id, 'managerNote', e.target.value)}
-                                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-100"
-                                  placeholder="Add any special notes for the guest"
+                                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-600 resize-none"
+                                  placeholder="Add special instructions or greetings for the guest..."
                                 />
                               </div>
 
@@ -634,19 +635,19 @@ export default function TourInquiriesManagement() {
                                 <button
                                   onClick={() => handleSendAcceptedEmail(inquiry)}
                                   disabled={processing === inquiry.id}
-                                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 font-semibold text-white shadow-sm transition-colors hover:bg-slate-800 disabled:bg-gray-400"
+                                  className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white disabled:bg-slate-200 py-3.5 text-xs font-black uppercase tracking-wider transition shadow-xs cursor-pointer"
                                 >
                                   {processing === inquiry.id ? (
-                                    <Loader className="w-4 h-4 animate-spin" />
+                                    <Loader className="w-4 h-4 animate-spin text-white" />
                                   ) : (
-                                    <Mail className="w-4 h-4" />
+                                    <Mail className="w-4 h-4 text-white" />
                                   )}
-                                  {processing === inquiry.id ? 'Sending...' : 'Send Email'}
+                                  {processing === inquiry.id ? 'Sending...' : 'Send Quote Email'}
                                 </button>
                                 <button
                                   onClick={closeEmailForm}
                                   disabled={processing === inquiry.id}
-                                  className="flex-1 rounded-xl bg-slate-100 px-4 py-2.5 font-semibold text-slate-700 transition-colors hover:bg-slate-200 disabled:bg-slate-50"
+                                  className="flex-1 rounded-2xl bg-white hover:bg-slate-50 text-slate-600 border border-slate-250 disabled:bg-slate-50 py-3.5 text-xs font-black uppercase tracking-wider transition cursor-pointer"
                                 >
                                   Cancel
                                 </button>

@@ -4,7 +4,8 @@ import { Search, Tag, Layers } from "lucide-react";
 export default function ShopFilters({ 
   searchTerm, setSearchTerm, 
   categoryFilter, setCategoryFilter, 
-  sortBy, setSortBy 
+  sortBy, setSortBy,
+  categories = []
 }) {
   return (
     <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-slate-50/70 p-4 rounded-2xl border border-slate-100 animate-fadeIn">
@@ -28,9 +29,11 @@ export default function ShopFilters({
             className="outline-none bg-transparent text-xs font-bold text-slate-600 pr-4 cursor-pointer w-full"
           >
             <option value="All">All Categories</option>
-            <option value="Clothes">Clothes</option>
-            <option value="Accessories">Accessories</option>
-            <option value="Other">Other</option>
+            {categories.map((cat) => (
+              <option key={cat.categoryId} value={cat.name}>
+                {cat.name}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -60,4 +63,5 @@ ShopFilters.propTypes = {
   setCategoryFilter: PropTypes.func.isRequired,
   sortBy: PropTypes.string.isRequired,
   setSortBy: PropTypes.func.isRequired,
+  categories: PropTypes.array,
 };

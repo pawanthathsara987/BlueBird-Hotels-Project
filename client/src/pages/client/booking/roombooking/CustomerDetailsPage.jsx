@@ -6,8 +6,7 @@ import { toast } from "react-hot-toast";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
     FaUser, FaEnvelope, FaGlobe, FaPhone, FaLock, FaEye, FaEyeSlash,
-    FaIdCard, FaMapMarkerAlt, FaArrowRight, FaArrowLeft, FaCalendar,
-    FaUsers, FaClock, FaCheck, FaInfoCircle
+    FaIdCard, FaMapMarkerAlt, FaArrowRight, FaArrowLeft, FaCheck
 } from "react-icons/fa";
 import { validateSriLankanNIC, validatePassport } from "../../../../utils/validation";
 import { jwtDecode } from "jwt-decode";
@@ -361,9 +360,9 @@ export default function CustomerDetailsPage() {
                 <div className="mx-auto max-w-7xl px-4 py-6 sm:px-8 lg:px-14">
                     <button
                         onClick={handleGoBack}
-                        className="mb-3 flex items-center gap-2 text-emerald-800 hover:text-emerald-950 font-extrabold text-sm tracking-wide transition cursor-pointer"
+                        className="mb-3 flex items-center gap-2 text-emerald-800 hover:text-emerald-950 font-extrabold text-xs tracking-wide transition cursor-pointer"
                     >
-                        <FaArrowLeft className="h-3.5 w-3.5" />
+                        <FaArrowLeft className="h-3 w-3" />
                         Back to Summary
                     </button>
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -371,7 +370,7 @@ export default function CustomerDetailsPage() {
                             <h1 className="text-3xl font-black text-stone-900 tracking-tight">
                                 {isLoggedIn ? "Verify Guest Details" : "Guest Registration Details"}
                             </h1>
-                            <p className="mt-1 text-sm text-stone-500 font-semibold">
+                            <p className="mt-1 text-xs text-stone-500 font-semibold">
                                 {isLoggedIn
                                     ? "Verify and confirm your checkout information before completing your payment"
                                     : "Enter your checkout details to register your resort account"}
@@ -394,6 +393,21 @@ export default function CustomerDetailsPage() {
 
                     {/* Left Column: Form Details (lg:col-span-2) */}
                     <div className="lg:col-span-2 space-y-6">
+
+                        {isLoggedIn && (
+                            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-5 flex items-start gap-4 shadow-3xs">
+                                <div className="rounded-full bg-emerald-100 p-2.5 text-emerald-800 shrink-0">
+                                    <FaCheck className="w-4 h-4" />
+                                </div>
+                                <div className="space-y-1">
+                                    <h4 className="text-xs font-bold text-stone-850">Resort Profile Verified</h4>
+                                    <p className="text-[11px] text-stone-650 leading-relaxed">
+                                        You are currently logged in as <span className="font-bold text-emerald-900">{firstName} {lastName}</span>. Your saved account profile has pre-filled the contact details below. Please review or adjust before completing payment.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="bg-white rounded-3xl border border-stone-200 p-6 sm:p-8 shadow-[0_4px_20px_rgba(28,25,23,0.03)] space-y-7">
 
                             {/* SECTION I: Personal Details */}
@@ -413,7 +427,7 @@ export default function CustomerDetailsPage() {
                                                 value={firstName}
                                                 onChange={(e) => setFirstName(e.target.value)}
                                                 disabled={loading}
-                                                className="w-full pl-10 pr-3 py-2.5 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400"
+                                                className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
                                             />
                                         </div>
                                     </div>
@@ -431,7 +445,7 @@ export default function CustomerDetailsPage() {
                                                 value={lastName}
                                                 onChange={(e) => setLastName(e.target.value)}
                                                 disabled={loading}
-                                                className="w-full pl-10 pr-3 py-2.5 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400"
+                                                className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
                                             />
                                         </div>
                                     </div>
@@ -449,7 +463,7 @@ export default function CustomerDetailsPage() {
                                                 value={email}
                                                 onChange={(e) => setEmail(e.target.value)}
                                                 disabled={loading}
-                                                className="w-full pl-10 pr-3 py-2.5 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400"
+                                                className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
                                             />
                                         </div>
                                     </div>
@@ -465,7 +479,7 @@ export default function CustomerDetailsPage() {
                                                     value={phoneCountry}
                                                     onChange={(e) => handlePhoneCountryChange(e.target.value)}
                                                     disabled={loading}
-                                                    className="w-full pl-3 pr-7 py-2.5 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 appearance-none cursor-pointer"
+                                                    className="w-full pl-3 pr-7 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 appearance-none cursor-pointer"
                                                 >
                                                     {countryCodeOptions.map((item) => (
                                                         <option key={item.value} value={item.value} className="bg-white text-stone-800">
@@ -483,7 +497,7 @@ export default function CustomerDetailsPage() {
                                                     value={phoneNumber}
                                                     onChange={(e) => setPhoneNumber(e.target.value)}
                                                     disabled={loading}
-                                                    className="w-full pl-10 pr-3 py-2.5 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400"
+                                                    className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
                                                 />
                                             </div>
                                         </div>
@@ -493,7 +507,7 @@ export default function CustomerDetailsPage() {
 
                             {/* SECTION II: Identity Verification */}
                             <div className="space-y-4">
-                                <h2 className="text-xs font-black text-emerald-850 uppercase tracking-widest pb-1.5 border-b border-stone-150">II. Verification Details</h2>
+                                <h2 className="text-xs font-black text-emerald-855 uppercase tracking-widest pb-1.5 border-b border-stone-150">II. Verification Details</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {/* Identification Type */}
                                     <div className="space-y-1.5">
@@ -509,7 +523,7 @@ export default function CustomerDetailsPage() {
                                                     setIdNumber("");
                                                 }}
                                                 disabled={loading || !isSriLankan}
-                                                className="w-full pl-10 pr-8 py-2.5 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 appearance-none cursor-pointer disabled:opacity-80"
+                                                className="w-full pl-10 pr-8 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 appearance-none cursor-pointer disabled:opacity-80 focus:bg-white"
                                             >
                                                 {isSriLankan && (
                                                     <option value="NIC" className="bg-white text-stone-800">National Identity Card (NIC)</option>
@@ -526,7 +540,7 @@ export default function CustomerDetailsPage() {
                                             {idType === "NIC" ? "NIC Number" : "Passport Number"} <span className="text-emerald-700">*</span>
                                         </label>
                                         <div className="relative group">
-                                            <FaIdCard className={`absolute left-4 top-1/2 -translate-y-1/2 text-xs transition-colors ${idNumber === "" ? "text-emerald-850" : idError ? "text-rose-600" : "text-emerald-600"
+                                            <FaIdCard className={`absolute left-4 top-1/2 -translate-y-1/2 text-xs transition-colors ${idNumber === "" ? "text-emerald-855" : idError ? "text-rose-600" : "text-emerald-600"
                                                 }`} />
                                             <input
                                                 type="text"
@@ -534,7 +548,7 @@ export default function CustomerDetailsPage() {
                                                 value={idNumber}
                                                 onChange={(e) => setIdNumber(e.target.value)}
                                                 disabled={loading}
-                                                className={`w-full pl-10 pr-3 py-2.5 bg-white border rounded-xl focus:outline-none focus:ring-4 transition text-xs text-stone-800 placeholder-stone-400 ${idNumber === ""
+                                                className={`w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border rounded-xl focus:outline-none focus:ring-4 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white ${idNumber === ""
                                                         ? "border-stone-200 focus:ring-emerald-500/10 focus:border-emerald-600"
                                                         : idError
                                                             ? "border-rose-400 focus:ring-rose-500/10 focus:border-rose-500"
@@ -555,7 +569,7 @@ export default function CustomerDetailsPage() {
 
                             {/* SECTION III: Address & Location */}
                             <div className="space-y-4">
-                                <h2 className="text-xs font-black text-emerald-850 uppercase tracking-widest pb-1.5 border-b border-stone-150">III. Address & Location</h2>
+                                <h2 className="text-xs font-black text-emerald-855 uppercase tracking-widest pb-1.5 border-b border-stone-150">III. Address & Location</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {/* Address Line 1 */}
                                     <div className="space-y-1.5 md:col-span-2">
@@ -570,7 +584,7 @@ export default function CustomerDetailsPage() {
                                                 value={addressLine1}
                                                 onChange={(e) => setAddressLine1(e.target.value)}
                                                 disabled={loading}
-                                                className="w-full pl-10 pr-3 py-2.5 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400"
+                                                className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
                                             />
                                         </div>
                                     </div>
@@ -588,7 +602,7 @@ export default function CustomerDetailsPage() {
                                                 value={addressLine2}
                                                 onChange={(e) => setAddressLine2(e.target.value)}
                                                 disabled={loading}
-                                                className="w-full pl-10 pr-3 py-2.5 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400"
+                                                className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
                                             />
                                         </div>
                                     </div>
@@ -606,7 +620,7 @@ export default function CustomerDetailsPage() {
                                                 value={city}
                                                 onChange={(e) => setCity(e.target.value)}
                                                 disabled={loading}
-                                                className="w-full pl-10 pr-3 py-2.5 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400"
+                                                className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
                                             />
                                         </div>
                                     </div>
@@ -624,7 +638,7 @@ export default function CustomerDetailsPage() {
                                                 value={zipCode}
                                                 onChange={(e) => setZipCode(e.target.value)}
                                                 disabled={loading}
-                                                className="w-full pl-10 pr-3 py-2.5 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400"
+                                                className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
                                             />
                                         </div>
                                     </div>
@@ -640,7 +654,7 @@ export default function CustomerDetailsPage() {
                                                 value={country}
                                                 onChange={(e) => setCountry(e.target.value)}
                                                 disabled={loading || isSriLankan}
-                                                className="w-full pl-10 pr-8 py-2.5 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 appearance-none cursor-pointer disabled:opacity-80"
+                                                className="w-full pl-10 pr-8 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 appearance-none cursor-pointer disabled:opacity-80 focus:bg-white"
                                             >
                                                 <option value="" className="bg-white text-stone-400">Select Country</option>
                                                 {countryCodeOptions
@@ -799,7 +813,7 @@ export default function CustomerDetailsPage() {
                                 <div className="p-3 bg-emerald-50 border border-emerald-150 rounded-xl flex gap-2.5">
                                     <FaCheck className="h-4 w-4 text-emerald-800 shrink-0 mt-0.5" />
                                     <div className="text-[11px] leading-tight text-emerald-800 font-semibold">
-                                        You pay 50% advance (${(Number(totalPrice || 0) * 0.5).toFixed(2)}) on the next payment page to secure your luxury booking.
+                                        You pay 50% advance on the next payment page to secure your luxury booking.
                                     </div>
                                 </div>
                             </div>

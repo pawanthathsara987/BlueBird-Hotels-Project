@@ -101,6 +101,7 @@ import TourViewPage from "./pages/client/booking/tourbooking/TourViewing";
 import TourDetailsPage from "./pages/client/booking/tourbooking/TourDetailsPage";
 import TourInquiryPage from "./pages/client/booking/tourbooking/TourInquiryPage";
 import TourPaymentPage from "./pages/client/booking/tourbooking/TourPaymentPage";
+import TourConfirmation from "./pages/client/booking/tourbooking/TourConfirmation";
 import RoomPaymentPage from "./pages/client/booking/roombooking/RoomPayment";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import BookingSummary from "./pages/client/booking/roombooking/BookingSummary";
@@ -116,6 +117,9 @@ import CustomerDetailsPage from "./pages/client/booking/roombooking/CustomerDeta
 import RoomTypeDetails from "./pages/client/RoomTypeDetails";
 import FaqPage from "./pages/Faq";
 import AboutPage from "./pages/About";
+import ShopCatalogPage from "./pages/client/shop/ShopCatalogPage";
+import ShopItemDetailsPage from "./pages/client/shop/ShopItemDetailsPage";
+import TestimonialsPage from './pages/reviewPage'
 
 function ScrollToTop() {
     const { pathname } = useLocation();
@@ -256,6 +260,7 @@ export default function App() {
                         <Route path="/booking/tour-details" element={<TourDetailsPage />} />
                         <Route path="/booking/tour-inquiry" element={<TourInquiryPage />} />
                         <Route path="/booking/tour-payment" element={<TourPaymentPage />} />
+                        <Route path="/tour-confirm" element={<TourConfirmation />} />
                         <Route path="/payment" element={<RoomPaymentPage />} />
                         <Route path="/registerCustomer" element={<CustomerRegister />} />
                         <Route path="/customerLogin" element={<CustomerLoginPage />} />
@@ -263,12 +268,15 @@ export default function App() {
                         <Route path="/contact" element={<ContactPage />} />
                         <Route path="/faq" element={<FaqPage />} />
                         <Route path="/about" element={<AboutPage />} />
+                        <Route path="/reviews" element={<TestimonialsPage />} />
                         <Route path="/customer/dashboard" element={<CustomerDashboard />} />
                         <Route path="/vehicles" element={<VehicleCatalogPage />} />
                         <Route path="/vehicles/:id" element={<VehicleDetailsPage />} />
                         <Route path="/vehicles/:id/book" element={<VehicleBookingPage />} />
                         <Route path="/vehicles/:id/summary" element={<VehicleBookingSummary />} />
                         <Route path="/vehicles/:id/payment" element={<VehiclePaymentPage />} />
+                        <Route path="/shop" element={<ShopCatalogPage />} />
+                        <Route path="/shop/:id" element={<ShopItemDetailsPage />} />
 
                         {/* Redirections for staff routes from booking subdomain */}
                         <Route path="/admin/*" element={<RedirectToSubdomain subdomain="admin" path="/admin" />} />
