@@ -124,13 +124,13 @@ const RoomView = () => {
                     />
                 </div>
                 
-                <div className="flex w-full md:w-auto items-center gap-3">
-                    <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2.5 flex-1 md:flex-none">
-                        <SlidersHorizontal size={16} className="text-slate-400" />
+                <div className="flex flex-col sm:flex-row w-full sm:w-auto items-stretch sm:items-center gap-3">
+                    <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2.5 w-full sm:w-auto">
+                        <SlidersHorizontal size={16} className="text-slate-400 shrink-0" />
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
-                            className="outline-none bg-transparent text-sm font-bold text-slate-600 pr-4 cursor-pointer"
+                            className="outline-none bg-transparent text-sm font-bold text-slate-600 pr-4 cursor-pointer w-full"
                         >
                             <option value="all">All Status</option>
                             <option value="available">Available</option>
@@ -141,7 +141,7 @@ const RoomView = () => {
 
                     <Link
                         to="/admin/rooms/room/add"
-                        className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all duration-300 shadow-md shadow-blue-500/10 hover:scale-[1.02] cursor-pointer"
+                        className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all duration-300 shadow-md shadow-blue-500/10 hover:scale-[1.02] cursor-pointer w-full sm:w-auto"
                     >
                         <Plus size={18} />
                         <span>Add Room</span>
