@@ -624,6 +624,10 @@ const getAllBookings = async (req, res) => {
                         model: Room,
                         include: [{ model: RoomType, as: "roomType" }]
                     }]
+                },
+                {
+                    model: RoomPayment,
+                    as: 'payments'
                 }
             ]
         });
