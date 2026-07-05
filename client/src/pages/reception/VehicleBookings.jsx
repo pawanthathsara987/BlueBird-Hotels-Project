@@ -1530,10 +1530,20 @@ export default function VehicleBookings() {
                                                         onChange={(e) => setCollectPaymentMethod(e.target.value)}
                                                         className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 outline-none font-bold text-xs cursor-pointer"
                                                     >
-                                                        {isCollecting ? "Recording..." : `Confirm Payment (LKR ${parseFloat(selectedBooking.balanceAmount || 0).toLocaleString()})`}
-                                                    </button>
+                                                        <option value="cash">Cash</option>
+                                                        <option value="card">Card Payment</option>
+                                                        <option value="bank_transfer">Bank Transfer</option>
+                                                    </select>
                                                 </div>
-                                            </>
+                                                <button
+                                                    onClick={() => handleCollectBalance(selectedBooking.id)}
+                                                    disabled={isCollecting}
+                                                    className="px-5 py-2.5 text-xs font-black text-white bg-rose-600 hover:bg-rose-700 disabled:bg-slate-400 rounded-lg transition shadow-sm cursor-pointer select-none whitespace-nowrap h-9 flex items-center justify-center"
+                                                >
+                                                    {isCollecting ? "Recording..." : `Confirm Payment (LKR ${parseFloat(selectedBooking.balanceAmount || 0).toLocaleString()})`}
+                                                </button>
+                                            </div>
+                                        </>
                                         )}
                                     </div>
                                 )}

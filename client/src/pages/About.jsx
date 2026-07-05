@@ -17,7 +17,6 @@ import {
 // Import images from assets folder
 import frontImage from "../assets/slider Images/front-2048x1014.jpg";
 import roomImage from "../assets/slider Images/home-slider2-2048x1014.jpg";
-import diningImage from "../assets/slider Images/restaurent-2048x1014.jpg";
 import travelImage from "../assets/slider Images/home-slider4-2048x1014.jpg";
 import carImage from "../assets/slider Images/luxury_car.png";
 
@@ -154,7 +153,7 @@ export default function AboutPage() {
                                         Relax in our beautifully designed suites and family rooms offering premium luxury, standard amenities, and absolute comfort.
                                     </p>
                                 </div>
-                                <Link to="/rooms" className="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                                <Link to="/booking" className="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
                                     Book a Room &rarr;
                                 </Link>
                             </div>

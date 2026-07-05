@@ -929,7 +929,7 @@ export const sendInquiryEmail = async ({ name, email, message }) => {
     `;
 
     await sendEmail({
-      to: "sandeepal513@gmail.com",
+      to: process.env.SUPPORT_EMAIL || process.env.PERSONAL_REQUEST_MAIL || "sandeepal513@gmail.com",
       subject,
       html,
       text: `New Contact Inquiry from ${name}\n\nEmail: ${email}\n\nMessage:\n${message}`,
