@@ -16,6 +16,9 @@ export default function TourConfirmation() {
     amountPaid,
     totalAmount,
     balanceDue,
+    originalSubtotal,
+    discountPercentage,
+    discountAmount,
     billing
   } = location.state || {};
 
@@ -134,10 +137,27 @@ export default function TourConfirmation() {
                 <CreditCard size={20} className="text-blue-600" /> Payment & Settlement Summary
               </h2>
               <div className="border border-gray-150 rounded-2xl overflow-hidden">
-                <div className="p-4 bg-gray-50 border-b border-gray-150 flex justify-between text-sm">
-                  <span className="text-gray-500 font-medium">Subtotal ({inquiry.adults} Adults × {CURRENCY} {Number(tour.price).toLocaleString()})</span>
-                  <span className="font-bold text-gray-800">{CURRENCY} {Number(totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                </div>
+                {discountPercentage > 0 ? (
+                  <>
+                    <div className="p-4 bg-gray-50 border-b border-gray-150 flex justify-between text-sm">
+                      <span className="text-gray-500 font-medium">Original Subtotal ({inquiry.adults} Adults × {CURRENCY} {Number(tour.price).toLocaleString()})</span>
+                      <span className="font-bold text-gray-800">{CURRENCY} {Number(originalSubtotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="p-4 bg-gray-50 border-b border-gray-150 flex justify-between text-sm text-emerald-700">
+                      <span className="font-medium">Discount ({discountPercentage}%)</span>
+                      <span className="font-bold">-{CURRENCY} {Number(discountAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="p-4 bg-gray-50 border-b border-gray-150 flex justify-between text-sm">
+                      <span className="text-gray-500 font-medium">Discounted Subtotal</span>
+                      <span className="font-bold text-gray-800">{CURRENCY} {Number(totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-4 bg-gray-50 border-b border-gray-150 flex justify-between text-sm">
+                    <span className="text-gray-500 font-medium">Subtotal ({inquiry.adults} Adults × {CURRENCY} {Number(tour.price).toLocaleString()})</span>
+                    <span className="font-bold text-gray-800">{CURRENCY} {Number(totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+                )}
                 <div className="p-4 bg-emerald-50/50 border-b border-gray-150 flex justify-between text-sm">
                   <span className="text-emerald-800 font-bold flex items-center gap-1.5">
                     <CheckCircle2 size={16} className="text-emerald-600" />

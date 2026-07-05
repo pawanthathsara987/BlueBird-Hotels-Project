@@ -56,7 +56,17 @@ export default function TourPaymentPage() {
 
   if (!tour || !inquiry) return null;
 
-  const advanceAmount = Number((tour.price * inquiry.adults * 0.5).toFixed(2));
+  const discountPercentage = Number(tour?.discount || 0);
+  const originalPricePerPerson = Number(tour.price);
+  const discountedPricePerPerson = discountPercentage > 0
+    ? originalPricePerPerson - (originalPricePerPerson * discountPercentage / 100)
+    : originalPricePerPerson;
+
+  const originalSubtotal = originalPricePerPerson * inquiry.adults;
+  const discountedSubtotal = discountedPricePerPerson * inquiry.adults;
+  const discountAmount = originalSubtotal - discountedSubtotal;
+
+  const advanceAmount = Number((discountedSubtotal * 0.5).toFixed(2));
 
   const handlePayment = async () => {
     if (!billing.fullName || !billing.email || !billing.phone) {
@@ -114,8 +124,11 @@ export default function TourPaymentPage() {
               inquiry,
               paymentNo: finalOid,
               amountPaid: advanceAmount,
-              totalAmount: tour.price * inquiry.adults,
-              balanceDue: (tour.price * inquiry.adults) - advanceAmount,
+              totalAmount: discountedSubtotal,
+              balanceDue: discountedSubtotal - advanceAmount,
+              originalSubtotal,
+              discountPercentage,
+              discountAmount,
               billing
             }
           });
@@ -223,19 +236,50 @@ export default function TourPaymentPage() {
               <div className="px-6 py-5 space-y-3 text-sm">
                 <div className="flex justify-between text-gray-600">
                   <span>Tour Price (per person)</span>
-                  <span className="font-semibold text-gray-900">{import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {Number(tour.price).toLocaleString()}</span>
+                  <div className="text-right">
+                    {discountPercentage > 0 && (
+                      <span className="text-xs text-gray-400 line-through mr-1.5">
+                        {import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {originalPricePerPerson.toLocaleString()}
+                      </span>
+                    )}
+                    <span className="font-semibold text-gray-900">
+                      {import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {discountedPricePerPerson.toLocaleString()}
+                    </span>
+                  </div>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>No. of Adults</span>
                   <span className="font-semibold text-gray-900">{inquiry.adults}</span>
                 </div>
+
+                {discountPercentage > 0 && (
+                  <>
+                    <div className="flex justify-between text-gray-600 pt-2 border-t border-gray-100">
+                      <span>Original Subtotal</span>
+                      <span className="font-semibold text-gray-800">
+                        {import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {originalSubtotal.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-emerald-700">
+                      <span className="font-medium">Discount ({discountPercentage}%)</span>
+                      <span className="font-bold">
+                        -{import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {discountAmount.toLocaleString()}
+                      </span>
+                    </div>
+                  </>
+                )}
+
                 <div className="flex justify-between text-gray-600 pt-2 border-t border-gray-100">
                   <span>Subtotal</span>
-                  <span className="font-semibold text-gray-900">{import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {Number(tour.price * inquiry.adults).toLocaleString()}</span>
+                  <span className="font-semibold text-gray-900">
+                    {import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {discountedSubtotal.toLocaleString()}
+                  </span>
                 </div>
                 <div className="flex justify-between items-baseline pt-3 border-t border-gray-200">
                   <span className="font-bold text-blue-800">50% Advance</span>
-                  <span className="text-2xl font-bold text-blue-900">{import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {advanceAmount.toLocaleString()}</span>
+                  <span className="text-2xl font-bold text-blue-900">
+                    {import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {advanceAmount.toLocaleString()}
+                  </span>
                 </div>
               </div>
               <div className="px-6 pb-6 space-y-3">
