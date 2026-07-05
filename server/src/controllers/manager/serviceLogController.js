@@ -179,8 +179,6 @@ export const createServiceLog = async (req, res) => {
       cost: req.body.cost || 0,
       vendor: req.body.vendor || null,
       performedBy: req.body.performedBy || null,
-      nextServiceDue: req.body.nextServiceDue || null,
-      nextServiceMileage: req.body.nextServiceMileage || null,
       notes: req.body.notes || null,
       receiptUrl,
     });
@@ -232,8 +230,6 @@ export const updateServiceLog = async (req, res) => {
       cost: req.body.cost ?? log.cost,
       vendor: req.body.vendor ?? log.vendor,
       performedBy: req.body.performedBy ?? log.performedBy,
-      nextServiceDue: req.body.nextServiceDue ?? log.nextServiceDue,
-      nextServiceMileage: req.body.nextServiceMileage ?? log.nextServiceMileage,
       notes: req.body.notes ?? log.notes,
       receiptUrl,
     });

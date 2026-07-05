@@ -214,7 +214,7 @@ export default function VehicleDetailsPage() {
                     <span className="text-emerald-500 font-black">✓</span> Complete Third-Party Insurance Cover
                   </li>
                   <li className="flex items-center gap-2 font-medium">
-                    <span className="text-emerald-500 font-black">✓</span> Professional Chauffeur Option available
+                    <span className="text-emerald-500 font-black">✓</span> Professional Driver Option available
                   </li>
                   {vehicle.color && (
                     <li className="flex items-center gap-2 font-medium">

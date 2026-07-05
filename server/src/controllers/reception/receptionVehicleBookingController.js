@@ -135,8 +135,10 @@ export const createReceptionVehicleBooking = async (req, res) => {
       return res.status(400).json({ success: false, message: `Vehicle is currently ${vehicle.status}` });
     }
 
-    // Check overlaps
-    const pickupDateWithBuffer = new Date(pickupDate.getTime() - 24 * 60 * 60 * 1000);
+    // Same-day return check: return date of existing booking must not be on or after the day of pickup
+    const pickupDateWithBuffer = new Date(pickupDate);
+    pickupDateWithBuffer.setHours(0, 0, 0, 0);
+
     const overlappingBooking = await VehicleBooking.findOne({
       where: {
         vehicleId,
@@ -362,7 +364,9 @@ export const checkVehicleAvailability = async (req, res) => {
       });
     }
 
-    const pickupDateWithBuffer = new Date(pickupDate.getTime() - 24 * 60 * 60 * 1000);
+    // Same-day return check: return date of existing booking must not be on or after the day of pickup
+    const pickupDateWithBuffer = new Date(pickupDate);
+    pickupDateWithBuffer.setHours(0, 0, 0, 0);
 
     const overlappingBooking = await VehicleBooking.findOne({
       where: {

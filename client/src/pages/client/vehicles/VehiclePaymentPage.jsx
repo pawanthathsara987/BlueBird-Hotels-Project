@@ -314,7 +314,7 @@ export default function VehiclePaymentPage() {
 
                   <div className="text-slate-500 font-medium">Driver Option:</div>
                   <div className="text-right font-semibold text-slate-800">
-                    {paymentSuccessDetails.driverOption === "with" ? "Professional Chauffeur" : "Self-Drive Rental"}
+                    {paymentSuccessDetails.driverOption === "with" ? "Professional Driver" : "Self-Drive Rental"}
                   </div>
 
                   <div className="text-slate-500 font-medium">Amount Paid:</div>
@@ -333,7 +333,7 @@ export default function VehiclePaymentPage() {
                   {paymentSuccessDetails.driverOption === "without" ? (
                     <li>Please bring your original <strong>Driving License</strong> and identification card when collecting the vehicle.</li>
                   ) : (
-                    <li>Chauffeur driver details will be assigned and texted to your phone number shortly before pickup.</li>
+                    <li>Driver details will be assigned and texted to your phone number shortly before pickup.</li>
                   )}
                   <li>For support, please call reception or Bluebird Fleet line.</li>
                 </ul>

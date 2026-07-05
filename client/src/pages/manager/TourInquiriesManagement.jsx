@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
-import { Check, X, AlertCircle, Loader, ChevronDown, Mail, Phone, MapPin, Users, Calendar } from 'lucide-react';
+import { Check, X, AlertCircle, Loader, ChevronDown, Mail, Phone, MapPin, Users, Calendar, Search, CheckCircle, Package, User, Globe, FileText, CreditCard } from 'lucide-react';
 import axios from 'axios';
 
 export default function TourInquiriesManagement() {
@@ -18,6 +18,12 @@ export default function TourInquiriesManagement() {
     const saved = localStorage.getItem('emailSentByInquiry');
     return saved ? JSON.parse(saved) : {};
   });
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4500);
+  };
 
   const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3002/api').replace(/\/$/, '');
 
@@ -135,14 +141,14 @@ export default function TourInquiriesManagement() {
     try {
       const { data } = await axios.put(`${backendBaseUrl}/tour-inquiry/${inquiryId}/accept`);
       if (data && data.success) {
-        alert('Inquiry accepted. You can now send a customized email to the guest.');
+        showToast('Inquiry accepted. You can now send a customized email to the guest.', 'success');
         await fetchInquiries();
       } else {
-        alert((data && data.message) || 'Failed to accept inquiry');
+        showToast((data && data.message) || 'Failed to accept inquiry', 'error');
       }
     } catch (err) {
       console.error('Error accepting inquiry:', err);
-      alert('Failed to accept inquiry');
+      showToast('Failed to accept inquiry', 'error');
     } finally {
       setProcessing(null);
     }
@@ -155,14 +161,14 @@ export default function TourInquiriesManagement() {
     try {
       const { data } = await axios.put(`${backendBaseUrl}/tour-inquiry/${inquiryId}/reject`);
       if (data && data.success) {
-        alert('Inquiry rejected');
+        showToast('Inquiry rejected successfully', 'success');
         await fetchInquiries();
       } else {
-        alert((data && data.message) || 'Failed to reject inquiry');
+        showToast((data && data.message) || 'Failed to reject inquiry', 'error');
       }
     } catch (err) {
       console.error('Error rejecting inquiry:', err);
-      alert('Failed to reject inquiry');
+      showToast('Failed to reject inquiry', 'error');
     } finally {
       setProcessing(null);
     }
@@ -209,22 +215,22 @@ export default function TourInquiriesManagement() {
     };
 
     if (!Number.isFinite(payload.pricePerGuest) || payload.pricePerGuest <= 0) {
-      alert('Please enter a valid price per guest.');
+      showToast('Please enter a valid price per guest.', 'error');
       return;
     }
 
     if (!Number.isInteger(payload.numberOfAdults) || payload.numberOfAdults < 1) {
-      alert('Adults must be 1 or more.');
+      showToast('Adults must be 1 or more.', 'error');
       return;
     }
 
     if (!Number.isInteger(payload.numberOfChildren) || payload.numberOfChildren < 0) {
-      alert('Children cannot be negative.');
+      showToast('Children cannot be negative.', 'error');
       return;
     }
 
     if (!payload.tourStartDate) {
-      alert('Please select a tour start date.');
+      showToast('Please select a tour start date.', 'error');
       return;
     }
 
@@ -232,7 +238,7 @@ export default function TourInquiriesManagement() {
     try {
       const { data } = await axios.put(`${backendBaseUrl}/tour-inquiry/${inquiry.id}/send-accepted-email`, payload);
       if (data && data.success) {
-        alert(`Email sent to ${inquiry.email}`);
+        showToast(`Email sent to ${inquiry.email}`, 'success');
         setEmailSentByInquiry((prev) => ({
           ...prev,
           [inquiry.id]: true,
@@ -240,11 +246,11 @@ export default function TourInquiriesManagement() {
         setEmailingInquiryId(null);
         await fetchInquiries();
       } else {
-        alert((data && data.message) || 'Failed to send email');
+        showToast((data && data.message) || 'Failed to send email', 'error');
       }
     } catch (err) {
       console.error('Error sending accepted inquiry email:', err);
-      alert('Failed to send email');
+      showToast('Failed to send email', 'error');
     } finally {
       setProcessing(null);
     }
@@ -663,6 +669,21 @@ export default function TourInquiriesManagement() {
           </div>
         )}
       </div>
+      {toast && (
+        <div className={`fixed bottom-5 right-5 z-50 flex items-center gap-3 text-white text-sm px-5 py-3.5 rounded-2xl shadow-2xl max-w-sm animate-in fade-in slide-in-from-bottom-5 duration-200 ${
+          toast.type === 'error' ? 'bg-rose-900' : 'bg-slate-900'
+        }`}>
+          {toast.type === 'error' ? (
+            <AlertCircle size={15} className="text-rose-300 shrink-0" />
+          ) : (
+            <CheckCircle size={15} className="text-emerald-400 shrink-0" />
+          )}
+          <span>{toast.message}</span>
+          <button onClick={() => setToast(null)} className="ml-auto text-white/50 hover:text-white transition cursor-pointer">
+            <X size={14} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
