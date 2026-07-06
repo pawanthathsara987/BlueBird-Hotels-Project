@@ -128,21 +128,19 @@ export default function CheckIn() {
             <div className="flex gap-2 mb-6 border-b dark:border-slate-800 border-slate-200 pb-3">
                 <button
                     onClick={() => setSubTab("today")}
-                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                        subTab === "today"
-                            ? "bg-blue-600 text-white shadow-sm font-bold"
-                            : (dk ? "bg-slate-900 text-slate-400 hover:text-white" : "bg-white text-slate-600 hover:text-slate-950 border border-slate-200")
-                    }`}
+                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${subTab === "today"
+                        ? "bg-blue-600 text-white shadow-sm font-bold"
+                        : (dk ? "bg-slate-900 text-slate-400 hover:text-white" : "bg-white text-slate-600 hover:text-slate-950 border border-slate-200")
+                        }`}
                 >
                     Today's Arrivals ({todayCheckInsList.length})
                 </button>
                 <button
                     onClick={() => setSubTab("upcoming")}
-                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                        subTab === "upcoming"
-                            ? "bg-blue-600 text-white shadow-sm font-bold"
-                            : (dk ? "bg-slate-900 text-slate-400 hover:text-white" : "bg-white text-slate-600 hover:text-slate-950 border border-slate-200")
-                    }`}
+                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${subTab === "upcoming"
+                        ? "bg-blue-600 text-white shadow-sm font-bold"
+                        : (dk ? "bg-slate-900 text-slate-400 hover:text-white" : "bg-white text-slate-600 hover:text-slate-950 border border-slate-200")
+                        }`}
                 >
                     Upcoming Arrivals ({upcomingCheckInsList.length})
                 </button>
@@ -157,13 +155,12 @@ export default function CheckIn() {
                             <div className="flex justify-between items-start">
                                 <div>
                                     <h2 className={`text-lg font-bold ${dk ? "text-white" : "text-slate-800"}`}>{guest.firstName} {guest.lastName}</h2>
-                                    <span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                                        guest.checkIn < todayStr
-                                            ? "bg-rose-100 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border-rose-200 dark:border-rose-900/40 animate-pulse"
-                                            : guest.checkIn === todayStr
-                                                ? "bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-200 dark:border-amber-900/40"
-                                                : "bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200 dark:border-blue-900/40"
-                                    }`}>
+                                    <span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${guest.checkIn < todayStr
+                                        ? "bg-rose-100 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border-rose-200 dark:border-rose-900/40 animate-pulse"
+                                        : guest.checkIn === todayStr
+                                            ? "bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-200 dark:border-amber-900/40"
+                                            : "bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200 dark:border-blue-900/40"
+                                        }`}>
                                         {guest.checkIn < todayStr ? "Overdue Arrival" : guest.checkIn === todayStr ? "Arriving Today" : "Upcoming Arrival"}
                                     </span>
                                 </div>

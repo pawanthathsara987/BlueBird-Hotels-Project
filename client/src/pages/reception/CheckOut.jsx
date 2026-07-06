@@ -122,21 +122,19 @@ export default function CheckOut() {
             <div className="flex gap-2 mb-6 border-b dark:border-slate-800 border-slate-200 pb-3">
                 <button
                     onClick={() => setSubTab("today")}
-                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                        subTab === "today"
+                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${subTab === "today"
                             ? "bg-orange-500 text-white shadow-sm font-bold"
                             : (dk ? "bg-slate-900 text-slate-400 hover:text-white" : "bg-white text-slate-600 hover:text-slate-950 border border-slate-200")
-                    }`}
+                        }`}
                 >
                     Today's Departures ({todayCheckOutsList.length})
                 </button>
                 <button
                     onClick={() => setSubTab("upcoming")}
-                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                        subTab === "upcoming"
+                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${subTab === "upcoming"
                             ? "bg-orange-500 text-white shadow-sm font-bold"
                             : (dk ? "bg-slate-900 text-slate-400 hover:text-white" : "bg-white text-slate-600 hover:text-slate-950 border border-slate-200")
-                    }`}
+                        }`}
                 >
                     Upcoming Departures ({upcomingCheckOutsList.length})
                 </button>
@@ -150,13 +148,12 @@ export default function CheckOut() {
                         <div key={guest.booking_id} className={`rounded-2xl shadow-sm hover:shadow-md transition p-5 border ${dk ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-150 text-slate-800"}`}>
                             <div>
                                 <h2 className={`text-lg font-bold ${dk ? "text-white" : "text-slate-800"}`}>{guest.firstName} {guest.lastName}</h2>
-                                <span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                                    guest.checkOut < todayStr
+                                <span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${guest.checkOut < todayStr
                                         ? "bg-rose-100 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border-rose-200 dark:border-rose-900/40 animate-pulse"
                                         : guest.checkOut === todayStr
                                             ? "bg-orange-100 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400 border-orange-200 dark:border-orange-900/40"
                                             : "bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200 dark:border-blue-900/40"
-                                }`}>
+                                    }`}>
                                     {guest.checkOut < todayStr ? "Overdue Departure" : guest.checkOut === todayStr ? "Departing Today" : "Upcoming Departure"}
                                 </span>
                             </div>
@@ -328,3 +325,4 @@ export default function CheckOut() {
         </div>
     );
 }
+
