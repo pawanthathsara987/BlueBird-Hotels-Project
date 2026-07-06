@@ -41,7 +41,6 @@ export default function Header() {
       }
       setIsLoggedIn(!!token);
 
-      // Try to read user name from stored token payload
       if (token) {
         try {
           const payload = JSON.parse(atob(token.split(".")[1]));
@@ -60,9 +59,8 @@ export default function Header() {
 
     window.addEventListener("storage", checkAuth);
     return () => window.removeEventListener("storage", checkAuth);
-  }, [location]); // re-check on route change so logout is reflected
+  }, [location]);
 
-  // Close profile dropdown when clicking outside BOTH dropdown containers
   useEffect(() => {
     function handleClickOutside(e) {
       const inDesktop = desktopProfileRef.current?.contains(e.target);
@@ -100,8 +98,7 @@ export default function Header() {
     navigate("/");
   };
 
-  const hour =
-    typeof window !== "undefined" ? new Date().getHours() : 12;
+  const hour = typeof window !== "undefined" ? new Date().getHours() : 12;
   const isDay = hour >= 6 && hour < 18;
 
   async function getWeather() {
@@ -115,7 +112,6 @@ export default function Header() {
     }
   }
 
-  // Initials avatar fallback
   const initials = userName
     .split(" ")
     .map((w) => w[0])
@@ -123,14 +119,16 @@ export default function Header() {
     .toUpperCase()
     .slice(0, 2);
 
-  // ─── nav links ───────────────────────────
+  // Balanced Desktop Distribution (Without Hotels)
   const leftLinks = [
     { label: "HOME", to: "/" },
+    { label: "ABOUT", to: "/about" },
     { label: "TRAVELS", to: "/booking/tour" },
     { label: "VEHICLES", to: "/vehicles" },
-    { label: "SHOP", to: "/shop" },
   ];
+
   const rightLinks = [
+    { label: "SHOP", to: "/shop" },
     { label: "GALLERY", to: "/gallery" },
     { label: "FAQ", to: "/faq" },
     { label: "REVIEWS", to: "/reviews" },
@@ -139,12 +137,27 @@ export default function Header() {
 
   return (
     <header className="w-full bg-white shadow-sm relative z-50">
+      <style>{`
+        @keyframes slideInFromLeft {
+          from { transform: translateX(-100%); }
+          to { transform: translateX(0); }
+        }
+        @keyframes fadeInBg {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .animate-slide-in-left {
+          animation: slideInFromLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .animate-fade-in-bg {
+          animation: fadeInBg 0.25s ease-out forwards;
+        }
+      `}</style>
       {/* ── Desktop bar ── */}
       <div className="w-full px-4 lg:px-10 h-[90px] hidden lg:grid grid-cols-[1fr_auto_1fr] items-center">
 
         {/* LEFT: weather + left nav */}
         <div className="flex items-center gap-6">
-          {/* Weather */}
           <span className="flex items-center gap-1.5 text-sm text-gray-500 whitespace-nowrap">
             {isDay ? (
               <Sun className="w-4 h-4 text-yellow-400" />
@@ -157,7 +170,6 @@ export default function Header() {
             </span>
           </span>
 
-          {/* Left nav links */}
           <nav className="flex items-center gap-6 font-medium text-sm tracking-wide text-gray-700">
             {leftLinks.map((l) => (
               <Link
@@ -180,7 +192,6 @@ export default function Header() {
 
         {/* RIGHT: right nav + auth */}
         <div className="flex items-center justify-end gap-6">
-          {/* Right nav links */}
           <nav className="flex items-center gap-6 font-medium text-sm tracking-wide text-gray-700">
             {rightLinks.map((l) => (
               <Link
@@ -196,7 +207,6 @@ export default function Header() {
           {/* Auth zone */}
           <div className="flex items-center gap-3">
             {isLoggedIn ? (
-              /* ── Profile avatar + dropdown ── */
               <div className="relative" ref={desktopProfileRef}>
                 <button
                   id="profile-menu-btn"
@@ -207,7 +217,6 @@ export default function Header() {
                   aria-haspopup="true"
                   aria-expanded={profileOpen}
                 >
-                  {/* Avatar circle */}
                   <span className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white text-xs font-bold shadow ring-2 ring-white group-hover:ring-blue-200 transition-all duration-200 select-none">
                     {initials || <User size={16} />}
                   </span>
@@ -217,15 +226,12 @@ export default function Header() {
                   />
                 </button>
 
-                {/* Dropdown panel */}
                 {profileOpen && (
                   <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 z-50">
-                    {/* User info */}
                     <div className="px-4 py-3 border-b border-gray-50 bg-gradient-to-r from-blue-50 to-cyan-50">
                       <p className="text-xs font-bold text-blue-900 truncate">{userName || "Valued Guest"}</p>
                       <p className="text-[10px] text-gray-400 mt-0.5">BlueBird Member</p>
                     </div>
-                    {/* Actions */}
                     <div className="py-1.5">
                       <Link
                         to="/customer/dashboard"
@@ -257,7 +263,6 @@ export default function Header() {
               </button>
             )}
 
-            {/* Book Now — hidden on booking page */}
             {location.pathname !== "/booking" && (
               <button
                 type="button"
@@ -273,7 +278,6 @@ export default function Header() {
 
       {/* ── Mobile bar ── */}
       <div className="lg:hidden flex items-center justify-between px-4 h-16">
-        {/* Hamburger */}
         <button
           type="button"
           onClick={() => setSideBarOpen(true)}
@@ -283,12 +287,10 @@ export default function Header() {
           <LuMenu className="text-3xl text-gray-700" />
         </button>
 
-        {/* Logo */}
         <Link to="/">
           <img src={logo} alt="BlueBird Logo" className="h-12 object-contain" />
         </Link>
 
-        {/* Mobile right: profile avatar or sign in icon */}
         {isLoggedIn ? (
           <div className="relative" ref={mobileProfileRef}>
             <button
@@ -342,14 +344,13 @@ export default function Header() {
       {/* ── Mobile sidebar drawer ── */}
       {sideBarOpen && (
         <div
-          className="fixed lg:hidden inset-0 bg-black/50 z-50"
+          className="fixed lg:hidden inset-0 bg-black/50 z-50 animate-fade-in-bg"
           onClick={() => setSideBarOpen(false)}
         >
           <div
-            className="bg-white w-72 h-full flex flex-col shadow-2xl animate-in slide-in-from-left duration-300"
+            className="bg-white w-72 h-full flex flex-col shadow-2xl animate-slide-in-left"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Drawer header */}
             <div className="flex items-center justify-between px-5 h-20 border-b border-gray-100 bg-gradient-to-r from-blue-950 to-blue-800">
               <img src={logo} alt="BlueBird Logo" className="h-12 object-contain brightness-200" />
               <button
@@ -362,7 +363,6 @@ export default function Header() {
               </button>
             </div>
 
-            {/* User greeting (if logged in) */}
             {isLoggedIn && (
               <div className="flex items-center gap-3 px-5 py-4 bg-blue-50 border-b border-blue-100">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white text-sm font-bold shadow shrink-0">
@@ -375,10 +375,10 @@ export default function Header() {
               </div>
             )}
 
-            {/* Nav links */}
             <nav className="flex flex-col text-sm font-medium text-gray-700 gap-1 px-3 pt-4 pb-2 flex-1 overflow-y-auto">
               {[
                 { label: "Home", to: "/" },
+                { label: "About Us", to: "/about" },
                 { label: "Reviews", to: "/reviews" },
                 { label: "FAQ", to: "/faq" },
                 { label: "Travels", to: "/booking/tour" },
@@ -440,7 +440,6 @@ export default function Header() {
               </div>
             </nav>
 
-            {/* Bottom weather strip */}
             <div className="px-5 py-3 border-t border-gray-100 flex items-center gap-2 text-xs text-gray-500">
               {isDay ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-gray-400" />}
               <span>Negombo &nbsp;·&nbsp; {weather !== null ? `${weather}°C` : "—"}</span>

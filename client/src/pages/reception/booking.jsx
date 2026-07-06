@@ -2,16 +2,22 @@ import React, { useState, useMemo, useEffect } from "react";
 import axios from "axios";
 import { useLocation } from "react-router-dom";
 import { MdCalendarToday, MdSearch, MdChevronLeft, MdChevronRight, MdList, MdAdd, MdClose, MdPayment } from "react-icons/md";
-import { Eye, FileText, Receipt, XCircle, LogIn, CheckCircle, CreditCard, Banknote, AlertCircle } from "lucide-react";
+import { Eye, FileText, Receipt, XCircle, LogIn, CheckCircle, CreditCard, Banknote, AlertCircle, Ticket, BedDouble, ShieldCheck, Check, Calendar, Users, Clock, MapPin, Mail, Phone, Info } from "lucide-react";
 import { toast } from "react-hot-toast";
 import NewBookingFlow from "./NewBookingFlow";
 
 export default function Booking() {
     const [activeTab, setActiveTab] = useState("list");
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+    const [dateFilter, setDateFilter] = useState("date"); // "date", "month"
+    const [selectedMonth, setSelectedMonth] = useState(() => {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    });
     const [searchTerm, setSearchTerm] = useState("");
     const [allBookings, setAllBookings] = useState([]);
     const [selectedBooking, setSelectedBooking] = useState(null);
+    const [statusFilter, setStatusFilter] = useState("all");
 
     // Check-In verification modal state
     const [checkInModal, setCheckInModal] = useState(null); // { bookingId, data } or null
@@ -75,6 +81,12 @@ export default function Booking() {
                             else if (statusStr === 'cancelled') statusStr = 'Cancelled';
                             else if (statusStr) statusStr = statusStr.charAt(0).toUpperCase() + statusStr.slice(1);
 
+                            const totalPaid = res.payments
+                                ? res.payments
+                                    .filter(p => p.status === 'success')
+                                    .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
+                                : 0;
+
                             flatList.push({
                                 id: `${res.id}-${br.id}`,
                                 guestName: res.Customer ? `${res.Customer.firstName} ${res.Customer.lastName}` : 'Unknown',
@@ -83,6 +95,8 @@ export default function Booking() {
                                 checkInDate: br.checkIn,
                                 checkOutDate: br.checkOut,
                                 status: statusStr || "Pending",
+                                totalPrice: res.total_price ? `${import.meta.env.VITE_CURRENCY_TYPE || "LKR"} ${parseFloat(res.total_price).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : 'N/A',
+                                paidPrice: `${import.meta.env.VITE_CURRENCY_TYPE || "LKR"} ${totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                                 price: res.total_price ? `${import.meta.env.VITE_CURRENCY_TYPE || "LKR"} ${res.total_price}` : 'N/A',
                                 phone: res.Customer ? res.Customer.phoneNumber : 'N/A',
                                 raw: res,
@@ -215,7 +229,7 @@ export default function Booking() {
             toast.error("Popup blocked! Please allow popups to print invoices.");
             return;
         }
-        
+
         const customer = booking.raw?.Customer || {};
         const guestName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || booking.guestName;
         const checkIn = booking.checkInDate || booking.rawBookedRoom?.checkIn;
@@ -224,7 +238,7 @@ export default function Booking() {
         const roomType = booking.roomType || 'Standard';
         const priceText = booking.price || `Rs. ${booking.raw?.total_price || 0}`;
         const bookingNo = booking.raw?.bookingNo || `RES-${booking.raw?.id || 'N/A'}`;
-        
+
         printWindow.document.write(`
             <html>
             <head>
@@ -318,13 +332,13 @@ export default function Booking() {
             toast.error("Popup blocked! Please allow popups to print receipts.");
             return;
         }
-        
+
         const customer = booking.raw?.Customer || {};
         const guestName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || booking.guestName;
         const roomNo = booking.roomNumber || 'N/A';
         const priceText = booking.price || `Rs. ${booking.raw?.total_price || 0}`;
         const bookingNo = booking.raw?.bookingNo || `RES-${booking.raw?.id || 'N/A'}`;
-        
+
         printWindow.document.write(`
             <html>
             <head>
@@ -377,18 +391,43 @@ export default function Booking() {
         printWindow.print();
     };
 
-    // Filter bookings by date
-    const filteredBookings = useMemo(() => {
+    // Filter bookings by date or month
+    const dailyBookings = useMemo(() => {
+        if (dateFilter === "month" && selectedMonth) {
+            const [y, m] = selectedMonth.split("-").map(Number);
+            const monthStart = `${y}-${String(m).padStart(2, "0")}-01`;
+            const lastDay = new Date(y, m, 0).getDate();
+            const monthEnd = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+
+            return allBookings.filter((booking) => {
+                return booking.checkOutDate >= monthStart && booking.checkInDate <= monthEnd;
+            });
+        }
         return allBookings.filter((booking) => {
-            const matchesDate =
-                booking.checkInDate === selectedDate || booking.checkOutDate === selectedDate ||
+            return booking.checkInDate === selectedDate || booking.checkOutDate === selectedDate ||
                 (selectedDate >= booking.checkInDate && selectedDate <= booking.checkOutDate);
+        });
+    }, [selectedDate, dateFilter, selectedMonth, allBookings]);
+
+    // Filter bookings by search and status
+    const filteredBookings = useMemo(() => {
+        return dailyBookings.filter((booking) => {
             const matchesSearch =
                 booking.guestName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (booking.roomNumber && booking.roomNumber.toString().includes(searchTerm));
-            return matchesDate && matchesSearch;
+
+            let matchesStatus = true;
+            if (statusFilter === "checkin") {
+                matchesStatus = booking.status === "Checked In";
+            } else if (statusFilter === "checkout") {
+                matchesStatus = booking.status === "Checked Out";
+            } else if (statusFilter === "cancel") {
+                matchesStatus = booking.status === "Cancelled" || booking.status === "Canceled";
+            }
+
+            return matchesSearch && matchesStatus;
         });
-    }, [selectedDate, searchTerm, allBookings]);
+    }, [dailyBookings, searchTerm, statusFilter]);
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -403,6 +442,133 @@ export default function Booking() {
             default:
                 return theme.mode === "dark" ? "bg-slate-800 text-slate-400 border border-slate-700/50" : "bg-slate-100 text-slate-600 border border-slate-200";
         }
+    };
+
+    const getModalStayDetails = (booking) => {
+        if (!booking || !booking.raw) return null;
+        const b = booking.raw;
+        const firstRoom = b.bookedRooms?.[0];
+        const checkIn = firstRoom?.checkIn || b.createdAt;
+        let checkOut = firstRoom?.checkOut || checkIn;
+        b.bookedRooms?.forEach(r => {
+            if (new Date(r.checkOut) > new Date(checkOut)) {
+                checkOut = r.checkOut;
+            }
+        });
+        const msPerDay = 1000 * 60 * 60 * 24;
+        const nights = Math.max(1, Math.round(Math.abs(new Date(checkOut) - new Date(checkIn)) / msPerDay));
+
+        const rooms = b.bookedRooms?.map(r => ({
+            type: r.Room?.roomType?.type || r.Room?.RoomType?.type || "Deluxe Room",
+            roomNumber: r.Room?.roomNumber || r.Room?.room_number ? `Room ${r.Room.roomNumber || r.Room.room_number}` : "",
+            guests: `${r.adults || 1} Adult${(r.adults || 1) > 1 ? 's' : ''}` + (r.kids > 0 ? `, ${r.kids} Child${r.kids > 1 ? 'ren' : ''}` : "")
+        })) || [];
+
+        let totalAdults = 0;
+        let totalKids = 0;
+        b.bookedRooms?.forEach(r => {
+            totalAdults += r.adults || 0;
+            totalKids += r.kids || 0;
+        });
+        const guestsSummary = `${totalAdults} Adult${totalAdults !== 1 ? 's' : ''}` + (totalKids > 0 ? `, ${totalKids} Child${totalKids > 1 ? 'ren' : ''}` : "");
+
+        const paidPayment = b.payments?.find(p => p.status === "success" || p.status === "paid");
+        let displayStatus = b.status ? (b.status.charAt(0).toUpperCase() + b.status.slice(1)) : "Pending";
+        let paymentStatus = "Unpaid";
+        if (paidPayment) {
+            paymentStatus = "Paid";
+        } else if (b.status === "confirmed" || b.status === "completed") {
+            paymentStatus = "Paid";
+        } else if (b.status === "cancelled") {
+            paymentStatus = "Cancelled";
+        }
+
+        const totalAmount = parseFloat(b.total_price) || 0;
+
+        return {
+            id: `BB-BK-${b.id}`,
+            realId: b.id,
+            hotelName: "BlueBird Luxury Hotels & Resorts",
+            location: "Galle Face, Colombo, Sri Lanka",
+            checkIn,
+            checkOut,
+            nights,
+            rooms,
+            guestsSummary,
+            status: displayStatus,
+            paymentStatus,
+            amount: totalAmount,
+            raw: b
+        };
+    };
+
+    const getOverallStayStatus = (booking) => {
+        const bookedRooms = booking.raw?.bookedRooms || [];
+        const status = (booking.status || "").toLowerCase();
+
+        if (bookedRooms.length > 0) {
+            const roomStatuses = bookedRooms.map(r => (r.status || "").toLowerCase());
+            if (roomStatuses.includes("checked_in")) {
+                return {
+                    key: "checked_in",
+                    label: "Checked In",
+                    color: "emerald",
+                    message: "The guest is currently checked-in to their room."
+                };
+            }
+            if (roomStatuses.includes("checked_out")) {
+                return {
+                    key: "checked_out",
+                    label: "Checked Out",
+                    color: "blue",
+                    message: "The guest has checked-out of this room."
+                };
+            }
+        }
+
+        if (status === "cancelled" || status === "rejected") {
+            return {
+                key: "cancelled",
+                label: "Cancelled",
+                color: "rose",
+                message: "This reservation has been cancelled or rejected."
+            };
+        }
+        if (status === "confirmed") {
+            return {
+                key: "confirmed",
+                label: "Reserved & Confirmed",
+                color: "indigo",
+                message: "The stay is confirmed and ready for arrival check-in."
+            };
+        }
+        return {
+            key: "pending",
+            label: "Pending Verification",
+            color: "amber",
+            message: "The reservation is pending manual review or advance deposit."
+        };
+    };
+
+    const getTimelineSteps = (booking) => {
+        const status = (booking.status || "").toLowerCase();
+        const isPaid = (booking.paymentStatus || "").toLowerCase() === "paid";
+        const bookedRooms = booking.raw?.bookedRooms || [];
+        const hasCheckedIn = bookedRooms.some(r => (r.status || "").toLowerCase() === "checked_in" || (r.status || "").toLowerCase() === "checked_out");
+        const hasCheckedOut = bookedRooms.some(r => (r.status || "").toLowerCase() === "checked_out");
+
+        const formatDateSafely = (dt) => {
+            if (!dt) return null;
+            try { return new Date(dt).toLocaleDateString(); } catch (e) { return dt; }
+        };
+
+        return [
+            { label: "Booking Created", date: formatDateSafely(booking.raw?.createdAt), active: true, done: true },
+            { label: "Payment Completed", date: isPaid ? "Verified" : null, active: isPaid, done: isPaid },
+            { label: "Booking Confirmed", date: (status === "confirmed" || status === "completed" || hasCheckedIn) ? "Stay Confirmed" : null, active: (status === "confirmed" || status === "completed" || hasCheckedIn), done: (status === "confirmed" || status === "completed" || hasCheckedIn) },
+            { label: "Check-in Completed", date: hasCheckedIn ? "Checked In" : null, active: hasCheckedIn, done: hasCheckedIn },
+            { label: "Booking Completed", date: hasCheckedOut ? "Checked Out" : null, active: hasCheckedOut, done: hasCheckedOut }
+        ];
     };
 
     const handlePreviousDate = () => {
@@ -481,58 +647,101 @@ export default function Booking() {
                 <NewBookingFlow onBookingSuccess={() => setActiveTab("list")} />
             ) : (
                 <>
-                    {/* Statistics Row */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                        <div className={`rounded-2xl border p-4 md:p-5 shadow-sm ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}>
-                            <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Total Bookings</p>
-                            <h3 className={`text-2xl font-black mt-1 ${theme.mode === "dark" ? "text-white" : "text-slate-800"}`}>{isLoading ? "..." : allBookings.length}</h3>
-                        </div>
-                        <div className={`rounded-2xl border p-4 md:p-5 shadow-sm ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}>
-                            <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Checked In</p>
-                            <h3 className="text-2xl font-black text-emerald-500 mt-1">{isLoading ? "..." : filteredBookings.filter(b => b.status === "Checked In").length}</h3>
-                        </div>
-                        <div className={`rounded-2xl border p-4 md:p-5 shadow-sm ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}>
-                            <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Pending</p>
-                            <h3 className="text-2xl font-black text-amber-500 mt-1">{isLoading ? "..." : filteredBookings.filter(b => b.status === "Pending").length}</h3>
-                        </div>
-                        <div className={`rounded-2xl border p-4 md:p-5 shadow-sm ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}>
-                            <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Confirmed</p>
-                            <h3 className="text-2xl font-black text-blue-500 mt-1">{isLoading ? "..." : filteredBookings.filter(b => b.status === "Confirmed").length}</h3>
-                        </div>
-                    </div>
+
 
                     {/* Filter Section */}
                     <div className={`rounded-2xl border p-4 md:p-6 mb-6 shadow-sm ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
                         }`}>
+                        {/* Date Mode Tabs */}
+                        <div className="flex flex-wrap gap-2 mb-4">
+                            {[
+                                { id: "date", label: "By Date" },
+                                { id: "month", label: "By Month" },
+                            ].map((mode) => {
+                                const isActive = dateFilter === mode.id;
+                                return (
+                                    <button
+                                        key={mode.id}
+                                        onClick={() => setDateFilter(mode.id)}
+                                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                                            isActive
+                                                ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                                                : (theme.mode === "dark" ? "bg-slate-800 text-slate-400 border-slate-700 hover:text-white" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50")
+                                        }`}
+                                    >
+                                        {mode.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-                            {/* Date Navigation */}
-                            <div className="flex items-center gap-2 md:gap-4">
-                                <button
-                                    onClick={handlePreviousDate}
-                                    className={`p-2 rounded-xl transition cursor-pointer ${theme.mode === "dark" ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-600"}`}
-                                    title="Previous Date"
-                                >
-                                    <MdChevronLeft className="text-xl md:text-2xl" />
-                                </button>
-                                <div className="flex-1">
-                                    <input
-                                        type="date"
-                                        value={selectedDate}
-                                        onChange={(e) => setSelectedDate(e.target.value)}
-                                        className={`w-full px-3 md:px-4 py-2 text-sm border rounded-xl focus:outline-none ${theme.mode === "dark"
-                                            ? "bg-slate-900 border-slate-800 text-white focus:border-slate-600"
-                                            : "bg-white border-slate-200 text-slate-800 focus:border-blue-500"
-                                            }`}
-                                    />
+                            {/* Date or Month Picker */}
+                            {dateFilter === "date" ? (
+                                <div className="flex items-center gap-2 md:gap-4">
+                                    <button
+                                        onClick={handlePreviousDate}
+                                        className={`p-2 rounded-xl transition cursor-pointer ${theme.mode === "dark" ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-600"}`}
+                                        title="Previous Date"
+                                    >
+                                        <MdChevronLeft className="text-xl md:text-2xl" />
+                                    </button>
+                                    <div className="flex-1">
+                                        <input
+                                            type="date"
+                                            value={selectedDate}
+                                            onChange={(e) => setSelectedDate(e.target.value)}
+                                            className={`w-full px-3 md:px-4 py-2 text-sm border rounded-xl focus:outline-none ${theme.mode === "dark"
+                                                ? "bg-slate-900 border-slate-800 text-white focus:border-slate-600"
+                                                : "bg-white border-slate-200 text-slate-800 focus:border-blue-500"
+                                                }`}
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={handleNextDate}
+                                        className={`p-2 rounded-xl transition cursor-pointer ${theme.mode === "dark" ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-600"}`}
+                                        title="Next Date"
+                                    >
+                                        <MdChevronRight className="text-xl md:text-2xl" />
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={handleNextDate}
-                                    className={`p-2 rounded-xl transition cursor-pointer ${theme.mode === "dark" ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-600"}`}
-                                    title="Next Date"
-                                >
-                                    <MdChevronRight className="text-xl md:text-2xl" />
-                                </button>
-                            </div>
+                            ) : (
+                                <div className="flex items-center gap-2 md:gap-4">
+                                    <button
+                                        onClick={() => {
+                                            const [y, m] = selectedMonth.split("-").map(Number);
+                                            const prev = new Date(y, m - 2, 1);
+                                            setSelectedMonth(`${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`);
+                                        }}
+                                        className={`p-2 rounded-xl transition cursor-pointer ${theme.mode === "dark" ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-600"}`}
+                                        title="Previous Month"
+                                    >
+                                        <MdChevronLeft className="text-xl md:text-2xl" />
+                                    </button>
+                                    <div className="flex-1">
+                                        <input
+                                            type="month"
+                                            value={selectedMonth}
+                                            onChange={(e) => setSelectedMonth(e.target.value)}
+                                            className={`w-full px-3 md:px-4 py-2 text-sm border rounded-xl focus:outline-none ${theme.mode === "dark"
+                                                ? "bg-slate-900 border-slate-800 text-white focus:border-slate-600"
+                                                : "bg-white border-slate-200 text-slate-800 focus:border-blue-500"
+                                                }`}
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            const [y, m] = selectedMonth.split("-").map(Number);
+                                            const next = new Date(y, m, 1);
+                                            setSelectedMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`);
+                                        }}
+                                        className={`p-2 rounded-xl transition cursor-pointer ${theme.mode === "dark" ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-600"}`}
+                                        title="Next Month"
+                                    >
+                                        <MdChevronRight className="text-xl md:text-2xl" />
+                                    </button>
+                                </div>
+                            )}
 
                             {/* Search Box */}
                             <div className="relative">
@@ -549,15 +758,56 @@ export default function Booking() {
                                 />
                             </div>
 
-                            {/* Date Display */}
+                            {/* Date / Month Display */}
                             <div className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl border ${theme.mode === "dark"
                                 ? "bg-teal-950/20 border-teal-900/30 text-teal-400"
                                 : "bg-blue-50 border-blue-100 text-blue-900"
                                 }`}>
                                 <MdCalendarToday className="text-lg md:text-xl flex-shrink-0" />
-                                <span className="font-extrabold text-sm md:text-base">{formatDate(selectedDate)}</span>
+                                <span className="font-extrabold text-sm md:text-base">
+                                    {dateFilter === "date" ? formatDate(selectedDate) : (() => {
+                                        const [y, m] = selectedMonth.split("-").map(Number);
+                                        const d = new Date(y, m - 1, 1);
+                                        return `All bookings for ${d.toLocaleDateString("en-US", { month: "long", year: "numeric" })}`;
+                                    })()}
+                                </span>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Status Filters Bar */}
+                    <div className="flex flex-wrap gap-2 mb-6">
+                        {[
+                            { id: "all", label: "All Bookings", count: dailyBookings.length, color: "slate" },
+                            { id: "checkin", label: "Checked In", count: dailyBookings.filter(b => b.status === "Checked In").length, color: "green" },
+                            { id: "checkout", label: "Checked Out", count: dailyBookings.filter(b => b.status === "Checked Out").length, color: "blue" },
+                            { id: "cancel", label: "Cancelled", count: dailyBookings.filter(b => b.status === "Cancelled" || b.status === "Canceled").length, color: "rose" }
+                        ].map(tab => {
+                            const isActive = statusFilter === tab.id;
+                            let activeClass = "";
+                            if (isActive) {
+                                if (tab.color === "green") activeClass = "bg-green-600 text-white shadow-sm border-green-600";
+                                else if (tab.color === "blue") activeClass = "bg-blue-600 text-white shadow-sm border-blue-600";
+                                else if (tab.color === "rose") activeClass = "bg-rose-600 text-white shadow-sm border-rose-600";
+                                else activeClass = "bg-slate-700 text-white shadow-sm border-slate-700";
+                            } else {
+                                activeClass = theme.mode === "dark"
+                                    ? "bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200"
+                                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50";
+                            }
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setStatusFilter(tab.id)}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${activeClass}`}
+                                >
+                                    <span>{tab.label}</span>
+                                    <span className={`px-2 py-0.5 text-[10px] rounded-full font-bold ${isActive ? 'bg-white/20 text-white' : (theme.mode === 'dark' ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500')}`}>
+                                        {tab.count}
+                                    </span>
+                                </button>
+                            );
+                        })}
                     </div>
 
                     {/* Bookings Table */}
@@ -574,12 +824,6 @@ export default function Booking() {
                                                     Guest Name
                                                 </th>
                                                 <th className={`px-4 lg:px-6 py-4 text-left text-xs font-black uppercase tracking-wider ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
-                                                    Room
-                                                </th>
-                                                <th className={`px-4 lg:px-6 py-4 text-left text-xs font-black uppercase tracking-wider ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
-                                                    Room Type
-                                                </th>
-                                                <th className={`px-4 lg:px-6 py-4 text-left text-xs font-black uppercase tracking-wider ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
                                                     Check-In
                                                 </th>
                                                 <th className={`px-4 lg:px-6 py-4 text-left text-xs font-black uppercase tracking-wider ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
@@ -589,10 +833,10 @@ export default function Booking() {
                                                     Status
                                                 </th>
                                                 <th className={`px-4 lg:px-6 py-4 text-left text-xs font-black uppercase tracking-wider ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
-                                                    Price
+                                                    Total Price
                                                 </th>
                                                 <th className={`px-4 lg:px-6 py-4 text-left text-xs font-black uppercase tracking-wider ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
-                                                    Phone
+                                                    Paid Price
                                                 </th>
                                                 <th className={`px-4 lg:px-6 py-4 text-left text-xs font-black uppercase tracking-wider ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
                                                     Actions
@@ -612,12 +856,6 @@ export default function Booking() {
                                                     <td className={`px-4 lg:px-6 py-4 text-xs md:text-sm font-bold ${theme.mode === "dark" ? "text-white" : "text-slate-800"}`}>
                                                         {booking.guestName}
                                                     </td>
-                                                    <td className={`px-4 lg:px-6 py-4 text-xs md:text-sm font-extrabold ${theme.mode === "dark" ? "text-slate-300" : "text-slate-700"}`}>
-                                                        Room {booking.roomNumber}
-                                                    </td>
-                                                    <td className={`px-4 lg:px-6 py-4 text-xs md:text-sm ${theme.mode === "dark" ? "text-slate-400" : "text-slate-600"}`}>
-                                                        {booking.roomType}
-                                                    </td>
                                                     <td className={`px-4 lg:px-6 py-4 text-xs md:text-sm ${theme.mode === "dark" ? "text-slate-400" : "text-slate-600"}`}>
                                                         {formatDate(booking.checkInDate)}
                                                     </td>
@@ -630,10 +868,10 @@ export default function Booking() {
                                                         </span>
                                                     </td>
                                                     <td className={`px-4 lg:px-6 py-4 text-xs md:text-sm font-black ${theme.mode === "dark" ? "text-teal-400" : "text-[#0d9488]"}`}>
-                                                        {booking.price}
+                                                        {booking.totalPrice}
                                                     </td>
-                                                    <td className={`px-4 lg:px-6 py-4 text-xs md:text-sm ${theme.mode === "dark" ? "text-slate-400" : "text-slate-600"}`}>
-                                                        {booking.phone}
+                                                    <td className={`px-4 lg:px-6 py-4 text-xs md:text-sm font-black ${theme.mode === "dark" ? "text-emerald-400" : "text-emerald-700"}`}>
+                                                        {booking.paidPrice}
                                                     </td>
                                                     <td className="px-4 lg:px-6 py-4">
                                                         <div className="flex items-center gap-1.5">
@@ -691,7 +929,6 @@ export default function Booking() {
                                             <div className="flex justify-between items-start mb-3">
                                                 <div>
                                                     <p className={`font-bold ${theme.mode === "dark" ? "text-white" : "text-slate-800"}`}>{booking.guestName}</p>
-                                                    <p className={`text-xs ${theme.mode === "dark" ? "text-slate-400" : "text-slate-600"}`}>Room {booking.roomNumber}</p>
                                                 </div>
                                                 <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${getStatusColor(booking.status)}`}>
                                                     {booking.status}
@@ -699,12 +936,12 @@ export default function Booking() {
                                             </div>
                                             <div className="grid grid-cols-2 gap-3 text-xs mb-3">
                                                 <div>
-                                                    <p className="text-slate-500 text-[10px] uppercase font-bold">Type</p>
-                                                    <p className={`font-semibold ${theme.mode === "dark" ? "text-slate-200" : "text-slate-700"}`}>{booking.roomType}</p>
+                                                    <p className="text-slate-500 text-[10px] uppercase font-bold">Total Price</p>
+                                                    <p className={`font-semibold ${theme.mode === "dark" ? "text-slate-200" : "text-slate-700"}`}>{booking.totalPrice}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-slate-500 text-[10px] uppercase font-bold">Price</p>
-                                                    <p className={`font-semibold ${theme.mode === "dark" ? "text-slate-200" : "text-slate-700"}`}>{booking.price}</p>
+                                                    <p className="text-slate-500 text-[10px] uppercase font-bold">Paid Price</p>
+                                                    <p className={`font-semibold ${theme.mode === "dark" ? "text-slate-205" : "text-emerald-700 font-bold"}`}>{booking.paidPrice}</p>
                                                 </div>
                                                 <div>
                                                     <p className="text-slate-500 text-[10px] uppercase font-bold">Check-In</p>
@@ -715,8 +952,46 @@ export default function Booking() {
                                                     <p className={`text-[10px] ${theme.mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>{formatDate(booking.checkOutDate)}</p>
                                                 </div>
                                             </div>
-                                            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500">
-                                                Phone: <span className="font-semibold">{booking.phone}</span>
+                                            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-1.5 flex-wrap">
+                                                <button
+                                                    onClick={() => setSelectedBooking(booking)}
+                                                    title="View stays details"
+                                                    className="p-1.5 bg-slate-50 border border-slate-200 dark:bg-slate-900/60 dark:border-slate-800 rounded-lg text-slate-655 hover:text-slate-850 dark:text-slate-300 dark:hover:text-white transition cursor-pointer shadow-2xs"
+                                                >
+                                                    <Eye size={13} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handlePrintInvoice(booking)}
+                                                    title="Print stay invoice"
+                                                    className="p-1.5 bg-blue-50 border border-blue-100 dark:bg-blue-950/20 dark:border-blue-900/30 rounded-lg text-blue-650 dark:text-blue-400 hover:text-blue-800 transition cursor-pointer shadow-2xs"
+                                                >
+                                                    <FileText size={13} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handlePrintReceipt(booking)}
+                                                    title="Print stay receipt"
+                                                    className="p-1.5 bg-cyan-50 border border-cyan-100 dark:bg-cyan-950/20 dark:border-cyan-900/30 rounded-lg text-cyan-700 dark:text-cyan-450 hover:text-cyan-900 transition cursor-pointer shadow-2xs"
+                                                >
+                                                    <Receipt size={13} />
+                                                </button>
+                                                {booking.status !== "Cancelled" && booking.status !== "Checked Out" ? (
+                                                    <button
+                                                        onClick={() => handleCancelBooking(booking.raw?.id)}
+                                                        title="Cancel reservation"
+                                                        className="p-1.5 bg-rose-50 border border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/30 rounded-lg text-rose-650 dark:text-rose-455 hover:text-rose-800 transition cursor-pointer shadow-2xs"
+                                                    >
+                                                        <XCircle size={13} />
+                                                    </button>
+                                                ) : null}
+                                                {booking.status === "Confirmed" ? (
+                                                    <button
+                                                        onClick={() => openCheckInModal(booking)}
+                                                        title="Check In Guest"
+                                                        className="p-1.5 bg-emerald-50 border border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900/30 rounded-lg text-emerald-700 dark:text-emerald-400 hover:text-emerald-900 transition cursor-pointer shadow-2xs"
+                                                    >
+                                                        <LogIn size={13} />
+                                                    </button>
+                                                ) : null}
                                             </div>
                                         </div>
                                     ))}
@@ -734,144 +1009,255 @@ export default function Booking() {
 
                 </>
             )}
+            {/* ROOM BOOKING DETAILS VIEW DRAWER */}
+            {(() => {
+                const mappedBooking = getModalStayDetails(selectedBooking);
+                if (!mappedBooking) return null;
 
-            {/* ROOM BOOKING DETAILS VIEW MODAL */}
-            {selectedBooking && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn">
-                    <div className={`w-full max-w-2xl rounded-2xl shadow-2xl border overflow-hidden max-h-[90vh] flex flex-col ${
-                        theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
-                    }`}>
-                        {/* Modal Header */}
-                        <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-slate-800">
-                            <div>
-                                <h3 className="text-base font-black tracking-tight flex items-center gap-1.5">
-                                    🏨 Room Reservation Details
-                                </h3>
-                                <p className="text-[10px] font-bold text-blue-500 mt-0.5">Booking Ref: {selectedBooking.raw?.bookingNo || `RES-${selectedBooking.raw?.id || 'N/A'}`}</p>
-                            </div>
-                            <button
-                                onClick={() => setSelectedBooking(null)}
-                                className="p-1 text-slate-400 hover:text-slate-650 dark:hover:text-white rounded-lg transition cursor-pointer"
-                            >
-                                <MdClose size={20} />
-                            </button>
-                        </div>
+                const stayStatus = getOverallStayStatus(mappedBooking);
+                const timelineSteps = getTimelineSteps(mappedBooking);
 
-                        {/* Modal Content - Scrollable */}
-                        <div className="p-6 overflow-y-auto space-y-6 text-xs text-left">
-                            {/* Stay Summary Card */}
-                            <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-950/40 border border-slate-200/50 dark:border-slate-800/80">
+                const colorClasses = {
+                    emerald: "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/20 dark:border-emerald-900/30 dark:text-emerald-400",
+                    blue: "bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-950/20 dark:border-blue-900/30 dark:text-blue-400",
+                    rose: "bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/20 dark:border-rose-900/30 dark:text-rose-400",
+                    indigo: "bg-indigo-50 border-indigo-200 text-indigo-805 dark:bg-indigo-950/20 dark:border-indigo-900/30 dark:text-indigo-400",
+                    amber: "bg-amber-50 border-amber-200 text-amber-900 dark:bg-amber-950/20 dark:border-amber-900/30 dark:text-amber-400"
+                };
+                const bgBorderClass = colorClasses[stayStatus.color] || "bg-slate-50 border-slate-200 text-slate-800";
+
+                return (
+                    <div className="fixed inset-0 z-50 flex justify-end">
+                        <div
+                            className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-40 transition-opacity animate-fadeIn"
+                            onClick={() => setSelectedBooking(null)}
+                        />
+                        <div className={`fixed inset-y-0 right-0 max-w-xl w-full z-50 shadow-2xl flex flex-col justify-between overflow-y-auto animate-slideLeft ${theme.mode === "dark" ? "bg-slate-900 border-l border-slate-800 text-white" : "bg-white text-slate-800"
+                            }`}>
+                            {/* Drawer Header */}
+                            <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-blue-950 text-white">
                                 <div>
-                                    <span className="text-[10px] text-slate-450 uppercase block">Room Details</span>
-                                    <span className="font-extrabold text-slate-850 dark:text-slate-100 mt-1 block">
-                                        Room {selectedBooking.roomNumber} ({selectedBooking.roomType})
-                                    </span>
-                                    <span className="text-[10px] text-slate-450 block mt-0.5">Check-in: {selectedBooking.checkInDate} | Check-out: {selectedBooking.checkOutDate}</span>
+                                    <span className="text-[10px] text-blue-300 font-bold uppercase tracking-widest block">Reception Stay details</span>
+                                    <h3 className="font-serif text-lg font-bold flex items-center gap-2">
+                                        <Ticket size={18} className="text-amber-400" />
+                                        {mappedBooking.id}
+                                    </h3>
                                 </div>
-                                <div>
-                                    <span className="text-[10px] text-slate-450 uppercase block">Booking Status</span>
-                                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider mt-1 ${getStatusColor(selectedBooking.status)}`}>
-                                        {selectedBooking.status}
-                                    </span>
-                                </div>
+                                <button
+                                    onClick={() => setSelectedBooking(null)}
+                                    className="p-1.5 hover:bg-white/10 rounded-lg text-white/80 hover:text-white transition cursor-pointer"
+                                >
+                                    <XCircle size={20} />
+                                </button>
                             </div>
 
-                            {/* Guest Details */}
-                            <div>
-                                <h4 className="font-black text-slate-900 dark:text-white border-b dark:border-slate-800 pb-2 mb-3 uppercase tracking-wider text-[10px]">
-                                    👤 Guest Information
-                                </h4>
-                                <div className="grid grid-cols-2 gap-y-3 gap-x-4">
-                                    <div>
-                                        <span className="text-[10px] text-slate-450 block font-bold">Full Name</span>
-                                        <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">
-                                            {selectedBooking.raw?.Customer ? `${selectedBooking.raw.Customer.firstName} ${selectedBooking.raw.Customer.lastName}` : selectedBooking.guestName}
-                                        </span>
+                            {/* Drawer Body */}
+                            <div className="p-6 flex-1 space-y-6 overflow-y-auto">
+                                {/* Status Banner */}
+                                <div className={`p-4 border rounded-2xl flex gap-3.5 items-start ${bgBorderClass} shadow-2xs`}>
+                                    <div className="shrink-0 mt-0.5">
+                                        {stayStatus.key === "checked_in" && <ShieldCheck className="w-5.5 h-5.5 text-emerald-600 animate-pulse" />}
+                                        {stayStatus.key === "checked_out" && <Check className="w-5.5 h-5.5 text-blue-600" />}
+                                        {stayStatus.key === "cancelled" && <XCircle className="w-5.5 h-5.5 text-rose-600" />}
+                                        {stayStatus.key === "confirmed" && <Calendar className="w-5.5 h-5.5 text-indigo-650" />}
+                                        {stayStatus.key === "pending" && <Clock className="w-5.5 h-5.5 text-amber-600 animate-pulse" />}
                                     </div>
-                                    <div>
-                                        <span className="text-[10px] text-slate-450 block font-bold">Email Address</span>
-                                        <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{selectedBooking.raw?.Customer?.email || 'N/A'}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-[10px] text-slate-455 block font-bold">Phone Number</span>
-                                        <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{selectedBooking.raw?.Customer?.phoneNumber || selectedBooking.phone || 'N/A'}</span>
+                                    <div className="text-xs text-left">
+                                        <p className="font-extrabold uppercase tracking-wider text-[9px] opacity-75">Stays status</p>
+                                        <p className="font-black text-sm uppercase mt-0.5 tracking-wide">{stayStatus.label}</p>
+                                        <p className="font-semibold mt-1 opacity-90 leading-relaxed text-[11px]">{stayStatus.message}</p>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* Booking Stays Dates */}
-                            <div>
-                                <h4 className="font-black text-slate-900 dark:text-white border-b dark:border-slate-800 pb-2 mb-3 uppercase tracking-wider text-[10px]">
-                                    📅 Accommodation Schedule
-                                </h4>
-                                <div className="grid grid-cols-2 gap-y-3 gap-x-4">
-                                    <div>
-                                        <span className="text-[10px] text-slate-400 block">Check-In Date</span>
-                                        <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{selectedBooking.checkInDate}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-[10px] text-slate-400 block">Check-Out Date</span>
-                                        <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{selectedBooking.checkOutDate}</span>
+                                {/* Milestone timeline */}
+                                <div className="space-y-3">
+                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block pl-0.5 text-left">Timeline Steps</span>
+                                    <div className="relative pl-6 space-y-4 border-l border-slate-200 dark:border-slate-800 text-left">
+                                        {timelineSteps.map((step, idx) => (
+                                            <div key={idx} className="relative">
+                                                <div className={`absolute -left-8.5 top-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${step.done
+                                                    ? "bg-emerald-600 border-emerald-600 text-white"
+                                                    : step.active
+                                                        ? "bg-amber-400 border-amber-400 text-white"
+                                                        : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                                                    }`}>
+                                                    {step.done && <Check size={8} className="stroke-3" />}
+                                                </div>
+                                                <div className="text-xs">
+                                                    <p className={`font-bold ${step.done ? (theme.mode === 'dark' ? 'text-slate-200' : 'text-slate-800') : 'text-slate-400'}`}>{step.label}</p>
+                                                    {step.date && <p className="text-[10px] text-slate-400 mt-0.5">{step.date}</p>}
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* Pricing & Bill Breakdown */}
-                            <div>
-                                <h4 className="font-black text-slate-900 dark:text-white border-b dark:border-slate-800 pb-2 mb-3 uppercase tracking-wider text-[10px]">
-                                    💵 Billing Summary
-                                </h4>
-                                <div className="space-y-2 max-w-md">
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-450">Room Accommodation Charge:</span>
-                                        <span className="font-bold">{selectedBooking.price}</span>
-                                    </div>
-                                    {selectedBooking.raw?.airportPickup === 1 && (
-                                        <div className="flex justify-between text-teal-650 dark:text-teal-400">
-                                            <span>Airport Pickup Surcharge:</span>
-                                            <span className="font-bold">+ LKR {parseFloat(selectedBooking.raw?.airportPickupSurcharge || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                {/* Stays Info Grid */}
+                                <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800/80">
+                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block pl-0.5 text-left">Accommodation Summary</span>
+                                    <div className="grid grid-cols-2 gap-3 text-xs text-left">
+                                        <div className="p-3 bg-slate-50 dark:bg-slate-950/40 border border-slate-200/50 dark:border-slate-850/80 rounded-xl">
+                                            <span className="text-[9px] text-slate-400 font-bold block mb-1">CHECK-IN</span>
+                                            <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                                <Calendar size={12} className="text-blue-700 dark:text-blue-400" />
+                                                {formatDate(mappedBooking.checkIn)}
+                                            </span>
                                         </div>
-                                    )}
-                                    <div className="border-t border-slate-200 dark:border-slate-800 my-1"></div>
-                                    <div className="flex justify-between text-sm font-black text-slate-900 dark:text-white">
-                                        <span>Total Stay Value:</span>
-                                        <span className={currentAccent.text}>{selectedBooking.price}</span>
+                                        <div className="p-3 bg-slate-50 dark:bg-slate-950/40 border border-slate-200/50 dark:border-slate-850/80 rounded-xl">
+                                            <span className="text-[9px] text-slate-400 font-bold block mb-1">CHECK-OUT</span>
+                                            <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                                <Calendar size={12} className="text-blue-700 dark:text-blue-400" />
+                                                {formatDate(mappedBooking.checkOut)}
+                                            </span>
+                                        </div>
+                                        <div className="p-3 bg-slate-50 dark:bg-slate-950/40 border border-slate-200/50 dark:border-slate-850/80 rounded-xl">
+                                            <span className="text-[9px] text-slate-400 font-bold block mb-1">ROOM DETAILS</span>
+                                            <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                                <BedDouble size={12} className="text-cyan-700 dark:text-cyan-400" />
+                                                {mappedBooking.rooms.length} Room(s) ({mappedBooking.nights} Nights)
+                                            </span>
+                                        </div>
+                                        <div className="p-3 bg-slate-50 dark:bg-slate-950/40 border border-slate-200/50 dark:border-slate-850/80 rounded-xl">
+                                            <span className="text-[9px] text-slate-400 font-bold block mb-1">OCCUPANCY SUMMARY</span>
+                                            <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                                <Users size={12} className="text-cyan-700 dark:text-cyan-400" />
+                                                {mappedBooking.guestsSummary}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Guest details block */}
+                                <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800/80 text-left">
+                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block pl-0.5">👤 Guest contact details</span>
+                                    <div className="grid grid-cols-2 gap-y-3 gap-x-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/30 border border-slate-100 dark:border-slate-850 text-xs">
+                                        <div>
+                                            <span className="text-[9px] text-slate-400 uppercase font-bold block">Guest Name</span>
+                                            <span className="font-bold text-slate-800 dark:text-slate-200 mt-1 block">
+                                                {mappedBooking.raw?.Customer ? `${mappedBooking.raw.Customer.firstName} ${mappedBooking.raw.Customer.lastName}` : selectedBooking.guestName}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="text-[9px] text-slate-400 uppercase font-bold block">Email Address</span>
+                                            <span className="font-bold text-slate-800 dark:text-slate-200 mt-1 block flex items-center gap-1">
+                                                <Mail size={11} className="text-slate-400" />
+                                                {mappedBooking.raw?.Customer?.email || 'N/A'}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="text-[9px] text-slate-400 uppercase font-bold block">Phone Number</span>
+                                            <span className="font-bold text-slate-800 dark:text-slate-200 mt-1 block flex items-center gap-1">
+                                                <Phone size={11} className="text-slate-400" />
+                                                {mappedBooking.raw?.Customer?.phoneNumber || selectedBooking.phone || 'N/A'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Room Details breakdown list */}
+                                <div className="space-y-2.5 pt-4 border-t border-slate-100 dark:border-slate-800/80 text-left">
+                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block pl-0.5">Rooms Allocation list</span>
+                                    {mappedBooking.raw?.bookedRooms?.map((room, idx) => (
+                                        <div key={idx} className="p-3.5 bg-slate-50/50 dark:bg-slate-950/20 border border-slate-200/60 dark:border-slate-800/80 rounded-xl flex gap-3 items-start">
+                                            <BedDouble size={18} className="text-blue-700 dark:text-blue-450 mt-0.5 shrink-0" />
+                                            <div className="flex-1 text-xs">
+                                                <div className="flex justify-between items-start">
+                                                    <p className="font-bold text-slate-800 dark:text-slate-200">{room.Room?.roomType?.type || "Standard Room"}</p>
+                                                    <span className="text-[9px] font-black text-blue-900 bg-blue-50 dark:bg-blue-950/40 dark:border-blue-900/60 dark:text-blue-300 border border-blue-100 rounded px-1.5 py-0.5">
+                                                        {room.board_type || "Room Only"}
+                                                    </span>
+                                                </div>
+                                                <p className="text-slate-500 text-[10px] mt-1">
+                                                    Occupancy capacity: {room.adults} Adult(s) {room.kids > 0 ? `, ${room.kids} Child(ren)` : ""}
+                                                </p>
+                                                <p className="text-slate-500 text-[10px]">
+                                                    Room Assigned: <span className="font-bold text-slate-700 dark:text-slate-350">{room.Room?.roomNumber || room.Room?.room_number ? `Room ${room.Room.roomNumber || room.Room.room_number}` : "Not Assigned"}</span>
+                                                </p>
+                                                <p className="text-slate-500 text-[10px]">
+                                                    Rate: <span className="font-bold text-slate-700 dark:text-slate-350">LKR {parseFloat(room.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Airport shuttle service pickup details */}
+                                {mappedBooking.raw?.airportPickup && (
+                                    <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/10 border border-emerald-100 dark:border-emerald-900/30 rounded-2xl space-y-2 text-left text-emerald-800 dark:text-emerald-400">
+                                        <div className="flex items-center gap-2 text-xs font-bold">
+                                            <MapPin size={14} className="text-emerald-700 dark:text-emerald-500" />
+                                            Airport Shuttle Pickup Info
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-[11px] font-semibold">
+                                            <p>Location: Katunayake (Fixed)</p>
+                                            <p>Date: {formatDate(mappedBooking.raw.airportPickup.pickup_date)}</p>
+                                            <p>Time: {mappedBooking.raw.airportPickup.pickup_time}</p>
+                                            <p>Flight No: {mappedBooking.raw.airportPickup.flight_number || "—"}</p>
+                                            <p>Passengers: {mappedBooking.raw.airportPickup.passenger_count || 1}</p>
+                                            <p>Baggage: {mappedBooking.raw.airportPickup.baggage_count || 0}</p>
+                                            <p className="col-span-2">Status: <span className="uppercase font-bold">{mappedBooking.raw.airportPickup.status}</span></p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Billing summary */}
+                                <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800/80 text-left">
+                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block pl-0.5">💵 Billing details</span>
+                                    <div className="space-y-2 max-w-md text-xs">
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-450">Room Accommodation Charge:</span>
+                                            <span className="font-bold">{selectedBooking.price}</span>
+                                        </div>
+                                        {selectedBooking.raw?.airportPickup && (
+                                            <div className="flex justify-between text-teal-650 dark:text-teal-400">
+                                                <span>Airport Pickup Surcharge:</span>
+                                                <span className="font-bold">+ LKR {parseFloat(selectedBooking.raw?.airportPickupSurcharge || selectedBooking.raw?.airportPickup?.price || 15000).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            </div>
+                                        )}
+                                        <div className="border-t border-slate-200 dark:border-slate-800 my-1"></div>
+                                        <div className="flex justify-between text-sm font-black text-slate-900 dark:text-white">
+                                            <span>Total Stay Value:</span>
+                                            <span className={currentAccent.text}>{selectedBooking.price}</span>
+                                        </div>
+                                        <div className="flex justify-between text-xs text-slate-500">
+                                            <span>Amount Paid:</span>
+                                            <span>{selectedBooking.paidPrice}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Modal Footer */}
-                        <div className="flex justify-end p-4 bg-slate-50 dark:bg-slate-950/40 border-t border-slate-100 dark:border-slate-800 gap-2">
-                            <button
-                                onClick={() => handlePrintInvoice(selectedBooking)}
-                                className="flex items-center gap-1 px-4 py-2 text-xs font-bold border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer text-slate-755 dark:text-slate-250 bg-white dark:bg-slate-900"
-                            >
-                                <FileText size={14} /> Print Invoice
-                            </button>
-                            <button
-                                onClick={() => handlePrintReceipt(selectedBooking)}
-                                className="flex items-center gap-1 px-4 py-2 text-xs font-bold border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer text-slate-755 dark:text-slate-250 bg-white dark:bg-slate-900"
-                            >
-                                <Receipt size={14} /> Print Receipt
-                            </button>
-                            <button
-                                onClick={() => setSelectedBooking(null)}
-                                className={`px-5 py-2 text-xs font-bold text-white rounded-xl cursor-pointer transition shadow-xs ${currentAccent.bg}`}
-                            >
-                                Close View
-                            </button>
+                            {/* Drawer Footer / Actions */}
+                            <div className="p-4 bg-slate-50 dark:bg-slate-950/40 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2 shrink-0">
+                                <button
+                                    onClick={() => handlePrintInvoice(selectedBooking)}
+                                    className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-850 rounded-xl transition cursor-pointer text-slate-755 dark:text-slate-250 bg-white dark:bg-slate-900 shadow-2xs"
+                                >
+                                    <FileText size={13} /> Print Invoice
+                                </button>
+                                <button
+                                    onClick={() => handlePrintReceipt(selectedBooking)}
+                                    className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-850 rounded-xl transition cursor-pointer text-slate-755 dark:text-slate-250 bg-white dark:bg-slate-900 shadow-2xs"
+                                >
+                                    <Receipt size={13} /> Print Receipt
+                                </button>
+                                <button
+                                    onClick={() => setSelectedBooking(null)}
+                                    className={`px-5 py-2.5 text-xs font-bold text-white rounded-xl cursor-pointer transition shadow-xs ${currentAccent.bg}`}
+                                >
+                                    Close View
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* CHECK-IN VERIFICATION MODAL */}
             {checkInModal && (
                 <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 animate-fadeIn">
-                    <div className={`w-full max-w-3xl rounded-2xl shadow-2xl border overflow-hidden max-h-[92vh] flex flex-col ${
-                        theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-800"
-                    }`}>
+                    <div className={`w-full max-w-3xl rounded-2xl shadow-2xl border overflow-hidden max-h-[92vh] flex flex-col ${theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-800"
+                        }`}>
                         {/* Modal Header */}
                         <div className={`flex items-center justify-between px-6 py-4 border-b ${theme.mode === "dark" ? "border-slate-800 bg-emerald-950/20" : "border-slate-100 bg-emerald-50/60"}`}>
                             <div className="flex items-center gap-3">
@@ -908,14 +1294,14 @@ export default function Booking() {
                                             <CheckCircle size={18} className="text-emerald-500 flex-shrink-0" />
                                             <div>
                                                 <p className="text-xs font-black text-emerald-700 dark:text-emerald-400">Payment Fully Settled</p>
-                                                <p className="text-[10px] text-emerald-600 dark:text-emerald-500">Total of LKR {paymentSummary.totalPaid.toLocaleString(undefined, {minimumFractionDigits:2})} received. Ready to check in.</p>
+                                                <p className="text-[10px] text-emerald-600 dark:text-emerald-500">Total of LKR {paymentSummary.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })} received. Ready to check in.</p>
                                             </div>
                                         </div>
                                     ) : (
                                         <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40">
                                             <AlertCircle size={18} className="text-amber-500 flex-shrink-0" />
                                             <div>
-                                                <p className="text-xs font-black text-amber-700 dark:text-amber-400">Balance Due: LKR {balanceDue.toLocaleString(undefined, {minimumFractionDigits:2})}</p>
+                                                <p className="text-xs font-black text-amber-700 dark:text-amber-400">Balance Due: LKR {balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                                                 <p className="text-[10px] text-amber-600 dark:text-amber-500">Collect remaining payment before completing check-in.</p>
                                             </div>
                                         </div>
@@ -967,13 +1353,13 @@ export default function Booking() {
                                                 </div>
                                                 <div className="flex justify-between">
                                                     <span className="text-slate-500">Payment Status</span>
-                                                    <span className={`font-bold text-[10px] px-2 py-0.5 rounded-full ${bk.payment_status === "FULLY_PAID" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400" : bk.payment_status === "PAY_AT_CHECKIN" ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400" : "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400"}`}>{bk.payment_status?.replace(/_/g," ")}</span>
+                                                    <span className={`font-bold text-[10px] px-2 py-0.5 rounded-full ${bk.payment_status === "FULLY_PAID" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400" : bk.payment_status === "PAY_AT_CHECKIN" ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400" : "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400"}`}>{bk.payment_status?.replace(/_/g, " ")}</span>
                                                 </div>
                                                 {bookedRooms && bookedRooms.map(br => (
                                                     <div key={br.id} className={`mt-1 p-2 rounded-lg border ${theme.mode === "dark" ? "bg-slate-900/40 border-slate-700" : "bg-white border-slate-200"}`}>
                                                         <div className="flex justify-between font-bold">
                                                             <span>Room {br.Room?.roomNumber || br.room_id}</span>
-                                                            <span className="text-emerald-600 dark:text-emerald-400">LKR {parseFloat(br.price).toLocaleString(undefined,{minimumFractionDigits:2})}</span>
+                                                            <span className="text-emerald-600 dark:text-emerald-400">LKR {parseFloat(br.price).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                                         </div>
                                                         <div className="text-[10px] text-slate-500 mt-0.5">
                                                             {br.checkIn} → {br.checkOut} · {br.board_type} · {br.adults} Adults, {br.kids} Kids
@@ -991,16 +1377,16 @@ export default function Booking() {
                                         <div className="grid grid-cols-3 gap-3 mb-3">
                                             <div className="text-center">
                                                 <p className="text-[10px] text-slate-500 font-bold uppercase">Total Charge</p>
-                                                <p className="text-base font-black mt-0.5">LKR {paymentSummary.totalPrice.toLocaleString(undefined,{minimumFractionDigits:2})}</p>
+                                                <p className="text-base font-black mt-0.5">LKR {paymentSummary.totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                                             </div>
                                             <div className="text-center">
                                                 <p className="text-[10px] text-slate-500 font-bold uppercase">Paid</p>
-                                                <p className="text-base font-black text-emerald-500 mt-0.5">LKR {paymentSummary.totalPaid.toLocaleString(undefined,{minimumFractionDigits:2})}</p>
+                                                <p className="text-base font-black text-emerald-500 mt-0.5">LKR {paymentSummary.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                                             </div>
                                             <div className="text-center">
                                                 <p className="text-[10px] text-slate-500 font-bold uppercase">Balance Due</p>
                                                 <p className={`text-base font-black mt-0.5 ${balanceDue > 0 ? "text-amber-500" : "text-emerald-500"}`}>
-                                                    LKR {balanceDue.toLocaleString(undefined,{minimumFractionDigits:2})}
+                                                    LKR {balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                 </p>
                                             </div>
                                         </div>
@@ -1012,7 +1398,7 @@ export default function Booking() {
                                                         <div key={i} className={`flex justify-between items-center text-[10px] px-2.5 py-1.5 rounded-lg ${theme.mode === "dark" ? "bg-slate-900/60" : "bg-white"} border ${theme.mode === "dark" ? "border-slate-700" : "border-slate-200"}`}>
                                                             <span className="text-slate-500">{new Date(p.createdAt).toLocaleDateString()} — {p.method?.toUpperCase()}</span>
                                                             <span className={`font-bold ${p.status === "success" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500"}`}>
-                                                                LKR {p.amount.toLocaleString(undefined,{minimumFractionDigits:2})}
+                                                                LKR {p.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                             </span>
                                                         </div>
                                                     ))}

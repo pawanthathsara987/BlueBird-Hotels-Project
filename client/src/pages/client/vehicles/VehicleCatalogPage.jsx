@@ -132,7 +132,7 @@ export default function VehicleCatalogPage() {
                 <span className="text-blue-600 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Drive with Prestige.</span>
               </h1>
               <p className="text-base text-slate-600 max-w-xl leading-relaxed">
-                Rent from our curated collection of luxury sedans, rugged SUVs, and spacious family vans. Explore flexible options with or without a private hotel chauffeur.
+                Rent from our curated collection of luxury sedans, rugged SUVs, and spacious family vans. Explore flexible options with or without a private hotel driver.
               </p>
               
               {/* Quick Specs Cards */}

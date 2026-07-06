@@ -9,4 +9,10 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Supabase client for Tour and Vehicle operations
+const SUPABASE_URL_TOUR = process.env.SUPABASE_URL_TOUR || SUPABASE_URL;
+const SUPABASE_ANON_KEY_TOUR = process.env.SUPABASE_ANON_KEY_TOUR || SUPABASE_ANON_KEY;
+
+export const supabaseTour = createClient(SUPABASE_URL_TOUR, SUPABASE_ANON_KEY_TOUR);
+
 export default supabase;

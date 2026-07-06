@@ -270,7 +270,7 @@ export default function VehicleBookingPage() {
             <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Advance deposit required</div>
             <div className="mt-3 text-4xl font-black text-slate-950">{formatMoney(successDeposit)}</div>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              Pay the {availability?.depositPercentage || 50}% advance deposit to secure the reservation. The remaining balance of {formatMoney(successBalance)} will be collected at pickup.
+              Pay the {availability?.depositPercentage || 50}% advance deposit to secure the reservation. The remaining balance of {formatMoney(successBalance)} {availability?.securityDepositAmount ? `plus a refundable security deposit of ${formatMoney(availability.securityDepositAmount)}` : ''} will be collected at pickup.
             </p>
           </div>
 
@@ -289,6 +289,9 @@ export default function VehicleBookingPage() {
 
   const summaryDeposit = pricing.depositAmount ?? 0;
   const summaryBalance = pricing.balanceAmount ?? 0;
+  const securityDeposit = availability?.securityDepositAmount ? Number(availability.securityDepositAmount) : 0;
+  const totalDueAtPickup = summaryBalance + securityDeposit;
+
   const availabilityWarning = !pickupDate || !returnDate
     ? "Select pickup and return dates to check live pricing."
     : availability?.available === false
@@ -391,7 +394,7 @@ export default function VehicleBookingPage() {
                   )}
 
                   <div className="space-y-2">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Chauffeur Service Options *</label>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Driver Service Options *</label>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <label className={`flex cursor-pointer items-center justify-between rounded-2xl border p-4 transition ${driverOption === "without" ? "border-blue-500 bg-blue-50/50" : "border-slate-200 bg-white hover:bg-slate-50"}`}>
                         <div className="space-y-0.5">
@@ -402,7 +405,7 @@ export default function VehicleBookingPage() {
                       </label>
                       <label className={`flex cursor-pointer items-center justify-between rounded-2xl border p-4 transition ${driverOption === "with" ? "border-blue-500 bg-blue-50/50" : "border-slate-200 bg-white hover:bg-slate-50"}`}>
                         <div className="space-y-0.5">
-                          <span className="block text-sm font-bold text-slate-800">Professional Chauffeur</span>
+                          <span className="block text-sm font-bold text-slate-800">Professional Driver</span>
                           <span className="block text-[10px] text-slate-500">Driver fees added per day</span>
                         </div>
                         <input type="radio" name="driverOption" value="with" checked={driverOption === "with"} onChange={() => setDriverOption("with")} className="accent-blue-600 w-4 h-4 cursor-pointer" />
@@ -460,20 +463,9 @@ export default function VehicleBookingPage() {
                   <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
                     <Info className="w-4 h-4 text-slate-400" /> Rental Terms & Conditions
                   </h4>
-                  <ul className="text-xs text-slate-650 space-y-2">
-                    <li className="flex items-start gap-2">
-                      <span className="text-emerald-500 font-black">✓</span>
-                      <span>{availability?.depositPercentage || 50}% advance deposit required to secure the vehicle booking.</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-emerald-500 font-black">✓</span>
-                      <span>The vehicle must be returned with the same fuel level as checked out.</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-emerald-500 font-black">✓</span>
-                      <span>Optional driver options are charged on a flat daily base rate.</span>
-                    </li>
-                  </ul>
+                  <div className="text-xs text-slate-600 whitespace-pre-wrap leading-relaxed mt-2">
+                    {availability?.termsAndConditions || "No rental policy terms set by the manager."}
+                  </div>
                 </div>
 
                 {bookingError && (
@@ -549,7 +541,7 @@ export default function VehicleBookingPage() {
                   </div>
 
                   <div className="flex justify-between py-2 border-b border-slate-50">
-                    <span className="text-slate-500">Chauffeur Service Fee</span>
+                    <span className="text-slate-500">Driver Service Fee</span>
                     <span className="text-slate-800 font-bold">
                       {availability?.driverFee ? formatMoney(availability.driverFee) : driverOption === "with" ? "Calculating..." : formatMoney(0)}
                     </span>
@@ -565,9 +557,27 @@ export default function VehicleBookingPage() {
                     <span className="font-black">{summaryDeposit ? formatMoney(summaryDeposit) : "—"}</span>
                   </div>
 
+                  <div className="flex justify-between items-center py-2.5 bg-slate-50 text-slate-800 px-3.5 border border-slate-100 rounded-xl mt-2">
+                    <span className="font-bold text-slate-600">Remaining Rental Balance</span>
+                    <span className="font-black text-slate-800">{summaryBalance ? formatMoney(summaryBalance) : "—"}</span>
+                  </div>
+
+                  {availability?.securityDepositAmount && (
+                    <div className="flex justify-between items-center py-2.5 bg-slate-50 text-slate-800 px-3.5 border border-slate-100 rounded-xl mt-2">
+                      <div>
+                        <span className="font-bold text-slate-600 block">Refundable Security Deposit</span>
+                        <span className="text-[9px] text-slate-400 block -mt-1 font-medium">Refunded on safe return</span>
+                      </div>
+                      <span className="font-black text-slate-800">{formatMoney(availability.securityDepositAmount)}</span>
+                    </div>
+                  )}
+
                   <div className="flex justify-between items-center py-2.5 bg-emerald-50 text-emerald-900 px-3.5 rounded-xl mt-2">
-                    <span className="font-bold text-emerald-700">Due at Pickup</span>
-                    <span className="font-black">{summaryBalance ? formatMoney(summaryBalance) : "—"}</span>
+                    <div>
+                      <span className="font-bold text-emerald-700 block">Total Due at Pickup</span>
+                      <span className="text-[9px] text-emerald-600 block -mt-1 font-medium">Rental Balance + Security Deposit</span>
+                    </div>
+                    <span className="font-black">{totalDueAtPickup ? formatMoney(totalDueAtPickup) : "—"}</span>
                   </div>
                 </div>
 

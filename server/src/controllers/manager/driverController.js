@@ -4,7 +4,7 @@ import Driver from '../../models/vehicle/driverModel.js';
 import VehicleBooking from '../../models/vehicle/VehicleBookingModel.js';
 import Vehicle from '../../models/vehicle/vehicleModel.js';
 import Customer from '../../models/User/Customer.js';
-import supabase from '../../config/supabaseClient.js';
+import { supabaseTour as supabase } from '../../config/supabaseClient.js';
 
 // Multer memory storage for image uploads
 const storage = multer.memoryStorage();

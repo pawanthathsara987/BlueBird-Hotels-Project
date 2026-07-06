@@ -114,8 +114,9 @@ export const createVehicleBooking = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Vehicle revenue license expires before the requested return date' });
       }
 
-      // 1-Day Post-Return Buffer: existing booking's returnDatetime must not be within 24hrs before requested pickup
-      const pickupDateWithBuffer = new Date(pickupDate.getTime() - 24 * 60 * 60 * 1000);
+      // Same-day return check: return date of existing booking must not be on or after the day of pickup
+      const pickupDateWithBuffer = new Date(pickupDate);
+      pickupDateWithBuffer.setHours(0, 0, 0, 0);
 
       const overlappingBooking = await VehicleBooking.findOne({
         where: {

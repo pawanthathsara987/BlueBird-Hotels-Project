@@ -59,16 +59,16 @@ export default function VehicleBookings() {
             const pickup = new Date(newBooking.pickupDatetime);
             const now = new Date();
             const minPickup = new Date(now.getTime() + 59 * 60 * 1000); // 59 mins buffer
-            
+
             if (pickup < minPickup) {
                 errors.pickup = "Pickup time must be at least 1 hour in the future";
             }
         }
-        
+
         if (newBooking.pickupDatetime && newBooking.returnDatetime) {
             const pickup = new Date(newBooking.pickupDatetime);
             const ret = new Date(newBooking.returnDatetime);
-            
+
             if (ret <= pickup) {
                 errors.return = "Return time must be strictly after the pickup time";
             }
@@ -123,9 +123,9 @@ export default function VehicleBookings() {
                 });
                 if (res.data.success) {
                     if (!res.data.available) {
-                         setAvailabilityError("Vehicle is no longer available for the selected date range");
+                        setAvailabilityError("Vehicle is no longer available for the selected date range");
                     } else {
-                         setAvailabilityError("");
+                        setAvailabilityError("");
                     }
                 }
             } catch (error) {
@@ -222,7 +222,7 @@ export default function VehicleBookings() {
         const vehicleRate = parseFloat(selectedVehicle.pricePerDay || 0);
         const driverRate = newBooking.hireType === "with_driver" ? driverPrice : 0;
         const securityDeposit = parseFloat(policy?.securityDepositAmount || 0);
-        
+
         const subtotal = (vehicleRate + driverRate) * numDays;
         const total = subtotal + securityDeposit;
         const deposit = total;
@@ -370,17 +370,17 @@ export default function VehicleBookings() {
             toast.error("Popup blocked! Please allow popups to print invoices.");
             return;
         }
-        
+
         const vehicleInfo = `${booking.vehicle?.brand || ""} ${booking.vehicle?.model || ""}`;
         const plateNo = booking.vehicle?.plateNo || "N/A";
         const guestName = `${booking.customer?.firstName || ""} ${booking.customer?.lastName || ""}` || "Guest";
         const guestEmail = booking.customer?.email || "N/A";
         const guestPhone = booking.customer?.phoneNumber || "N/A";
-        
+
         const subtotal = parseFloat(booking.subtotal || 0);
         const securityDeposit = parseFloat(booking.securityDepositCollected || 0);
         const totalPayable = parseFloat(booking.totalPayable || 0);
-        
+
         printWindow.document.write(`
             <html>
             <head>
@@ -459,6 +459,44 @@ export default function VehicleBookings() {
                             <td style="text-align: right; font-weight: bold;">LKR ${(parseFloat(booking.driverRatePerDay) * booking.numDays).toLocaleString()}</td>
                         </tr>
                         ` : ''}
+                        ${booking.finalBill ? `
+                        <tr>
+                            <td colspan="3" style="text-align: left; font-weight: bold; background-color: #f8fafc; font-size: 11px; text-transform: uppercase; color: #475569; padding: 8px 12px; border-top: 1.5px solid #cbd5e1;">Returned Vehicle Inspection & Fees</td>
+                            <td style="background-color: #f8fafc; border-top: 1.5px solid #cbd5e1;"></td>
+                        </tr>
+                        ${parseFloat(booking.finalBill.lateFee || 0) > 0 ? `
+                        <tr>
+                            <td><strong>Late Return Fee</strong><br/><span style="font-size: 11px; color: #64748b;">Fee for delayed vehicle return</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td style="text-align: right; font-weight: bold;">LKR ${parseFloat(booking.finalBill.lateFee).toLocaleString()}</td>
+                        </tr>
+                        ` : ''}
+                        ${parseFloat(booking.finalBill.extraMileageFee || 0) > 0 ? `
+                        <tr>
+                            <td><strong>Extra Mileage Fee</strong><br/><span style="font-size: 11px; color: #64748b;">Charge for exceeding mileage limit</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td style="text-align: right; font-weight: bold;">LKR ${parseFloat(booking.finalBill.extraMileageFee).toLocaleString()}</td>
+                        </tr>
+                        ` : ''}
+                        ${parseFloat(booking.finalBill.damageFee || 0) > 0 ? `
+                        <tr>
+                            <td><strong style="color: #ef4444;">Damage Assessment Fee</strong><br/><span style="font-size: 11px; color: #64748b;">Deductions for vehicle physical damages</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td style="text-align: right; font-weight: bold; color: #ef4444;">LKR ${parseFloat(booking.finalBill.damageFee).toLocaleString()}</td>
+                        </tr>
+                        ` : ''}
+                        ${parseFloat(booking.finalBill.fuelFee || 0) > 0 ? `
+                        <tr>
+                            <td><strong>Refueling Fee</strong><br/><span style="font-size: 11px; color: #64748b;">Charges for missing fuel on return</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td style="text-align: right; font-weight: bold;">LKR ${parseFloat(booking.finalBill.fuelFee).toLocaleString()}</td>
+                        </tr>
+                        ` : ''}
+                        ` : ''}
                     </tbody>
                 </table>
                 
@@ -471,10 +509,25 @@ export default function VehicleBookings() {
                         <span style="color: #64748b;">Security Deposit (Refundable):</span>
                         <span style="font-weight: bold;">LKR ${securityDeposit.toLocaleString()}</span>
                     </div>
+                    ${booking.finalBill ? `
+                    <div class="total-row">
+                        <span style="color: #64748b;">Total Extra Charges:</span>
+                        <span style="font-weight: bold;">LKR ${parseFloat(booking.finalBill.totalExtraCharges).toLocaleString()}</span>
+                    </div>
+                    <div class="total-row">
+                        <span style="color: #64748b;">Applied Security Deposit:</span>
+                        <span style="font-weight: bold;">-LKR ${parseFloat(booking.finalBill.securityDepositCollected).toLocaleString()}</span>
+                    </div>
+                    <div class="total-row grand-total">
+                        <span>Final Balance Due:</span>
+                        <span>LKR ${parseFloat(booking.finalBill.finalAmountOwed).toLocaleString()}</span>
+                    </div>
+                    ` : `
                     <div class="total-row grand-total">
                         <span>Invoice Total:</span>
                         <span>LKR ${totalPayable.toLocaleString()}</span>
                     </div>
+                    `}
                 </div>
                 
                 <div class="footer">
@@ -495,22 +548,28 @@ export default function VehicleBookings() {
             toast.error("Popup blocked! Please allow popups to print receipts.");
             return;
         }
-        
+
         const vehicleInfo = `${booking.vehicle?.brand || ""} ${booking.vehicle?.model || ""}`;
         const plateNo = booking.vehicle?.plateNo || "N/A";
         const guestName = `${booking.customer?.firstName || ""} ${booking.customer?.lastName || ""}` || "Guest";
-        
+
         const total = parseFloat(booking.totalPayable || 0);
-        const paidAmount = booking.balancePaidAt ? total : parseFloat(booking.depositAmount || 0);
-        const receiptType = booking.balancePaidAt ? "FULL PAYMENT RECEIPT" : "DEPOSIT RECEIPT";
-        
+
+        let paidAmount = booking.balancePaidAt ? total : parseFloat(booking.depositAmount || 0);
+        let receiptType = booking.balancePaidAt ? "FULL PAYMENT RECEIPT" : "DEPOSIT RECEIPT";
+
+        if (booking.status === "completed" && booking.finalBill) {
+            receiptType = "FINAL SETTLEMENT RECEIPT";
+            paidAmount = parseFloat(booking.finalBill.finalAmountOwed || 0);
+        }
+
         printWindow.document.write(`
             <html>
             <head>
                 <title>Receipt - ${booking.bookingNo}</title>
                 <style>
                     body { font-family: 'Segoe UI', Roboto, sans-serif; color: #333; margin: 40px; line-height: 1.5; }
-                    .receipt-container { max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); }
+                    .receipt-container { max-width: 650px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); }
                     .header { text-align: center; border-bottom: 2px dashed #0d9488; padding-bottom: 20px; margin-bottom: 20px; }
                     .logo { font-size: 20px; font-weight: 900; color: #0d9488; letter-spacing: 1px; }
                     .title { font-size: 22px; font-weight: 850; color: #1e293b; margin-top: 10px; }
@@ -547,8 +606,48 @@ export default function VehicleBookings() {
                         <span>Transaction Date:</span>
                         <span style="font-weight: bold;">${new Date().toLocaleString()}</span>
                     </div>
+                    
+                    ${booking.finalBill ? `
+                    <div class="receipt-row" style="background-color: #f8fafc; font-weight: bold; padding: 6px 10px; margin-top: 15px; font-size: 11px;">
+                        <span>RETURN INSPECTION & FEES BREAKDOWN</span>
+                        <span></span>
+                    </div>
+                    ${parseFloat(booking.finalBill.lateFee || 0) > 0 ? `
+                    <div class="receipt-row">
+                        <span>Late Return Fee:</span>
+                        <span>LKR ${parseFloat(booking.finalBill.lateFee).toLocaleString()}</span>
+                    </div>
+                    ` : ''}
+                    ${parseFloat(booking.finalBill.extraMileageFee || 0) > 0 ? `
+                    <div class="receipt-row">
+                        <span>Extra Mileage Fee:</span>
+                        <span>LKR ${parseFloat(booking.finalBill.extraMileageFee).toLocaleString()}</span>
+                    </div>
+                    ` : ''}
+                    ${parseFloat(booking.finalBill.damageFee || 0) > 0 ? `
+                    <div class="receipt-row" style="color: #ef4444;">
+                        <span>Damage Assessment Fee:</span>
+                        <span>LKR ${parseFloat(booking.finalBill.damageFee).toLocaleString()}</span>
+                    </div>
+                    ` : ''}
+                    ${parseFloat(booking.finalBill.fuelFee || 0) > 0 ? `
+                    <div class="receipt-row">
+                        <span>Refueling Fee:</span>
+                        <span>LKR ${parseFloat(booking.finalBill.fuelFee).toLocaleString()}</span>
+                    </div>
+                    ` : ''}
+                    <div class="receipt-row" style="font-weight: bold; color: #475569;">
+                        <span>Total Extra Charges:</span>
+                        <span>LKR ${parseFloat(booking.finalBill.totalExtraCharges).toLocaleString()}</span>
+                    </div>
+                    <div class="receipt-row" style="font-size: 11px; color: #64748b;">
+                        <span>Applied Security Deposit:</span>
+                        <span>-LKR ${parseFloat(booking.finalBill.securityDepositCollected).toLocaleString()}</span>
+                    </div>
+                    ` : ''}
+
                     <div class="receipt-row total">
-                        <span>Paid Amount:</span>
+                        <span>${booking.status === "completed" ? "Settled Amount:" : "Paid Amount:"}</span>
                         <span>LKR ${paidAmount.toLocaleString()}</span>
                     </div>
                     
@@ -607,9 +706,8 @@ export default function VehicleBookings() {
     const cancelledCount = bookings.filter(b => b.status === "cancelled").length;
 
     return (
-        <div className={`w-full px-6 py-6 min-h-screen transition-colors duration-300 ${
-            theme.mode === "dark" ? "dark bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-800"
-        }`}>
+        <div className={`w-full px-6 py-6 min-h-screen transition-colors duration-300 ${theme.mode === "dark" ? "dark bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-800"
+            }`}>
             {/* Header Block */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                 <div>
@@ -666,9 +764,8 @@ export default function VehicleBookings() {
                     { label: "Awaiting Payment", val: pendingPayCount, icon: "💵", color: "text-amber-500 bg-amber-500/10" },
                     { label: "Cancelled Hires", val: cancelledCount, icon: "✕", color: "text-rose-500 bg-rose-500/10" }
                 ].map((c, i) => (
-                    <div key={i} className={`p-4 rounded-2xl border flex items-center justify-between shadow-xs ${
-                        theme.mode === "dark" ? "bg-slate-900 border-slate-850" : "bg-white border-slate-100"
-                    }`}>
+                    <div key={i} className={`p-4 rounded-2xl border flex items-center justify-between shadow-xs ${theme.mode === "dark" ? "bg-slate-900 border-slate-850" : "bg-white border-slate-100"
+                        }`}>
                         <div>
                             <span className="text-[10px] uppercase font-black text-slate-500 tracking-wider block">{c.label}</span>
                             <span className="text-2xl font-black block mt-1">{c.val}</span>
@@ -679,9 +776,8 @@ export default function VehicleBookings() {
             </div>
 
             {/* Filter Search Bar */}
-            <div className={`p-4 rounded-2xl border flex flex-col md:flex-row items-center gap-4 mb-6 ${
-                theme.mode === "dark" ? "bg-slate-900 border-slate-850" : "bg-white border-slate-100"
-            }`}>
+            <div className={`p-4 rounded-2xl border flex flex-col md:flex-row items-center gap-4 mb-6 ${theme.mode === "dark" ? "bg-slate-900 border-slate-850" : "bg-white border-slate-100"
+                }`}>
                 <div className="relative w-full md:w-80">
                     <MdSearch className="absolute left-3 top-3.5 text-slate-400 text-base" />
                     <input
@@ -694,17 +790,16 @@ export default function VehicleBookings() {
                 </div>
 
                 <div className="flex gap-2 w-full md:w-auto overflow-x-auto">
-                    {["all", "pending_payment", "confirmed", "ongoing", "completed", "cancelled"].map((st) => (
+                    {["all", "pending_payment", "confirmed", "balance_paid", "ongoing", "completed", "cancelled"].map((st) => (
                         <button
                             key={st}
                             onClick={() => setStatusFilter(st)}
-                            className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider border transition cursor-pointer select-none whitespace-nowrap ${
-                                statusFilter === st
+                            className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider border transition cursor-pointer select-none whitespace-nowrap ${statusFilter === st
                                     ? currentAccent.bg + " text-white " + currentAccent.border
                                     : theme.mode === "dark"
                                         ? "bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
                                         : "bg-slate-50 border-slate-100 text-slate-600 hover:bg-slate-100"
-                            }`}
+                                }`}
                         >
                             {st.replace("_", " ")}
                         </button>
@@ -713,9 +808,8 @@ export default function VehicleBookings() {
             </div>
 
             {/* Booking Records Table */}
-            <div className={`rounded-2xl border overflow-hidden shadow-sm ${
-                theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
-            }`}>
+            <div className={`rounded-2xl border overflow-hidden shadow-sm ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+                }`}>
                 {isLoading ? (
                     <div className="py-20 text-center">
                         <span className="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></span>
@@ -744,7 +838,7 @@ export default function VehicleBookings() {
                                 {filteredBookings.map((b) => {
                                     const guestName = b.customer ? `${b.customer.firstName} ${b.customer.lastName}` : "Walk-in Guest";
                                     const vehicleInfo = b.vehicle ? `${b.vehicle.brand} ${b.vehicle.model}` : "Custom Vehicle";
-                                    
+
                                     const vehicleCost = parseFloat(b.vehicleRatePerDay || 0) * parseInt(b.numDays);
                                     const driverCost = parseFloat(b.driverRatePerDay || 0) * parseInt(b.numDays);
                                     const total = parseFloat(b.totalPayable || 0);
@@ -795,7 +889,7 @@ export default function VehicleBookings() {
                                                         <span>Total:</span>
                                                         <span className={currentAccent.text}>LKR {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                     </span>
-                                                    
+
                                                     {/* Half / Full details */}
                                                     {b.id ? (
                                                         <div className="mt-1 pt-1 border-t border-dashed border-slate-200 dark:border-slate-800 space-y-0.5 text-[9px] font-bold">
@@ -811,7 +905,7 @@ export default function VehicleBookings() {
                                                             ) : (
                                                                 <div className="flex justify-between text-rose-500 dark:text-rose-400">
                                                                     <span>Balance Due:</span>
-                                                                    <span>LKR {parseFloat(b.remainingAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                                    <span>LKR {parseFloat(b.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -868,13 +962,11 @@ export default function VehicleBookings() {
             {/* BOOKING CREATE FORM MODAL */}
             {showForm && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn">
-                    <div className={`w-full max-w-4xl rounded-2xl shadow-2xl border flex flex-col md:flex-row overflow-hidden max-h-[90vh] ${
-                        theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
-                    }`}>
-                        {/* Left Side: Live Price Summary Panel */}
-                        <div className={`w-full md:w-80 p-6 flex flex-col justify-between border-b md:border-b-0 md:border-r ${
-                            theme.mode === "dark" ? "bg-slate-950/60 border-slate-800" : "bg-slate-50 border-slate-100"
+                    <div className={`w-full max-w-4xl rounded-2xl shadow-2xl border flex flex-col md:flex-row overflow-hidden max-h-[90vh] ${theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
                         }`}>
+                        {/* Left Side: Live Price Summary Panel */}
+                        <div className={`w-full md:w-80 p-6 flex flex-col justify-between border-b md:border-b-0 md:border-r ${theme.mode === "dark" ? "bg-slate-950/60 border-slate-800" : "bg-slate-50 border-slate-100"
+                            }`}>
                             <div>
                                 <h3 className="text-xs uppercase font-black text-slate-400 tracking-wider mb-4">Rental Cost Summary</h3>
                                 {priceDetails.total > 0 ? (
@@ -951,11 +1043,10 @@ export default function VehicleBookings() {
                                             required
                                             value={newBooking.vehicleId}
                                             onChange={(e) => setNewBooking({ ...newBooking, vehicleId: e.target.value })}
-                                            className={`w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-3 outline-none cursor-pointer transition-all ${
-                                                availabilityError.includes("no longer available") || availabilityError.includes("not available")
+                                            className={`w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-3 outline-none cursor-pointer transition-all ${availabilityError.includes("no longer available") || availabilityError.includes("not available")
                                                     ? "border-rose-500 bg-rose-50/10 focus:border-rose-500 text-rose-600 dark:text-rose-450"
                                                     : "border-slate-200 dark:border-slate-800 focus:border-blue-500"
-                                            }`}
+                                                }`}
                                         >
                                             <option value="">-- Select Active Vehicle --</option>
                                             {vehicles.map((v) => (
@@ -1031,11 +1122,10 @@ export default function VehicleBookings() {
                                             min={getMinPickupDatetime()}
                                             value={newBooking.pickupDatetime}
                                             onChange={(e) => setNewBooking({ ...newBooking, pickupDatetime: e.target.value })}
-                                            className={`w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-3 outline-none transition-all ${
-                                                dateErrors.pickup
+                                            className={`w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-3 outline-none transition-all ${dateErrors.pickup
                                                     ? "border-rose-500 bg-rose-50/10 focus:border-rose-500 text-rose-600 dark:text-rose-450"
                                                     : "border-slate-200 dark:border-slate-800 focus:border-blue-500"
-                                            }`}
+                                                }`}
                                         />
                                         {dateErrors.pickup && (
                                             <p className="text-[10px] text-rose-500 font-bold mt-1.5 flex items-center gap-1 select-none">
@@ -1052,11 +1142,10 @@ export default function VehicleBookings() {
                                             min={getMinReturnDatetime()}
                                             value={newBooking.returnDatetime}
                                             onChange={(e) => setNewBooking({ ...newBooking, returnDatetime: e.target.value })}
-                                            className={`w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-3 outline-none transition-all ${
-                                                dateErrors.return
+                                            className={`w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-3 outline-none transition-all ${dateErrors.return
                                                     ? "border-rose-500 bg-rose-50/10 focus:border-rose-500 text-rose-600 dark:text-rose-450"
                                                     : "border-slate-200 dark:border-slate-800 focus:border-blue-500"
-                                            }`}
+                                                }`}
                                         />
                                         {dateErrors.return && (
                                             <p className="text-[10px] text-rose-500 font-bold mt-1.5 flex items-center gap-1 select-none">
@@ -1092,11 +1181,10 @@ export default function VehicleBookings() {
 
                                 {/* License details (WITHOUT driver only) */}
                                 {newBooking.hireType === "without_driver" && (
-                                    <div className={`grid grid-cols-2 gap-3 p-4 rounded-xl border ${
-                                        theme.mode === "dark"
+                                    <div className={`grid grid-cols-2 gap-3 p-4 rounded-xl border ${theme.mode === "dark"
                                             ? "bg-slate-950/40 border-slate-850"
                                             : "bg-slate-50 border-slate-200/50"
-                                    }`}>
+                                        }`}>
                                         <div>
                                             <label className="block text-slate-550 mb-2">Driver License Number *</label>
                                             <input
@@ -1105,11 +1193,10 @@ export default function VehicleBookings() {
                                                 placeholder="License card number"
                                                 value={newBooking.customerLicenseNo}
                                                 onChange={(e) => setNewBooking({ ...newBooking, customerLicenseNo: e.target.value })}
-                                                className={`w-full border rounded-xl p-3 outline-none ${
-                                                    theme.mode === "dark"
+                                                className={`w-full border rounded-xl p-3 outline-none ${theme.mode === "dark"
                                                         ? "bg-slate-900 border-slate-800 text-white"
                                                         : "bg-white border-slate-200 text-slate-800"
-                                                }`}
+                                                    }`}
                                             />
                                         </div>
                                         <div>
@@ -1120,11 +1207,10 @@ export default function VehicleBookings() {
                                                 style={{ colorScheme: theme.mode }}
                                                 value={newBooking.customerLicenseExpiry}
                                                 onChange={(e) => setNewBooking({ ...newBooking, customerLicenseExpiry: e.target.value })}
-                                                className={`w-full border rounded-xl p-3 outline-none ${
-                                                    theme.mode === "dark"
+                                                className={`w-full border rounded-xl p-3 outline-none ${theme.mode === "dark"
                                                         ? "bg-slate-900 border-slate-800 text-white"
                                                         : "bg-white border-slate-200 text-slate-800"
-                                                }`}
+                                                    }`}
                                             />
                                         </div>
                                     </div>
@@ -1164,11 +1250,10 @@ export default function VehicleBookings() {
                                     <button
                                         type="submit"
                                         disabled={!!availabilityError}
-                                        className={`px-6 py-3 text-white rounded-xl flex items-center gap-1.5 font-black transition shadow-md ${
-                                            availabilityError 
-                                                ? "bg-slate-400 dark:bg-slate-850 cursor-not-allowed opacity-60 shadow-none text-slate-500 dark:text-slate-400" 
+                                        className={`px-6 py-3 text-white rounded-xl flex items-center gap-1.5 font-black transition shadow-md ${availabilityError
+                                                ? "bg-slate-400 dark:bg-slate-850 cursor-not-allowed opacity-60 shadow-none text-slate-500 dark:text-slate-400"
                                                 : currentAccent.bg + " cursor-pointer"
-                                        }`}
+                                            }`}
                                     >
                                         <MdCheckCircle size={16} /> Confirm Hire Booking
                                     </button>
@@ -1182,9 +1267,8 @@ export default function VehicleBookings() {
             {/* BOOKING DETAILS VIEW MODAL */}
             {selectedBooking && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn">
-                    <div className={`w-full max-w-2xl rounded-2xl shadow-2xl border overflow-hidden max-h-[90vh] flex flex-col ${
-                        theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
-                    }`}>
+                    <div className={`w-full max-w-2xl rounded-2xl shadow-2xl border overflow-hidden max-h-[90vh] flex flex-col ${theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
+                        }`}>
                         {/* Modal Header */}
                         <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-slate-800">
                             <div>
@@ -1314,13 +1398,31 @@ export default function VehicleBookings() {
                                         <span>Advance Paid (Deposit):</span>
                                         <span className="font-bold">LKR {parseFloat(selectedBooking.depositAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     </div>
-                                    
+
                                     {!selectedBooking.balancePaidAt ? (
                                         <>
                                             <div className="flex justify-between text-rose-600 dark:text-rose-400 font-extrabold text-sm border-t border-dashed dark:border-slate-800 pt-1.5">
-                                                <span>Remaining Balance Due:</span>
+                                                <span>Remaining Balance:</span>
                                                 <span>LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                             </div>
+                                            {["confirmed", "driver_assigned"].includes(selectedBooking.status) && parseFloat(policy?.securityDepositAmount || 0) > 0 && (
+                                                <>
+                                                    <div className="flex justify-between text-amber-600 dark:text-amber-400 font-extrabold text-sm">
+                                                        <span>+ Security Deposit (Refundable):</span>
+                                                        <span>LKR {parseFloat(policy?.securityDepositAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                    </div>
+                                                    <div className={`flex justify-between font-black text-base p-2 rounded-lg mt-1 ${theme.mode === "dark" ? "bg-rose-950/30 text-rose-400 border border-rose-900/40" : "bg-rose-50 text-rose-700 border border-rose-200"}`}>
+                                                        <span>Total Due Now:</span>
+                                                        <span>LKR {(parseFloat(selectedBooking.balanceAmount || 0) + parseFloat(policy?.securityDepositAmount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                    </div>
+                                                </>
+                                            )}
+                                            {!["confirmed", "driver_assigned"].includes(selectedBooking.status) && (
+                                                <div className={`flex justify-between font-black text-base p-2 rounded-lg mt-1 ${theme.mode === "dark" ? "bg-rose-950/30 text-rose-400 border border-rose-900/40" : "bg-rose-50 text-rose-700 border border-rose-200"}`}>
+                                                    <span>Total Due Now:</span>
+                                                    <span>LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                            )}
                                         </>
                                     ) : (
                                         <>
@@ -1328,30 +1430,98 @@ export default function VehicleBookings() {
                                                 <span>Remaining Balance (Paid):</span>
                                                 <span>LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                             </div>
-                                            <div className="text-[9px] text-slate-400 mt-1">
+                                            <div className="text-[9px] text-slate-455 mt-1">
                                                 Balance collected on {new Date(selectedBooking.balancePaidAt).toLocaleString()} via {selectedBooking.balancePaymentMethod?.toUpperCase()}
                                             </div>
                                         </>
+                                    )}
+
+                                    {selectedBooking.finalBill && (
+                                        <div className="mt-3 p-3 bg-slate-100 dark:bg-slate-800/40 rounded-lg text-xs space-y-1.5 border border-slate-200/40">
+                                            <div className="font-bold text-slate-700 dark:text-slate-350 uppercase text-[9px] mb-1">Final Bill Details (Vehicle Returned)</div>
+                                            {parseFloat(selectedBooking.finalBill.lateFee || 0) > 0 && (
+                                                <div className="flex justify-between text-slate-550 dark:text-slate-400">
+                                                    <span>Late Return Fee:</span>
+                                                    <span>LKR {parseFloat(selectedBooking.finalBill.lateFee).toLocaleString()}</span>
+                                                </div>
+                                            )}
+                                            {parseFloat(selectedBooking.finalBill.extraMileageFee || 0) > 0 && (
+                                                <div className="flex justify-between text-slate-550 dark:text-slate-400">
+                                                    <span>Extra Mileage Fee:</span>
+                                                    <span>LKR {parseFloat(selectedBooking.finalBill.extraMileageFee).toLocaleString()}</span>
+                                                </div>
+                                            )}
+                                            {parseFloat(selectedBooking.finalBill.damageFee || 0) > 0 && (
+                                                <div className="flex justify-between text-rose-600 dark:text-rose-400 font-semibold">
+                                                    <span>Damage Assessment Fee:</span>
+                                                    <span>LKR {parseFloat(selectedBooking.finalBill.damageFee).toLocaleString()}</span>
+                                                </div>
+                                            )}
+                                            {parseFloat(selectedBooking.finalBill.fuelFee || 0) > 0 && (
+                                                <div className="flex justify-between text-slate-550 dark:text-slate-400">
+                                                    <span>Refueling Fee:</span>
+                                                    <span>LKR {parseFloat(selectedBooking.finalBill.fuelFee).toLocaleString()}</span>
+                                                </div>
+                                            )}
+                                            <div className="flex justify-between font-bold border-t border-dashed dark:border-slate-800 pt-1 mt-1 text-slate-800 dark:text-slate-200">
+                                                <span>Total Extra Charges:</span>
+                                                <span>LKR {parseFloat(selectedBooking.finalBill.totalExtraCharges).toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex justify-between text-slate-500 font-medium text-[10px]">
+                                                <span>Applied Security Deposit:</span>
+                                                <span>-LKR {parseFloat(selectedBooking.finalBill.securityDepositCollected).toLocaleString()}</span>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
                             </div>
 
                             {/* Collect Balance Payment Panel (Reception desk) */}
-                            {!selectedBooking.balancePaidAt && !["cancelled", "completed", "returned"].includes(selectedBooking.status) && (
+                            {!selectedBooking.balancePaidAt && (
+                                (!["cancelled", "completed", "returned"].includes(selectedBooking.status)) ||
+                                (selectedBooking.status === "completed" && parseFloat(selectedBooking.balanceAmount || 0) > 0.01)
+                            ) && (
                                 <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/5 dark:bg-rose-500/2 space-y-3.5">
                                     <div className="flex items-center gap-1.5 text-rose-550 dark:text-rose-400 font-bold uppercase tracking-wider text-[10px]">
-                                        <span>💵 Collect Remaining Balance Payment</span>
+                                        <span>💵 {selectedBooking.status === "completed" ? "Collect Final Settlement Payment" : "Collect Remaining Balance + Security Deposit"}</span>
                                     </div>
-                                    {selectedBooking.status === "pending_payment" ? (
+                                    {selectedBooking.hireType === "with_driver" && !selectedBooking.driverId ? (
+                                        <div className="flex items-start gap-2 p-3 bg-amber-500/10 text-amber-500 border border-amber-500/25 rounded-lg font-bold text-[11px]">
+                                            <span className="mt-0.5">⚠️</span>
+                                            <span>Chauffeur Unassigned: The manager must assign a chauffeur to this booking before the balance payment can be collected by reception.</span>
+                                        </div>
+                                    ) : selectedBooking.status === "pending_payment" ? (
                                         <div className="flex items-start gap-2 p-3 bg-amber-500/10 text-amber-500 border border-amber-500/25 rounded-lg font-bold text-[11px]">
                                             <span className="mt-0.5">⚠️</span>
                                             <span>Advance Deposit Unpaid: The customer has not paid the online deposit (50%) for this booking yet. The remaining balance can only be collected after the deposit is paid and status becomes confirmed.</span>
                                         </div>
                                     ) : (
                                         <>
-                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-bold">
-                                                The customer must pay the remaining balance of <span className="text-rose-500 font-extrabold">LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> to check-in/start the vehicle rental.
-                                            </p>
+                                            {!["confirmed", "driver_assigned"].includes(selectedBooking.status) ? (
+                                                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-bold">
+                                                    <span>The customer has a pending outstanding bill of <span className="text-rose-500 font-extrabold">LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> for extra mileage, damages, or late return fees. Confirm payment to clear this booking.</span>
+                                                </p>
+                                            ) : (
+                                                <>
+                                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-bold">
+                                                        The customer must pay the remaining balance plus the refundable security deposit at vehicle pickup:
+                                                    </p>
+                                                    <div className={`rounded-lg border p-3 space-y-1.5 text-xs font-bold ${theme.mode === "dark" ? "bg-slate-800/40 border-slate-700" : "bg-white border-slate-200"}`}>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-slate-500">Remaining Balance:</span>
+                                                            <span className="text-rose-500">LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-slate-500">Security Deposit (Refundable):</span>
+                                                            <span className="text-indigo-500">LKR {parseFloat(policy?.securityDepositAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                        </div>
+                                                        <div className="flex justify-between border-t border-dashed border-slate-200 dark:border-slate-700 pt-1.5 text-sm">
+                                                            <span className="text-slate-700 dark:text-slate-200">Total to Collect:</span>
+                                                            <span className="text-rose-600 dark:text-rose-400 font-extrabold">LKR {(parseFloat(selectedBooking.balanceAmount || 0) + parseFloat(policy?.securityDepositAmount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
                                             <div className="flex flex-col sm:flex-row gap-3 items-end">
                                                 <div className="flex-1 w-full">
                                                     <label className="block text-[10px] text-slate-450 uppercase mb-1.5 font-bold">Select Payment Method</label>
@@ -1374,9 +1544,9 @@ export default function VehicleBookings() {
                                                 </button>
                                             </div>
                                         </>
-                                    )}
-                                </div>
-                            )}
+                                        )}
+                                    </div>
+                                )}
 
                             {/* Special Requirements */}
                             {selectedBooking.specialRequirements && (

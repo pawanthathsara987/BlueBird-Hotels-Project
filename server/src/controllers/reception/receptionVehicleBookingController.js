@@ -6,6 +6,7 @@ import Customer from "../../models/User/Customer.js";
 import DriverPricingSetting from "../../models/vehicle/driverPricingModel.js";
 import StaffMember from "../../models/User/StaffMember.js";
 import VehicleRentalPolicy from "../../models/vehicle/vehicleRentalPolicyModel.js";
+import Payment from "../../models/vehicle/paymentModel.js";
 
 const BLOCKING_BOOKING_STATUSES = [
   "pending_payment",
@@ -135,8 +136,10 @@ export const createReceptionVehicleBooking = async (req, res) => {
       return res.status(400).json({ success: false, message: `Vehicle is currently ${vehicle.status}` });
     }
 
-    // Check overlaps
-    const pickupDateWithBuffer = new Date(pickupDate.getTime() - 24 * 60 * 60 * 1000);
+    // Same-day return check: return date of existing booking must not be on or after the day of pickup
+    const pickupDateWithBuffer = new Date(pickupDate);
+    pickupDateWithBuffer.setHours(0, 0, 0, 0);
+
     const overlappingBooking = await VehicleBooking.findOne({
       where: {
         vehicleId,
@@ -362,7 +365,9 @@ export const checkVehicleAvailability = async (req, res) => {
       });
     }
 
-    const pickupDateWithBuffer = new Date(pickupDate.getTime() - 24 * 60 * 60 * 1000);
+    // Same-day return check: return date of existing booking must not be on or after the day of pickup
+    const pickupDateWithBuffer = new Date(pickupDate);
+    pickupDateWithBuffer.setHours(0, 0, 0, 0);
 
     const overlappingBooking = await VehicleBooking.findOne({
       where: {
@@ -428,19 +433,22 @@ export const getReceptionVehiclePolicy = async (req, res) => {
 
 // 7. Collect balance payment for an existing vehicle booking
 export const collectVehicleBalancePayment = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     const { id } = req.params;
     const { paymentMethod } = req.body;
 
     if (!paymentMethod) {
+      await t.rollback();
       return res.status(400).json({
         success: false,
         message: "paymentMethod is required"
       });
     }
 
-    const booking = await VehicleBooking.findByPk(id);
+    const booking = await VehicleBooking.findByPk(id, { transaction: t });
     if (!booking) {
+      await t.rollback();
       return res.status(404).json({
         success: false,
         message: "Vehicle booking not found"
@@ -448,6 +456,7 @@ export const collectVehicleBalancePayment = async (req, res) => {
     }
 
     if (booking.status === "pending_payment") {
+      await t.rollback();
       return res.status(400).json({
         success: false,
         message: "Cannot collect balance payment for an unpaid booking. The customer must pay the advance deposit first."
@@ -455,9 +464,18 @@ export const collectVehicleBalancePayment = async (req, res) => {
     }
 
     if (booking.balancePaidAt) {
+      await t.rollback();
       return res.status(400).json({
         success: false,
         message: "Balance payment has already been collected for this booking"
+      });
+    }
+
+    if (booking.hireType === "with_driver" && !booking.driverId) {
+      await t.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Chauffeur must be assigned by the manager before balance payment can be collected."
       });
     }
 
@@ -469,28 +487,64 @@ export const collectVehicleBalancePayment = async (req, res) => {
             { userId: req.user.id },
             { email: req.user.email }
           ]
-        }
+        },
+        transaction: t
       });
       if (staffObj) {
         balanceCollectedBy = staffObj.userId;
       }
     }
 
-    // Update status and payment details
-    booking.balancePaidAt = new Date();
-    booking.balancePaymentMethod = paymentMethod;
-    booking.balanceCollectedBy = balanceCollectedBy;
-    booking.status = "balance_paid";
+    // Fetch security deposit amount from vehicle rental policy
+    const [rentalPolicy] = await VehicleRentalPolicy.findOrCreate({ where: { id: 1 }, defaults: { id: 1 }, transaction: t });
+    const securityDepositAmount = ["confirmed", "driver_assigned"].includes(booking.status)
+      ? parseFloat(rentalPolicy.securityDepositAmount || 0)
+      : 0;
 
-    await booking.save();
+    const balanceAmountVal = parseFloat(booking.balanceAmount || 0);
+    const totalCollected = balanceAmountVal + securityDepositAmount;
+
+    // Update booking fields
+    const now = new Date();
+    const newStatus = ['ongoing', 'returned', 'completed'].includes(booking.status) ? booking.status : 'balance_paid';
+
+    await booking.update({
+      balancePaidAt: now,
+      balancePaymentMethod: paymentMethod,
+      balanceCollectedBy: balanceCollectedBy,
+      securityDepositCollected: securityDepositAmount,
+      securityDepositPaidAt: now,
+      status: newStatus,
+    }, { transaction: t });
+
+    // Create payment entry in vehicle_payment table (balance + security deposit)
+    const payment = await Payment.create({
+      booking_id: booking.id,
+      customer_id: booking.customerId,
+      payment_no: `RCPT-V-${Date.now().toString(36).toUpperCase()}`,
+      amount: totalCollected,
+      currency: "LKR",
+      method: paymentMethod,
+      status: "success",
+      raw_payload: {
+        receivedBy: balanceCollectedBy,
+        type: 'balance',
+        notes: `Balance LKR ${balanceAmountVal.toLocaleString()} + Security Deposit LKR ${securityDepositAmount.toLocaleString()}`,
+        receivedAt: now,
+      }
+    }, { transaction: t });
+
+    await t.commit();
 
     res.status(200).json({
       success: true,
-      message: "Balance payment collected successfully",
-      data: booking
+      message: `Balance (LKR ${balanceAmountVal.toLocaleString()}) and security deposit (LKR ${securityDepositAmount.toLocaleString()}) collected successfully. Total: LKR ${totalCollected.toLocaleString()}`,
+      data: booking,
+      payment
     });
 
   } catch (error) {
+    await t.rollback();
     console.error("Error collecting vehicle balance:", error);
     res.status(500).json({
       success: false,

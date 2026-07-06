@@ -45,6 +45,7 @@ export const updateVehicleRentalPolicy = async (req, res) => {
       lateReturnGraceHours: toInteger(req.body.lateReturnGraceHours),
       lateReturnFeePerHour: toNumber(req.body.lateReturnFeePerHour),
       lateReturnFullDayAfterHours: toInteger(req.body.lateReturnFullDayAfterHours),
+      securityDepositAmount: toNumber(req.body.securityDepositAmount),
       includedKilometersPerDay: toInteger(req.body.includedKilometersPerDay),
       extraMileageFee: toNumber(req.body.extraMileageFee),
       extraMileageCurrency: normalizeText(req.body.extraMileageCurrency) || process.env.CURRENCY_TYPE || 'LKR',
@@ -52,6 +53,10 @@ export const updateVehicleRentalPolicy = async (req, res) => {
     };
 
     const validationErrors = {};
+
+    if (!Number.isFinite(payload.securityDepositAmount) || payload.securityDepositAmount < 0) {
+      validationErrors.securityDepositAmount = 'Security deposit amount must be zero or a positive number.';
+    }
 
     if (!Number.isFinite(payload.lateReturnGraceHours) || payload.lateReturnGraceHours < 0) {
       validationErrors.lateReturnGraceHours = 'Grace hours must be zero or a positive integer.';

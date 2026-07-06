@@ -490,13 +490,19 @@ const BookingSummary = () => {
                                 </div>
                             </div>
 
-                            {totalSavings > 0 && (
-                                <div className="mb-6 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
-                                    <p className="text-sm font-semibold text-emerald-800">
-                                        You save {CURRENCY} {totalSavings.toFixed(2)} with your discount
-                                    </p>
-                                </div>
-                            )}
+                            {totalSavings > 0 && (() => {
+                                const firstDiscountRoom = selectedRooms.find(r => r.discountName);
+                                const savingText = firstDiscountRoom?.discountName
+                                    ? `You save ${CURRENCY} ${totalSavings.toFixed(2)} with your "${firstDiscountRoom.discountName}" discount!`
+                                    : `You save ${CURRENCY} ${totalSavings.toFixed(2)} with your discount!`;
+                                return (
+                                    <div className="mb-6 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+                                        <p className="text-sm font-semibold text-emerald-800 flex items-center gap-1">
+                                            ✨ {savingText}
+                                        </p>
+                                    </div>
+                                );
+                            })()}
 
                             <button
                                 onClick={handleConfirmBooking}

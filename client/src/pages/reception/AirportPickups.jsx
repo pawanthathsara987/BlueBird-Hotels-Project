@@ -227,9 +227,9 @@ export default function AirportPickups() {
                                 <tr>
                                     <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Booking ID</th>
                                     <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Guest</th>
-                                    <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Date & Time</th>
-                                    <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Location</th>
-                                    <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Passengers</th>
+                                    <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Date, Time & Flight</th>
+                                    <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Location & Baggage</th>
+                                    <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Passengers & Price</th>
                                     <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Status</th>
                                     <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Actions</th>
                                 </tr>
@@ -241,7 +241,7 @@ export default function AirportPickups() {
                                         : "N/A";
                                     const phone = pickup.booking?.Customer?.phoneNumber || "N/A";
                                     const email = pickup.booking?.Customer?.email || "N/A";
-
+ 
                                     return (
                                         <tr key={pickup.id} className={theme.mode === "dark" ? "hover:bg-slate-800/20" : "hover:bg-slate-50/50"}>
                                             <td className="px-6 py-4 font-bold text-blue-500">#{pickup.booking_id}</td>
@@ -251,18 +251,29 @@ export default function AirportPickups() {
                                                 <div className="text-[10px] text-slate-500">✉️ {email}</div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex items-center gap-1">
+                                                <div className="flex items-center gap-1 font-semibold text-slate-800 dark:text-slate-200">
                                                     <MdAccessTime size={13} className="text-slate-400" />
-                                                    <span>{pickup.pickup_date} at {pickup.pickup_time.slice(0, 5)}</span>
+                                                    <span>{pickup.pickup_date} at {pickup.pickup_time ? pickup.pickup_time.slice(0, 5) : ""}</span>
+                                                </div>
+                                                <div className="text-[10px] text-slate-550 mt-1">
+                                                    ✈️ Flight: <span className="font-bold text-slate-700 dark:text-slate-300">{pickup.flight_number || "—"}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 font-medium">
-                                                <div className="flex items-center gap-0.5">
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-0.5 font-semibold text-slate-800 dark:text-slate-200">
                                                     <MdLocationOn size={13} className="text-slate-400" />
                                                     <span>{pickup.pickup_location}</span>
                                                 </div>
+                                                <div className="text-[10px] text-slate-550 mt-1">
+                                                    🧳 Baggage: <span className="font-bold text-slate-700 dark:text-slate-300">{pickup.baggage_count || 0} Bag(s)</span>
+                                                </div>
                                             </td>
-                                            <td className="px-6 py-4 font-bold">{pickup.passenger_count} Passenger(s)</td>
+                                            <td className="px-6 py-4">
+                                                <div className="font-extrabold text-slate-800 dark:text-slate-200">{pickup.passenger_count} Passenger(s)</div>
+                                                <div className="text-[10px] text-slate-550 mt-1">
+                                                    💵 Price: <span className="font-bold text-emerald-600 dark:text-emerald-400">LKR {parseFloat(pickup.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                            </td>
                                             <td className="px-6 py-4">
                                                 <span className={`inline-block px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${getStatusColor(pickup.status)}`}>
                                                     {pickup.status}

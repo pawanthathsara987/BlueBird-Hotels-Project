@@ -65,16 +65,6 @@ VehicleServiceLog.init(
       allowNull: true,
     },
 
-    // ── Next service ───────────────────────────────
-    nextServiceDue: {
-      type: DataTypes.DATEONLY,
-      allowNull: true,
-    },
-    nextServiceMileage: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-
     // ── Notes ──────────────────────────────────────
     notes: {
       type: DataTypes.TEXT,

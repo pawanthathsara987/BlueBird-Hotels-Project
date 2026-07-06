@@ -1,54 +1,47 @@
-import nodemailer from 'nodemailer';
+import axios from 'axios';
 import { RoomPayment, AirPortPickup, Policy, BookedRoom } from '../models/index.js';
-
-// Configure Nodemailer transporter
-const useGmail = !process.env.SMTP_SERVER && process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD;
-
-const transporterConfig = useGmail
-  ? {
-      service: 'gmail',
-      auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD,
-      }
-    }
-  : {
-      host: process.env.SMTP_SERVER || 'localhost',
-      port: parseInt(process.env.SMTP_PORT) || 587,
-      secure: (parseInt(process.env.SMTP_PORT) || 587) === 465,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-      tls: {  
-        rejectUnauthorized: false
-      }
-    };
-
-const transporter = nodemailer.createTransport(transporterConfig);
 
 const getCurrencyType = () => process.env.CURRENCY_TYPE || 'LKR';
 
-// Helper function to send emails
+// Helper function to send emails using Brevo Transactional Email REST API
 export const sendEmail = async ({ to, subject, html, text, fromName }) => {
   try {
-    const senderEmail = process.env.EMAIL_SENDER || process.env.GMAIL_USER || 'info@bluebirdhotels.lk';
+    const apiKey = process.env.BREVO_API_KEY || process.env.EMAIL_PASS;
+    if (!apiKey) {
+      throw new Error("Brevo API key is not configured (please set BREVO_API_KEY or EMAIL_PASS).");
+    }
+
+    const senderEmail = process.env.EMAIL_SENDER || 'info@bluebirdhotels.lk';
     const senderName = fromName || process.env.EMAIL_SENDER_NAME || 'BlueBird Hotels & Tours';
 
-    const mailOptions = {
-      from: `"${senderName}" <${senderEmail}>`,
-      to,
+    const data = {
+      sender: {
+        name: senderName,
+        email: senderEmail
+      },
+      to: [
+        {
+          email: to
+        }
+      ],
       subject: subject,
-      html,
-      text,
+      htmlContent: html || text
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`[EMAIL SUCCESS] Email sent to ${to}: ${info.response}`);
+    const response = await axios.post('https://api.brevo.com/v3/smtp/email', data, {
+      headers: {
+        'accept': 'application/json',
+        'api-key': apiKey,
+        'content-type': 'application/json'
+      }
+    });
+
+    console.log(`[EMAIL SUCCESS] Email sent to ${to} via Brevo API:`, response.data);
     return true;
   } catch (error) {
-    console.error(`[EMAIL ERROR] Failed to send email to ${to}:`, error.message);
-    throw error;
+    const errorMsg = error.response?.data?.message || error.message;
+    console.error(`[EMAIL ERROR] Failed to send email to ${to} via Brevo API:`, errorMsg);
+    throw new Error(errorMsg);
   }
 };
 
@@ -558,7 +551,7 @@ export const sendAcceptedInquiryQuoteEmail = async (inquiry, booking, options = 
             <div class="content">
               <div class="section">
                 <p>Dear ${inquiry.fullName},</p>
-                <p>Great news! Your inquiry has been accepted and your booking quote is now ready.</p>
+                <p>Great news! Your inquiry has been accepted. To complete your tour booking, please pay the 50% advance payment.</p>
               </div>
 
               <div class="section details">
@@ -929,7 +922,7 @@ export const sendInquiryEmail = async ({ name, email, message }) => {
     `;
 
     await sendEmail({
-      to: "sandeepal513@gmail.com",
+      to: process.env.SUPPORT_EMAIL || process.env.PERSONAL_REQUEST_MAIL || "sandeepal513@gmail.com",
       subject,
       html,
       text: `New Contact Inquiry from ${name}\n\nEmail: ${email}\n\nMessage:\n${message}`,

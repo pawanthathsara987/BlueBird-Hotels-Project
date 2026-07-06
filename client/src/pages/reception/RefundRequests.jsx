@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
-import { 
-  MdRefresh, MdCheckCircle, MdCancel, MdSearch, MdInfo, 
-  MdPayment, MdDateRange, MdPerson, MdRoom, MdLocalTaxi,
-  MdOutlineMoneyOff, MdEqualizer, MdPendingActions
+import {
+    MdRefresh, MdCheckCircle, MdCancel, MdSearch, MdInfo,
+    MdPayment, MdDateRange, MdPerson, MdRoom, MdLocalTaxi,
+    MdOutlineMoneyOff, MdEqualizer, MdPendingActions, MdTerrain
 } from "react-icons/md";
 
 const CURRENCY = "LKR";
 
 export default function RefundRequests() {
     const [activeSubTab, setActiveSubTab] = useState("pending"); // "pending", "reports"
-    const [pendingRefunds, setPendingRefunds] = useState([]);
+    const [pendingRefunds, setPendingRefunds] = useState({ roomRefunds: [], tourRefunds: [], vehicleRefunds: [] });
+    const [activeCategory, setActiveCategory] = useState("room"); // "room", "tour", "vehicle"
     const [allRefunds, setAllRefunds] = useState([]); // for reports
     const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(true);
@@ -22,6 +23,7 @@ export default function RefundRequests() {
     const [refundMethod, setRefundMethod] = useState("Cash");
     const [transactionRef, setTransactionRef] = useState("");
     const [rejectionReason, setRejectionReason] = useState("");
+    const [customAmount, setCustomAmount] = useState("");
     const [submittingAction, setSubmittingAction] = useState(false);
 
     // Theme state synced with layout
@@ -54,11 +56,11 @@ export default function RefundRequests() {
             const token = localStorage.getItem("token");
             const headers = { Authorization: `Bearer ${token}` };
             const res = await axios.get(
-                `${import.meta.env.VITE_BACKEND_URL}/roombook/refunds/pending`,
+                `${import.meta.env.VITE_BACKEND_URL}/roombook/refunds/all-pending`,
                 { headers }
             );
             if (res.data.success) {
-                setPendingRefunds(res.data.data || []);
+                setPendingRefunds(res.data.data || { roomRefunds: [], tourRefunds: [], vehicleRefunds: [] });
             }
         } catch (err) {
             console.error("Error fetching pending refunds:", err);
@@ -100,7 +102,7 @@ export default function RefundRequests() {
         try {
             const token = localStorage.getItem("token");
             const headers = { Authorization: `Bearer ${token}` };
-            
+
             const payload = {
                 status: actionType === "APPROVE" ? "APPROVED" : "REJECTED"
             };
@@ -113,15 +115,15 @@ export default function RefundRequests() {
             }
 
             const res = await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/roombook/refunds/${selectedRefund.id}/action`,
+                `${import.meta.env.VITE_BACKEND_URL}/roombook/refunds/${activeCategory}/${selectedRefund.id}/action`,
                 payload,
                 { headers }
             );
 
             if (res.data.success) {
                 toast.success(
-                    actionType === "APPROVE" 
-                        ? `Refund request approved! Amount: ${CURRENCY} ${res.data.refundedAmount.toLocaleString()}` 
+                    actionType === "APPROVE"
+                        ? "Refund request approved successfully!"
                         : "Refund request rejected."
                 );
                 setSelectedRefund(null);
@@ -141,13 +143,35 @@ export default function RefundRequests() {
     };
 
     // Filter pending list
-    const filteredRefunds = pendingRefunds.filter(r => {
+    const getFilteredRefunds = () => {
         const query = searchTerm.toLowerCase();
-        const refNo = r.refund_no.toLowerCase();
-        const bookingId = String(r.booking_id).toLowerCase();
-        const guestName = (r.booking?.Customer?.name || "").toLowerCase();
-        return refNo.includes(query) || bookingId.includes(query) || guestName.includes(query);
-    });
+        if (activeCategory === "room") {
+            return (pendingRefunds.roomRefunds || []).filter(r => {
+                const refNo = (r.refund_no || "").toLowerCase();
+                const bookingId = String(r.booking_id || "").toLowerCase();
+                const guestName = `${r.booking?.Customer?.firstName || ""} ${r.booking?.Customer?.lastName || ""}`.toLowerCase();
+                return refNo.includes(query) || bookingId.includes(query) || guestName.includes(query);
+            });
+        } else if (activeCategory === "tour") {
+            return (pendingRefunds.tourRefunds || []).filter(r => {
+                const refNo = (r.refundRef || "").toLowerCase();
+                const bookingId = String(r.bookingId || "").toLowerCase();
+                const guestName = (r.fullName || "").toLowerCase();
+                const email = (r.email || "").toLowerCase();
+                return refNo.includes(query) || bookingId.includes(query) || guestName.includes(query) || email.includes(query);
+            });
+        } else {
+            return (pendingRefunds.vehicleRefunds || []).filter(r => {
+                const refNo = (r.refundRef || "").toLowerCase();
+                const bookingId = String(r.bookingId || "").toLowerCase();
+                const guestName = `${r.firstName || ""} ${r.lastName || ""}`.toLowerCase();
+                const email = (r.email || "").toLowerCase();
+                return refNo.includes(query) || bookingId.includes(query) || guestName.includes(query) || email.includes(query);
+            });
+        }
+    };
+
+    const filteredRefunds = getFilteredRefunds();
 
     // Theme values mappings
     const accentColors = {
@@ -180,13 +204,13 @@ export default function RefundRequests() {
     // Reports Math Calculations
     const getReportsData = () => {
         const completed = allRefunds.filter(r => r.status === "COMPLETED" || r.status === "APPROVED");
-        
+
         // Total Refunded
         const totalRefunded = completed.reduce((sum, r) => sum + parseFloat(r.amount), 0);
 
         // Daily Refunded (Today)
         const startOfToday = new Date();
-        startOfToday.setHours(0,0,0,0);
+        startOfToday.setHours(0, 0, 0, 0);
         const todayRefunds = completed.filter(r => new Date(r.refund_date) >= startOfToday);
         const todayTotal = todayRefunds.reduce((sum, r) => sum + parseFloat(r.amount), 0);
 
@@ -224,10 +248,9 @@ export default function RefundRequests() {
     const reportsData = getReportsData();
 
     return (
-        <div className={`w-full px-6 py-6 min-h-screen transition-colors duration-300 ${
-            theme.mode === "dark" ? "bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-800"
-        }`}>
-            
+        <div className={`w-full px-6 py-6 min-h-screen transition-colors duration-300 ${theme.mode === "dark" ? "bg-slate-950 text-slate-100" : "bg-[#fafafa] text-slate-800"
+            }`}>
+
             {/* HEADER */}
             <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
@@ -243,22 +266,20 @@ export default function RefundRequests() {
                 <div className={`flex p-1 rounded-xl border ${theme.mode === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}>
                     <button
                         onClick={() => setActiveSubTab("pending")}
-                        className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg transition cursor-pointer ${
-                            activeSubTab === "pending"
+                        className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg transition cursor-pointer ${activeSubTab === "pending"
                                 ? `${currentAccent.bg} text-white`
-                                : "text-slate-550 dark:text-slate-400 hover:text-slate-800"
-                        }`}
+                                : "text-slate-555 dark:text-slate-400 hover:text-slate-800"
+                            }`}
                     >
                         <MdPendingActions className="text-sm" />
-                        Pending Requests ({pendingRefunds.length})
+                        Pending Requests ({(pendingRefunds.roomRefunds?.length || 0) + (pendingRefunds.tourRefunds?.length || 0) + (pendingRefunds.vehicleRefunds?.length || 0)})
                     </button>
                     <button
                         onClick={() => setActiveSubTab("reports")}
-                        className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg transition cursor-pointer ${
-                            activeSubTab === "reports"
+                        className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg transition cursor-pointer ${activeSubTab === "reports"
                                 ? `${currentAccent.bg} text-white`
                                 : "text-slate-550 dark:text-slate-400 hover:text-slate-800"
-                        }`}
+                            }`}
                     >
                         <MdEqualizer className="text-sm" />
                         Refund Reports
@@ -269,7 +290,7 @@ export default function RefundRequests() {
             {/* PENDING REFUNDS TAB */}
             {activeSubTab === "pending" && (
                 <div className="space-y-6 animate-fadeIn">
-                    
+
                     {/* Filters Bar */}
                     <div className={`${getCardStyle()} p-4 flex flex-col md:flex-row items-center justify-between gap-4`}>
                         <div className="relative w-full md:max-w-xs">
@@ -281,11 +302,10 @@ export default function RefundRequests() {
                                 placeholder="Search by booking or customer..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className={`w-full pl-10 pr-4 py-2 text-xs font-semibold rounded-xl border focus:outline-none transition-colors ${
-                                    theme.mode === "dark"
+                                className={`w-full pl-10 pr-4 py-2 text-xs font-semibold rounded-xl border focus:outline-none transition-colors ${theme.mode === "dark"
                                         ? "bg-slate-950 border-slate-800 text-slate-100 focus:border-indigo-500"
                                         : "bg-slate-50 border-slate-200 text-slate-800 focus:border-indigo-550"
-                                }`}
+                                    }`}
                             />
                         </div>
                         <button
@@ -294,6 +314,40 @@ export default function RefundRequests() {
                         >
                             <MdRefresh className={`text-base ${loading ? "animate-spin" : ""}`} />
                             Refresh List
+                        </button>
+                    </div>
+
+                    {/* Category Tabs */}
+                    <div className="flex gap-2 border-b border-slate-200 dark:border-slate-800 pb-px">
+                        <button
+                            onClick={() => setActiveCategory("room")}
+                            className={`px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer ${
+                                activeCategory === "room"
+                                    ? "border-blue-600 text-blue-650 dark:text-blue-400 font-extrabold"
+                                    : "border-transparent text-slate-500 hover:text-slate-800"
+                            }`}
+                        >
+                            Room Bookings ({pendingRefunds.roomRefunds?.length || 0})
+                        </button>
+                        <button
+                            onClick={() => setActiveCategory("tour")}
+                            className={`px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer ${
+                                activeCategory === "tour"
+                                    ? "border-blue-600 text-blue-650 dark:text-blue-400 font-extrabold"
+                                    : "border-transparent text-slate-500 hover:text-slate-800"
+                            }`}
+                        >
+                            Tour Bookings ({pendingRefunds.tourRefunds?.length || 0})
+                        </button>
+                        <button
+                            onClick={() => setActiveCategory("vehicle")}
+                            className={`px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer ${
+                                activeCategory === "vehicle"
+                                    ? "border-blue-600 text-blue-650 dark:text-blue-400 font-extrabold"
+                                    : "border-transparent text-slate-500 hover:text-slate-800"
+                            }`}
+                        >
+                            Vehicle Rentals ({pendingRefunds.vehicleRefunds?.length || 0})
                         </button>
                     </div>
 
@@ -311,46 +365,30 @@ export default function RefundRequests() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {filteredRefunds.map((refund) => (
-                                <div key={refund.id} className={getCardStyle()}>
-                                    <div className="flex justify-between items-start border-b border-slate-100 dark:border-slate-800 pb-3 mb-3">
-                                        <div>
-                                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Refund Number</span>
-                                            <span className="text-sm font-black text-slate-800 dark:text-white">{refund.refund_no}</span>
-                                        </div>
-                                        <div className="text-right">
-                                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Refund Method</span>
-                                            <span className="text-[11px] font-bold text-slate-700 dark:text-slate-350">{refund.payment_method}</span>
-                                        </div>
-                                    </div>
+                            {filteredRefunds.map((refund) => {
+                                // Extract variables based on activeCategory
+                                let refundNo = "";
+                                let refundMethodDisplay = "";
+                                let guestName = "";
+                                let guestContact = "";
+                                let bookingRef = "";
+                                let requestDate = "";
+                                let itemsBreakdown = null;
+                                let reason = "";
+                                let amountValue = 0;
 
-                                    {/* Body details */}
-                                    <div className="space-y-3.5 text-xs text-slate-600 dark:text-slate-400">
-                                        <div className="flex gap-2">
-                                            <MdPerson className="text-slate-400 shrink-0 text-base" />
-                                            <div>
-                                                <p className="font-bold text-slate-800 dark:text-slate-200">
-                                                    {refund.booking?.Customer?.name || "Walk-In Guest"}
-                                                </p>
-                                                <p className="text-[10px] text-slate-400 mt-0.5">
-                                                    {refund.booking?.Customer?.email} | {refund.booking?.Customer?.phone}
-                                                </p>
-                                            </div>
-                                        </div>
+                                if (activeCategory === "room") {
+                                    refundNo = refund.refund_no;
+                                    refundMethodDisplay = refund.payment_method || "Cash";
+                                    const cust = refund.booking?.Customer;
+                                    guestName = cust ? `${cust.firstName || ""} ${cust.lastName || ""}` : "Walk-In Guest";
+                                    guestContact = cust ? `${cust.email || ""} | ${cust.phoneNumber || ""}` : "";
+                                    bookingRef = `Booking Ref: #${refund.booking_id}`;
+                                    requestDate = refund.request_date ? new Date(refund.request_date).toLocaleString() : "";
+                                    reason = refund.reason;
+                                    amountValue = parseFloat(refund.amount || 0);
 
-                                        <div className="flex gap-2">
-                                            <MdDateRange className="text-slate-400 shrink-0 text-base" />
-                                            <div>
-                                                <p className="font-bold text-slate-800 dark:text-slate-200">
-                                                    Booking Ref: #{refund.booking_id}
-                                                </p>
-                                                <p className="text-[10px] text-slate-400 mt-0.5">
-                                                    Requested on: {new Date(refund.request_date).toLocaleString()}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        {/* Refunded Items List */}
+                                    itemsBreakdown = (
                                         <div className="p-3 bg-slate-50 dark:bg-slate-950/60 rounded-xl space-y-1.5 border border-slate-200/50 dark:border-slate-800/40">
                                             <p className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Refunded Items Breakdown:</p>
                                             {refund.items && refund.items.map((item) => (
@@ -360,51 +398,137 @@ export default function RefundRequests() {
                                                         {item.item_type === "ROOM" ? `Room stay (Room ${item.bookedRoom?.Room?.room_number || "TBD"})` : "Airport Pickup service"}
                                                     </span>
                                                     <span className="text-slate-800 dark:text-slate-200">
-                                                        {CURRENCY} {item.refund_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                        {CURRENCY} {parseFloat(item.refund_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                     </span>
                                                 </div>
                                             ))}
                                         </div>
+                                    );
+                                } else if (activeCategory === "tour") {
+                                    refundNo = refund.refundRef;
+                                    refundMethodDisplay = "Bank Transfer / Card Reversal";
+                                    guestName = refund.fullName || "Guest";
+                                    guestContact = `${refund.email || ""} | ${refund.phone || ""}`;
+                                    bookingRef = `Tour Inquiry Ref: ${refund.inquiryRef} (Inquiry ID: #${refund.bookingId})`;
+                                    requestDate = refund.requestedAt ? new Date(refund.requestedAt).toLocaleString() : "";
+                                    reason = refund.clientReason;
+                                    amountValue = parseFloat(refund.refundAmount || 0);
 
-                                        {/* Reason block */}
-                                        {refund.reason && (
-                                            <div className="p-3 bg-rose-50/40 dark:bg-rose-950/15 border-l-4 border-l-rose-500 rounded text-[11px] italic leading-normal">
-                                                Cancellation Reason: "{refund.reason}"
-                                            </div>
-                                        )}
-
-                                        <div className="flex justify-between items-center pt-2.5 border-t border-slate-100 dark:border-slate-800">
-                                            <div>
-                                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Total Refundable</span>
-                                                <span className="text-lg font-black text-rose-700 dark:text-rose-400">
-                                                    {CURRENCY} {parseFloat(refund.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    itemsBreakdown = (
+                                        <div className="p-3 bg-slate-50 dark:bg-slate-950/60 rounded-xl space-y-1.5 border border-slate-200/50 dark:border-slate-800/40">
+                                            <p className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Tour Details:</p>
+                                            <div className="flex justify-between items-center text-[11px] font-semibold">
+                                                <span className="flex items-center gap-1">
+                                                    <MdTerrain className="text-indigo-500" />
+                                                    {refund.packageName || "Tour Package"}
+                                                </span>
+                                                <span className="text-slate-800 dark:text-slate-200">
+                                                    {CURRENCY} {amountValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                 </span>
                                             </div>
+                                        </div>
+                                    );
+                                } else if (activeCategory === "vehicle") {
+                                    refundNo = refund.refundRef;
+                                    refundMethodDisplay = "Bank Transfer / Card Reversal";
+                                    guestName = `${refund.firstName || ""} ${refund.lastName || ""}`;
+                                    guestContact = `${refund.email || ""} | ${refund.phoneNumber || ""}`;
+                                    bookingRef = `Vehicle Booking No: ${refund.bookingNo} (Booking ID: #${refund.bookingId})`;
+                                    requestDate = refund.createdAt ? new Date(refund.createdAt).toLocaleString() : "";
+                                    reason = refund.reason;
+                                    amountValue = parseFloat(refund.refundAmount || 0);
+
+                                    itemsBreakdown = (
+                                        <div className="p-3 bg-slate-50 dark:bg-slate-950/60 rounded-xl space-y-1.5 border border-slate-200/50 dark:border-slate-800/40">
+                                            <p className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Rental Details:</p>
+                                            <div className="flex justify-between items-center text-[11px] font-semibold">
+                                                <span className="flex items-center gap-1">
+                                                    <MdLocalTaxi className="text-indigo-500" />
+                                                    Security Deposit Refund
+                                                </span>
+                                                <span className="text-slate-800 dark:text-slate-200">
+                                                    {CURRENCY} {amountValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
+                                return (
+                                    <div key={refund.id} className={getCardStyle()}>
+                                        <div className="flex justify-between items-start border-b border-slate-100 dark:border-slate-800 pb-3 mb-3">
+                                            <div>
+                                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Refund Number</span>
+                                                <span className="text-sm font-black text-slate-800 dark:text-white">{refundNo}</span>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Refund Method</span>
+                                                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-350">{refundMethodDisplay}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Body details */}
+                                        <div className="space-y-3.5 text-xs text-slate-600 dark:text-slate-400">
                                             <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => {
-                                                        setSelectedRefund(refund);
-                                                        setActionType("REJECT");
-                                                    }}
-                                                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 rounded-xl font-bold transition cursor-pointer"
-                                                >
-                                                    Reject
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setSelectedRefund(refund);
-                                                        setActionType("APPROVE");
-                                                        setRefundMethod(refund.payment_method || "Cash");
-                                                    }}
-                                                    className={`px-4 py-2 ${currentAccent.bg} text-white rounded-xl font-bold transition cursor-pointer`}
-                                                >
-                                                    Approve & Pay
-                                                </button>
+                                                <MdPerson className="text-slate-400 shrink-0 text-base" />
+                                                <div>
+                                                    <p className="font-bold text-slate-800 dark:text-slate-200">{guestName}</p>
+                                                    <p className="text-[10px] text-slate-400 mt-0.5">{guestContact}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex gap-2">
+                                                <MdDateRange className="text-slate-400 shrink-0 text-base" />
+                                                <div>
+                                                    <p className="font-bold text-slate-800 dark:text-slate-200">{bookingRef}</p>
+                                                    <p className="text-[10px] text-slate-400 mt-0.5">Requested on: {requestDate}</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Items Breakdown */}
+                                            {itemsBreakdown}
+
+                                            {/* Reason block */}
+                                            {reason && (
+                                                <div className="p-3 bg-rose-50/40 dark:bg-rose-950/15 border-l-4 border-l-rose-500 rounded text-[11px] italic leading-normal">
+                                                    Cancellation Reason: "{reason}"
+                                                </div>
+                                            )}
+
+                                            <div className="flex justify-between items-center pt-2.5 border-t border-slate-100 dark:border-slate-800">
+                                                <div>
+                                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Total Refundable</span>
+                                                    <span className="text-lg font-black text-rose-700 dark:text-rose-400">
+                                                        {CURRENCY} {amountValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                    </span>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedRefund(refund);
+                                                            setActionType("REJECT");
+                                                        }}
+                                                        className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 rounded-xl font-bold transition cursor-pointer"
+                                                    >
+                                                        Reject
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedRefund(refund);
+                                                            setActionType("APPROVE");
+                                                            setRefundMethod(activeCategory === "room" ? (refund.payment_method || "Cash") : "Cash");
+                                                            setCustomAmount(amountValue || "");
+                                                        }}
+                                                        className={`px-4 py-2 ${currentAccent.bg} text-white rounded-xl font-bold transition cursor-pointer`}
+                                                    >
+                                                        Approve & Pay
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>
@@ -413,7 +537,7 @@ export default function RefundRequests() {
             {/* REPORTS TAB */}
             {activeSubTab === "reports" && (
                 <div className="space-y-6 animate-fadeIn">
-                    
+
                     {/* Stats Cards Row */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className={getCardStyle()}>
@@ -535,7 +659,7 @@ export default function RefundRequests() {
             {/* APPROVAL / REJECTION ACTION OVERLAY MODAL */}
             {selectedRefund && actionType && (
                 <>
-                    <div 
+                    <div
                         className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs z-55 animate-fadeIn"
                         onClick={() => {
                             setSelectedRefund(null);
@@ -559,10 +683,24 @@ export default function RefundRequests() {
                                 {actionType === "APPROVE" ? (
                                     <>
                                         <p className="text-slate-500 leading-normal text-[11px]">
-                                            You are approving refund request <span className="font-bold text-slate-800">{selectedRefund.refund_no}</span> for 
-                                            <span className="font-bold text-slate-800"> {CURRENCY} {parseFloat(selectedRefund.amount).toLocaleString()}</span>. 
+                                            You are approving refund request <span className="font-bold text-slate-800">{selectedRefund.refund_no || selectedRefund.refundRef}</span> for
+                                            <span className="font-bold text-slate-800"> {CURRENCY} {parseFloat(selectedRefund.amount || selectedRefund.refundAmount || 0).toLocaleString()}</span>.
                                             Please configure payout details:
                                         </p>
+
+                                        <div className="flex flex-col gap-1.5">
+                                            <label className="text-slate-700 font-bold">Approved Refund Amount ({CURRENCY}):</label>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                required
+                                                placeholder="Enter custom refund amount"
+                                                value={customAmount}
+                                                onChange={(e) => setCustomAmount(e.target.value)}
+                                                className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-700 focus:outline-indigo-650"
+                                            />
+                                        </div>
 
                                         <div className="flex flex-col gap-1.5">
                                             <label className="text-slate-700 font-bold">Refund Payment Method:</label>
@@ -591,7 +729,7 @@ export default function RefundRequests() {
                                 ) : (
                                     <>
                                         <p className="text-slate-500 leading-normal text-[11px]">
-                                            You are rejecting refund request <span className="font-bold text-slate-800">{selectedRefund.refund_no}</span>. Please enter rejection reason:
+                                            You are rejecting refund request <span className="font-bold text-slate-800">{selectedRefund.refund_no || selectedRefund.refundRef}</span>. Please enter rejection reason:
                                         </p>
 
                                         <div className="flex flex-col gap-1.5">
@@ -621,9 +759,8 @@ export default function RefundRequests() {
                                     <button
                                         type="submit"
                                         disabled={submittingAction}
-                                        className={`flex-1 py-2.5 text-white rounded-xl font-bold transition cursor-pointer text-center text-xs flex items-center justify-center gap-1.5 ${
-                                            actionType === "APPROVE" ? "bg-emerald-650 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"
-                                        }`}
+                                        className={`flex-1 py-2.5 text-white rounded-xl font-bold transition cursor-pointer text-center text-xs flex items-center justify-center gap-1.5 ${actionType === "APPROVE" ? "bg-emerald-650 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"
+                                            }`}
                                     >
                                         {submittingAction ? (
                                             <>

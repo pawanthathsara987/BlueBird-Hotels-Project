@@ -19,6 +19,7 @@ import ShopManagement from "./shop/ShopManagement";
 import AttendanceRecords from "./Attendance/AttendanceRecords";
 import LeaveManagement from "./leave/LeaveManagement";
 import AdminProfileSettings from "./AdminProfileSettings";
+import RefundRequests from "../reception/RefundRequests";
 
 
 export default function AdminPage() {
@@ -179,6 +180,10 @@ export default function AdminPage() {
                                 <MdShoppingBag className="text-xl" />
                                 <span>Shop Items</span>
                             </NavLink>
+                            <NavLink to="/admin/refunds" onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}>
+                                <MdBookOnline className="text-xl" />
+                                <span>Refunds Approval</span>
+                            </NavLink>
                         </div>
                     </div>
 
@@ -237,6 +242,7 @@ export default function AdminPage() {
                     <Route path="/extra-charges" element={<ServiceChargeView />} />
                     <Route path="/shop-items" element={<ShopManagement />} />
                     <Route path="/settings" element={<AdminProfileSettings />} />
+                    <Route path="/refunds" element={<RefundRequests />} />
                 </Routes>
             </div>
         </div>
