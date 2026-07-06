@@ -20,6 +20,7 @@ import AttendanceRecords from "./Attendance/AttendanceRecords";
 import LeaveManagement from "./leave/LeaveManagement";
 import AdminProfileSettings from "./AdminProfileSettings";
 import RefundRequests from "../reception/RefundRequests";
+import BookingsManagement from "./BookingsManagement";
 
 
 export default function AdminPage() {
@@ -160,6 +161,10 @@ export default function AdminPage() {
                                 <MdBedroomParent className="text-xl" />
                                 <span>Rooms</span>
                             </NavLink>
+                            <NavLink to="/admin/bookings" onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}>
+                                <MdBookOnline className="text-xl" />
+                                <span>Bookings</span>
+                            </NavLink>
                             <NavLink to="/admin/users" onClick={() => setSidebarOpen(false)} className={sidebarLinkClass}>
                                 <MdPeople className="text-xl" />
                                 <span>Users</span>
@@ -232,7 +237,7 @@ export default function AdminPage() {
                     <Route path="/rooms/packages/add" element={<RoomTypeForm />} />
                     <Route path="/rooms/packages/edit" element={<RoomTypeForm />} />
                     <Route path="/rooms/packages/image/add" element={<PackageImageForm />} />
-                    <Route path="/bookings" element={<h1 className="p-5">Bookings Management</h1>} />
+                    <Route path="/bookings" element={<BookingsManagement />} />
                     <Route path="/users" element={<StaffManagement />} />
                     <Route path="/users/addStaffMember" element={<AddNewStaffMember />} />
                     <Route path="/users/updateStaffMember" element={<UpdateStaffMember />} />

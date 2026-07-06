@@ -11,7 +11,7 @@ const VehicleFinalBill = sequelize.define('VehicleFinalBill', {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'vehicle_booking', // must match the actual table name
+      model: 'vehicle_booking', 
       key: 'id',
     },
   },

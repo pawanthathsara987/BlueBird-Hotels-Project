@@ -60,7 +60,6 @@ import {
 
 const router = express.Router();
 
-// ── PUBLIC read-only endpoints (no token required) ────────────────────────────
 // Used by: TourViewing (customer booking page), TourDetailsPage
 router.get('/tours',            getAllTours);
 router.get('/tours/:id',        getTourById);
@@ -70,7 +69,6 @@ router.get('/tour-items/:itemId', getTourItem);
 // ── All routes below require a valid manager JWT ──────────────────────────────
 router.use(requireAuth);
 router.use(requireRole('manager'));
-// ─────────────────────────────────────────────────────────────────────────────
 
 // Tour Items routes (write operations — manager only)
 router.post('/tour-items', createTourItem);

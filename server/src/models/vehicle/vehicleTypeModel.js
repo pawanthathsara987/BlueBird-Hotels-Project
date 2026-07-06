@@ -14,7 +14,7 @@ VehicleType.init(
     name: {
       type: DataTypes.STRING(100),
       allowNull: false,
-      unique: true,             // e.g. "Sedan", "Van", "SUV"
+      unique: true,
     },
     description: {
       type: DataTypes.TEXT,

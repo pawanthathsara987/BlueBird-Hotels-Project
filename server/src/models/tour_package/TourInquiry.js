@@ -15,7 +15,6 @@ TourInquiry.init(
       type: DataTypes.STRING,
       unique: true,
       allowNull: false,
-      // e.g. TI-2026-0001
     },
     tourId: {
       type: DataTypes.INTEGER,
@@ -23,7 +22,7 @@ TourInquiry.init(
     },
     customerId: {
       type: DataTypes.INTEGER,
-      allowNull: true, // Making it true so it's backwards compatible, but in practice will be populated
+      allowNull: true,
     },
     // Guest Details (from form)
     fullName: {
