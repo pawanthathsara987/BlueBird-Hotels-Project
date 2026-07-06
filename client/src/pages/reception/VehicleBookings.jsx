@@ -19,9 +19,11 @@ import {
     MdDateRange
 } from "react-icons/md";
 import { toast } from "react-hot-toast";
+import { useLocation } from "react-router-dom";
 import { Eye, FileText, Receipt, XCircle } from "lucide-react";
 
 export default function VehicleBookings() {
+    const location = useLocation();
     const [bookings, setBookings] = useState([]);
     const [vehicles, setVehicles] = useState([]);
     const [selectedBooking, setSelectedBooking] = useState(null);
@@ -189,6 +191,35 @@ export default function VehicleBookings() {
         const minutes = String(date.getMinutes()).padStart(2, '0');
         return `${year}-${month}-${day}T${hours}:${minutes}`;
     };
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        if (params.get("action") === "new") {
+            const now = new Date();
+            const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+            const twoHoursLater = new Date(now.getTime() + 120 * 60 * 1000);
+            setNewBooking({
+                vehicleId: "",
+                fullName: "",
+                email: "",
+                phone: "",
+                pickupDatetime: formatLocalDatetime(oneHourLater),
+                returnDatetime: formatLocalDatetime(twoHoursLater),
+                pickupLocation: "Hotel Lobby",
+                dropoffLocation: "Hotel Lobby",
+                hireType: "without_driver",
+                customerLicenseNo: "",
+                customerLicenseExpiry: "",
+                specialRequirements: "",
+                isFullyPaid: true,
+                paymentMethod: "cash"
+            });
+            setShowForm(true);
+            // clean query param
+            const cleanUrl = window.location.pathname + window.location.hash;
+            window.history.replaceState({}, document.title, cleanUrl);
+        }
+    }, [location.search]);
 
     // Date calculations
     const getMinPickupDatetime = () => {

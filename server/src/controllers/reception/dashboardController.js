@@ -913,6 +913,157 @@ async function getMonthlyReport(req, res) {
     }
 }
 
+async function getRangeReport(req, res) {
+    try {
+        const startDate = req.query.startDate || new Date().toISOString().split('T')[0];
+        const endDate = req.query.endDate || new Date().toISOString().split('T')[0];
+
+        const bookingsQuery = `
+            SELECT
+                bk.id AS reservation_id,
+                c.firstName,
+                c.lastName,
+                bk.status AS bookingStatus,
+                bk.total_price,
+                MIN(br.checkIn) AS checkIn,
+                MAX(br.checkOut) AS checkOut,
+                GROUP_CONCAT(room.room_number ORDER BY room.room_number) AS rooms,
+                GROUP_CONCAT(DISTINCT br.status) AS roomStatuses,
+                bk.createdAt AS bookedAt
+            FROM booking bk
+            JOIN booked_rooms br ON bk.id = br.booking_id
+            JOIN room ON room.id = br.room_id
+            JOIN customer c ON bk.customer_id = c.id
+            WHERE DATE(bk.createdAt) BETWEEN :startDate AND :endDate
+            GROUP BY bk.id, c.firstName, c.lastName, bk.status, bk.total_price, bk.createdAt
+            ORDER BY bk.createdAt DESC
+        `;
+
+        const summaryQuery = `
+            SELECT
+                COUNT(*) AS totalBookings,
+                COALESCE(SUM(total_price), 0) AS totalRevenue,
+                COALESCE(AVG(total_price), 0) AS avgRevenue
+            FROM booking
+            WHERE DATE(createdAt) BETWEEN :startDate AND :endDate
+        `;
+
+        const checkInsQuery = `SELECT COUNT(*) AS count FROM booked_rooms WHERE checkIn BETWEEN :startDate AND :endDate AND status != 'cancelled'`;
+        const checkOutsQuery = `SELECT COUNT(*) AS count FROM booked_rooms WHERE checkOut BETWEEN :startDate AND :endDate AND status != 'cancelled'`;
+
+        const vehicleBookingsQuery = `
+            SELECT
+                vb.id AS reservation_id,
+                vb.bookingNo,
+                c.firstName,
+                c.lastName,
+                v.brand,
+                v.model,
+                vb.pickupDatetime,
+                vb.returnDatetime,
+                vb.status AS bookingStatus,
+                vb.totalPayable,
+                vb.depositAmount,
+                vb.balanceAmount,
+                vb.balancePaidAt,
+                vb.createdAt AS bookedAt
+            FROM vehicle_booking vb
+            LEFT JOIN customer c ON vb.customerId = c.id
+            LEFT JOIN vehicles v ON vb.vehicleId = v.id
+            WHERE DATE(vb.createdAt) BETWEEN :startDate AND :endDate
+            ORDER BY vb.createdAt DESC
+        `;
+
+        const vehicleSummaryQuery = `
+            SELECT
+                COUNT(*) AS totalBookings,
+                COALESCE(SUM(totalPayable), 0) AS totalRevenue
+            FROM vehicle_booking
+            WHERE DATE(createdAt) BETWEEN :startDate AND :endDate AND status != 'cancelled'
+        `;
+
+        const tourBookingsQuery = `
+            SELECT
+                tb.id AS reservation_id,
+                tb.bookingRef,
+                c.firstName,
+                c.lastName,
+                t.packageName AS tourTitle,
+                tb.tourStartDate,
+                tb.status AS bookingStatus,
+                tb.totalAmount,
+                tb.depositAmount,
+                tb.remainingAmount,
+                tb.balancePaidAt,
+                tb.createdAt AS bookedAt
+            FROM tour_bookings tb
+            JOIN tour_inquiries ti ON tb.inquiryId = ti.id
+            JOIN tours t ON ti.tourId = t.id
+            LEFT JOIN customer c ON ti.customerId = c.id
+            WHERE DATE(tb.createdAt) BETWEEN :startDate AND :endDate
+            ORDER BY tb.createdAt DESC
+        `;
+
+        const tourSummaryQuery = `
+            SELECT
+                COUNT(*) AS totalBookings,
+                COALESCE(SUM(totalAmount), 0) AS totalRevenue
+            FROM tour_bookings
+            WHERE DATE(createdAt) BETWEEN :startDate AND :endDate AND status != 'cancelled'
+        `;
+
+        const [
+            bookings, summary, checkIns, checkOuts,
+            vehicleBookings, vehicleSummary,
+            tourBookings, tourSummary
+        ] = await Promise.all([
+            sequelize.query(bookingsQuery, { replacements: { startDate, endDate }, type: QueryTypes.SELECT }),
+            sequelize.query(summaryQuery, { replacements: { startDate, endDate }, type: QueryTypes.SELECT }),
+            sequelize.query(checkInsQuery, { replacements: { startDate, endDate }, type: QueryTypes.SELECT }),
+            sequelize.query(checkOutsQuery, { replacements: { startDate, endDate }, type: QueryTypes.SELECT }),
+            sequelize.query(vehicleBookingsQuery, { replacements: { startDate, endDate }, type: QueryTypes.SELECT }),
+            sequelize.query(vehicleSummaryQuery, { replacements: { startDate, endDate }, type: QueryTypes.SELECT }),
+            sequelize.query(tourBookingsQuery, { replacements: { startDate, endDate }, type: QueryTypes.SELECT }),
+            sequelize.query(tourSummaryQuery, { replacements: { startDate, endDate }, type: QueryTypes.SELECT }),
+        ]);
+
+        const totalBookingsCount = (Number(summary[0]?.totalBookings) || 0) +
+                                    (Number(vehicleSummary[0]?.totalBookings) || 0) +
+                                    (Number(tourSummary[0]?.totalBookings) || 0);
+
+        const totalRevenueValue = (Number(summary[0]?.totalRevenue) || 0) +
+                                   (Number(vehicleSummary[0]?.totalRevenue) || 0) +
+                                   (Number(tourSummary[0]?.totalRevenue) || 0);
+
+        const avgRevenueValue = totalBookingsCount > 0 ? (totalRevenueValue / totalBookingsCount) : 0;
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                startDate,
+                endDate,
+                bookings,
+                vehicleBookings,
+                tourBookings,
+                totalBookings: totalBookingsCount,
+                totalRevenue: totalRevenueValue,
+                avgRevenue: avgRevenueValue,
+                roomBookingsCount: Number(summary[0]?.totalBookings) || 0,
+                roomRevenue: Number(summary[0]?.totalRevenue) || 0,
+                vehicleBookingsCount: Number(vehicleSummary[0]?.totalBookings) || 0,
+                vehicleRevenue: Number(vehicleSummary[0]?.totalRevenue) || 0,
+                tourBookingsCount: Number(tourSummary[0]?.totalBookings) || 0,
+                tourRevenue: Number(tourSummary[0]?.totalRevenue) || 0,
+                todayCheckIns: Number(checkIns[0]?.count) || 0,
+                todayCheckOuts: Number(checkOuts[0]?.count) || 0,
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching range report:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+}
+
 export {
     getAvailableRooms,
     todayCheckIns,
@@ -925,5 +1076,6 @@ export {
     getDashboardDetails,
     getAnalyticsSummary,
     getDailyReport,
-    getMonthlyReport
+    getMonthlyReport,
+    getRangeReport
 };
