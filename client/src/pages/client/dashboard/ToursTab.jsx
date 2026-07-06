@@ -17,6 +17,7 @@ export default function ToursTab({
   const [selectedTourForDetails, setSelectedTourForDetails] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, tourId: null, isPaid: false, isProcessing: false, reason: "" });
   const [reviewPanel, setReviewPanel] = useState({ isOpen: false, tourId: null, tourRating: 0, guideRating: 0, comment: "", submitting: false });
+  const [subTab, setSubTab] = useState("bookings");
   const navigate = useNavigate();
 
   const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api").replace(/\/$/, "");
@@ -116,15 +117,45 @@ export default function ToursTab({
   );
 
   const filteredTours = filterList(tours, "destination");
+  const excursionBookings = filteredTours.filter(t => t.rawStatus === "accepted");
+  const excursionInquiries = filteredTours.filter(t => t.rawStatus === "pending" || t.rawStatus === "progress" || t.rawStatus === "rejected" || t.rawStatus === "canceled");
+
+  const currentTabTours = subTab === "bookings" ? excursionBookings : excursionInquiries;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 font-sans">
       <div className="flex justify-between items-center pb-4 border-b border-slate-200/60">
         <div>
-          <h2 className="font-serif font-semibold text-xl md:text-2xl text-blue-950">Luxury Excursion Inquiries</h2>
+          <h2 className="font-serif font-semibold text-xl md:text-2xl text-blue-950">Luxury Tours & Excursions</h2>
           <p className="text-slate-500 text-xs mt-0.5">Special helicopter flightpaths, reserve sommelier wine tastings, and deep-sea yacht charters.</p>
         </div>
       </div>
+
+      {/* Sub tabs to switch between Bookings and Inquiries */}
+      {!isEmptyState && filteredTours.length > 0 && (
+        <div className="flex border-b border-slate-200/80 gap-6 text-xs mb-2">
+          <button
+            onClick={() => setSubTab("bookings")}
+            className={`pb-3 px-2 font-bold uppercase tracking-wider border-b-2 transition-all outline-none cursor-pointer ${
+              subTab === "bookings"
+                ? "border-blue-600 text-blue-950"
+                : "border-transparent text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            Excursion Bookings ({excursionBookings.length})
+          </button>
+          <button
+            onClick={() => setSubTab("inquiries")}
+            className={`pb-3 px-2 font-bold uppercase tracking-wider border-b-2 transition-all outline-none cursor-pointer ${
+              subTab === "inquiries"
+                ? "border-blue-600 text-blue-950"
+                : "border-transparent text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            Excursion Inquiries ({excursionInquiries.length})
+          </button>
+        </div>
+      )}
 
       {isEmptyState || filteredTours.length === 0 ? (
         renderEmptyState(
@@ -134,120 +165,147 @@ export default function ToursTab({
           "Book Custom Excursion",
           () => navigate("/booking/tour")
         )
+      ) : currentTabTours.length === 0 ? (
+        renderEmptyState(
+          subTab === "bookings" ? "No Confirmed Tours" : "No Tour Inquiries",
+          subTab === "bookings"
+            ? "You do not have any confirmed bookings or excursions awaiting payment."
+            : "You have no active tour inquiries under review.",
+          <Compass size={36} />,
+          subTab === "bookings" ? "Curate Excursion" : "",
+          subTab === "bookings" ? () => navigate("/booking/tour") : null
+        )
       ) : (
         <div className="space-y-6">
-          {filteredTours.map(tour => (
+          {currentTabTours.map(tour => (
             <div
               key={tour.id}
-              className="bg-white/80 backdrop-blur-md border border-blue-50/50 rounded-3xl p-5 md:p-6 shadow-xs hover:shadow-md transition-all duration-300 space-y-4"
+              className="bg-white/85 backdrop-blur-md border border-blue-500 rounded-3xl overflow-hidden shadow-xs hover:shadow-md transition-all duration-300 flex flex-col md:flex-row"
             >
-              <div className="flex flex-col md:flex-row md:justify-between items-start md:items-center gap-3">
-                <div className="space-y-1">
-                  <span className="text-[9px] font-bold text-amber-500 tracking-wider uppercase">CURATED EXPERIENCES</span>
-                  <h3 className="font-serif font-semibold text-lg text-blue-950">{tour.destination}</h3>
-                  <p className="text-xs text-slate-500 flex items-center gap-1.5">
-                    <MapPin size={12} className="text-slate-400" />
-                    {tour.location}
-                  </p>
-                </div>
-                <span className={`px-3 py-1 rounded-full text-[9px] font-bold tracking-wider uppercase border ${
-                  tour.refund 
-                    ? "bg-rose-5 border-rose-100 text-rose-900" 
-                    : tour.rawStatus === "accepted" 
-                      ? "bg-blue-5 border-blue-100 text-blue-900" 
-                      : tour.rawStatus === "progress" 
-                        ? "bg-emerald-5 border-emerald-100 text-emerald-900" 
-                        : tour.rawStatus === "canceled"
-                          ? "bg-slate-100 border-slate-200 text-slate-500"
-                          : "bg-amber-5 border-amber-100 text-amber-900"
-                }`}>
-                  {tour.status}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50/70 p-4 rounded-2xl border border-slate-100/60 text-xs">
-                <div>
-                  <span className="text-[10px] text-slate-400 font-bold block mb-1">INQUIRY REF</span>
-                  <button
-                    onClick={() => setSelectedTourForDetails(tour)}
-                    className="font-semibold text-blue-700 hover:text-blue-900 hover:underline outline-none cursor-pointer text-left"
-                  >
-                    {tour.id}
-                  </button>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 font-bold block mb-1">REQUESTED DATE</span>
-                  <span className="font-semibold text-blue-950">
-                    {new Date(tour.requestedDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+              {/* Tour Image */}
+              <div className="relative w-full md:w-56 h-48 md:h-auto shrink-0 overflow-hidden">
+                <img
+                  src={tour.image}
+                  alt={tour.destination}
+                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                  onError={(e) => {
+                    e.target.src = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80";
+                  }}
+                />
+                <div className="absolute top-4 left-4 z-10">
+                  <span className={`px-2.5 py-1 rounded-full text-[9px] font-black tracking-wider uppercase border backdrop-blur-md shadow-sm ${
+                    tour.refund 
+                      ? "bg-rose-50/90 border-rose-200 text-rose-800" 
+                      : tour.rawStatus === "accepted" 
+                        ? "bg-blue-50/90 border-blue-200 text-blue-800" 
+                        : tour.rawStatus === "progress" 
+                          ? "bg-emerald-50/90 border-emerald-250 text-emerald-800" 
+                          : tour.rawStatus === "canceled"
+                            ? "bg-slate-100/90 border-slate-200 text-slate-600"
+                            : "bg-amber-50/90 border-amber-200 text-amber-800"
+                  }`}>
+                    {tour.status}
                   </span>
                 </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 font-bold block mb-1">GROUP CONFIGURATION</span>
-                  <span className="font-semibold text-blue-950">{tour.groupSize}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 font-bold block mb-1">ESTIMATED RATE</span>
-                  <span className="font-serif font-semibold text-blue-950">{import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {tour.price.toLocaleString()}</span>
-                </div>
               </div>
 
-              {/* Concierge Response Chat Bubble */}
-              <div className="bg-blue-50/40 border border-blue-100/40 rounded-2xl p-4 flex gap-3">
-                <img
-                  src={logo}
-                  alt="BlueBird Logo"
-                  className="w-8 h-8 rounded-full object-contain shrink-0 bg-blue-50/50 p-1 border border-blue-100/20"
-                />
-                <div className="space-y-1 w-full">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-blue-950">BlueBird Concierge Coordinator</span>
-                    <span className="text-[9px] text-slate-400">Last updated: {tour.lastUpdated}</span>
+              {/* Tour Content */}
+              <div className="p-5 md:p-6 flex-1 flex flex-col justify-between space-y-4">
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <span className="text-[9px] font-bold text-amber-500 tracking-wider uppercase block">CURATED EXPERIENCES</span>
+                    <h3 className="font-serif font-semibold text-lg text-blue-950 leading-snug">{tour.destination}</h3>
+                    <p className="text-xs text-slate-500 flex items-center gap-1.5">
+                      <MapPin size={12} className="text-slate-400" />
+                      {tour.location}
+                    </p>
                   </div>
-                  <p className="text-slate-600 text-[11px] leading-relaxed italic">
-                    "{tour.conciergeNotes}"
-                  </p>
-                </div>
-              </div>
 
-              <div className="flex flex-wrap justify-end gap-2.5 pt-2">
-                {tour.rawStatus === "progress" ? (
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-50/60 p-4 rounded-2xl border border-slate-100/40 text-xs">
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block mb-1">INQUIRY REF</span>
+                      <button
+                        onClick={() => setSelectedTourForDetails(tour)}
+                        className="font-semibold text-blue-700 hover:text-blue-900 hover:underline outline-none cursor-pointer text-left"
+                      >
+                        {tour.id}
+                      </button>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block mb-1">REQUESTED DATE</span>
+                      <span className="font-semibold text-blue-950">
+                        {new Date(tour.requestedDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block mb-1">GROUP SIZE</span>
+                      <span className="font-semibold text-blue-950">{tour.groupSize}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block mb-1">ESTIMATED RATE</span>
+                      <span className="font-serif font-semibold text-blue-950">{import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {tour.price.toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  {/* Concierge Notes Chat Bubble */}
+                  <div className="bg-blue-50/30 border border-blue-100/30 rounded-2xl p-3 flex gap-3 items-start">
+                    <img
+                      src={logo}
+                      alt="BlueBird Logo"
+                      className="w-10 h-10 rounded-full object-contain shrink-0 bg-blue-50/50 p-1 border border-black-100/20"
+                    />
+                    <div className="space-y-0.5 flex-1 min-w-0">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[12px] font-bold text-blue-950">BlueBird Concierge Coordinator</span>
+                        <span className="text-[11px] text-slate-600">Last updated: {tour.lastUpdated}</span>
+                      </div>
+                      <p className="text-slate-600 text-[11px] leading-relaxed italic line-clamp-2">
+                        "{tour.conciergeNotes}"
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap justify-end gap-2.5 pt-2 border-t border-slate-100/50">
+                  {tour.rawStatus === "progress" ? (
+                    <button
+                      onClick={() => handlePayment(tour)}
+                      disabled={processingId === tour.id}
+                      className="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white font-semibold text-xs rounded-xl transition-all shadow-sm disabled:opacity-50"
+                    >
+                      {processingId === tour.id ? "Processing..." : "Pay 50% Advance"}
+                    </button>
+                  ) : tour.rawStatus === "pending" ? (
+                    <button
+                      disabled
+                      className="px-5 py-2 bg-slate-100 text-slate-400 font-semibold text-xs rounded-xl cursor-not-allowed border border-slate-200"
+                    >
+                      Awaiting Manager Approval for Payment
+                    </button>
+                  ) : null}
                   <button
-                    onClick={() => handlePayment(tour)}
-                    disabled={processingId === tour.id}
-                    className="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white font-semibold text-xs rounded-xl transition-all shadow-sm disabled:opacity-50"
+                    onClick={() => setSelectedTourForDetails(tour)}
+                    className="p-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 hover:text-slate-700 transition cursor-pointer flex items-center justify-center"
+                    title="View Excursion Details"
                   >
-                    {processingId === tour.id ? "Processing..." : "Pay 50% Advance"}
+                    <Eye size={13} />
                   </button>
-                ) : tour.rawStatus === "pending" ? (
                   <button
-                    disabled
-                    className="px-5 py-2 bg-slate-100 text-slate-400 font-semibold text-xs rounded-xl cursor-not-allowed border border-slate-200"
+                    onClick={() => setModifyModal({ isOpen: true, tour: tour })}
+                    className="px-4 py-2 bg-white border border-slate-200 text-slate-700 font-semibold text-xs rounded-xl hover:bg-slate-50 transition-colors"
                   >
-                    Awaiting Manager Approval for Payment
+                    Modify Excursion Details
                   </button>
-                ) : null}
-                 <button
-                  onClick={() => setSelectedTourForDetails(tour)}
-                  className="p-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 hover:text-slate-700 transition cursor-pointer flex items-center justify-center"
-                  title="View Excursion Details"
-                >
-                  <Eye size={13} />
-                </button>
-                <button
-                  onClick={() => setModifyModal({ isOpen: true, tour: tour })}
-                  className="px-4 py-2 bg-white border border-slate-200 text-slate-700 font-semibold text-xs rounded-xl hover:bg-slate-50 transition-colors"
-                >
-                  Modify Excursion Details
-                </button>
-                {["pending", "progress", "accepted"].includes(tour.rawStatus) && (
-                  <button
-                    onClick={() => openCancelDialog(tour.id, tour.rawStatus === "accepted")}
-                    disabled={processingId === tour.id}
-                    className="px-4 py-2 bg-red-50 border border-red-200 text-red-600 font-semibold text-xs rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
-                  >
-                    {tour.rawStatus === "accepted" ? "Request Refund & Cancel" : "Cancel Booking"}
-                  </button>
-                )}
+                  {["pending", "progress", "accepted"].includes(tour.rawStatus) && (
+                    <button
+                      onClick={() => openCancelDialog(tour.id, tour.rawStatus === "accepted")}
+                      disabled={processingId === tour.id}
+                      className="px-4 py-2 bg-red-50 border border-red-200 text-red-600 font-semibold text-xs rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
+                    >
+                      {tour.rawStatus === "accepted" ? "Request Refund & Cancel" : "Cancel Booking"}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -353,7 +411,25 @@ export default function ToursTab({
               </div>
 
               {/* Modal Body */}
-              <div className="p-6 flex-1 space-y-6">
+              <div className="p-6 flex-1 space-y-6 overflow-y-auto">
+                
+                {/* Hero Banner Image */}
+                <div className="relative h-44 w-full rounded-2xl overflow-hidden shrink-0 shadow-sm">
+                  <img
+                    src={selectedTourForDetails.image}
+                    alt={selectedTourForDetails.destination}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.src = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80";
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/10 to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4 text-white">
+                    <span className="text-[8px] font-extrabold text-amber-400 tracking-wider uppercase block">CURATED EXCURSION</span>
+                    <h4 className="font-serif font-semibold text-base text-white leading-snug">{selectedTourForDetails.destination}</h4>
+                  </div>
+                </div>
+
                 
                 {/* Status Banner */}
                 <div className={`p-4 border rounded-2xl flex gap-3.5 items-start ${
@@ -521,9 +597,10 @@ export default function ToursTab({
                 {selectedTourForDetails.rawStatus === "accepted" && !selectedTourForDetails.review && (
                   <button
                     onClick={() => setReviewPanel({ isOpen: true, tourId: selectedTourForDetails.realId, tourRating: 0, guideRating: 0, comment: "", submitting: false })}
-                    className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
+                    disabled={new Date(selectedTourForDetails.requestedDate) > new Date()}
+                    className="w-full py-3 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-semibold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
                   >
-                    <Star size={13} /> Write a Review
+                    <Star size={13} /> {new Date(selectedTourForDetails.requestedDate) > new Date() ? `Review available after ${new Date(selectedTourForDetails.requestedDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}` : "Write a Review"}
                   </button>
                 )}
                 {/* Review submitted display */}
