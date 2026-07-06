@@ -229,7 +229,7 @@ export default function TourDetailsPage() {
 
       {/* ══════════════ STATS BAR ══════════════ */}
       <div className="bg-slate-900 border-y border-slate-800">
-        <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 divide-x divide-slate-800">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-800">
           {[
             { icon: <Users size={16} />, label: 'Group size', value: tour?.groupSize ? `Up to ${tour.groupSize} Pax` : '—' },
             { icon: <Tag size={16} />,   label: 'From',       value: `${import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} ${Number(finalPrice).toLocaleString()}` },

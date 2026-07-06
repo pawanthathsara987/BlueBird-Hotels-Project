@@ -2037,8 +2037,8 @@ const RoomSelector = () => {
                   {/* Surcharge Badge */}
                   <span className="text-xs font-black text-emerald-850 bg-emerald-50 border border-emerald-200/60 px-2.5 py-1 rounded-lg">
                     {airportPickupEnabled
-                      ? `+${process.env.CURRENCY_TYPE || "LKR"} ${getAirportPickupTotalPrice().toFixed(2)}`
-                      : `+${process.env.CURRENCY_TYPE || "LKR"} ${getAirportPickupPrice().toFixed(2)} / vehicle`
+                      ? `+${import.meta.env.VITE_CURRENCY_TYPE || "LKR"} ${getAirportPickupTotalPrice().toFixed(2)}`
+                      : `+${import.meta.env.VITE_CURRENCY_TYPE || "LKR"} ${getAirportPickupPrice().toFixed(2)} / vehicle`
                     }
                   </span>
                 </div>
@@ -2237,14 +2237,14 @@ const RoomSelector = () => {
               <div className="flex flex-col items-end sm:items-start text-right sm:text-left bg-emerald-50/40 border border-emerald-250/60 px-4.5 py-2.5 rounded-2xl shadow-3xs animate-fadeIn shrink-0">
                 <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-emerald-800 mb-0.5">Shuttle Surcharge ({getAirportPickupVehicleDescription().split(" (")[0]})</span>
                 <span className="text-emerald-950 font-black text-lg sm:text-xl tracking-tight">
-                  +{process.env.CURRENCY_TYPE || "LKR"} {getAirportPickupTotalPrice().toFixed(2)} <span className="text-xs font-bold text-amber-600 font-extrabold">pay at hotel</span>
+                  +{import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {getAirportPickupTotalPrice().toFixed(2)} <span className="text-xs font-bold text-amber-600 font-extrabold">pay at hotel</span>
                 </span>
               </div>
             )}
             <div className="flex flex-col items-end sm:items-start text-right sm:text-left bg-emerald-800 text-white border border-emerald-900/15 px-4.5 py-2.5 rounded-2xl shadow-[0_6px_16px_rgba(6,95,70,0.18)] animate-fadeIn shrink-0">
               <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-emerald-200 mb-0.5">Total for {getStayNights()} {getStayNights() === 1 ? 'Night' : 'Nights'}</span>
               <span className="font-black text-lg sm:text-xl tracking-tight text-white">
-                {process.env.CURRENCY_TYPE || "LKR"} {(totalNightlyRate * getStayNights()).toFixed(2)}
+                {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {(totalNightlyRate * getStayNights()).toFixed(2)}
               </span>
             </div>
           </div>
