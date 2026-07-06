@@ -1,0 +1,706 @@
+import VehicleBooking from '../../models/vehicle/VehicleBookingModel.js';
+import Vehicle from '../../models/vehicle/vehicleModel.js';
+import Driver from '../../models/vehicle/driverModel.js';
+import Customer from '../../models/User/Customer.js';
+import Payment from '../../models/vehicle/paymentModel.js';
+import StaffMember from '../../models/User/StaffMember.js';
+import VehicleRentalPolicy from '../../models/vehicle/vehicleRentalPolicyModel.js';
+import VehicleChecklist from '../../models/vehicle/vehicleChecklistModel.js';
+import VehicleFinalBill from '../../models/vehicle/vehicleFinalBillModel.js';
+import sequelize from '../../config/database.js';
+import { Op } from 'sequelize';
+import { supabaseTour as supabase } from '../../config/supabaseClient.js';
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+const PAYMENT_RECEIPT_BUCKET = 'Blue-Bird';
+
+export const uploadReceiptToSupabase = async (file) => {
+  if (!file) return null;
+  const fileName = `payment-receipts/${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+
+  const { error } = await supabase.storage.from(PAYMENT_RECEIPT_BUCKET).upload(
+    fileName,
+    file.buffer,
+    { contentType: file.mimetype, upsert: false }
+  );
+
+  if (error) {
+    throw new Error(`Receipt upload failed: ${error.message}`);
+  }
+
+  const { data } = supabase.storage.from(PAYMENT_RECEIPT_BUCKET).getPublicUrl(fileName);
+  return data.publicUrl;
+};
+
+// ── Valid status transitions (state machine) ──────────────────────────────────
+// Each key maps to the list of statuses it can transition TO.
+// Terminal states (completed, cancelled, expired) have no outbound transitions
+// except expired → pending_payment (allow retry).
+const VALID_TRANSITIONS = {
+  pending_payment: ['confirmed', 'payment_failed', 'cancelled', 'expired'],
+  confirmed: ['driver_assigned', 'balance_paid', 'ongoing', 'cancelled'],
+  payment_failed: ['pending_payment', 'cancelled', 'expired'],
+  driver_assigned: ['confirmed', 'balance_paid', 'ongoing', 'cancelled'],
+  balance_paid: ['ongoing', 'cancelled'],
+  ongoing: ['returned', 'cancelled'],
+  returned: [],             // completed only via generateBill endpoint (which validates return checklist)
+  completed: [],             // terminal
+  cancelled: [],             // terminal
+  expired: ['pending_payment'], // allow retry
+};
+
+// Get all vehicle bookings
+export const getVehicleBookings = async (req, res) => {
+  try {
+    const { status, startDate, endDate } = req.query;
+
+    const where = {};
+    if (status) {
+      where.status = status;
+    }
+
+    if (startDate || endDate) {
+      where.pickupDatetime = {};
+      if (startDate) where.pickupDatetime[Op.gte] = new Date(startDate);
+      if (endDate) where.pickupDatetime[Op.lte] = new Date(endDate);
+    }
+
+    const bookings = await VehicleBooking.findAll({
+      where,
+      include: [
+        { association: 'vehicle' },
+        { association: 'customer' },
+        { association: 'driver' },
+        { association: 'payments' },
+        { association: 'finalBill' },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+
+    return res.json({ success: true, data: bookings });
+  } catch (err) {
+    console.error('getVehicleBookings error', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Get a single vehicle booking with all associations
+export const getVehicleBooking = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const booking = await VehicleBooking.findByPk(id, {
+      include: [
+        { association: 'vehicle' },
+        { association: 'customer' },
+        { association: 'driver' },
+        { association: 'payments' },
+        { association: 'finalBill' },
+      ],
+    });
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Vehicle booking not found' });
+    }
+
+    return res.json({ success: true, data: booking });
+  } catch (err) {
+    console.error('getVehicleBooking error', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+
+
+// Update booking status manually (with transition enforcement)
+export const updateBookingStatus = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // Validate the target status is a known status
+    if (!VALID_TRANSITIONS.hasOwnProperty(status) && !Object.values(VALID_TRANSITIONS).flat().includes(status)) {
+      await t.rollback();
+      return res.status(400).json({ success: false, message: 'Invalid booking status' });
+    }
+
+    const booking = await VehicleBooking.findByPk(id, { transaction: t });
+    if (!booking) {
+      await t.rollback();
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // Enforce valid transitions
+    const currentStatus = booking.status;
+    const allowedNextStatuses = VALID_TRANSITIONS[currentStatus] || [];
+
+    if (!allowedNextStatuses.includes(status)) {
+      await t.rollback();
+      return res.status(400).json({
+        success: false,
+        message: `Cannot transition from "${currentStatus}" to "${status}". Allowed transitions: ${allowedNextStatuses.length ? allowedNextStatuses.join(', ') : 'none (terminal state)'}`,
+      });
+    }
+
+    // ── Fix #1: Deposit must be paid before confirming ──────────────────────
+    /* TEMPORARILY DISABLED PENDING GATEWAY INTEGRATION
+    if (status === 'confirmed' && !booking.depositPaidAt) {
+      await t.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot confirm booking — the deposit has not been paid yet. The customer must complete the online deposit payment first.',
+      });
+    }
+    */
+
+    // ── Fix #2 & #4: Deposit + pickup checklist required before vehicle handover ──
+    if (status === 'ongoing') {
+      // Fix #2: Deposit must be paid
+      /* TEMPORARILY DISABLED PENDING GATEWAY INTEGRATION
+      if (!booking.depositPaidAt) {
+        await t.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot hand over vehicle — the deposit has not been paid yet.',
+        });
+      }
+      */
+
+      // Fix #4: Pickup checklist must exist (vehicle condition documented before handover)
+      const pickupChecklist = await VehicleChecklist.findOne({
+        where: { bookingId: booking.id, type: 'pickup' },
+        transaction: t,
+      });
+      if (!pickupChecklist) {
+        await t.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot hand over vehicle — a pickup checklist has not been filed yet. Please complete the pickup inspection first.',
+        });
+      }
+    }
+
+    // Require return checklist before marking as returned
+    if (status === 'returned') {
+      const returnChecklist = await VehicleChecklist.findOne({
+        where: { bookingId: booking.id, type: 'return' },
+        transaction: t,
+      });
+      if (!returnChecklist) {
+        await t.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot mark vehicle as returned — a return checklist has not been filed yet. Please complete the return inspection first.',
+        });
+      }
+    }
+
+    await booking.update({ status }, { transaction: t });
+
+    // Auto-status logic for Vehicle
+    // Note: 'ongoing' does NOT change vehicle status — availability is date-based
+    if (status === 'returned') {
+      await Vehicle.update({ status: 'pending_inspection' }, { where: { id: booking.vehicleId }, transaction: t });
+    } else if (status === 'cancelled') {
+      // If cancelled while pending inspection, reset to available
+      const vehicle = await Vehicle.findByPk(booking.vehicleId, { transaction: t });
+      if (vehicle && vehicle.status === 'pending_inspection') {
+        await vehicle.update({ status: 'available' }, { transaction: t });
+      }
+    }
+
+    await t.commit();
+    return res.json({ success: true, message: `Booking status updated to ${status}`, data: booking });
+  } catch (err) {
+    await t.rollback();
+    console.error('updateBookingStatus error', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Assign driver to a booking
+export const assignDriver = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const { driverId } = req.body; // can be null to unassign
+
+    const booking = await VehicleBooking.findByPk(id, { transaction: t });
+    if (!booking) {
+      await t.rollback();
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    if (booking.hireType !== 'with_driver') {
+      await t.rollback();
+      return res.status(400).json({ success: false, message: 'Cannot assign a driver to a without-driver booking' });
+    }
+
+    if (driverId) {
+      const driver = await Driver.findByPk(driverId, { transaction: t });
+      if (!driver) {
+        await t.rollback();
+        return res.status(404).json({ success: false, message: 'Driver not found' });
+      }
+      if (driver.status !== 'active') {
+        await t.rollback();
+        return res.status(400).json({ success: false, message: 'Selected driver is not active' });
+      }
+
+      // Fix #15: Check driver license expiry
+      if (driver.licenseExpiry && new Date(driver.licenseExpiry) < new Date(booking.returnDatetime)) {
+        await t.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot assign driver: License expires before the booking return date.'
+        });
+      }
+
+      // Check driver is not already assigned to an overlapping booking
+      const overlappingDriverBooking = await VehicleBooking.findOne({
+        where: {
+          driverId,
+          id: { [Op.ne]: booking.id },
+          status: { [Op.in]: ['confirmed', 'driver_assigned', 'balance_paid', 'ongoing'] },
+          pickupDatetime: { [Op.lt]: booking.returnDatetime },
+          returnDatetime: { [Op.gt]: booking.pickupDatetime },
+        },
+        attributes: ['id', 'bookingNo', 'pickupDatetime', 'returnDatetime'],
+        transaction: t,
+      });
+
+      if (overlappingDriverBooking) {
+        await t.rollback();
+        return res.status(409).json({
+          success: false,
+          message: `Driver is already assigned to booking ${overlappingDriverBooking.bookingNo} for overlapping dates`,
+        });
+      }
+    }
+
+    const updates = { driverId };
+    // If status is currently confirmed, auto-transition to driver_assigned
+    if (driverId && booking.status === 'confirmed') {
+      updates.status = 'driver_assigned';
+    } else if (!driverId && booking.status === 'driver_assigned') {
+      updates.status = 'confirmed';
+    }
+
+    await booking.update(updates, { transaction: t });
+
+    await t.commit();
+    return res.json({ success: true, message: 'Driver assigned successfully', data: booking });
+  } catch (err) {
+    await t.rollback();
+    console.error('assignDriver error', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Record balance payment collected at the hotel
+export const collectBalance = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const { paymentMethod, notes, receiptNo } = req.body;
+
+    const allowedMethods = ['cash', 'card', 'bank_transfer'];
+    if (!paymentMethod || !allowedMethods.includes(paymentMethod)) {
+      await t.rollback();
+      return res.status(400).json({ success: false, message: 'Valid payment method is required (cash, card, bank_transfer)' });
+    }
+
+    const booking = await VehicleBooking.findByPk(id, { transaction: t });
+    if (!booking) {
+      await t.rollback();
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // Only allow balance collection in appropriate statuses
+    const balanceAllowedStatuses = ['confirmed', 'driver_assigned', 'ongoing'];
+    if (!balanceAllowedStatuses.includes(booking.status)) {
+      await t.rollback();
+      return res.status(400).json({ success: false, message: `Cannot collect balance when booking is "${booking.status}". Booking must be confirmed, driver assigned, or ongoing.` });
+    }
+
+    // Ensure deposit has been paid before collecting balance
+    /* TEMPORARILY DISABLED PENDING GATEWAY INTEGRATION
+    if (!booking.depositPaidAt) {
+      await t.rollback();
+      return res.status(400).json({ success: false, message: 'Cannot collect balance — the deposit has not been paid yet. The customer must complete the online deposit payment first.' });
+    }
+    */
+
+    if (booking.balancePaidAt) {
+      await t.rollback();
+      return res.status(400).json({ success: false, message: 'Balance has already been collected' });
+    }
+
+    let staffId = req.user?.id || null;
+    if (!staffId) {
+      // Fallback to first manager staff member or ID 1 for robustness
+      const firstStaff = await StaffMember.findOne({ transaction: t });
+      staffId = firstStaff ? firstStaff.userId : null;
+    }
+
+    // Get the security deposit amount from policy
+    const [policy] = await VehicleRentalPolicy.findOrCreate({ where: { id: 1 }, defaults: { id: 1 }, transaction: t });
+    const securityDepositAmount = parseFloat(policy.securityDepositAmount || 200);
+
+    const balanceAmountVal = parseFloat(booking.balanceAmount || 0);
+    const totalCollected = balanceAmountVal + securityDepositAmount;
+
+    const newStatus = ['ongoing', 'returned', 'completed'].includes(booking.status) ? booking.status : 'balance_paid';
+
+    // Update booking fields
+    await booking.update({
+      balancePaidAt: new Date(),
+      balancePaymentMethod: paymentMethod,
+      balanceCollectedBy: staffId,
+      securityDepositCollected: securityDepositAmount,
+      securityDepositPaidAt: new Date(),
+      status: newStatus,
+    }, { transaction: t });
+
+    let receiptImageUrl = null;
+    if (req.file) {
+      receiptImageUrl = await uploadReceiptToSupabase(req.file);
+    }
+
+    // Create payment entry for the total collected amount (Balance + Security Deposit)
+    const payment = await Payment.create({
+      booking_id: booking.id,
+      customer_id: booking.customerId,
+      payment_no: receiptNo || `REC-${Date.now().toString(36).toUpperCase()}`,
+      amount: totalCollected,
+      currency: "LKR",
+      method: paymentMethod,
+      status: "success",
+      raw_payload: {
+        receivedBy: staffId,
+        type: 'balance',
+        receiptImageUrl: receiptImageUrl,
+        notes: (notes ? notes + ' | ' : '') + `Includes $${securityDepositAmount} Security Deposit`,
+        receivedAt: new Date(),
+      }
+    }, { transaction: t });
+
+
+    await t.commit();
+    return res.json({ success: true, message: 'Balance payment recorded successfully', data: { booking, payment } });
+  } catch (err) {
+    await t.rollback();
+    console.error('collectBalance error', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Record final settlement payment (extra charges or remaining balance) after bill generation
+export const collectFinalSettlement = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const { paymentMethod, notes, receiptNo } = req.body;
+
+    const allowedMethods = ['cash', 'card', 'bank_transfer'];
+    if (!paymentMethod || !allowedMethods.includes(paymentMethod)) {
+      await t.rollback();
+      return res.status(400).json({ success: false, message: 'Valid payment method is required (cash, card, bank_transfer)' });
+    }
+
+    const booking = await VehicleBooking.findByPk(id, {
+      transaction: t,
+      include: [{ association: 'payments' }]
+    });
+
+    if (!booking) {
+      await t.rollback();
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    if (booking.status !== 'completed') {
+      await t.rollback();
+      return res.status(400).json({ success: false, message: 'Cannot collect final settlement before final bill is generated (status must be completed).' });
+    }
+
+    let staffId = req.user?.id || null;
+    if (!staffId) {
+      const firstStaff = await StaffMember.findOne({ transaction: t });
+      staffId = firstStaff ? firstStaff.userId : null;
+    }
+
+    // Calculate total paid via balance or extra
+    const totalPaidAtHotel = (booking.payments || []).reduce((sum, p) => {
+      if (p.type === 'balance' || p.type === 'extra') {
+        return sum + parseFloat(p.amount);
+      }
+      return sum;
+    }, 0);
+
+    const totalDue = parseFloat(booking.balanceAmount || 0);
+    let remainingBalance = totalDue - totalPaidAtHotel;
+
+    // Small rounding fix
+    if (remainingBalance < 0.01) {
+      await t.rollback();
+      return res.status(400).json({ success: false, message: 'No remaining balance to collect.' });
+    }
+
+    let receiptImageUrl = null;
+    if (req.file) {
+      receiptImageUrl = await uploadReceiptToSupabase(req.file);
+    }
+
+    // Create payment entry for the remaining amount
+    const payment = await Payment.create({
+      booking_id: booking.id,
+      customer_id: booking.customerId,
+      payment_no: receiptNo || `REC-F-${Date.now().toString(36).toUpperCase()}`,
+      amount: remainingBalance,
+      currency: "LKR",
+      method: paymentMethod,
+      status: "success",
+      raw_payload: {
+        receivedBy: staffId,
+        type: 'extra',
+        receiptImageUrl: receiptImageUrl,
+        notes: notes || 'Final settlement collected',
+        receivedAt: new Date(),
+      }
+    }, { transaction: t });
+
+    // Ensure balancePaidAt is set if it wasn't already
+    if (!booking.balancePaidAt) {
+      await booking.update({
+        balancePaidAt: new Date(),
+        balancePaymentMethod: paymentMethod,
+        balanceCollectedBy: staffId,
+      }, { transaction: t });
+    }
+
+    await t.commit();
+    return res.json({ success: true, message: 'Final settlement collected successfully', data: { payment } });
+  } catch (err) {
+    await t.rollback();
+    console.error('collectFinalSettlement error', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Cancel a booking
+export const cancelBooking = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const { cancellationReason } = req.body;
+
+    const booking = await VehicleBooking.findByPk(id, { transaction: t });
+    if (!booking) {
+      await t.rollback();
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    if (booking.status === 'cancelled' || booking.status === 'completed') {
+      await t.rollback();
+      return res.status(400).json({ success: false, message: `Cannot cancel a booking that is already ${booking.status}` });
+    }
+
+    let staffId = req.user?.id || null;
+    if (!staffId) {
+      const firstStaff = await StaffMember.findOne({ transaction: t });
+      staffId = firstStaff ? firstStaff.userId : null;
+    }
+
+    await booking.update({
+      status: 'cancelled',
+      cancelledBy: staffId,
+      cancelledAt: new Date(),
+      cancellationReason: cancellationReason || 'Cancelled by manager',
+    }, { transaction: t });
+
+    // Auto-status logic for Vehicle if booking was active
+    const vehicle = await Vehicle.findByPk(booking.vehicleId, { transaction: t });
+    if (vehicle && ['booked', 'pending_inspection'].includes(vehicle.status)) {
+      await vehicle.update({ status: 'available' }, { transaction: t });
+    }
+
+    await t.commit();
+    return res.json({ success: true, message: 'Booking cancelled successfully', data: booking });
+  } catch (err) {
+    await t.rollback();
+    console.error('cancelBooking error', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Helper for calculating fees
+const calculateExtraFees = async (booking, policy, returnChecklist, pickupChecklist) => {
+  let lateFee = 0;
+  let extraMileageFee = 0;
+
+  if (returnChecklist && booking.returnDatetime) {
+    const returnTime = new Date(returnChecklist.inspectedAt);
+    const expectedReturnTime = new Date(booking.returnDatetime);
+
+    // Late return calculation
+    if (returnTime > expectedReturnTime) {
+      const diffHrs = (returnTime - expectedReturnTime) / (1000 * 60 * 60);
+      if (diffHrs > policy.lateReturnGraceHours) {
+        if (diffHrs >= policy.lateReturnFullDayAfterHours) {
+          lateFee = parseFloat(booking.vehicleRatePerDay);
+        } else {
+          lateFee = diffHrs * parseFloat(policy.lateReturnFeePerHour);
+        }
+      }
+    }
+  }
+
+  // Mileage calculation
+  if (returnChecklist && pickupChecklist) {
+    const drivenKm = returnChecklist.mileage - pickupChecklist.mileage;
+    const allowedKm = policy.includedKilometersPerDay * booking.numDays;
+
+    if (drivenKm > allowedKm) {
+      const extraKm = drivenKm - allowedKm;
+      extraMileageFee = extraKm * parseFloat(policy.extraMileageFee);
+    }
+  }
+
+  return { lateFee: Number(lateFee.toFixed(2)), extraMileageFee: Number(extraMileageFee.toFixed(2)) };
+};
+
+export const previewBill = async (req, res) => {
+  try {
+    const booking = await VehicleBooking.findByPk(req.params.id);
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+
+    const [policy] = await VehicleRentalPolicy.findOrCreate({ where: { id: 1 }, defaults: { id: 1 } });
+
+    const returnChecklist = await VehicleChecklist.findOne({ where: { bookingId: booking.id, type: 'return' } });
+    if (!returnChecklist) {
+      return res.status(400).json({ success: false, message: 'Return checklist missing. Cannot preview bill.' });
+    }
+
+    const pickupChecklist = await VehicleChecklist.findOne({ where: { bookingId: booking.id, type: 'pickup' } });
+
+    const { lateFee, extraMileageFee } = await calculateExtraFees(booking, policy, returnChecklist, pickupChecklist);
+
+    return res.json({
+      success: true,
+      data: {
+        lateFee,
+        extraMileageFee,
+        securityDepositAmount: Number(policy.securityDepositAmount),
+        securityDepositCollected: parseFloat(booking.securityDepositCollected || 0),
+      }
+    });
+  } catch (err) {
+    console.error('previewBill error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const generateBill = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const { manualDamageFee, manualFuelFee, extraNotes } = req.body;
+
+    const booking = await VehicleBooking.findByPk(id, { transaction: t, include: [{ association: 'finalBill' }] });
+    if (!booking) {
+      await t.rollback();
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    if (booking.finalBill) {
+      await t.rollback();
+      return res.status(400).json({ success: false, message: 'Final bill already generated for this booking' });
+    }
+
+    if (booking.status !== 'returned') {
+      await t.rollback();
+      return res.status(400).json({ success: false, message: 'Vehicle must be in "returned" state before generating the bill.' });
+    }
+
+    const returnChecklist = await VehicleChecklist.findOne({ where: { bookingId: id, type: 'return' }, transaction: t });
+    if (!returnChecklist) {
+      await t.rollback();
+      return res.status(400).json({ success: false, message: 'Return checklist missing.' });
+    }
+    const pickupChecklist = await VehicleChecklist.findOne({ where: { bookingId: id, type: 'pickup' }, transaction: t });
+    const [policy] = await VehicleRentalPolicy.findOrCreate({ where: { id: 1 }, defaults: { id: 1 }, transaction: t });
+
+    const { lateFee, extraMileageFee } = await calculateExtraFees(booking, policy, returnChecklist, pickupChecklist);
+
+    let damageFee = Number(manualDamageFee) || 0;
+    const fuelFee = Number(manualFuelFee) || 0;
+
+    // Enforce damage liability cap (damage fee cannot exceed security deposit amount)
+    const depositCap = parseFloat(policy.securityDepositAmount || 200);
+    if (damageFee > depositCap) {
+      damageFee = depositCap;
+    }
+
+    const totalExtraCharges = lateFee + extraMileageFee + damageFee + fuelFee;
+    
+    const securityDepositCollected = parseFloat(booking.securityDepositCollected || 0);
+    
+    // Math: subtract all extra charges from the deposit
+    const remainingAfterDeductions = securityDepositCollected - totalExtraCharges;
+    
+    let securityDepositRefund = 0;
+    let finalAmountOwed = 0;
+
+    if (remainingAfterDeductions > 0) {
+      // Customer gets a refund
+      securityDepositRefund = remainingAfterDeductions;
+      finalAmountOwed = 0;
+    } else if (remainingAfterDeductions < 0) {
+      // Deposit didn't cover everything, customer owes money
+      securityDepositRefund = 0;
+      finalAmountOwed = Math.abs(remainingAfterDeductions);
+    } else {
+      // Exactly zero
+      securityDepositRefund = 0;
+      finalAmountOwed = 0;
+    }
+
+    // Create the final bill record
+    const finalBill = await VehicleFinalBill.create({
+      bookingId: booking.id,
+      lateFee,
+      extraMileageFee,
+      damageFee,
+      fuelFee,
+      totalExtraCharges,
+      securityDepositCollected,
+      securityDepositRefund,
+      finalAmountOwed,
+      notes: extraNotes || null,
+    }, { transaction: t });
+
+    await booking.update({
+      balanceAmount: finalAmountOwed,
+      securityDepositRefund,
+      status: 'completed'
+    }, { transaction: t });
+
+    // Safety net: ensure vehicle is not stuck in pending_inspection or booked
+    const vehicle = await Vehicle.findByPk(booking.vehicleId, { transaction: t });
+    if (vehicle && ['pending_inspection', 'booked'].includes(vehicle.status)) {
+      await vehicle.update({ status: 'available' }, { transaction: t });
+    }
+
+    await t.commit();
+
+    // Attach for frontend
+    booking.dataValues.finalBill = finalBill;
+
+    return res.json({ success: true, message: 'Final bill generated successfully', data: booking });
+  } catch (err) {
+    await t.rollback();
+    console.error('generateBill error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};

@@ -1,0 +1,83 @@
+import { Model, DataTypes } from 'sequelize';
+import sequelize from '../../config/database.js';
+
+class StaffMember extends Model { }
+
+StaffMember.init(
+    {
+        userId: {
+            type: DataTypes.INTEGER,
+            primaryKey: true,
+            autoIncrement: true
+        },
+        staffId: {
+            type: DataTypes.STRING(20),
+            allowNull: true,
+            unique: true
+        },
+        name: {
+            type: DataTypes.STRING(100),
+            allowNull: false
+        },
+        userName: {
+            type: DataTypes.STRING(50),
+            allowNull: false
+        },
+        email: {
+            type: DataTypes.STRING(255),
+            allowNull: false,
+            validate: {
+                isEmail: true
+            }
+        },
+        roleId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            references: {
+                model: "roles",
+                key: "roleId"
+            }
+        },
+        phoneNumber: {
+            type: DataTypes.STRING(20),
+            allowNull: false
+        },
+        nicNumber: {
+            type: DataTypes.STRING(20),
+            allowNull: true
+        },
+        address: {
+            type: DataTypes.STRING(255),
+            allowNull: true
+        },
+        imageUrl: {
+            type: DataTypes.STRING(500),
+            allowNull: true
+        },
+        qrCodeUrl: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            get() {
+                const staffId = this.getDataValue('staffId');
+                return staffId ? `/users/staff/${staffId}/qr-code` : null;
+            }
+        }
+    },
+    {
+        sequelize,
+        modelName: 'StaffMember',
+        tableName: 'staff_members',
+        timestamps: true,
+        paranoid: true,
+        hooks: {
+            afterCreate: async (staffMember, options) => {
+                if (!staffMember.staffId) {
+                    staffMember.staffId = `STF${staffMember.userId}`;
+                    await staffMember.save({ transaction: options.transaction });
+                }
+            }
+        }
+    }
+);
+
+export default StaffMember;

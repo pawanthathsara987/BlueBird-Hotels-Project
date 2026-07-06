@@ -1,0 +1,566 @@
+import React, { useState, useEffect } from 'react';
+import { Lock, AlertCircle, Check, ArrowLeft, Loader } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { jwtDecode } from 'jwt-decode';
+import { toast } from 'react-hot-toast';
+
+const RoomPayment = () => {
+  const CURRENCY = import.meta.env.VITE_CURRENCY_TYPE || "LKR";
+  const location = useLocation();
+  const navigate = useNavigate();
+  const bookingData = location.state?.bookingData || null;
+  const airportPickupFromState = location.state?.airportPickup || null;
+
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const [billingDetails, setBillingDetails] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    country: ''
+  });
+
+  // Redirect if no booking data
+  useEffect(() => {
+    if (!bookingData && !localStorage.getItem("currentBooking")) {
+      alert('❌ No booking information found. Please complete booking first.');
+      navigate('/booking', { replace: true });
+      return;
+    }
+
+    let token = localStorage.getItem("customerToken") || sessionStorage.getItem("customerToken");
+    if (token === "undefined" || token === "null") {
+      localStorage.removeItem("customerToken");
+      sessionStorage.removeItem("customerToken");
+      token = null;
+    }
+    let guest = {};
+    if (token) {
+      try {
+        guest = jwtDecode(token) || {};
+      } catch { }
+    }
+
+    // Initialize with token values/defaults before fetching full profile
+    setBillingDetails({
+      firstName: guest.firstName || 'Guest',
+      lastName: guest.lastName || 'Customer',
+      email: guest.email || 'guest@bluebird.com',
+      phone: guest.phoneNumber || '0771234567',
+      address: 'No 1, Galle Road',
+      city: 'Colombo',
+      country: 'Sri Lanka',
+    });
+
+    // If logged in, fetch the real, up-to-date user profile from the backend database
+    if (token) {
+      axios.get(`${import.meta.env.VITE_BACKEND_URL}/customers/profile`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+      ).then(response => {
+        if (response.data && response.data.success && response.data.data) {
+          const profile = response.data.data;
+
+          // Parse city from address line if possible
+          const addr = profile.address || '';
+          const parts = addr.split(',').map(p => p.trim()).filter(Boolean);
+          let extractedCity = 'Colombo';
+          if (parts.length >= 2) {
+            const lastPart = parts[parts.length - 1];
+            if (/^\d+$/.test(lastPart) && parts.length >= 3) {
+              extractedCity = parts[parts.length - 2];
+            } else {
+              extractedCity = lastPart;
+            }
+          }
+
+          setBillingDetails({
+            firstName: profile.firstName || 'Guest',
+            lastName: profile.lastName || 'Customer',
+            email: profile.email || 'guest@bluebird.com',
+            phone: profile.phoneNumber || '0771234567',
+            address: profile.address || 'No 1, Galle Road',
+            city: extractedCity,
+            country: profile.country || 'Sri Lanka',
+          });
+        }
+      }).catch(err => {
+        console.error("Error fetching customer profile for billing:", err);
+      });
+    }
+  }, []);
+
+  const selectedRooms = location.state?.selectedRooms || [];
+  const passedBookingData = location.state?.bookingData || {};
+  const airportPickup = airportPickupFromState || (() => {
+    try {
+      return JSON.parse(localStorage.getItem("airportPickUp"));
+    } catch {
+      return null;
+    }
+  })();
+
+  // Calculate rooms and adults, kids from selectedRooms
+  const totalRooms = selectedRooms.length;
+  const totalAdults = selectedRooms.reduce((sum, r) => sum + (r.adults || 0), 0);
+  const totalKids = selectedRooms.reduce((sum, r) => sum + (r.kids || 0), 0);
+
+  // Calculate 50% advance payment
+  const totalAmount = Number(passedBookingData?.totalPrice || 0);
+  const originalTotalAmount = Number(
+    passedBookingData?.originalTotalPrice ||
+    selectedRooms.reduce((sum, room) => sum + Number(room.originalTotalPrice || room.totalPrice || 0), 0)
+  );
+  const totalSavings = Math.max(0, originalTotalAmount - totalAmount);
+  const advanceAmount = Number((totalAmount * 0.5).toFixed(2));
+  const remainingAmount = Number((totalAmount - advanceAmount).toFixed(2));
+
+  const handlePayment = async (e) => {
+    e.preventDefault();
+    setError('');
+    setProcessing(true);
+
+    let token = localStorage.getItem("customerToken") ||
+      sessionStorage.getItem("customerToken");
+    if (token === "undefined" || token === "null") {
+      localStorage.removeItem("customerToken");
+      sessionStorage.removeItem("customerToken");
+      token = null;
+    }
+
+    let savedBookingDetails = {};
+    let personalRequest = null;
+
+    try {
+      savedBookingDetails = JSON.parse(localStorage.getItem("bookingDetails"));
+    } catch {
+      savedBookingDetails = {};
+    }
+
+    try {
+      personalRequest = localStorage.getItem("personalRequest");
+    } catch {
+      personalRequest = null;
+    }
+
+    if (!token) {
+      setError("User not authenticated");
+      setProcessing(false);
+      return;
+    }
+    let guest;
+
+    try {
+      guest = jwtDecode(token);
+    } catch (err) {
+      setError("Invalid session. Please login again.");
+      setProcessing(false);
+      return;
+    }
+
+    if (!guest?.id) {
+      localStorage.removeItem("customerToken");
+      sessionStorage.removeItem("customerToken");
+      setError("Invalid session data. Please logout and login again.");
+      setProcessing(false);
+      return;
+    }
+
+    try {
+      // 1. Create booking in PENDING status first
+      const saveRes = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/roombook/booking`,
+        {
+          guestId: guest.id,
+          checkInDate:
+            passedBookingData?.checkInDate || savedBookingDetails?.checkInDate,
+          total_price: Number(totalAmount),
+          status: "pending",
+          rooms: selectedRooms.map(r => ({
+            roomId: r.roomId,
+            checkIn: r.checkInDate,
+            checkOut: r.checkOutDate,
+            actualAdults: r.adults,
+            actualKids: r.kids,
+            actualKidAges: r.actualKidAges || [],
+            roomType: r.roomType,
+            boardType: r.boardType
+          })),
+          airportPickup: airportPickup?.enabled
+            ? {
+              enabled: true,
+              pickupDate: airportPickup.pickupDate || passedBookingData?.checkInDate || savedBookingDetails?.checkInDate || null,
+              pickupTime: airportPickup.time || "",
+              flightNumber: airportPickup.flightNo || null,
+              baggageCount: Number(airportPickup.baggageCount) || 0,
+              passengerCount: Number(airportPickup.passengerCount) || 1
+            }
+            : null,
+          personalRequest,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!saveRes.data?.success || !saveRes.data?.data?.reservationId) {
+        throw new Error(saveRes.data?.message || "Failed to register pending booking");
+      }
+
+      const reservationId = saveRes.data.data.reservationId;
+
+      // 2. Fetch the secure signature hash from the backend
+      const hashRes = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/payment/payhere-hash`,
+        {
+          orderId: String(reservationId),
+          amount: advanceAmount,
+          currency: "LKR"
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!hashRes.data?.success || !hashRes.data?.hash) {
+        throw new Error("Failed to generate payment signature hash");
+      }
+
+      const { hash, merchantId } = hashRes.data;
+
+      // 3. Serialize booking details into localStorage so they are restored on return
+      localStorage.setItem("completedBookingDetails", JSON.stringify({
+        bookingData: passedBookingData,
+        selectedRooms: selectedRooms,
+        airportPickup,
+        bookingConfirmation: { bookingId: reservationId }
+      }));
+
+      setSuccessMessage("Opening Secure Payment Window...");
+
+      // 4. Trigger PayHere Inline Checkout Popup Overlay
+      setTimeout(() => {
+        if (!window.payhere) {
+          setError("Payment portal failed to initialize. Please refresh the page and try again.");
+          setProcessing(false);
+          return;
+        }
+
+        // Configure callback event listeners
+        window.payhere.onCompleted = function onCompleted(orderId) {
+          console.log("Payment completed. OrderID:" + orderId);
+          toast.success("Payment completed successfully!");
+          navigate(`/booking-confirm?order_id=${reservationId}`);
+        };
+
+        window.payhere.onDismissed = function onDismissed() {
+          console.log("Payment dismissed");
+          setError("Payment window was closed. You can retry payment.");
+          setProcessing(false);
+        };
+
+        window.payhere.onError = function onError(error) {
+          console.error("PayHere Error:", error);
+          setError("Payment transaction failed. Please try again.");
+          setProcessing(false);
+        };
+
+        // Construct formatting for target validation strings cleanly
+        const cleanBackendUrl = String(import.meta.env.VITE_BACKEND_URL).endsWith('/')
+          ? import.meta.env.VITE_BACKEND_URL
+          : `${import.meta.env.VITE_BACKEND_URL}/`;
+
+        // Construct inline payment request object
+        const payment = {
+          sandbox: true,
+          merchant_id: merchantId,
+          return_url: `${window.location.origin}/booking-confirm?order_id=${reservationId}`,
+          cancel_url: `${window.location.origin}/payment`,
+          notify_url: import.meta.env.VITE_NOTIFY_URL
+            ? `${import.meta.env.VITE_NOTIFY_URL}/api/payment/notify`
+            : `${cleanBackendUrl}payment/notify`,
+          order_id: String(reservationId),
+          items: `BlueBird Room Booking #${reservationId}`,
+          amount: Number(advanceAmount).toFixed(2),
+          currency: "LKR",
+          hash: hash,
+          first_name: billingDetails.firstName,
+          last_name: billingDetails.lastName,
+          email: billingDetails.email,
+          phone: billingDetails.phone,
+          address: billingDetails.address,
+          city: billingDetails.city,
+          country: billingDetails.country
+        };
+
+        window.payhere.startPayment(payment);
+      }, 1000);
+
+    } catch (err) {
+      console.error('❌ PayHere Redirection error:', err);
+      setError(err.response?.data?.message || err.message || 'Payment initiation failed. Please try again.');
+      setProcessing(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col min-h-screen bg-stone-50">
+      <main className="grow py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Back Button */}
+          <button
+            onClick={() => navigate(-1)}
+            className="mb-6 inline-flex items-center gap-2 text-emerald-700 hover:text-emerald-800 font-semibold"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Booking
+          </button>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Payment Portal */}
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-2xl shadow-lg p-8">
+                <div className="mb-8 flex items-center gap-4 rounded-2xl border border-teal-100 bg-teal-50/70 px-5 py-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-teal-700 text-white shadow-md shadow-teal-700/20">
+                    <Lock className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Official Payment Gateway</p>
+                    <h2 className="text-2xl font-bold text-stone-900">PayHere Secure Checkout</h2>
+                  </div>
+                </div>
+
+                {/* Error Alert */}
+                {error && (
+                  <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex gap-3">
+                    <AlertCircle className="h-5 w-5 text-red-600 shrink-0" />
+                    <p className="text-sm text-red-700">{error}</p>
+                  </div>
+                )}
+
+                {/* Success Alert */}
+                {successMessage && (
+                  <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg flex gap-3">
+                    <Check className="h-5 w-5 text-emerald-600 shrink-0" />
+                    <p className="text-sm text-emerald-700">{successMessage}</p>
+                  </div>
+                )}
+
+                {/* Billing Details Review */}
+                <div className="mb-8 p-6 bg-stone-50 border border-stone-200 rounded-2xl">
+                  <h3 className="text-md font-bold text-stone-900 mb-4 pb-2 border-b border-stone-200">Billing & Contact Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-stone-500 text-xs">Customer Name</p>
+                      <p className="font-semibold text-stone-800">{billingDetails.firstName} {billingDetails.lastName}</p>
+                    </div>
+                    <div>
+                      <p className="text-stone-500 text-xs">Email Address</p>
+                      <p className="font-semibold text-stone-800">{billingDetails.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-stone-500 text-xs">Phone Number</p>
+                      <p className="font-semibold text-stone-800">{billingDetails.phone}</p>
+                    </div>
+                    <div>
+                      <p className="text-stone-500 text-xs">Billing Address</p>
+                      <p className="font-semibold text-stone-800">{billingDetails.address}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {airportPickup?.enabled && airportPickup.flightNo && (
+                  <div className="mb-8 p-6 bg-emerald-50/50 border border-emerald-100 rounded-2xl">
+                    <h3 className="text-md font-bold text-stone-900 mb-4 pb-2 border-b border-emerald-100">Shuttle Details</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-stone-500 text-xs">Flight Number</p>
+                        <p className="font-semibold text-stone-800">{airportPickup.flightNo}</p>
+                      </div>
+                      <div>
+                        <p className="text-stone-500 text-xs">Pickup Date</p>
+                        <p className="font-semibold text-stone-800">
+                          {airportPickup.pickupDate ? new Date(airportPickup.pickupDate).toLocaleDateString() : "Check-in Date"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="p-6 bg-emerald-50/50 border border-emerald-100 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+                  <div className="flex gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800">
+                      <Check className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-emerald-950">50% Advance Guarantee</p>
+                      <p className="text-xs text-emerald-700/80">Pay half today securely, pay the remaining half at check-in.</p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-stone-500 text-[10px] font-bold uppercase tracking-wider">Pay Today</p>
+                    <p className="text-3xl font-black text-emerald-800">{CURRENCY} {advanceAmount.toFixed(2)}</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handlePayment}>
+                  <button
+                    type="submit"
+                    disabled={processing}
+                    className="w-full bg-teal-700 hover:bg-teal-800 disabled:bg-stone-400 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl transition flex items-center justify-center gap-2 mt-6 shadow-lg shadow-teal-700/10 hover:shadow-teal-800/20 active:scale-[0.98]"
+                  >
+                    {processing ? (
+                      <>
+                        <Loader className="h-5 w-5 animate-spin" />
+                        Initializing PayHere Portal...
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="h-5 w-5" />
+                        Proceed to Pay {CURRENCY} {advanceAmount.toFixed(2)} with PayHere
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl flex gap-3">
+                  <AlertCircle className="h-5 w-5 text-blue-600 shrink-0" />
+                  <div className="text-sm text-blue-700">
+                    <p className="font-semibold mb-1">Payment Information</p>
+                    <p>You are paying 50% advance now. The remaining 50% will be due upon check-in.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Order Summary */}
+            <div>
+              <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-4">
+                <h3 className="text-xl font-bold text-stone-900 mb-6">Booking Summary</h3>
+
+                <div className="space-y-4 mb-6 pb-6 border-b border-stone-200">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-stone-600">Check-in:</span>
+                    <span className="font-semibold text-stone-900">
+                      {passedBookingData?.checkInDate ? new Date(passedBookingData.checkInDate).toLocaleDateString() : "N/A"}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between text-sm">
+                    <span className="text-stone-600">Check-out:</span>
+                    <span className="font-semibold text-stone-900">
+                      {passedBookingData?.checkOutDate ? new Date(passedBookingData.checkOutDate).toLocaleDateString() : "N/A"}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between text-sm">
+                    <span className="text-stone-600">Rooms:</span>
+                    <span className="font-semibold text-stone-900">
+                      {totalRooms}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between text-sm">
+                    <span className="text-stone-600">Guests:</span>
+                    <span className="font-semibold text-stone-900">
+                      {totalAdults} Adults, {totalKids} Kids
+                    </span>
+                  </div>
+                </div>
+
+                {/* Show per-room kid ages if available */}
+                {selectedRooms.map((room, idx) => {
+                  const ages = Array.isArray(room.actualKidAges) && room.actualKidAges.length > 0
+                    ? room.actualKidAges
+                    : Array.isArray(room.kidAges) && room.kidAges.length > 0
+                      ? room.kidAges
+                      : [];
+
+                  if (ages.length === 0) return null;
+
+                  return (
+                    <div key={idx} className="mb-3 p-3 rounded-lg bg-white border border-stone-100 text-sm">
+                      <div className="font-semibold text-stone-900 mb-2">Room {idx + 1} - Kid ages</div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {ages.map((a, i) => (
+                          <span key={i} className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800 border border-emerald-100">
+                            <span className="flex w-4 h-4 rounded-full bg-emerald-300 text-white text-[11px] font-bold items-center justify-center">{i + 1}</span>
+                            <span>Age {a}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <div className="space-y-2 mb-6">
+                  {originalTotalAmount > totalAmount && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-stone-600">Original Total:</span>
+                      <span className="text-stone-400 line-through">{CURRENCY} {originalTotalAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-stone-600">Subtotal:</span>
+                    <span className="text-stone-900">{CURRENCY} {totalAmount.toFixed(2)}</span>
+                  </div>
+                  {totalSavings > 0 && (() => {
+                    const firstDiscountRoom = selectedRooms.find(r => r.discountName);
+                    const discountLabel = firstDiscountRoom?.discountName
+                      ? `Discount (${firstDiscountRoom.discountName}):`
+                      : "Discount Savings:";
+                    return (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-stone-600">{discountLabel}</span>
+                        <span className="font-semibold text-emerald-700">-{CURRENCY} {totalSavings.toFixed(2)}</span>
+                      </div>
+                    );
+                  })()}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-stone-600">Advance (50%):</span>
+                    <span className="font-semibold text-emerald-700">{CURRENCY} {advanceAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-stone-600">Due at check-in:</span>
+                    <span className="font-semibold text-stone-900">{CURRENCY} {remainingAmount.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <div className="bg-stone-100 p-3 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-stone-900">Total Amount:</span>
+                    <div className="text-right">
+                      {originalTotalAmount > totalAmount && (
+                        <p className="text-xs text-stone-400 line-through">{CURRENCY} {originalTotalAmount.toFixed(2)}</p>
+                      )}
+                      <span className="text-2xl font-bold text-emerald-700">{CURRENCY} {totalAmount.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 p-3 bg-emerald-50 rounded-lg flex gap-2">
+                  <Check className="h-4 w-4 text-emerald-700 shrink-0" />
+                  <p className="text-xs text-emerald-700 font-semibold">Secure payment with encryption</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+export default RoomPayment;
