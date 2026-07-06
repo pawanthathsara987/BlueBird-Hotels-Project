@@ -9,7 +9,7 @@ import NewBookingFlow from "./NewBookingFlow";
 export default function Booking() {
     const [activeTab, setActiveTab] = useState("list");
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
-    const [dateFilter, setDateFilter] = useState("date"); // "date", "month"
+    const [dateFilter, setDateFilter] = useState("month"); // "date", "month"
     const [selectedMonth, setSelectedMonth] = useState(() => {
         const now = new Date();
         return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -18,6 +18,7 @@ export default function Booking() {
     const [allBookings, setAllBookings] = useState([]);
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [statusFilter, setStatusFilter] = useState("all");
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: "", message: "", onConfirm: null });
 
     // Check-In verification modal state
     const [checkInModal, setCheckInModal] = useState(null); // { bookingId, data } or null
@@ -121,20 +122,25 @@ export default function Booking() {
     }, [activeTab]);
 
     // Cancel room booking reservation
-    const handleCancelBooking = async (bookingId) => {
-        if (!window.confirm("Are you sure you want to cancel this room booking?\nThis will mark the room booking status as Cancelled.")) {
-            return;
-        }
-        try {
-            const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/roombook/booking/${bookingId}`, { status: "cancelled" });
-            if (res.data.success || res.data.message === "Updated") {
-                toast.success("Room booking reservation cancelled successfully!");
-                fetchBookings();
+    const handleCancelBooking = (bookingId) => {
+        setConfirmModal({
+            isOpen: true,
+            title: "Cancel Room Booking",
+            message: "Are you sure you want to cancel this room booking?\nThis will mark the room booking status as Cancelled.",
+            onConfirm: async () => {
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                try {
+                    const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/roombook/booking/${bookingId}`, { status: "cancelled" });
+                    if (res.data.success || res.data.message === "Updated") {
+                        toast.success("Room booking reservation cancelled successfully!");
+                        fetchBookings();
+                    }
+                } catch (error) {
+                    console.error(error);
+                    toast.error(error.response?.data?.message || "Failed to cancel room booking.");
+                }
             }
-        } catch (error) {
-            console.error(error);
-            toast.error(error.response?.data?.message || "Failed to cancel room booking.");
-        }
+        });
     };
 
     // Open Check-In verification modal
@@ -145,7 +151,7 @@ export default function Booking() {
         setCheckInModal({ bookingId, data: null });
         setPaymentVerified(false);
         setPaymentAmount("");
-        setPaymentNote("");
+        setPaymentNote("Additional payment");
         setPaymentMethod("cash");
         try {
             const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/checkin-details/${bookingId}`);
@@ -191,7 +197,7 @@ export default function Booking() {
                     }
                 }));
                 setPaymentAmount("");
-                setPaymentNote("");
+                setPaymentNote("Additional payment");
                 if (newSummary.balanceDue <= 0) {
                     setPaymentVerified(true);
                 }
@@ -238,6 +244,13 @@ export default function Booking() {
         const roomType = booking.roomType || 'Standard';
         const priceText = booking.price || `Rs. ${booking.raw?.total_price || 0}`;
         const bookingNo = booking.raw?.bookingNo || `RES-${booking.raw?.id || 'N/A'}`;
+
+        const payments = booking.raw?.payments || [];
+        const successPayments = payments.filter(p => p.status === 'success');
+        const totalPaid = successPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+        const totalPrice = parseFloat(booking.raw?.total_price || 0);
+        const balanceDue = Math.max(0, totalPrice - totalPaid);
+        const currency = import.meta.env.VITE_CURRENCY_TYPE || "LKR";
 
         printWindow.document.write(`
             <html>
@@ -308,10 +321,46 @@ export default function Booking() {
                 </table>
                 
                 <div class="totals">
-                    <div class="total-row grand-total">
+                    <div class="total-row">
                         <span>Stay Total:</span>
                         <span>${priceText}</span>
                     </div>
+                    <div class="total-row" style="color: #10b981; font-weight: bold;">
+                        <span>Total Paid:</span>
+                        <span>${currency} ${totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div class="total-row grand-total">
+                        <span>Balance Due:</span>
+                        <span>${currency} ${balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                </div>
+
+                <div style="margin-top: 40px;">
+                    <div class="section-title">Payment History & Details</div>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #e2e8f0; text-align: left; color: #64748b;">
+                                <th style="padding: 8px; font-weight: bold; text-transform: uppercase;">Date</th>
+                                <th style="padding: 8px; font-weight: bold; text-transform: uppercase;">Method</th>
+                                <th style="padding: 8px; font-weight: bold; text-transform: uppercase;">Note</th>
+                                <th style="padding: 8px; font-weight: bold; text-transform: uppercase; text-align: right;">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${successPayments.length > 0 ? successPayments.map(p => `
+                                <tr style="border-bottom: 1px solid #f1f5f9;">
+                                    <td style="padding: 10px 8px;">${new Date(p.createdAt).toLocaleDateString()}</td>
+                                    <td style="padding: 10px 8px; text-transform: uppercase;">${p.method?.replace(/_/g, ' ')}</td>
+                                    <td style="padding: 10px 8px; color: #64748b;">${p.note || '-'}</td>
+                                    <td style="padding: 10px 8px; text-align: right; font-weight: bold; color: #0f766e;">${currency} ${parseFloat(p.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                </tr>
+                            `).join('') : `
+                                <tr>
+                                    <td colspan="4" style="padding: 15px 8px; text-align: center; color: #94a3b8;">No payments recorded</td>
+                                </tr>
+                            `}
+                        </tbody>
+                    </table>
                 </div>
                 
                 <div class="footer">
@@ -338,6 +387,13 @@ export default function Booking() {
         const roomNo = booking.roomNumber || 'N/A';
         const priceText = booking.price || `Rs. ${booking.raw?.total_price || 0}`;
         const bookingNo = booking.raw?.bookingNo || `RES-${booking.raw?.id || 'N/A'}`;
+
+        const payments = booking.raw?.payments || [];
+        const successPayments = payments.filter(p => p.status === 'success');
+        const totalPaid = successPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+        const totalPrice = parseFloat(booking.raw?.total_price || 0);
+        const balanceDue = Math.max(0, totalPrice - totalPaid);
+        const currency = import.meta.env.VITE_CURRENCY_TYPE || "LKR";
 
         printWindow.document.write(`
             <html>
@@ -371,12 +427,42 @@ export default function Booking() {
                         <span style="font-weight: bold;">Room ${roomNo}</span>
                     </div>
                     <div class="receipt-row">
+                        <span>Total Stay Cost:</span>
+                        <span style="font-weight: bold;">${currency} ${totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div class="receipt-row">
+                        <span>Remaining Balance:</span>
+                        <span style="font-weight: bold; color: ${balanceDue > 0 ? '#ef4444' : '#10b981'};">${currency} ${balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div class="receipt-row">
                         <span>Payment Date & Time:</span>
                         <span style="font-weight: bold;">${new Date().toLocaleString()}</span>
                     </div>
                     <div class="receipt-row total">
                         <span>Total Paid Amount:</span>
-                        <span>${priceText}</span>
+                        <span>${currency} ${totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+
+                    <div style="margin-top: 25px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+                        <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">Payment Breakdown</div>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid #e2e8f0; text-align: left; color: #64748b;">
+                                    <th style="padding: 6px 0; font-weight: bold;">Date</th>
+                                    <th style="padding: 6px 0; font-weight: bold;">Method</th>
+                                    <th style="padding: 6px 0; font-weight: bold; text-align: right;">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${successPayments.map(p => `
+                                    <tr style="border-bottom: 1px solid #f8fafc;">
+                                        <td style="padding: 8px 0;">${new Date(p.createdAt).toLocaleDateString()}</td>
+                                        <td style="padding: 8px 0; text-transform: uppercase;">${p.method?.replace(/_/g, ' ')}</td>
+                                        <td style="padding: 8px 0; text-align: right; font-weight: bold; color: #0f766e;">${currency} ${parseFloat(p.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
                     </div>
                     
                     <div class="footer">
@@ -1396,7 +1482,7 @@ export default function Booking() {
                                                 <div className="space-y-1">
                                                     {payments.map((p, i) => (
                                                         <div key={i} className={`flex justify-between items-center text-[10px] px-2.5 py-1.5 rounded-lg ${theme.mode === "dark" ? "bg-slate-900/60" : "bg-white"} border ${theme.mode === "dark" ? "border-slate-700" : "border-slate-200"}`}>
-                                                            <span className="text-slate-500">{new Date(p.createdAt).toLocaleDateString()} — {p.method?.toUpperCase()}</span>
+                                                            <span className="text-slate-500">{new Date(p.createdAt).toLocaleDateString()} — {p.method?.toUpperCase()} {p.note ? `(${p.note})` : ""}</span>
                                                             <span className={`font-bold ${p.status === "success" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500"}`}>
                                                                 LKR {p.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                             </span>
@@ -1495,6 +1581,31 @@ export default function Booking() {
                             >
                                 <LogIn size={14} />
                                 Confirm Check-In
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {confirmModal.isOpen && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn text-left">
+                    <div className={`w-full max-w-md rounded-2xl shadow-2xl border p-6 ${theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-800"}`}>
+                        <h3 className="text-base font-black tracking-tight mb-2">{confirmModal.title}</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-6 whitespace-pre-line">{confirmModal.message}</p>
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                                className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl transition hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    confirmModal.onConfirm?.();
+                                }}
+                                className="px-4 py-2 text-xs font-bold text-white bg-indigo-650 hover:bg-indigo-750 rounded-xl transition cursor-pointer shadow-sm"
+                            >
+                                Confirm
                             </button>
                         </div>
                     </div>

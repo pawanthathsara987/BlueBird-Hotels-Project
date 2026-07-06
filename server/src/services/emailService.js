@@ -1,47 +1,41 @@
+import nodemailer from "nodemailer";
 import axios from 'axios';
 import { RoomPayment, AirPortPickup, Policy, BookedRoom } from '../models/index.js';
 
 const getCurrencyType = () => process.env.CURRENCY_TYPE || 'LKR';
 
-// Helper function to send emails using Brevo Transactional Email REST API
-export const sendEmail = async ({ to, subject, html, text, fromName }) => {
+
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_SERVER,
+  port: Number(process.env.SMTP_PORT),
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+export const sendEmail = async ({
+  to,
+  subject,
+  html,
+  text,
+  fromName,
+}) => {
   try {
-    const apiKey = process.env.BREVO_API_KEY || process.env.EMAIL_PASS;
-    if (!apiKey) {
-      throw new Error("Brevo API key is not configured (please set BREVO_API_KEY or EMAIL_PASS).");
-    }
-
-    const senderEmail = process.env.EMAIL_SENDER || 'info@bluebirdhotels.lk';
-    const senderName = fromName || process.env.EMAIL_SENDER_NAME || 'BlueBird Hotels & Tours';
-
-    const data = {
-      sender: {
-        name: senderName,
-        email: senderEmail
-      },
-      to: [
-        {
-          email: to
-        }
-      ],
-      subject: subject,
-      htmlContent: html || text
-    };
-
-    const response = await axios.post('https://api.brevo.com/v3/smtp/email', data, {
-      headers: {
-        'accept': 'application/json',
-        'api-key': apiKey,
-        'content-type': 'application/json'
-      }
+    const info = await transporter.sendMail({
+      from: `"${fromName || process.env.EMAIL_SENDER_NAME}" <${process.env.EMAIL_SENDER}>`,
+      to,
+      subject,
+      text,
+      html,
     });
 
-    console.log(`[EMAIL SUCCESS] Email sent to ${to} via Brevo API:`, response.data);
-    return true;
+    console.log("Email sent:", info.messageId);
+    return info;
   } catch (error) {
-    const errorMsg = error.response?.data?.message || error.message;
-    console.error(`[EMAIL ERROR] Failed to send email to ${to} via Brevo API:`, errorMsg);
-    throw new Error(errorMsg);
+    console.error("Email Error:", error);
+    throw error;
   }
 };
 
@@ -922,7 +916,7 @@ export const sendInquiryEmail = async ({ name, email, message }) => {
     `;
 
     await sendEmail({
-      to: process.env.SUPPORT_EMAIL || process.env.PERSONAL_REQUEST_MAIL || "sandeepal513@gmail.com",
+      to: process.env.SUPPORT_EMAIL,
       subject,
       html,
       text: `New Contact Inquiry from ${name}\n\nEmail: ${email}\n\nMessage:\n${message}`,

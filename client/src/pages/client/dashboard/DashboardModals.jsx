@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { X, Star, AlertCircle } from "lucide-react";
+import { X, Star, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { getCountries, getCountryCallingCode, parsePhoneNumberFromString, isValidPhoneNumber } from "libphonenumber-js";
+import { validateSriLankanNIC, validatePassport } from "../../../utils/validation";
 
 export default function DashboardModals({
+  isLoading,
   isEditProfileOpen,
   setIsEditProfileOpen,
   editProfileForm,
@@ -35,6 +37,10 @@ export default function DashboardModals({
   const [addressLine2, setAddressLine2] = useState("");
   const [city, setCity] = useState("");
   const [zipCode, setZipCode] = useState("");
+
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const countryCodeOptions = useMemo(() => {
     const displayNames = new Intl.DisplayNames(["en"], { type: "region" });
@@ -107,6 +113,16 @@ export default function DashboardModals({
     }
   }, [isEditProfileOpen]);
 
+  // Reset password visibility toggles when modal opens/closes
+  useEffect(() => {
+    if (!isChangePasswordOpen) {
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
+    }
+  }, [isChangePasswordOpen]);
+
+
   // Sync state values to editProfileForm (phone and address)
   useEffect(() => {
     const dialingCode = countryCodeOptions.find(c => c.value === phoneCountry)?.dialingCode || "";
@@ -133,10 +149,30 @@ export default function DashboardModals({
     });
   }, [phoneCountry, localPhone, addressLine1, addressLine2, city, zipCode, setEditProfileForm]);
 
+  const idValidationError = useMemo(() => {
+    const num = editProfileForm.idNumber || "";
+    if (num.trim() === "") return "";
+    if (editProfileForm.idType === "NIC") {
+      return validateSriLankanNIC(num)
+        ? ""
+        : "Invalid NIC format. Use 9 digits followed by V/X or 12 digits.";
+    }
+    if (editProfileForm.idType === "PASSPORT") {
+      return validatePassport(num)
+        ? ""
+        : "Invalid Passport format. Must be alphanumeric and 6-15 characters.";
+    }
+    return "";
+  }, [editProfileForm.idNumber, editProfileForm.idType]);
+
   const handleSubmitProfile = (e) => {
     e.preventDefault();
     if (localPhone.trim() !== "" && !isValidPhoneNumber(localPhone.trim(), phoneCountry)) {
       toast.error(`Invalid phone number for ${countryCodeOptions.find(c => c.value === phoneCountry)?.countryName || "selected country"}. Please check the number.`);
+      return;
+    }
+    if (idValidationError) {
+      toast.error(idValidationError);
       return;
     }
     handleSaveProfile(e);
@@ -281,15 +317,24 @@ export default function DashboardModals({
                     <option value="PASSPORT">PASSPORT</option>
                   </select>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1 relative">
                   <label className="text-[10px] text-slate-400 font-bold uppercase">ID Document Number</label>
                   <input
                     type="text"
                     required
-                    value={editProfileForm.idNumber}
+                    value={editProfileForm.idNumber || ""}
                     onChange={(e) => setEditProfileForm({ ...editProfileForm, idNumber: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 focus:bg-white focus:border-cyan-600 outline-none"
+                    className={`w-full bg-slate-50 border rounded-xl py-2.5 px-3.5 focus:bg-white outline-none transition-all duration-200 ${
+                      idValidationError
+                        ? "border-rose-500 focus:border-rose-600 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
+                        : "border-slate-200 focus:border-cyan-600"
+                    }`}
                   />
+                  {idValidationError && (
+                    <span className="text-[10px] text-rose-500 font-semibold block mt-1 animate-in fade-in duration-200">
+                      {idValidationError}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -297,15 +342,17 @@ export default function DashboardModals({
                 <button
                   type="button"
                   onClick={() => setIsEditProfileOpen(false)}
-                  className="px-4 py-2 bg-slate-50 border border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-100 transition-colors"
+                  disabled={isLoading}
+                  className="px-4 py-2 bg-slate-50 border border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-gradient-to-r from-blue-950 to-cyan-800 hover:from-blue-900 text-white font-semibold rounded-xl transition-all"
+                  disabled={isLoading}
+                  className="px-5 py-2.5 bg-gradient-to-r from-blue-950 to-cyan-800 hover:from-blue-900 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px]"
                 >
-                  Save Credentials
+                  {isLoading ? "Saving..." : "Save Credentials"}
                 </button>
               </div>
             </form>
@@ -403,18 +450,20 @@ export default function DashboardModals({
                 <span className="text-[10px] text-slate-500 font-medium">Late cancellations are subject to standard resort cancellation policies.</span>
               </p>
             </div>
-            <div className="flex gap-3 pt-2 font-sans">
+             <div className="flex gap-3 pt-2 font-sans">
               <button
                 onClick={() => setIsCancelConfirmOpen(false)}
-                className="flex-1 py-2 bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs rounded-xl hover:bg-slate-100 transition-colors"
+                disabled={isLoading}
+                className="flex-1 py-2 bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs rounded-xl hover:bg-slate-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Keep Suite
               </button>
               <button
                 onClick={handleConfirmCancel}
-                className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl transition-colors shadow-sm"
+                disabled={isLoading}
+                className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Request Cancel
+                {isLoading ? "Cancelling..." : "Request Cancel"}
               </button>
             </div>
           </div>
@@ -436,53 +485,82 @@ export default function DashboardModals({
             <form onSubmit={handleChangePassword} className="space-y-4 text-xs font-sans">
               <div className="space-y-1">
                 <label className="text-[10px] text-slate-400 font-bold uppercase">Current Password</label>
-                <input
-                  type="password"
-                  required
-                  value={changePasswordForm.currentPassword}
-                  onChange={(e) => setChangePasswordForm({ ...changePasswordForm, currentPassword: e.target.value })}
-                  placeholder="Enter current password"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 focus:bg-white focus:border-cyan-600 outline-none"
-                />
+                <div className="relative">
+                  <input
+                    type={showCurrentPassword ? "text" : "password"}
+                    required
+                    value={changePasswordForm.currentPassword}
+                    onChange={(e) => setChangePasswordForm({ ...changePasswordForm, currentPassword: e.target.value })}
+                    placeholder="Enter current password"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-3.5 pr-10 focus:bg-white focus:border-cyan-600 outline-none transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
+                  >
+                    {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-1">
                 <label className="text-[10px] text-slate-400 font-bold uppercase">New Password</label>
-                <input
-                  type="password"
-                  required
-                  value={changePasswordForm.newPassword}
-                  onChange={(e) => setChangePasswordForm({ ...changePasswordForm, newPassword: e.target.value })}
-                  placeholder="Enter new password (min. 8 characters)"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 focus:bg-white focus:border-cyan-600 outline-none"
-                />
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    required
+                    value={changePasswordForm.newPassword}
+                    onChange={(e) => setChangePasswordForm({ ...changePasswordForm, newPassword: e.target.value })}
+                    placeholder="Enter new password (min. 8 characters)"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-3.5 pr-10 focus:bg-white focus:border-cyan-600 outline-none transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
+                  >
+                    {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-1">
                 <label className="text-[10px] text-slate-400 font-bold uppercase">Confirm New Password</label>
-                <input
-                  type="password"
-                  required
-                  value={changePasswordForm.confirmNewPassword}
-                  onChange={(e) => setChangePasswordForm({ ...changePasswordForm, confirmNewPassword: e.target.value })}
-                  placeholder="Confirm new password"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 focus:bg-white focus:border-cyan-600 outline-none"
-                />
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    required
+                    value={changePasswordForm.confirmNewPassword}
+                    onChange={(e) => setChangePasswordForm({ ...changePasswordForm, confirmNewPassword: e.target.value })}
+                    placeholder="Confirm new password"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-3.5 pr-10 focus:bg-white focus:border-cyan-600 outline-none transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
 
               <div className="flex gap-3 pt-4 justify-end">
                 <button
                   type="button"
                   onClick={() => setIsChangePasswordOpen(false)}
-                  className="px-4 py-2 bg-slate-50 border border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-100 transition-colors"
+                  disabled={isLoading}
+                  className="px-4 py-2 bg-slate-50 border border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-gradient-to-r from-blue-950 to-cyan-800 hover:from-blue-900 text-white font-semibold rounded-xl transition-all"
+                  disabled={isLoading}
+                  className="px-5 py-2.5 bg-gradient-to-r from-blue-950 to-cyan-800 hover:from-blue-900 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed min-w-[130px]"
                 >
-                  Update Password
+                  {isLoading ? "Updating..." : "Update Password"}
                 </button>
               </div>
             </form>

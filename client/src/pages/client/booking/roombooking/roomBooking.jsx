@@ -39,13 +39,13 @@ const BookingRoom = () => {
           <div className="absolute left-0 top-0 w-full px-4 pt-10 sm:px-8 lg:px-14">
             <div className="mx-auto max-w-7xl w-full flex justify-between items-start">
               <div className="flex-1">
-                <p className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/20 px-4.5 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-[0.25em] text-emerald-250 backdrop-blur-md shadow-2xs">
-                  <Sparkles className="h-3.5 w-3.5 text-emerald-350 animate-pulse" /> Island Luxury Collection
+                <p className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/20 px-4.5 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-[0.25em] text-blue-350 backdrop-blur-md shadow-2xs">
+                  <Sparkles className="h-3.5 w-3.5 text-blue-350 animate-pulse" /> Island Luxury Collection
                 </p>
                 <h1 className="mt-5 max-w-3xl text-4xl sm:text-5xl lg:text-6xl font-black leading-tight text-white tracking-tight">
                   Escape To Places
                   <br />
-                  <span className="bg-gradient-to-r from-white via-emerald-100 to-emerald-200 bg-clip-text text-transparent">You Will Never Forget</span>
+                  <span className="bg-gradient-to-r from-white via-blue-100 to-blue-200 bg-clip-text text-transparent">You Will Never Forget</span>
                 </h1>
                 <p className="mt-4 max-w-xl text-xs sm:text-sm text-stone-200 font-semibold leading-relaxed">
                   Discover curated beachfront, city, and hillside stays with a

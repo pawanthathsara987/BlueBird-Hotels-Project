@@ -15,7 +15,8 @@ import {
   AlertCircle,
   RefreshCcw,
   BedDouble,
-  Car
+  Car,
+  Compass
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -47,6 +48,7 @@ function StatusBadge({ status }) {
 function CategoryIcon({ category }) {
   if (category === "Room Booking") return <BedDouble size={13} className="text-blue-500" />;
   if (category === "Vehicle Rental") return <Car size={13} className="text-indigo-500" />;
+  if (category === "Tour Package" || category === "Tour Package Advance Payment" || category === "Tour Package Refund" || category === "Tour Package Refund Approval") return <Compass size={13} className="text-amber-500" />;
   return <CreditCard size={13} className="text-slate-400" />;
 }
 
@@ -117,6 +119,11 @@ export default function PaymentsTab({ payments, paymentSummary = {}, isEmptyStat
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
   const [sortDir, setSortDir] = useState("desc"); // newest first
+  const [currentPage, setCurrentPage] = useState(1);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterStatus, filterCategory]);
 
   const summary = {
     totalPaid: paymentSummary.totalPaid ?? 0,
@@ -144,6 +151,12 @@ export default function PaymentsTab({ payments, paymentSummary = {}, isEmptyStat
     });
     return list;
   }, [payments, search, filterStatus, filterCategory, sortDir]);
+
+  const totalPages = Math.ceil(filtered.length / 10);
+  const paginatedPayments = useMemo(() => {
+    const startIndex = (currentPage - 1) * 10;
+    return filtered.slice(startIndex, startIndex + 10);
+  }, [filtered, currentPage]);
 
   if (isEmptyState || payments.length === 0) {
     return (
@@ -201,15 +214,6 @@ export default function PaymentsTab({ payments, paymentSummary = {}, isEmptyStat
             text: "text-purple-900"
           },
           {
-            label: "Pending",
-            value: `${import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} ${fmt(summary.totalPending)}`,
-            icon: <Clock size={18} />,
-            bg: "from-amber-50 to-orange-50",
-            border: "border-amber-100",
-            iconBg: "bg-amber-100 text-amber-700",
-            text: "text-amber-900"
-          },
-          {
             label: "Transactions",
             value: summary.totalTransactions,
             icon: <Layers size={18} />,
@@ -219,7 +223,7 @@ export default function PaymentsTab({ payments, paymentSummary = {}, isEmptyStat
             text: "text-blue-900"
           },
         ].map((c) => (
-          <div key={c.label} className={`bg-gradient-to-br ${c.bg} border ${c.border} rounded-2xl p-4 flex items-center gap-3 shadow-xs`}>
+          <div key={c.label} className={`bg-gradient-to-br ${c.bg} border ${c.border} rounded-2xl p-4 flex items-center gap-3 shadow-xs `}>
             <div className={`p-2 rounded-xl ${c.iconBg} shrink-0`}>{c.icon}</div>
             <div className="min-w-0">
               <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase">{c.label}</p>
@@ -268,6 +272,7 @@ export default function PaymentsTab({ payments, paymentSummary = {}, isEmptyStat
             <option value="all">All Categories</option>
             <option value="Room Booking">Room Booking</option>
             <option value="Vehicle Rental">Vehicle Rental</option>
+            <option value="Tour Package">Tour Booking</option>
           </select>
         </div>
         {/* Sort toggle */}
@@ -298,14 +303,14 @@ export default function PaymentsTab({ payments, paymentSummary = {}, isEmptyStat
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.length === 0 ? (
+              {paginatedPayments.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-16 text-center text-slate-400 text-sm">
                     <AlertCircle size={24} className="mx-auto mb-2 text-slate-300" />
                     No transactions match your filters.
                   </td>
                 </tr>
-              ) : filtered.map(pay => (
+              ) : paginatedPayments.map(pay => (
                 <tr key={pay.id} className="hover:bg-slate-50/80 transition-colors group">
                   {/* Ref / ID */}
                   <td className="py-3.5 px-5">
@@ -369,13 +374,52 @@ export default function PaymentsTab({ payments, paymentSummary = {}, isEmptyStat
           </table>
         </div>
 
-        {/* Table footer */}
-        {filtered.length > 0 && (
-          <div className="px-5 py-3 bg-slate-50/60 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-slate-500">
-            <span>Showing <strong className="text-blue-900">{filtered.length}</strong> of <strong className="text-blue-900">{payments.length}</strong> transactions</span>
-            <span className="text-[10px]">Amounts shown in original currency · All times local</span>
+        {/* Table footer with pagination controls */}
+        <div className="px-5 py-4 bg-slate-50/60 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-500">
+          <div>
+            <span>Showing <strong className="text-blue-900">{filtered.length === 0 ? 0 : (currentPage - 1) * 10 + 1}</strong> to <strong className="text-blue-900">{Math.min(filtered.length, currentPage * 10)}</strong> of <strong className="text-blue-900">{filtered.length}</strong> transactions</span>
           </div>
-        )}
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 bg-white border border-slate-200 hover:border-blue-900 disabled:opacity-50 text-slate-700 disabled:text-slate-400 font-semibold text-xs rounded-xl transition cursor-pointer select-none"
+              >
+                Previous
+              </button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }).map((_, idx) => {
+                  const pg = idx + 1;
+                  return (
+                    <button
+                      key={pg}
+                      type="button"
+                      onClick={() => setCurrentPage(pg)}
+                      className={`w-7 h-7 rounded-lg font-bold flex items-center justify-center transition cursor-pointer text-xs ${
+                        currentPage === pg
+                          ? "bg-blue-950 text-white"
+                          : "bg-white border border-slate-200 text-slate-650 hover:bg-slate-100"
+                      }`}
+                    >
+                      {pg}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                type="button"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 bg-white border border-slate-200 hover:border-blue-900 disabled:opacity-50 text-slate-700 disabled:text-slate-400 font-semibold text-xs rounded-xl transition cursor-pointer select-none"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
     </div>

@@ -19,9 +19,11 @@ import {
     MdDateRange
 } from "react-icons/md";
 import { toast } from "react-hot-toast";
+import { useLocation } from "react-router-dom";
 import { Eye, FileText, Receipt, XCircle } from "lucide-react";
 
 export default function VehicleBookings() {
+    const location = useLocation();
     const [bookings, setBookings] = useState([]);
     const [vehicles, setVehicles] = useState([]);
     const [selectedBooking, setSelectedBooking] = useState(null);
@@ -84,6 +86,7 @@ export default function VehicleBookings() {
             return { mode: "dark", accent: "teal" };
         }
     });
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: "", message: "", showInput: false, onConfirm: null });
 
     useEffect(() => {
         fetchData();
@@ -189,6 +192,35 @@ export default function VehicleBookings() {
         return `${year}-${month}-${day}T${hours}:${minutes}`;
     };
 
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        if (params.get("action") === "new") {
+            const now = new Date();
+            const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+            const twoHoursLater = new Date(now.getTime() + 120 * 60 * 1000);
+            setNewBooking({
+                vehicleId: "",
+                fullName: "",
+                email: "",
+                phone: "",
+                pickupDatetime: formatLocalDatetime(oneHourLater),
+                returnDatetime: formatLocalDatetime(twoHoursLater),
+                pickupLocation: "Hotel Lobby",
+                dropoffLocation: "Hotel Lobby",
+                hireType: "without_driver",
+                customerLicenseNo: "",
+                customerLicenseExpiry: "",
+                specialRequirements: "",
+                isFullyPaid: true,
+                paymentMethod: "cash"
+            });
+            setShowForm(true);
+            // clean query param
+            const cleanUrl = window.location.pathname + window.location.hash;
+            window.history.replaceState({}, document.title, cleanUrl);
+        }
+    }, [location.search]);
+
     // Date calculations
     const getMinPickupDatetime = () => {
         const now = new Date();
@@ -284,55 +316,66 @@ export default function VehicleBookings() {
             `💵 Estimated Total: LKR ${priceDetails.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}\n\n` +
             `Do you want to proceed and save this booking?`;
 
-        if (!window.confirm(confirmMsg)) {
-            return;
-        }
-
-        try {
-            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/reception/vehicle-bookings`, newBooking);
-            if (res.data.success) {
-                toast.success("Vehicle rental booking created successfully!");
-                setShowForm(false);
-                setNewBooking({
-                    vehicleId: "",
-                    fullName: "",
-                    email: "",
-                    phone: "",
-                    pickupDatetime: "",
-                    returnDatetime: "",
-                    pickupLocation: "Hotel Lobby",
-                    dropoffLocation: "Hotel Lobby",
-                    hireType: "without_driver",
-                    customerLicenseNo: "",
-                    customerLicenseExpiry: "",
-                    specialRequirements: "",
-                    isFullyPaid: true,
-                    paymentMethod: "cash"
-                });
-                fetchData();
+        setConfirmModal({
+            isOpen: true,
+            title: "Confirm Vehicle Booking",
+            message: confirmMsg,
+            showInput: false,
+            onConfirm: async () => {
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                try {
+                    const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/reception/vehicle-bookings`, newBooking);
+                    if (res.data.success) {
+                        toast.success("Vehicle rental booking created successfully!");
+                        setShowForm(false);
+                        setNewBooking({
+                            vehicleId: "",
+                            fullName: "",
+                            email: "",
+                            phone: "",
+                            pickupDatetime: "",
+                            returnDatetime: "",
+                            pickupLocation: "Hotel Lobby",
+                            dropoffLocation: "Hotel Lobby",
+                            hireType: "without_driver",
+                            customerLicenseNo: "",
+                            customerLicenseExpiry: "",
+                            specialRequirements: "",
+                            isFullyPaid: true,
+                            paymentMethod: "cash"
+                        });
+                        fetchData();
+                    }
+                } catch (error) {
+                    console.error(error);
+                    toast.error(error.response?.data?.message || "Failed to create vehicle booking.");
+                }
             }
-        } catch (error) {
-            console.error(error);
-            toast.error(error.response?.data?.message || "Failed to create vehicle booking.");
-        }
+        });
     };
 
-    const handleCancelBooking = async (id) => {
-        const reason = window.prompt("Please enter the reason for cancellation:");
-        if (reason === null) return; // cancelled prompt
-
-        try {
-            const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/reception/vehicle-bookings/${id}/cancel`, {
-                cancellationReason: reason || "Cancelled by receptionist at hotel desk"
-            });
-            if (res.data.success) {
-                toast.success("Booking cancelled successfully!");
-                fetchData();
+    const handleCancelBooking = (id) => {
+        setConfirmModal({
+            isOpen: true,
+            title: "Cancel Vehicle Booking",
+            message: "Please enter the reason for cancellation if you want to proceed:",
+            showInput: true,
+            onConfirm: async (reason) => {
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                try {
+                    const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/reception/vehicle-bookings/${id}/cancel`, {
+                        cancellationReason: reason || "Cancelled by receptionist at hotel desk"
+                    });
+                    if (res.data.success) {
+                        toast.success("Booking cancelled successfully!");
+                        fetchData();
+                    }
+                } catch (error) {
+                    console.error(error);
+                    toast.error(error.response?.data?.message || "Failed to cancel booking.");
+                }
             }
-        } catch (error) {
-            console.error(error);
-            toast.error(error.response?.data?.message || "Failed to cancel booking.");
-        }
+        });
     };
 
     const handleCollectBalance = async (id) => {
@@ -721,7 +764,7 @@ export default function VehicleBookings() {
 
                 <div className="flex gap-2 flex-shrink-0">
                     <button
-                        onClick={() => window.open("http://localhost:5173/vehicles", "_blank")}
+                        onClick={() => window.open((import.meta.env.VITE_CUSTOMER_FRONTEND_URL || "http://localhost:5173") + "/vehicles", "_blank")}
                         className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-black border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 rounded-xl transition duration-200 cursor-pointer shadow-sm text-slate-700 dark:text-slate-200"
                     >
                         <MdDirectionsCar size={16} className={currentAccent.text} /> View Vehicles Page
@@ -1580,6 +1623,45 @@ export default function VehicleBookings() {
                                 className={`px-5 py-2 text-xs font-bold text-white rounded-xl cursor-pointer transition shadow-xs ${currentAccent.bg}`}
                             >
                                 Close View
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {confirmModal.isOpen && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn text-left">
+                    <div className={`w-full max-w-md rounded-2xl shadow-2xl border p-6 ${theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-800"}`}>
+                        <h3 className="text-base font-black tracking-tight mb-2">{confirmModal.title}</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-4 whitespace-pre-line leading-normal">{confirmModal.message}</p>
+                        
+                        {confirmModal.showInput && (
+                            <div className="mb-4">
+                                <label className="text-[10px] font-bold text-slate-500 block mb-1">Reason for Cancellation</label>
+                                <input
+                                    type="text"
+                                    id="confirmModalInput"
+                                    placeholder="Enter reason..."
+                                    className={`w-full px-3 py-2 text-xs border rounded-lg outline-none focus:ring-1 focus:ring-blue-400 ${theme.mode === "dark" ? "bg-slate-800 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-800"}`}
+                                />
+                            </div>
+                        )}
+
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                                className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl transition hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const val = confirmModal.showInput ? document.getElementById("confirmModalInput")?.value : null;
+                                    confirmModal.onConfirm?.(val);
+                                }}
+                                className="px-4 py-2 text-xs font-bold text-white bg-indigo-650 hover:bg-indigo-755 rounded-xl transition cursor-pointer shadow-sm"
+                            >
+                                Confirm
                             </button>
                         </div>
                     </div>

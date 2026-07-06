@@ -5,9 +5,11 @@ import { toast } from "react-hot-toast";
 import Logo from "../../assets/bluebird logo.png";
 
 export default function Reports() {
-    const [reportType, setReportType] = useState("daily"); // "daily" or "monthly"
+    const [reportType, setReportType] = useState("daily"); // "daily", "monthly", or "custom"
     const [viewMode, setViewMode] = useState("dashboard"); // "dashboard" or "report"
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+    const [customStartDate, setCustomStartDate] = useState(new Date().toISOString().split("T")[0]);
+    const [customEndDate, setCustomEndDate] = useState(new Date().toISOString().split("T")[0]);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
     const [isLoading, setIsLoading] = useState(true);
@@ -57,6 +59,9 @@ export default function Reports() {
             if (reportType === "daily") {
                 url = `${import.meta.env.VITE_BACKEND_URL}/reception/report/daily`;
                 params = { date: selectedDate };
+            } else if (reportType === "custom") {
+                url = `${import.meta.env.VITE_BACKEND_URL}/reception/report/range`;
+                params = { startDate: customStartDate, endDate: customEndDate };
             } else {
                 url = `${import.meta.env.VITE_BACKEND_URL}/reception/report/monthly`;
                 params = { year: selectedYear, month: selectedMonth };
@@ -78,7 +83,7 @@ export default function Reports() {
 
     useEffect(() => {
         fetchReport();
-    }, [reportType, selectedDate, selectedYear, selectedMonth]);
+    }, [reportType, selectedDate, customStartDate, customEndDate, selectedYear, selectedMonth]);
 
     const handlePrint = () => {
         window.print();
@@ -255,6 +260,15 @@ export default function Reports() {
                     >
                         Monthly Report
                     </button>
+                    <button
+                        onClick={() => setReportType("custom")}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer ${reportType === "custom"
+                            ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm"
+                            : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+                            }`}
+                    >
+                        Custom Range
+                    </button>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -267,6 +281,27 @@ export default function Reports() {
                                 onChange={(e) => setSelectedDate(e.target.value)}
                                 className="bg-transparent border-none text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-0 cursor-pointer"
                             />
+                        </div>
+                    ) : reportType === "custom" ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700">
+                                <span className="text-[10px] uppercase font-black text-slate-400">From</span>
+                                <input
+                                    type="date"
+                                    value={customStartDate}
+                                    onChange={(e) => setCustomStartDate(e.target.value)}
+                                    className="bg-transparent border-none text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-0 cursor-pointer"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700">
+                                <span className="text-[10px] uppercase font-black text-slate-400">To</span>
+                                <input
+                                    type="date"
+                                    value={customEndDate}
+                                    onChange={(e) => setCustomEndDate(e.target.value)}
+                                    className="bg-transparent border-none text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-0 cursor-pointer"
+                                />
+                            </div>
                         </div>
                     ) : (
                         <div className="flex gap-2">
@@ -342,10 +377,10 @@ export default function Reports() {
                             <p className="text-[10px] text-slate-600 dark:text-slate-400 font-medium">Average income per booking</p>
                         </div>
 
-                        {reportType === "daily" ? (
+                        {reportType === "daily" || reportType === "custom" ? (
                             <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs space-y-1">
                                 <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
-                                    <span className="text-xs font-bold uppercase tracking-wider">Today's Traffic</span>
+                                    <span className="text-xs font-bold uppercase tracking-wider">{reportType === "daily" ? "Today's Traffic" : "Period Traffic"}</span>
                                     <MdDateRange size={18} className="text-amber-500" />
                                 </div>
                                 <h3 className="text-2xl font-black text-slate-800 dark:text-white">
@@ -717,10 +752,10 @@ export default function Reports() {
                         </div>
                         <div className="text-right">
                             <h1 className="text-xl font-black uppercase tracking-wider text-slate-900 font-serif">
-                                {reportType === "daily" ? "Daily Bookings & Income Report" : "Monthly Bookings & Income Report"}
+                                {reportType === "daily" ? "Daily Bookings & Income Report" : reportType === "custom" ? "Custom Range Bookings & Income Report" : "Monthly Bookings & Income Report"}
                             </h1>
                             <p className="text-[10px] text-slate-500 font-sans mt-1">
-                                Report period: {reportType === "daily" ? selectedDate : `${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}`} | Generated on {new Date().toLocaleString()}
+                                Report period: {reportType === "daily" ? selectedDate : reportType === "custom" ? `${customStartDate} to ${customEndDate}` : `${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}`} | Generated on {new Date().toLocaleString()}
                             </p>
                         </div>
                     </div>
@@ -735,8 +770,8 @@ export default function Reports() {
                             <p>Support: +94701950195</p>
                         </div>
                         <div className="text-right">
-                            <p><span className="font-bold">Report Type:</span> {reportType === "daily" ? "Daily Performance" : "Monthly Performance"}</p>
-                            <p className="mt-1"><span className="font-bold">Period:</span> {reportType === "daily" ? selectedDate : `${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}`}</p>
+                            <p><span className="font-bold">Report Type:</span> {reportType === "daily" ? "Daily Performance" : reportType === "custom" ? "Custom Range Performance" : "Monthly Performance"}</p>
+                            <p className="mt-1"><span className="font-bold">Period:</span> {reportType === "daily" ? selectedDate : reportType === "custom" ? `${customStartDate} to ${customEndDate}` : `${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}`}</p>
                             <p className="mt-1"><span className="font-bold">Status:</span> Live Compiled</p>
                             <p className="mt-1"><span className="font-bold">Generated By:</span> Reception Desk</p>
                         </div>

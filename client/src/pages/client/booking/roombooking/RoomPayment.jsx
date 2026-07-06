@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 import { toast } from 'react-hot-toast';
+import BookingSteps from './BookingSteps';
 
 const RoomPayment = () => {
   const CURRENCY = import.meta.env.VITE_CURRENCY_TYPE || "LKR";
@@ -322,22 +323,24 @@ const RoomPayment = () => {
           {/* Back Button */}
           <button
             onClick={() => navigate(-1)}
-            className="mb-6 inline-flex items-center gap-2 text-emerald-700 hover:text-emerald-800 font-semibold"
+            className="mb-6 inline-flex items-center gap-2 text-blue-700 hover:text-blue-900 font-semibold"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Booking
           </button>
 
+          <BookingSteps activeStep={4} />
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Payment Portal */}
             <div className="lg:col-span-2">
               <div className="bg-white rounded-2xl shadow-lg p-8">
-                <div className="mb-8 flex items-center gap-4 rounded-2xl border border-teal-100 bg-teal-50/70 px-5 py-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-teal-700 text-white shadow-md shadow-teal-700/20">
+                <div className="mb-8 flex items-center gap-4 rounded-2xl border border-blue-100 bg-blue-50/70 px-5 py-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-900 text-white shadow-md shadow-blue-900/20">
                     <Lock className="h-6 w-6" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Official Payment Gateway</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-900">Official Payment Gateway</p>
                     <h2 className="text-2xl font-bold text-stone-900">PayHere Secure Checkout</h2>
                   </div>
                 </div>
@@ -352,9 +355,9 @@ const RoomPayment = () => {
 
                 {/* Success Alert */}
                 {successMessage && (
-                  <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg flex gap-3">
-                    <Check className="h-5 w-5 text-emerald-600 shrink-0" />
-                    <p className="text-sm text-emerald-700">{successMessage}</p>
+                  <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex gap-3">
+                    <Check className="h-5 w-5 text-blue-600 shrink-0" />
+                    <p className="text-sm text-blue-700">{successMessage}</p>
                   </div>
                 )}
 
@@ -382,8 +385,8 @@ const RoomPayment = () => {
                 </div>
 
                 {airportPickup?.enabled && airportPickup.flightNo && (
-                  <div className="mb-8 p-6 bg-emerald-50/50 border border-emerald-100 rounded-2xl">
-                    <h3 className="text-md font-bold text-stone-900 mb-4 pb-2 border-b border-emerald-100">Shuttle Details</h3>
+                  <div className="mb-8 p-6 bg-blue-50/50 border border-blue-100 rounded-2xl">
+                    <h3 className="text-md font-bold text-stone-900 mb-4 pb-2 border-b border-blue-100">Shuttle Details</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <div>
                         <p className="text-stone-500 text-xs">Flight Number</p>
@@ -399,19 +402,19 @@ const RoomPayment = () => {
                   </div>
                 )}
 
-                <div className="p-6 bg-emerald-50/50 border border-emerald-100 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+                <div className="p-6 bg-blue-50/50 border border-blue-100 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
                   <div className="flex gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-900">
                       <Check className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-emerald-950">50% Advance Guarantee</p>
-                      <p className="text-xs text-emerald-700/80">Pay half today securely, pay the remaining half at check-in.</p>
+                      <p className="text-sm font-bold text-blue-950">50% Advance Guarantee</p>
+                      <p className="text-xs text-blue-700/80">Pay half today securely, pay the remaining half at check-in.</p>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-stone-500 text-[10px] font-bold uppercase tracking-wider">Pay Today</p>
-                    <p className="text-3xl font-black text-emerald-800">{CURRENCY} {advanceAmount.toFixed(2)}</p>
+                    <p className="text-3xl font-black text-blue-900">{CURRENCY} {advanceAmount.toFixed(2)}</p>
                   </div>
                 </div>
 
@@ -419,7 +422,7 @@ const RoomPayment = () => {
                   <button
                     type="submit"
                     disabled={processing}
-                    className="w-full bg-teal-700 hover:bg-teal-800 disabled:bg-stone-400 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl transition flex items-center justify-center gap-2 mt-6 shadow-lg shadow-teal-700/10 hover:shadow-teal-800/20 active:scale-[0.98]"
+                    className="w-full bg-blue-900 hover:bg-blue-950 disabled:bg-stone-400 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl transition flex items-center justify-center gap-2 mt-6 shadow-lg shadow-blue-900/10 hover:shadow-blue-950/20 active:scale-[0.98]"
                   >
                     {processing ? (
                       <>
@@ -495,8 +498,8 @@ const RoomPayment = () => {
                       <div className="font-semibold text-stone-900 mb-2">Room {idx + 1} - Kid ages</div>
                       <div className="flex flex-wrap items-center gap-2">
                         {ages.map((a, i) => (
-                          <span key={i} className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800 border border-emerald-100">
-                            <span className="flex w-4 h-4 rounded-full bg-emerald-300 text-white text-[11px] font-bold items-center justify-center">{i + 1}</span>
+                          <span key={i} className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-900 border border-blue-100">
+                            <span className="flex w-4 h-4 rounded-full bg-blue-300 text-white text-[11px] font-bold items-center justify-center">{i + 1}</span>
                             <span>Age {a}</span>
                           </span>
                         ))}
@@ -524,13 +527,13 @@ const RoomPayment = () => {
                     return (
                       <div className="flex justify-between text-sm">
                         <span className="text-stone-600">{discountLabel}</span>
-                        <span className="font-semibold text-emerald-700">-{CURRENCY} {totalSavings.toFixed(2)}</span>
+                        <span className="font-semibold text-blue-700">-{CURRENCY} {totalSavings.toFixed(2)}</span>
                       </div>
                     );
                   })()}
                   <div className="flex justify-between text-sm">
                     <span className="text-stone-600">Advance (50%):</span>
-                    <span className="font-semibold text-emerald-700">{CURRENCY} {advanceAmount.toFixed(2)}</span>
+                    <span className="font-semibold text-blue-700">{CURRENCY} {advanceAmount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-stone-600">Due at check-in:</span>
@@ -545,14 +548,14 @@ const RoomPayment = () => {
                       {originalTotalAmount > totalAmount && (
                         <p className="text-xs text-stone-400 line-through">{CURRENCY} {originalTotalAmount.toFixed(2)}</p>
                       )}
-                      <span className="text-2xl font-bold text-emerald-700">{CURRENCY} {totalAmount.toFixed(2)}</span>
+                      <span className="text-2xl font-bold text-blue-700">{CURRENCY} {totalAmount.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-4 p-3 bg-emerald-50 rounded-lg flex gap-2">
-                  <Check className="h-4 w-4 text-emerald-700 shrink-0" />
-                  <p className="text-xs text-emerald-700 font-semibold">Secure payment with encryption</p>
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg flex gap-2">
+                  <Check className="h-4 w-4 text-blue-700 shrink-0" />
+                  <p className="text-xs text-blue-700 font-semibold">Secure payment with encryption</p>
                 </div>
               </div>
             </div>

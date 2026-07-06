@@ -432,7 +432,7 @@ export default function NewBookingFlow({ onBookingSuccess }) {
                                 Select Room & Board Config
                             </h3>
                             <a
-                                href={getSubdomainUrl("", "/booking")}
+                                href={import.meta.env.VITE_CUSTOMER_FRONTEND_URL ? `${import.meta.env.VITE_CUSTOMER_FRONTEND_URL}/booking` : getSubdomainUrl("", "/booking")}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1.5 px-4.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider text-white bg-blue-600 hover:bg-blue-700 active:scale-95 shadow-md shadow-blue-500/20 hover:shadow-lg transition-all cursor-pointer border border-blue-500"
