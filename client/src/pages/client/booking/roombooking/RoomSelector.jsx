@@ -7,6 +7,7 @@ import { addDays, format } from "date-fns";
 import { Plus, Minus, Calendar, Users, Globe, ChevronDown, ChevronLeft, ChevronRight, Info, Sparkles, Coffee, Utensils, Check, Moon, ArrowRight, Trash2, Lock, Unlock, Car, Clock, ClipboardList, MapPin } from "lucide-react";
 import toast from "react-hot-toast";
 import RoomDetailsModal from "./RoomDetailsModal";
+import BookingSteps from "./BookingSteps";
 import { jwtDecode } from "jwt-decode";
 
 import "react-date-range/dist/styles.css";
@@ -17,7 +18,7 @@ const getBoardTypeColor = (type) => {
   if (normalized.includes("room only")) return "from-stone-400 to-stone-600";
   if (normalized.includes("breakfast")) return "from-amber-400 to-amber-600";
   if (normalized.includes("half")) return "from-rose-400 to-rose-600";
-  if (normalized.includes("full")) return "from-emerald-500 to-teal-700";
+  if (normalized.includes("full")) return "from-blue-500 to-blue-900";
   return "from-blue-500 to-indigo-600";
 };
 
@@ -145,10 +146,54 @@ const RoomSelector = () => {
     }
   };
 
-  const [flightNo, setFlightNo] = useState(() => getStoredPickupValue("flightNo", ""));
-  const [baggageCount, setBaggageCount] = useState(() => getStoredPickupValue("baggageCount", 0));
-  const [pickupDate, setPickupDate] = useState(() => getStoredPickupValue("pickupDate", ""));
-  const [passengerCount, setPassengerCount] = useState(() => getStoredPickupValue("passengerCount", 1));
+  const [flightNo, setFlightNo] = useState(() => {
+    const tempSaved = localStorage.getItem("tempSavedBookingState");
+    if (tempSaved) {
+      try {
+        const parsed = JSON.parse(tempSaved);
+        if (parsed.airportPickup?.flightNo !== undefined) return parsed.airportPickup.flightNo;
+      } catch (e) {
+        console.error("Error restoring flightNo state:", e);
+      }
+    }
+    return getStoredPickupValue("flightNo", "");
+  });
+  const [baggageCount, setBaggageCount] = useState(() => {
+    const tempSaved = localStorage.getItem("tempSavedBookingState");
+    if (tempSaved) {
+      try {
+        const parsed = JSON.parse(tempSaved);
+        if (parsed.airportPickup?.baggageCount !== undefined) return parsed.airportPickup.baggageCount;
+      } catch (e) {
+        console.error("Error restoring baggageCount state:", e);
+      }
+    }
+    return getStoredPickupValue("baggageCount", 0);
+  });
+  const [pickupDate, setPickupDate] = useState(() => {
+    const tempSaved = localStorage.getItem("tempSavedBookingState");
+    if (tempSaved) {
+      try {
+        const parsed = JSON.parse(tempSaved);
+        if (parsed.airportPickup?.pickupDate !== undefined) return parsed.airportPickup.pickupDate;
+      } catch (e) {
+        console.error("Error restoring pickupDate state:", e);
+      }
+    }
+    return getStoredPickupValue("pickupDate", "");
+  });
+  const [passengerCount, setPassengerCount] = useState(() => {
+    const tempSaved = localStorage.getItem("tempSavedBookingState");
+    if (tempSaved) {
+      try {
+        const parsed = JSON.parse(tempSaved);
+        if (parsed.airportPickup?.passengerCount !== undefined) return parsed.airportPickup.passengerCount;
+      } catch (e) {
+        console.error("Error restoring passengerCount state:", e);
+      }
+    }
+    return getStoredPickupValue("passengerCount", 1);
+  });
   const [hasManuallySetPassengers, setHasManuallySetPassengers] = useState(false);
 
   const getPickupDateRange = () => {
@@ -1060,7 +1105,10 @@ const RoomSelector = () => {
         airportPickup: {
           enabled: airportPickupEnabled,
           time: pickupTime,
-          flightNo: normalizedFlightNo
+          flightNo: normalizedFlightNo,
+          baggageCount,
+          pickupDate,
+          passengerCount
         }
       };
       localStorage.setItem("tempSavedBookingState", JSON.stringify(bookingStateToSave));
@@ -1193,18 +1241,20 @@ const RoomSelector = () => {
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto bg-white/95 backdrop-blur-md rounded-3xl shadow-[0_20px_60px_rgba(28,25,23,0.18)] border border-stone-200/90 p-6 md:p-9 space-y-9 relative transition-all duration-300">
+    <div className="w-full max-w-7xl mx-auto space-y-8">
+      <BookingSteps activeStep={1} />
+      <div className="w-full bg-white/95 backdrop-blur-md rounded-3xl shadow-[0_20px_60px_rgba(28,25,23,0.18)] border border-stone-200/90 p-6 md:p-9 space-y-9 relative transition-all duration-300">
 
       {/* Upper Luxury Header Row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 pb-5">
         <div className="flex items-center gap-3">
-          <span className="bg-emerald-800 text-white px-3 py-1 rounded-full font-bold text-xs uppercase tracking-widest shadow-sm flex items-center gap-1.5 animate-pulse">
+          <span className="bg-blue-900 text-white px-3 py-1 rounded-full font-bold text-xs uppercase tracking-widest shadow-sm flex items-center gap-1.5 animate-pulse">
             <Sparkles className="w-3.5 h-3.5" /> Luxury Stay
           </span>
           <h2 className="text-stone-800 font-extrabold text-xl tracking-tight">Configure Your Escape</h2>
         </div>
         <div className="text-xs text-stone-500 font-semibold flex items-center gap-1.5 bg-stone-50 px-3 py-1 rounded-full border border-stone-100">
-          <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
+          <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
           Best Rates Guaranteed Direct
         </div>
       </div>
@@ -1215,7 +1265,7 @@ const RoomSelector = () => {
         {/* Nationality Dropdown */}
         <div ref={nationalityRef} className="lg:col-span-3 flex flex-col relative h-full">
           <label className="text-xs uppercase font-bold tracking-widest text-stone-500 mb-2 px-1 flex items-center gap-1">
-            <Globe className="w-3 h-3 text-emerald-800" /> Nationality
+            <Globe className="w-3 h-3 text-blue-900" /> Nationality
           </label>
 
           <button
@@ -1224,7 +1274,7 @@ const RoomSelector = () => {
               setShowNationalityDropdown(!showNationalityDropdown);
               setShowCalendar(false);
             }}
-            className="flex-1 flex items-center justify-between border border-stone-200/80 bg-white hover:border-emerald-600 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500/20 px-4 py-3.5 rounded-xl transition text-left cursor-pointer group shadow-xs"
+            className="flex-1 flex items-center justify-between border border-stone-200/80 bg-white hover:border-blue-600 focus:border-blue-600 focus:ring-1 focus:ring-blue-500/20 px-4 py-3.5 rounded-xl transition text-left cursor-pointer group shadow-xs"
           >
             <span className="text-stone-800 font-bold text-sm flex items-center gap-2">
               {nationality === "Sri Lankan"
@@ -1233,7 +1283,7 @@ const RoomSelector = () => {
                   ? "🌐 Non-Sri Lankan"
                   : "❓ Please Select"}
             </span>
-            <ChevronDown className={`w-4 h-4 text-stone-400 transition-transform ${showNationalityDropdown ? "rotate-180 text-emerald-800" : "group-hover:text-stone-600"}`} />
+            <ChevronDown className={`w-4 h-4 text-stone-400 transition-transform ${showNationalityDropdown ? "rotate-180 text-blue-900" : "group-hover:text-stone-600"}`} />
           </button>
 
           {showNationalityDropdown && (
@@ -1244,11 +1294,11 @@ const RoomSelector = () => {
                   setNationality("Sri Lankan");
                   setShowNationalityDropdown(false);
                 }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${nationality === "Sri Lankan" ? "bg-emerald-50 text-emerald-950 font-bold" : "text-stone-600 hover:bg-stone-50 hover:text-stone-900"
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${nationality === "Sri Lankan" ? "bg-blue-50 text-blue-950 font-bold" : "text-stone-600 hover:bg-stone-50 hover:text-stone-900"
                   }`}
               >
                 <span>🇱🇰 Sri Lankan Resident</span>
-                {nationality === "Sri Lankan" && <Check className="w-3.5 h-3.5 text-emerald-800" />}
+                {nationality === "Sri Lankan" && <Check className="w-3.5 h-3.5 text-blue-900" />}
               </button>
               <button
                 type="button"
@@ -1256,11 +1306,11 @@ const RoomSelector = () => {
                   setNationality("Non Sri Lankan Resident");
                   setShowNationalityDropdown(false);
                 }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${nationality === "Non Sri Lankan Resident" ? "bg-emerald-50 text-emerald-950 font-bold" : "text-stone-600 hover:bg-stone-50 hover:text-stone-900"
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${nationality === "Non Sri Lankan Resident" ? "bg-blue-50 text-blue-950 font-bold" : "text-stone-600 hover:bg-stone-50 hover:text-stone-900"
                   }`}
               >
                 <span>🌐 Non-Sri Lankan Resident</span>
-                {nationality === "Non Sri Lankan Resident" && <Check className="w-3.5 h-3.5 text-emerald-800" />}
+                {nationality === "Non Sri Lankan Resident" && <Check className="w-3.5 h-3.5 text-blue-900" />}
               </button>
             </div>
           )}
@@ -1269,7 +1319,7 @@ const RoomSelector = () => {
         {/* Dynamic Check In - Check Out Dates */}
         <div ref={dateRangeRef} className="lg:col-span-5 flex flex-col relative h-full">
           <label className="text-xs uppercase font-bold tracking-widest text-stone-500 mb-2 px-1 flex items-center gap-1">
-            <Calendar className="w-3 h-3 text-emerald-800" /> Check In — Check Out
+            <Calendar className="w-3 h-3 text-blue-900" /> Check In — Check Out
           </label>
 
           <button
@@ -1278,7 +1328,7 @@ const RoomSelector = () => {
               setShowCalendar(!showCalendar);
               setShowNationalityDropdown(false);
             }}
-            className="flex-1 flex items-center justify-between border border-stone-200/80 bg-white hover:border-emerald-600 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500/20 p-3.5 rounded-xl transition text-left cursor-pointer shadow-xs group"
+            className="flex-1 flex items-center justify-between border border-stone-200/80 bg-white hover:border-blue-600 focus:border-blue-600 focus:ring-1 focus:ring-blue-500/20 p-3.5 rounded-xl transition text-left cursor-pointer shadow-xs group"
           >
             {/* Visual Stay Card Blocks */}
             <div className="flex items-center justify-between w-full">
@@ -1293,9 +1343,9 @@ const RoomSelector = () => {
               </div>
 
               {/* Night Counter stay badge */}
-              <div className="flex flex-col items-center justify-center px-3 py-1 bg-stone-100 group-hover:bg-emerald-50 rounded-lg border border-stone-200/50 transition">
+              <div className="flex flex-col items-center justify-center px-3 py-1 bg-stone-100 group-hover:bg-blue-50 rounded-lg border border-stone-200/50 transition">
                 <span className="text-xs font-extrabold text-stone-600 uppercase tracking-widest flex items-center gap-1">
-                  <Moon className="w-2.5 h-2.5 text-emerald-800" /> {getStayNights()}
+                  <Moon className="w-2.5 h-2.5 text-blue-900" /> {getStayNights()}
                 </span>
                 <span className="text-xs font-bold text-stone-400 uppercase tracking-widest mt-px animate-fadeIn">
                   {getStayNights() === 1 ? "Night" : "Nights"}
@@ -1345,7 +1395,7 @@ const RoomSelector = () => {
         {/* Read-Only Occupancy Preview Bar */}
         <div className="lg:col-span-4 flex flex-col relative group h-full">
           <label className="text-xs uppercase font-bold tracking-widest text-stone-500 mb-2 px-1 flex items-center gap-1">
-            <Users className="w-3.5 h-3.5 text-emerald-800" /> Occupancy Preview
+            <Users className="w-3.5 h-3.5 text-blue-900" /> Occupancy Preview
           </label>
 
           <div className="flex-1 flex items-center justify-between border border-stone-200/80 bg-stone-100/50 px-4 py-3.5 rounded-xl transition text-left cursor-default shadow-xs select-none">
@@ -1361,7 +1411,7 @@ const RoomSelector = () => {
             {/* Dynamic visual indicator for configuration completeness */}
             <span className={`text-xs font-bold px-2 py-1 rounded-lg border transition-colors duration-300 ${hasUnconfiguredRoom
               ? "bg-amber-50 text-amber-700 border-amber-250/50"
-              : "bg-emerald-50 text-emerald-850 border-emerald-250/50"
+              : "bg-blue-50 text-blue-950 border-blue-200/50"
               }`}>
               {hasUnconfiguredRoom ? "Progress" : "Verified"}
             </span>
@@ -1377,13 +1427,13 @@ const RoomSelector = () => {
           disabled={hasUnconfiguredRoom}
           className={`font-extrabold uppercase text-xs tracking-wider px-8 py-3.5 rounded-xl transition-all duration-300 transform flex items-center gap-2 border shadow-sm ${hasUnconfiguredRoom
             ? "bg-stone-100 text-stone-400 border-stone-200/80 cursor-not-allowed scale-100 shadow-none"
-            : "bg-emerald-800 hover:bg-emerald-950 text-white border-emerald-900/10 cursor-pointer active:scale-98 hover:shadow-[0_6px_15px_rgba(6,95,70,0.12)] group"
+            : "bg-blue-900 hover:bg-blue-950 text-white border-blue-950/10 cursor-pointer active:scale-98 hover:shadow-[0_6px_15px_rgba(6,95,70,0.12)] group"
             }`}
         >
           {hasUnconfiguredRoom ? (
             <Lock className="w-4 h-4 text-stone-400" />
           ) : (
-            <Plus className="w-4 h-4 text-emerald-200 transition-transform group-hover:rotate-90" />
+            <Plus className="w-4 h-4 text-blue-200 transition-transform group-hover:rotate-90" />
           )}
           Add Room
         </button>
@@ -1399,11 +1449,11 @@ const RoomSelector = () => {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-stone-800 font-bold text-lg tracking-wide flex items-center gap-2">
-              <Users className="w-5 h-5 text-emerald-800" /> 2. Configure Added Rooms
+              <Users className="w-5 h-5 text-blue-900" /> 2. Configure Added Rooms
             </h3>
             <p className="text-sm text-stone-500">Assign a luxurious room category and occupancy size to each room</p>
           </div>
-          <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-100 px-3.5 py-1 rounded-full shadow-2xs">
+          <span className="text-xs font-bold text-blue-900 bg-blue-50 border border-blue-100 px-3.5 py-1 rounded-full shadow-2xs">
             {totalRooms} {totalRooms === 1 ? "Room Configured" : "Rooms Configured"}
           </span>
         </div>
@@ -1458,26 +1508,26 @@ const RoomSelector = () => {
               // ---------------- CONFIRMED / LOCKED STATE ----------------
               <div
                 key={room.id}
-                className="bg-emerald-50/10 border-2 border-emerald-600/30 rounded-2xl p-6 relative shadow-3xs flex flex-col md:flex-row items-center justify-between gap-6 transition-all duration-300 animate-fadeIn"
+                className="bg-blue-50/10 border-2 border-blue-600/30 rounded-2xl p-6 relative shadow-3xs flex flex-col md:flex-row items-center justify-between gap-6 transition-all duration-300 animate-fadeIn"
               >
                 {/* Left side: Room status, name, details */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 w-full md:w-auto">
-                  <div className="w-11 h-11 rounded-full bg-emerald-100 border border-emerald-250 flex items-center justify-center shrink-0 shadow-2xs">
-                    <Check className="w-5 h-5 text-emerald-800" />
+                  <div className="w-11 h-11 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center shrink-0 shadow-2xs">
+                    <Check className="w-5 h-5 text-blue-900" />
                   </div>
 
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-black uppercase tracking-widest text-emerald-850">
+                      <span className="text-xs font-black uppercase tracking-widest text-blue-950">
                         Room {idx + 1} Confirmed
                       </span>
-                      <span className="text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-150 px-2 py-0.5 rounded-md flex items-center gap-1">
+                      <span className="text-xs font-bold bg-blue-50 text-blue-900 border border-blue-150 px-2 py-0.5 rounded-md flex items-center gap-1">
                         {(() => {
                           const bt = boardTypes.find(b => b.type === room.boardType);
                           if (bt && bt.icon) {
                             return <img src={bt.icon} alt={room.boardType} className="w-3 h-3 object-contain" />;
                           }
-                          return <Sparkles className="w-3 h-3 text-emerald-800" />;
+                          return <Sparkles className="w-3 h-3 text-blue-900" />;
                         })()}
                         {room.boardType}
                       </span>
@@ -1485,7 +1535,7 @@ const RoomSelector = () => {
 
                     <h4 className="text-stone-800 font-extrabold text-base sm:text-lg tracking-tight flex items-center gap-2">
                       <span>{room.roomType}</span>
-                      <span className="text-emerald-850 bg-emerald-50 border border-emerald-250/60 px-2 py-0.5 rounded-lg text-xs font-extrabold tracking-wide">
+                      <span className="text-blue-950 bg-blue-50 border border-blue-200/60 px-2 py-0.5 rounded-lg text-xs font-extrabold tracking-wide">
                         {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {room.price} / night
                       </span>
                     </h4>
@@ -1563,7 +1613,7 @@ const RoomSelector = () => {
               // ---------------- EDITABLE / CONFIGURING STATE ----------------
               <div
                 key={room.id}
-                className="bg-stone-50/50 border border-stone-200/80 rounded-2xl p-6 relative group hover:border-emerald-600/30 transition-all duration-300 shadow-2xs flex flex-col lg:flex-row lg:items-stretch gap-6 animate-fadeIn"
+                className="bg-stone-50/50 border border-stone-200/80 rounded-2xl p-6 relative group hover:border-blue-600/30 transition-all duration-300 shadow-2xs flex flex-col lg:flex-row lg:items-stretch gap-6 animate-fadeIn"
               >
                 {/* Left Side: Category and Board Type Selectors Stacked */}
                 <div className="flex-1 flex flex-col min-w-0 space-y-6">
@@ -1572,7 +1622,7 @@ const RoomSelector = () => {
                     <label className="text-xs uppercase font-extrabold tracking-widest text-stone-400 mb-2.5 px-0.5 block flex items-center justify-between">
                       <span>Select Room Category</span>
                       {room.roomType && (
-                        <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-150 px-2.5 py-0.5 rounded-md normal-case tracking-normal">
+                        <span className="text-xs font-bold text-blue-900 bg-blue-50 border border-blue-150 px-2.5 py-0.5 rounded-md normal-case tracking-normal">
                           Active: {room.roomType}
                         </span>
                       )}
@@ -1605,10 +1655,10 @@ const RoomSelector = () => {
                                     handleRoomTypeChange(room.id, type.name);
                                   }}
                                   className={`min-w-[195px] w-[195px] bg-white rounded-xl border-2 transition-all duration-350 cursor-pointer overflow-hidden flex flex-col justify-between group relative active:scale-98 ${isSelected
-                                    ? "border-emerald-600 ring-4 ring-emerald-500/15 scale-[1.03] shadow-[0_12px_24px_rgba(6,95,70,0.12)] z-10"
+                                    ? "border-blue-600 ring-4 ring-blue-500/15 scale-[1.03] shadow-[0_12px_24px_rgba(6,95,70,0.12)] z-10"
                                     : remainingRoomsCount <= 0
                                       ? "border-stone-200 opacity-60 cursor-not-allowed filter grayscale"
-                                      : "border-stone-200/80 hover:border-emerald-600/40 hover:scale-[1.01] hover:shadow-2xs"
+                                      : "border-stone-200/80 hover:border-blue-600/40 hover:scale-[1.01] hover:shadow-2xs"
                                     }`}
                                 >
                                   {/* HD room thumbnail preview */}
@@ -1620,7 +1670,7 @@ const RoomSelector = () => {
                                     />
                                     <div className="absolute top-2 right-2 z-10">
                                       {isSelected ? (
-                                        <span className="w-6 h-6 rounded-full bg-emerald-800 text-white flex items-center justify-center shadow-md border border-white/20">
+                                        <span className="w-6 h-6 rounded-full bg-blue-900 text-white flex items-center justify-center shadow-md border border-white/20">
                                           <Check className="w-3.5 h-3.5" />
                                         </span>
                                       ) : (
@@ -1637,7 +1687,7 @@ const RoomSelector = () => {
                                         e.stopPropagation();
                                         setDetailingRoom(type);
                                       }}
-                                      className="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-white/95 text-stone-600 hover:text-emerald-800 flex items-center justify-center backdrop-blur-3xs shadow-sm border border-stone-200/50 hover:border-stone-300 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+                                      className="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-white/95 text-stone-600 hover:text-blue-900 flex items-center justify-center backdrop-blur-3xs shadow-sm border border-stone-200/50 hover:border-stone-300 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
                                       title="View suite details"
                                     >
                                       <Info className="w-3.5 h-3.5" />
@@ -1664,7 +1714,7 @@ const RoomSelector = () => {
                                   {/* Card metadata details */}
                                   <div className="p-3.5 flex-1 flex flex-col justify-between space-y-2">
                                     <div>
-                                      <h5 className="font-extrabold text-stone-850 text-xs leading-tight tracking-tight group-hover:text-emerald-900 transition">
+                                      <h5 className="font-extrabold text-stone-850 text-xs leading-tight tracking-tight group-hover:text-blue-950 transition">
                                         {type.name}
                                       </h5>
                                       {type.originalPriceVal > type.priceVal && type.discountName && (
@@ -1680,7 +1730,7 @@ const RoomSelector = () => {
                                           e.stopPropagation();
                                           setDetailingRoom(type);
                                         }}
-                                        className="text-stone-450 hover:text-emerald-850 transition duration-200 font-extrabold flex items-center gap-0.5 cursor-pointer hover:underline"
+                                        className="text-stone-450 hover:text-blue-950 transition duration-200 font-extrabold flex items-center gap-0.5 cursor-pointer hover:underline"
                                       >
                                         <Info className="w-3.5 h-3.5" /> Details
                                       </button>
@@ -1688,7 +1738,7 @@ const RoomSelector = () => {
                                       <div className="flex flex-col items-end gap-1 shrink-0">
                                         <span className="text-stone-650 bg-stone-100 px-2 py-0.5 rounded text-[10px] font-bold">{type.maxOccupancy} Guests</span>
                                         <span className={`px-2 py-0.5 rounded text-[10px] font-black tracking-wide border ${remainingRoomsCount > 0
-                                          ? "bg-emerald-50 text-emerald-800 border-emerald-250/30"
+                                          ? "bg-blue-50 text-blue-900 border-blue-200/30"
                                           : "bg-rose-50 text-rose-800 border-rose-250/30 animate-pulse"
                                           }`}>
                                           {remainingRoomsCount} Available
@@ -1710,7 +1760,7 @@ const RoomSelector = () => {
                     <label className="text-xs uppercase font-extrabold tracking-widest text-stone-400 mb-2 px-0.5 block flex items-center justify-between">
                       <span>Select Experience Package (Board Type)</span>
                       {room.boardType && (
-                        <span className="text-xs font-bold text-emerald-850 bg-emerald-50 border border-emerald-150 px-2.5 py-0.5 rounded-md normal-case tracking-normal">
+                        <span className="text-xs font-bold text-blue-950 bg-blue-50 border border-blue-150 px-2.5 py-0.5 rounded-md normal-case tracking-normal">
                           Active: {room.boardType}
                         </span>
                       )}
@@ -1727,21 +1777,21 @@ const RoomSelector = () => {
                                 key={bt.id}
                                 onClick={() => handleBoardTypeChange(room.id, bt.type)}
                                 className={`w-full bg-white rounded-xl border-2 p-3.5 transition-all duration-350 cursor-pointer overflow-hidden flex flex-col justify-between group relative active:scale-98 ${isSelected
-                                  ? "border-emerald-600 ring-4 ring-emerald-500/15 scale-[1.03] shadow-[0_12px_24px_rgba(6,95,70,0.12)] z-10"
-                                  : "border-stone-200/80 hover:border-emerald-600/40 hover:scale-[1.01] hover:shadow-2xs"
+                                  ? "border-blue-600 ring-4 ring-blue-500/15 scale-[1.03] shadow-[0_12px_24px_rgba(6,95,70,0.12)] z-10"
+                                  : "border-stone-200/80 hover:border-blue-600/40 hover:scale-[1.01] hover:shadow-2xs"
                                   }`}
                               >
                                 <div className={`h-1.5 bg-gradient-to-r ${cardColor} absolute top-0 left-0 right-0`} />
                                 <div className="flex justify-between items-center pt-2">
-                                  <div className="p-1.5 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center w-8 h-8 shrink-0">
+                                  <div className="p-1.5 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center w-8 h-8 shrink-0">
                                     {bt.icon ? (
                                       <img src={bt.icon} alt={bt.type} className="w-4 h-4 object-contain" />
                                     ) : (
-                                      <Sparkles className="w-4 h-4 text-emerald-800" />
+                                      <Sparkles className="w-4 h-4 text-blue-900" />
                                     )}
                                   </div>
                                   {isSelected ? (
-                                    <span className="w-6 h-6 rounded-full bg-emerald-800 text-white flex items-center justify-center shadow-md border border-white/20">
+                                    <span className="w-6 h-6 rounded-full bg-blue-900 text-white flex items-center justify-center shadow-md border border-white/20">
                                       <Check className="w-3.5 h-3.5" />
                                     </span>
                                   ) : (
@@ -1768,14 +1818,14 @@ const RoomSelector = () => {
 
                   {/* Room Identifier Header */}
                   <div className="flex justify-between items-center border-b border-stone-200/40 pb-3">
-                    <span className="text-xs font-extrabold uppercase tracking-widest text-emerald-850 flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-700 animate-pulse" />
+                    <span className="text-xs font-extrabold uppercase tracking-widest text-blue-950 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-blue-700 animate-pulse" />
                       Room {idx + 1}
                     </span>
 
                     <div className="flex items-center gap-2.5">
                       {/* Selected Package Badge */}
-                      <span className="text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-100 px-2.5 py-0.5 rounded-md flex items-center gap-1">
+                      <span className="text-xs font-bold bg-blue-50 text-blue-900 border border-blue-100 px-2.5 py-0.5 rounded-md flex items-center gap-1">
                         <Sparkles className="w-2.5 h-2.5" /> {room.boardType}
                       </span>
 
@@ -1796,25 +1846,25 @@ const RoomSelector = () => {
                   <div className="text-xs text-stone-500 leading-relaxed bg-white/45 p-3.5 rounded-xl border border-stone-200/50 space-y-2.5">
                     <div>
                       <span className="font-bold text-stone-400 block text-xs uppercase tracking-wider mb-0.5">Selected Category</span>
-                      <span className={`font-bold block text-sm ${room.roomType ? "text-emerald-850" : "text-amber-650 italic font-semibold animate-pulse"}`}>
+                      <span className={`font-bold block text-sm ${room.roomType ? "text-blue-950" : "text-amber-650 italic font-semibold animate-pulse"}`}>
                         {room.roomType || "⚠️ Selection Required"}
                       </span>
                     </div>
                     <div className="pt-2 border-t border-stone-200/40">
                       <span className="font-bold text-stone-400 block text-xs uppercase tracking-wider mb-0.5">Selected Board Type</span>
-                      <span className="font-bold block text-sm text-emerald-850 flex items-center gap-1.5 font-sans">
+                      <span className="font-bold block text-sm text-blue-950 flex items-center gap-1.5 font-sans">
                         {(() => {
                           const bt = boardTypes.find(b => b.type === room.boardType);
                           if (bt && bt.icon) {
                             return <img src={bt.icon} alt={room.boardType} className="w-3.5 h-3.5 object-contain" />;
                           }
-                          return <Sparkles className="w-3.5 h-3.5 text-emerald-800" />;
+                          return <Sparkles className="w-3.5 h-3.5 text-blue-900" />;
                         })()}
                         {room.boardType || "Room Only"}
                       </span>
                     </div>
                     {room.roomType && (
-                      <div className="pt-2.5 border-t border-stone-200/40 space-y-1.5 bg-emerald-50/20 p-3 rounded-xl border border-emerald-100/50 animate-fadeIn">
+                      <div className="pt-2.5 border-t border-stone-200/40 space-y-1.5 bg-blue-50/20 p-3 rounded-xl border border-blue-100/50 animate-fadeIn">
                         <span className="font-bold text-stone-400 block text-xs uppercase tracking-wider">Calculated Room Price</span>
                         <div className="flex flex-col text-stone-750 font-bold text-xs space-y-1">
                           <div className="flex justify-between">
@@ -1837,9 +1887,9 @@ const RoomSelector = () => {
                             </span>
                           </div>
                         </div>
-                        <div className="pt-2 border-t border-emerald-200/35 flex items-center justify-between">
-                          <span className="text-xs font-black text-emerald-850">Total Nightly Rate:</span>
-                          <span className="font-black text-emerald-900 text-sm sm:text-base">
+                        <div className="pt-2 border-t border-blue-200/35 flex items-center justify-between">
+                          <span className="text-xs font-black text-blue-950">Total Nightly Rate:</span>
+                          <span className="font-black text-blue-950 text-sm sm:text-base">
                             {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {room.price} / night
                           </span>
                         </div>
@@ -1862,7 +1912,7 @@ const RoomSelector = () => {
                         <span>Combined Guest Capacity Limit:</span>
                         <span className={`px-2 py-0.5 rounded text-[10px] font-black border ${(room.adults + room.children) >= (roomTypes.find(t => t.name === room.roomType)?.maxAdults || 0)
                           ? "bg-rose-50 text-rose-800 border-rose-200/50"
-                          : "bg-emerald-50 text-emerald-800 border-emerald-200/50"
+                          : "bg-blue-50 text-blue-900 border-blue-200/50"
                           }`}>
                           {room.adults + room.children} / {roomTypes.find(t => t.name === room.roomType)?.maxAdults || 0} Max
                         </span>
@@ -1945,7 +1995,7 @@ const RoomSelector = () => {
                     {/* Specify Child Ages Grid */}
                     {room.children > 0 && (
                       <div className="bg-white border border-stone-200/60 p-3 rounded-xl shadow-3xs space-y-3 animate-fadeIn">
-                        <span className="text-xs uppercase font-extrabold tracking-widest text-emerald-850 block border-b border-stone-100 pb-1.5">
+                        <span className="text-xs uppercase font-extrabold tracking-widest text-blue-950 block border-b border-stone-100 pb-1.5">
                           Specify Child Ages
                         </span>
 
@@ -1958,7 +2008,7 @@ const RoomSelector = () => {
                                 <select
                                   value={currentAge}
                                   onChange={(e) => handleChildAgeChange(room.id, childIdx, e.target.value)}
-                                  className={`border text-xs rounded-lg px-2 py-1 bg-stone-50 text-stone-700 font-bold focus:ring-1 focus:ring-emerald-500/20 focus:border-emerald-600 transition cursor-pointer ${currentAge === "" ? "border-amber-300 ring-2 ring-amber-500/5" : "border-stone-200 hover:border-stone-300"
+                                  className={`border text-xs rounded-lg px-2 py-1 bg-stone-50 text-stone-700 font-bold focus:ring-1 focus:ring-blue-500/20 focus:border-blue-600 transition cursor-pointer ${currentAge === "" ? "border-amber-300 ring-2 ring-amber-500/5" : "border-stone-200 hover:border-stone-300"
                                     }`}
                                 >
                                   <option value="">Select Age</option>
@@ -1988,12 +2038,12 @@ const RoomSelector = () => {
                     onClick={() => handleConfirmRoom(room.id, idx)}
                     className={`w-full font-extrabold uppercase text-xs tracking-wider py-3 rounded-xl transition-all duration-350 flex items-center justify-center gap-1.5 border shadow-2xs ${!room.roomType || (room.children > 0 && room.childAges.some(age => age === ""))
                       ? "bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-250/50 cursor-pointer"
-                      : "bg-emerald-800 hover:bg-emerald-950 text-white border-emerald-900/10 cursor-pointer active:scale-98 shadow-[0_4px_10px_rgba(6,95,70,0.08)] hover:shadow-[0_6px_14px_rgba(6,95,70,0.12)] group"
+                      : "bg-blue-900 hover:bg-blue-950 text-white border-blue-950/10 cursor-pointer active:scale-98 shadow-[0_4px_10px_rgba(6,95,70,0.08)] hover:shadow-[0_6px_14px_rgba(6,95,70,0.12)] group"
                       }`}
                   >
                     <Check className={`w-3.5 h-3.5 transition-transform group-hover:scale-110 ${!room.roomType || (room.children > 0 && room.childAges.some(age => age === ""))
                       ? "text-amber-600"
-                      : "text-emerald-250"
+                      : "text-blue-200"
                       }`} />
                     Confirm Room {idx + 1}
                   </button>
@@ -2008,7 +2058,7 @@ const RoomSelector = () => {
       <div className="space-y-5 pt-6 border-t border-stone-100">
         <div>
           <h3 className="text-stone-800 font-bold text-lg tracking-wide flex items-center gap-2">
-            <ClipboardList className="w-5 h-5 text-emerald-800" /> 3. Additional Guest Services
+            <ClipboardList className="w-5 h-5 text-blue-900" /> 3. Additional Guest Services
           </h3>
           <p className="text-sm text-stone-500">Elevate your stay with premium resort services and special requests</p>
         </div>
@@ -2018,14 +2068,14 @@ const RoomSelector = () => {
           {hasAirportPickup && (
             <div
               className={`border rounded-2xl p-6 transition-all duration-350 shadow-3xs flex flex-col justify-between ${airportPickupEnabled
-                ? "border-emerald-600 bg-emerald-50/5 ring-4 ring-emerald-500/5"
-                : "border-stone-200 bg-stone-50/30 hover:border-emerald-600/30"
+                ? "border-blue-600 bg-blue-50/5 ring-4 ring-blue-500/5"
+                : "border-stone-200 bg-stone-50/30 hover:border-blue-600/30"
                 }`}
             >
               <div>
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-xl border ${airportPickupEnabled ? "bg-emerald-100 border-emerald-250 text-emerald-800" : "bg-white border-stone-200 text-stone-500"}`}>
+                    <div className={`p-2 rounded-xl border ${airportPickupEnabled ? "bg-blue-100 border-blue-200 text-blue-900" : "bg-white border-stone-200 text-stone-500"}`}>
                       <Car className="w-5 h-5" />
                     </div>
                     <div>
@@ -2035,7 +2085,7 @@ const RoomSelector = () => {
                   </div>
 
                   {/* Surcharge Badge */}
-                  <span className="text-xs font-black text-emerald-850 bg-emerald-50 border border-emerald-200/60 px-2.5 py-1 rounded-lg">
+                  <span className="text-xs font-black text-blue-950 bg-blue-50 border border-blue-200/60 px-2.5 py-1 rounded-lg">
                     {airportPickupEnabled
                       ? `+${import.meta.env.VITE_CURRENCY_TYPE || "LKR"} ${getAirportPickupTotalPrice().toFixed(2)}`
                       : `+${import.meta.env.VITE_CURRENCY_TYPE || "LKR"} ${getAirportPickupPrice().toFixed(2)} / vehicle`
@@ -2048,20 +2098,20 @@ const RoomSelector = () => {
                 </p>
 
                 <div className="flex items-center gap-2 mb-4 text-xs text-stone-600 bg-stone-50 border border-stone-200/60 p-2.5 rounded-xl font-bold">
-                  <MapPin className="w-4 h-4 text-emerald-800" />
+                  <MapPin className="w-4 h-4 text-blue-900" />
                   <span>Pickup Location: <strong className="text-stone-850">Katunayake Airport (Fixed)</strong></span>
                 </div>
 
                 {/* Shuttle Schedule Inputs */}
                 {airportPickupEnabled && (
                   <div className="bg-white border border-stone-200/80 p-5 rounded-2xl space-y-4 shadow-xs animate-fadeIn mb-4">
-                    <span className="text-xs uppercase font-extrabold tracking-widest text-emerald-850 block border-b border-stone-100 pb-2 flex items-center gap-1.5 font-bold">
+                    <span className="text-xs uppercase font-extrabold tracking-widest text-blue-950 block border-b border-stone-100 pb-2 flex items-center gap-1.5 font-bold">
                       <Clock className="w-3.5 h-3.5" /> Shuttle Service Details
                     </span>
 
-                    <div className="bg-emerald-50/50 text-emerald-950 p-3 rounded-xl text-xs font-bold border border-emerald-200/50 flex flex-col gap-0.5 shadow-3xs">
-                      <span className="text-[10px] uppercase text-emerald-800 tracking-wider font-extrabold">Allocated Vehicle(s):</span>
-                      <span className="text-emerald-900 font-extrabold text-sm">{getAirportPickupVehicleDescription()}</span>
+                    <div className="bg-blue-50/50 text-blue-950 p-3 rounded-xl text-xs font-bold border border-blue-200/50 flex flex-col gap-0.5 shadow-3xs">
+                      <span className="text-[10px] uppercase text-blue-900 tracking-wider font-extrabold">Allocated Vehicle(s):</span>
+                      <span className="text-blue-950 font-extrabold text-sm">{getAirportPickupVehicleDescription()}</span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3.5">
@@ -2074,7 +2124,7 @@ const RoomSelector = () => {
                           onChange={(e) => setFlightNo(e.target.value.toUpperCase())}
                           required={airportPickupEnabled}
                           placeholder="e.g. UL102 / EK650"
-                          className="border text-xs rounded-lg px-3 py-2 bg-white text-stone-700 font-bold border-stone-200 hover:border-stone-300 focus:ring-1 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
+                          className="border text-xs rounded-lg px-3 py-2 bg-white text-stone-700 font-bold border-stone-200 hover:border-stone-300 focus:ring-1 focus:ring-blue-500/20 focus:border-blue-600 transition"
                         />
                       </div>
 
@@ -2086,7 +2136,7 @@ const RoomSelector = () => {
                           min="0"
                           value={baggageCount}
                           onChange={(e) => setBaggageCount(Math.max(0, parseInt(e.target.value) || 0))}
-                          className="border text-xs rounded-lg px-3 py-2 bg-white text-stone-700 font-bold border-stone-200 hover:border-stone-300 focus:ring-1 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
+                          className="border text-xs rounded-lg px-3 py-2 bg-white text-stone-700 font-bold border-stone-200 hover:border-stone-300 focus:ring-1 focus:ring-blue-500/20 focus:border-blue-600 transition"
                         />
                       </div>
 
@@ -2099,7 +2149,7 @@ const RoomSelector = () => {
                           min={getPickupDateRange().min}
                           max={getPickupDateRange().max}
                           onChange={(e) => setPickupDate(e.target.value)}
-                          className="border text-xs rounded-lg px-3 py-2 bg-white text-stone-700 font-bold border-stone-200 hover:border-stone-300 focus:ring-1 focus:ring-emerald-500/20 focus:border-emerald-600 transition cursor-pointer"
+                          className="border text-xs rounded-lg px-3 py-2 bg-white text-stone-700 font-bold border-stone-200 hover:border-stone-300 focus:ring-1 focus:ring-blue-500/20 focus:border-blue-600 transition cursor-pointer"
                         />
                       </div>
 
@@ -2121,7 +2171,7 @@ const RoomSelector = () => {
                               setPickupTime(val);
                             }
                           }}
-                          className="border text-xs rounded-lg px-3 py-2 bg-white text-stone-700 font-bold border-stone-200 hover:border-stone-300 focus:ring-1 focus:ring-emerald-500/20 focus:border-emerald-600 transition cursor-pointer disabled:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed"
+                          className="border text-xs rounded-lg px-3 py-2 bg-white text-stone-700 font-bold border-stone-200 hover:border-stone-300 focus:ring-1 focus:ring-blue-500/20 focus:border-blue-600 transition cursor-pointer disabled:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed"
                         />
                       </div>
 
@@ -2136,7 +2186,7 @@ const RoomSelector = () => {
                             setPassengerCount(Math.max(1, parseInt(e.target.value) || 1));
                             setHasManuallySetPassengers(true);
                           }}
-                          className="border text-xs rounded-lg px-3 py-2 bg-white text-stone-700 font-bold border-stone-200 hover:border-stone-300 focus:ring-1 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
+                          className="border text-xs rounded-lg px-3 py-2 bg-white text-stone-700 font-bold border-stone-200 hover:border-stone-300 focus:ring-1 focus:ring-blue-500/20 focus:border-blue-600 transition"
                         />
                       </div>
                     </div>
@@ -2162,7 +2212,7 @@ const RoomSelector = () => {
                   onClick={() => {
                     setAirportPickupEnabled(!airportPickupEnabled);
                   }}
-                  className={`w-12 h-6.5 rounded-full p-1 transition-colors duration-300 focus:outline-none shadow-inner cursor-pointer relative ${airportPickupEnabled ? "bg-emerald-800" : "bg-stone-200"
+                  className={`w-12 h-6.5 rounded-full p-1 transition-colors duration-300 focus:outline-none shadow-inner cursor-pointer relative ${airportPickupEnabled ? "bg-blue-900" : "bg-stone-200"
                     }`}
                 >
                   <div
@@ -2177,13 +2227,13 @@ const RoomSelector = () => {
           {/* Card B: Personal & Special Requests */}
           <div
             className={`border rounded-2xl p-6 transition-all duration-350 shadow-3xs flex flex-col h-fit md:self-start ${personalRequest.trim().length > 0
-              ? "border-emerald-600 bg-emerald-50/5 ring-4 ring-emerald-500/5"
-              : "border-stone-200 bg-stone-50/30 hover:border-emerald-600/30"
+              ? "border-blue-600 bg-blue-50/5 ring-4 ring-blue-500/5"
+              : "border-stone-200 bg-stone-50/30 hover:border-blue-600/30"
               }`}
           >
             <div className="flex flex-col gap-4">
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-xl border ${personalRequest.trim().length > 0 ? "bg-emerald-100 border-emerald-250 text-emerald-800" : "bg-white border-stone-200 text-stone-500"}`}>
+                <div className={`p-2 rounded-xl border ${personalRequest.trim().length > 0 ? "bg-blue-100 border-blue-200 text-blue-900" : "bg-white border-stone-200 text-stone-500"}`}>
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
@@ -2203,7 +2253,7 @@ const RoomSelector = () => {
                   placeholder="e.g., Allergen-free feather pillows, celebrating our wedding anniversary, arrival cake setup, extra child bed option..."
                   maxLength={500}
                   rows={6}
-                  className="w-full min-h-[180px] text-xs font-semibold text-stone-750 bg-white border border-stone-400 hover:border-stone-300 rounded-xl p-3.5 focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-600 transition placeholder-stone-400 outline-hidden resize-y shadow-3xs"
+                  className="w-full min-h-[180px] text-xs font-semibold text-stone-750 bg-white border border-stone-400 hover:border-stone-300 rounded-xl p-3.5 focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition placeholder-stone-400 outline-hidden resize-y shadow-3xs"
                 />
                 <div className="flex justify-between items-center text-[10px] text-stone-400 font-bold px-1">
                   <span>We do our best to accommodate all guest desires.</span>
@@ -2229,21 +2279,21 @@ const RoomSelector = () => {
           <div className="flex items-center gap-3.5 flex-wrap justify-end sm:justify-start">
             <div className="flex flex-col items-end sm:items-start text-right sm:text-left bg-stone-50 border border-stone-200/50 px-4.5 py-2.5 rounded-2xl shadow-3xs animate-fadeIn shrink-0">
               <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-stone-400 mb-0.5">Est. Total Nightly Rate</span>
-              <span className="text-emerald-900 font-black text-lg sm:text-xl tracking-tight">
+              <span className="text-blue-950 font-black text-lg sm:text-xl tracking-tight">
                 {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {totalNightlyRate} <span className="text-xs font-bold text-stone-450">/ night</span>
               </span>
             </div>
             {airportPickupEnabled && (
-              <div className="flex flex-col items-end sm:items-start text-right sm:text-left bg-emerald-50/40 border border-emerald-250/60 px-4.5 py-2.5 rounded-2xl shadow-3xs animate-fadeIn shrink-0">
-                <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-emerald-800 mb-0.5">Shuttle Surcharge ({getAirportPickupVehicleDescription().split(" (")[0]})</span>
-                <span className="text-emerald-950 font-black text-lg sm:text-xl tracking-tight">
+              <div className="flex flex-col items-end sm:items-start text-right sm:text-left bg-blue-50/40 border border-blue-200/60 px-4.5 py-2.5 rounded-2xl shadow-3xs animate-fadeIn shrink-0">
+                <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-blue-900 mb-0.5">Shuttle Surcharge ({getAirportPickupVehicleDescription().split(" (")[0]})</span>
+                <span className="text-blue-950 font-black text-lg sm:text-xl tracking-tight">
                   +{import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {getAirportPickupTotalPrice().toFixed(2)} <span className="text-xs font-bold text-amber-600 font-extrabold">pay at hotel</span>
                 </span>
               </div>
             )}
-            <div className="flex flex-col items-end sm:items-start text-right sm:text-left bg-emerald-800 text-white border border-emerald-900/15 px-4.5 py-2.5 rounded-2xl shadow-[0_6px_16px_rgba(6,95,70,0.18)] animate-fadeIn shrink-0">
-              <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-emerald-200 mb-0.5">Total for {getStayNights()} {getStayNights() === 1 ? 'Night' : 'Nights'}</span>
-              <span className="font-black text-lg sm:text-xl tracking-tight text-white">
+            <div className="flex flex-col items-end sm:items-start text-right sm:text-left bg-slate-50 border border-slate-200 px-4.5 py-2.5 rounded-2xl shadow-3xs animate-fadeIn shrink-0">
+              <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-slate-500 mb-0.5">Total for {getStayNights()} {getStayNights() === 1 ? 'Night' : 'Nights'}</span>
+              <span className="font-black text-lg sm:text-xl tracking-tight text-blue-950">
                 {import.meta.env.VITE_CURRENCY_TYPE || "LKR"} {(totalNightlyRate * getStayNights()).toFixed(2)}
               </span>
             </div>
@@ -2255,7 +2305,7 @@ const RoomSelector = () => {
           onClick={handleFinalBookingSubmit}
           className={`font-extrabold uppercase text-xs tracking-widest px-8 py-4 rounded-2xl transition-all duration-300 transform flex items-center justify-center gap-2 border group cursor-pointer active:scale-98 shadow-[0_4px_12px_rgba(6,95,70,0.08)] hover:shadow-[0_10px_20px_rgba(6,95,70,0.15)] ${hasUnconfiguredRoom
             ? "bg-amber-700 hover:bg-amber-800 text-white border-amber-900/10"
-            : "bg-emerald-800 hover:bg-emerald-950 text-white border-emerald-900/10"
+            : "bg-blue-900 hover:bg-blue-950 text-white border-blue-950/10"
             }`}
         >
           {hasUnconfiguredRoom ? "Configure All Rooms" : "Confirm Luxury Stay"}
@@ -2267,6 +2317,7 @@ const RoomSelector = () => {
         selectedRoom={detailingRoom}
         onClose={() => setDetailingRoom(null)}
       />
+      </div>
     </div>
   );
 };

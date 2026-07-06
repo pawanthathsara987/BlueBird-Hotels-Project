@@ -10,6 +10,7 @@ import {
 } from "react-icons/fa";
 import { validateSriLankanNIC, validatePassport } from "../../../../utils/validation";
 import { jwtDecode } from "jwt-decode";
+import BookingSteps from "./BookingSteps";
 
 export default function CustomerDetailsPage() {
     const navigate = useNavigate();
@@ -360,7 +361,7 @@ export default function CustomerDetailsPage() {
                 <div className="mx-auto max-w-7xl px-4 py-6 sm:px-8 lg:px-14">
                     <button
                         onClick={handleGoBack}
-                        className="mb-3 flex items-center gap-2 text-emerald-800 hover:text-emerald-950 font-extrabold text-xs tracking-wide transition cursor-pointer"
+                        className="mb-3 flex items-center gap-2 text-blue-900 hover:text-blue-950 font-extrabold text-xs tracking-wide transition cursor-pointer"
                     >
                         <FaArrowLeft className="h-3 w-3" />
                         Back to Summary
@@ -380,7 +381,7 @@ export default function CustomerDetailsPage() {
                             <img src={Logo} alt="BlueBird logo" className="w-8 h-8 object-contain" />
                             <div className="leading-tight">
                                 <p className="text-[10px] font-black text-stone-850 uppercase tracking-widest leading-none">BlueBird</p>
-                                <p className="text-[9px] font-bold text-emerald-800 uppercase tracking-widest leading-none mt-1">Hotels & Resorts</p>
+                                <p className="text-[9px] font-bold text-blue-900 uppercase tracking-widest leading-none mt-1">Hotels & Resorts</p>
                             </div>
                         </div>
                     </div>
@@ -389,20 +390,21 @@ export default function CustomerDetailsPage() {
 
             {/* Page content - fits to full width max-w-7xl */}
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-8 lg:px-14">
+                <BookingSteps activeStep={3} />
                 <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
 
                     {/* Left Column: Form Details (lg:col-span-2) */}
                     <div className="lg:col-span-2 space-y-6">
 
                         {isLoggedIn && (
-                            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-5 flex items-start gap-4 shadow-3xs">
-                                <div className="rounded-full bg-emerald-100 p-2.5 text-emerald-800 shrink-0">
+                            <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-5 flex items-start gap-4 shadow-3xs">
+                                <div className="rounded-full bg-blue-100 p-2.5 text-blue-900 shrink-0">
                                     <FaCheck className="w-4 h-4" />
                                 </div>
                                 <div className="space-y-1">
                                     <h4 className="text-xs font-bold text-stone-850">Resort Profile Verified</h4>
                                     <p className="text-[11px] text-stone-650 leading-relaxed">
-                                        You are currently logged in as <span className="font-bold text-emerald-900">{firstName} {lastName}</span>. Your saved account profile has pre-filled the contact details below. Please review or adjust before completing payment.
+                                        You are currently logged in as <span className="font-bold text-blue-950">{firstName} {lastName}</span>. Your saved account profile has pre-filled the contact details below. Please review or adjust before completing payment.
                                     </p>
                                 </div>
                             </div>
@@ -412,22 +414,22 @@ export default function CustomerDetailsPage() {
 
                             {/* SECTION I: Personal Details */}
                             <div className="space-y-4">
-                                <h2 className="text-xs font-black text-emerald-850 uppercase tracking-widest pb-1.5 border-b border-stone-150">I. Personal Details</h2>
+                                <h2 className="text-xs font-black text-blue-950 uppercase tracking-widest pb-1.5 border-b border-stone-150">I. Personal Details</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {/* First Name */}
                                     <div className="space-y-1.5">
                                         <label className="block text-[9px] font-black text-stone-550 uppercase tracking-widest pl-1">
-                                            First Name <span className="text-emerald-700">*</span>
+                                            First Name <span className="text-blue-700">*</span>
                                         </label>
                                         <div className="relative group">
-                                            <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-800 text-xs" />
+                                            <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-900 text-xs" />
                                             <input
                                                 type="text"
                                                 placeholder="First Name"
                                                 value={firstName}
                                                 onChange={(e) => setFirstName(e.target.value)}
                                                 disabled={loading}
-                                                className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
+                                                className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
                                             />
                                         </div>
                                     </div>
@@ -435,17 +437,17 @@ export default function CustomerDetailsPage() {
                                     {/* Last Name */}
                                     <div className="space-y-1.5">
                                         <label className="block text-[9px] font-black text-stone-550 uppercase tracking-widest pl-1">
-                                            Last Name <span className="text-emerald-700">*</span>
+                                            Last Name <span className="text-blue-700">*</span>
                                         </label>
                                         <div className="relative group">
-                                            <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-800 text-xs" />
+                                            <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-900 text-xs" />
                                             <input
                                                 type="text"
                                                 placeholder="Last Name"
                                                 value={lastName}
                                                 onChange={(e) => setLastName(e.target.value)}
                                                 disabled={loading}
-                                                className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
+                                                className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
                                             />
                                         </div>
                                     </div>
@@ -453,17 +455,17 @@ export default function CustomerDetailsPage() {
                                     {/* Email Address */}
                                     <div className="space-y-1.5">
                                         <label className="block text-[9px] font-black text-stone-550 uppercase tracking-widest pl-1">
-                                            Email Address <span className="text-emerald-700">*</span>
+                                            Email Address <span className="text-blue-700">*</span>
                                         </label>
                                         <div className="relative group">
-                                            <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-800 text-xs" />
+                                            <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-900 text-xs" />
                                             <input
                                                 type="email"
                                                 placeholder="Your Email Address"
                                                 value={email}
                                                 onChange={(e) => setEmail(e.target.value)}
                                                 disabled={loading}
-                                                className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
+                                                className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
                                             />
                                         </div>
                                     </div>
@@ -471,7 +473,7 @@ export default function CustomerDetailsPage() {
                                     {/* Phone Number */}
                                     <div className="space-y-1.5">
                                         <label className="block text-[9px] font-black text-stone-550 uppercase tracking-widest pl-1">
-                                            Phone Number <span className="text-emerald-700">*</span>
+                                            Phone Number <span className="text-blue-700">*</span>
                                         </label>
                                         <div className="flex gap-2">
                                             <div className="relative w-28 shrink-0">
@@ -479,7 +481,7 @@ export default function CustomerDetailsPage() {
                                                     value={phoneCountry}
                                                     onChange={(e) => handlePhoneCountryChange(e.target.value)}
                                                     disabled={loading}
-                                                    className="w-full pl-3 pr-7 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 appearance-none cursor-pointer"
+                                                    className="w-full pl-3 pr-7 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 transition text-xs text-stone-800 appearance-none cursor-pointer"
                                                 >
                                                     {countryCodeOptions.map((item) => (
                                                         <option key={item.value} value={item.value} className="bg-white text-stone-800">
@@ -490,14 +492,14 @@ export default function CustomerDetailsPage() {
                                                 <div className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 text-[10px] pointer-events-none">▼</div>
                                             </div>
                                             <div className="relative flex-1">
-                                                <FaPhone className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-800 text-xs" />
+                                                <FaPhone className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-900 text-xs" />
                                                 <input
                                                     type="tel"
                                                     placeholder="Phone Number"
                                                     value={phoneNumber}
                                                     onChange={(e) => setPhoneNumber(e.target.value)}
                                                     disabled={loading}
-                                                    className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
+                                                    className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
                                                 />
                                             </div>
                                         </div>
@@ -507,15 +509,15 @@ export default function CustomerDetailsPage() {
 
                             {/* SECTION II: Identity Verification */}
                             <div className="space-y-4">
-                                <h2 className="text-xs font-black text-emerald-855 uppercase tracking-widest pb-1.5 border-b border-stone-150">II. Verification Details</h2>
+                                <h2 className="text-xs font-black text-blue-855 uppercase tracking-widest pb-1.5 border-b border-stone-150">II. Verification Details</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {/* Identification Type */}
                                     <div className="space-y-1.5">
                                         <label className="block text-[9px] font-black text-stone-550 uppercase tracking-widest pl-1">
-                                            Identification Type <span className="text-emerald-700">*</span>
+                                            Identification Type <span className="text-blue-700">*</span>
                                         </label>
                                         <div className="relative">
-                                            <FaIdCard className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-800 text-xs z-10" />
+                                            <FaIdCard className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-900 text-xs z-10" />
                                             <select
                                                 value={idType}
                                                 onChange={(e) => {
@@ -523,7 +525,7 @@ export default function CustomerDetailsPage() {
                                                     setIdNumber("");
                                                 }}
                                                 disabled={loading || !isSriLankan}
-                                                className="w-full pl-10 pr-8 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 appearance-none cursor-pointer disabled:opacity-80 focus:bg-white"
+                                                className="w-full pl-10 pr-8 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 transition text-xs text-stone-800 appearance-none cursor-pointer disabled:opacity-80 focus:bg-white"
                                             >
                                                 {isSriLankan && (
                                                     <option value="NIC" className="bg-white text-stone-800">National Identity Card (NIC)</option>
@@ -537,10 +539,10 @@ export default function CustomerDetailsPage() {
                                     {/* ID / Passport Number */}
                                     <div className="space-y-1.5">
                                         <label className="block text-[9px] font-black text-stone-550 uppercase tracking-widest pl-1">
-                                            {idType === "NIC" ? "NIC Number" : "Passport Number"} <span className="text-emerald-700">*</span>
+                                            {idType === "NIC" ? "NIC Number" : "Passport Number"} <span className="text-blue-700">*</span>
                                         </label>
                                         <div className="relative group">
-                                            <FaIdCard className={`absolute left-4 top-1/2 -translate-y-1/2 text-xs transition-colors ${idNumber === "" ? "text-emerald-855" : idError ? "text-rose-600" : "text-emerald-600"
+                                            <FaIdCard className={`absolute left-4 top-1/2 -translate-y-1/2 text-xs transition-colors ${idNumber === "" ? "text-blue-855" : idError ? "text-rose-600" : "text-blue-600"
                                                 }`} />
                                             <input
                                                 type="text"
@@ -549,10 +551,10 @@ export default function CustomerDetailsPage() {
                                                 onChange={(e) => setIdNumber(e.target.value)}
                                                 disabled={loading}
                                                 className={`w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border rounded-xl focus:outline-none focus:ring-4 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white ${idNumber === ""
-                                                        ? "border-stone-200 focus:ring-emerald-500/10 focus:border-emerald-600"
+                                                        ? "border-stone-200 focus:ring-blue-500/10 focus:border-blue-600"
                                                         : idError
                                                             ? "border-rose-400 focus:ring-rose-500/10 focus:border-rose-500"
-                                                            : "border-emerald-400 focus:ring-emerald-500/10 focus:border-emerald-500"
+                                                            : "border-blue-400 focus:ring-blue-500/10 focus:border-blue-500"
                                                     }`}
                                             />
                                         </div>
@@ -569,22 +571,22 @@ export default function CustomerDetailsPage() {
 
                             {/* SECTION III: Address & Location */}
                             <div className="space-y-4">
-                                <h2 className="text-xs font-black text-emerald-855 uppercase tracking-widest pb-1.5 border-b border-stone-150">III. Address & Location</h2>
+                                <h2 className="text-xs font-black text-blue-855 uppercase tracking-widest pb-1.5 border-b border-stone-150">III. Address & Location</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {/* Address Line 1 */}
                                     <div className="space-y-1.5 md:col-span-2">
                                         <label className="block text-[9px] font-black text-stone-550 uppercase tracking-widest pl-1">
-                                            Address Line 1 <span className="text-emerald-700">*</span>
+                                            Address Line 1 <span className="text-blue-700">*</span>
                                         </label>
                                         <div className="relative group">
-                                            <FaMapMarkerAlt className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-800 text-xs" />
+                                            <FaMapMarkerAlt className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-900 text-xs" />
                                             <input
                                                 type="text"
                                                 placeholder="Street Address, P.O. Box, or Company Name"
                                                 value={addressLine1}
                                                 onChange={(e) => setAddressLine1(e.target.value)}
                                                 disabled={loading}
-                                                className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
+                                                className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
                                             />
                                         </div>
                                     </div>
@@ -595,14 +597,14 @@ export default function CustomerDetailsPage() {
                                             Address Line 2 <span className="text-stone-400 text-[8px]">(Optional)</span>
                                         </label>
                                         <div className="relative group">
-                                            <FaMapMarkerAlt className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-800 text-xs" />
+                                            <FaMapMarkerAlt className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-900 text-xs" />
                                             <input
                                                 type="text"
                                                 placeholder="Apartment, Suite, Unit, Building, or Floor"
                                                 value={addressLine2}
                                                 onChange={(e) => setAddressLine2(e.target.value)}
                                                 disabled={loading}
-                                                className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
+                                                className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
                                             />
                                         </div>
                                     </div>
@@ -610,17 +612,17 @@ export default function CustomerDetailsPage() {
                                     {/* City */}
                                     <div className="space-y-1.5">
                                         <label className="block text-[9px] font-black text-stone-550 uppercase tracking-widest pl-1">
-                                            City <span className="text-emerald-700">*</span>
+                                            City <span className="text-blue-700">*</span>
                                         </label>
                                         <div className="relative group">
-                                            <FaMapMarkerAlt className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-800 text-xs" />
+                                            <FaMapMarkerAlt className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-900 text-xs" />
                                             <input
                                                 type="text"
                                                 placeholder="City Name"
                                                 value={city}
                                                 onChange={(e) => setCity(e.target.value)}
                                                 disabled={loading}
-                                                className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
+                                                className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
                                             />
                                         </div>
                                     </div>
@@ -631,14 +633,14 @@ export default function CustomerDetailsPage() {
                                             ZIP / Postal Code <span className="text-stone-400 text-[8px]">(Optional)</span>
                                         </label>
                                         <div className="relative group">
-                                            <FaMapMarkerAlt className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-800 text-xs" />
+                                            <FaMapMarkerAlt className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-900 text-xs" />
                                             <input
                                                 type="text"
                                                 placeholder="ZIP / Postal Code"
                                                 value={zipCode}
                                                 onChange={(e) => setZipCode(e.target.value)}
                                                 disabled={loading}
-                                                className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
+                                                className="w-full pl-10 pr-3 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 transition text-xs text-stone-800 placeholder-stone-400 focus:bg-white"
                                             />
                                         </div>
                                     </div>
@@ -646,15 +648,15 @@ export default function CustomerDetailsPage() {
                                     {/* Country */}
                                     <div className="space-y-1.5 md:col-span-2">
                                         <label className="block text-[9px] font-black text-stone-550 uppercase tracking-widest pl-1">
-                                            Country <span className="text-emerald-700">*</span>
+                                            Country <span className="text-blue-700">*</span>
                                         </label>
                                         <div className="relative group">
-                                            <FaGlobe className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-800 text-xs z-10" />
+                                            <FaGlobe className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-900 text-xs z-10" />
                                             <select
                                                 value={country}
                                                 onChange={(e) => setCountry(e.target.value)}
                                                 disabled={loading || isSriLankan}
-                                                className="w-full pl-10 pr-8 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 appearance-none cursor-pointer disabled:opacity-80 focus:bg-white"
+                                                className="w-full pl-10 pr-8 py-2.5 bg-slate-50/50 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 transition text-xs text-stone-800 appearance-none cursor-pointer disabled:opacity-80 focus:bg-white"
                                             >
                                                 <option value="" className="bg-white text-stone-400">Select Country</option>
                                                 {countryCodeOptions
@@ -674,27 +676,27 @@ export default function CustomerDetailsPage() {
                             {/* SECTION IV: Password Security */}
                             {!isLoggedIn && (
                                 <div className="space-y-4">
-                                    <h2 className="text-xs font-black text-emerald-850 uppercase tracking-widest pb-1.5 border-b border-stone-150">IV. Security Details</h2>
+                                    <h2 className="text-xs font-black text-blue-950 uppercase tracking-widest pb-1.5 border-b border-stone-150">IV. Security Details</h2>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {/* Password */}
                                         <div className="space-y-1.5">
                                             <label className="block text-[9px] font-black text-stone-550 uppercase tracking-widest pl-1">
-                                                Password <span className="text-emerald-700">*</span>
+                                                Password <span className="text-blue-700">*</span>
                                             </label>
                                             <div className="relative group">
-                                                <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-800 text-xs" />
+                                                <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-900 text-xs" />
                                                 <input
                                                     type={showPassword ? "text" : "password"}
                                                     placeholder="Create Password"
                                                     value={password}
                                                     onChange={(e) => setPassword(e.target.value)}
                                                     disabled={loading}
-                                                    className="w-full pl-10 pr-12 py-2.5 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400"
+                                                    className="w-full pl-10 pr-12 py-2.5 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 transition text-xs text-stone-800 placeholder-stone-400"
                                                 />
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowPassword((curr) => !curr)}
-                                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-800/85 hover:text-emerald-600 transition cursor-pointer"
+                                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-blue-900/85 hover:text-blue-600 transition cursor-pointer"
                                                 >
                                                     {showPassword ? <FaEyeSlash className="text-sm" /> : <FaEye className="text-sm" />}
                                                 </button>
@@ -704,22 +706,22 @@ export default function CustomerDetailsPage() {
                                         {/* Confirm Password */}
                                         <div className="space-y-1.5">
                                             <label className="block text-[9px] font-black text-stone-550 uppercase tracking-widest pl-1">
-                                                Confirm Password <span className="text-emerald-700">*</span>
+                                                Confirm Password <span className="text-blue-700">*</span>
                                             </label>
                                             <div className="relative group">
-                                                <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-800 text-xs" />
+                                                <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-900 text-xs" />
                                                 <input
                                                     type={showConfirmPassword ? "text" : "password"}
                                                     placeholder="Confirm Password"
                                                     value={confirmPassword}
                                                     onChange={(e) => setConfirmPassword(e.target.value)}
                                                     disabled={loading}
-                                                    className="w-full pl-10 pr-12 py-2.5 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-600 transition text-xs text-stone-800 placeholder-stone-400"
+                                                    className="w-full pl-10 pr-12 py-2.5 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 transition text-xs text-stone-800 placeholder-stone-400"
                                                 />
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowConfirmPassword((curr) => !curr)}
-                                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-800/85 hover:text-emerald-600 transition cursor-pointer"
+                                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-blue-900/85 hover:text-blue-600 transition cursor-pointer"
                                                 >
                                                     {showConfirmPassword ? <FaEyeSlash className="text-sm" /> : <FaEye className="text-sm" />}
                                                 </button>
@@ -731,23 +733,23 @@ export default function CustomerDetailsPage() {
                                     <div className="w-full bg-stone-50 p-3.5 rounded-2xl border border-stone-200/65 text-[10px] tracking-wide mt-4">
                                         <p className="text-stone-500 font-bold uppercase tracking-wider mb-2 text-[9px]">Password Guidelines</p>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5">
-                                            <div className={`flex items-center gap-1.5 ${/[A-Z]/.test(password) ? "text-emerald-700 font-bold" : "text-stone-450"}`}>
+                                            <div className={`flex items-center gap-1.5 ${/[A-Z]/.test(password) ? "text-blue-700 font-bold" : "text-stone-450"}`}>
                                                 <span className="text-[20px]">•</span> One uppercase letter
                                             </div>
-                                            <div className={`flex items-center gap-1.5 ${/[a-z]/.test(password) ? "text-emerald-700 font-bold" : "text-stone-450"}`}>
+                                            <div className={`flex items-center gap-1.5 ${/[a-z]/.test(password) ? "text-blue-700 font-bold" : "text-stone-450"}`}>
                                                 <span className="text-[20px]">•</span> One lowercase letter
                                             </div>
-                                            <div className={`flex items-center gap-1.5 ${/\d/.test(password) ? "text-emerald-700 font-bold" : "text-stone-450"}`}>
+                                            <div className={`flex items-center gap-1.5 ${/\d/.test(password) ? "text-blue-700 font-bold" : "text-stone-450"}`}>
                                                 <span className="text-[20px]">•</span> One number
                                             </div>
-                                            <div className={`flex items-center gap-1.5 ${/[@$!%*?&]/.test(password) ? "text-emerald-700 font-bold" : "text-stone-450"}`}>
+                                            <div className={`flex items-center gap-1.5 ${/[@$!%*?&]/.test(password) ? "text-blue-700 font-bold" : "text-stone-450"}`}>
                                                 <span className="text-[20px]">•</span> One special char
                                             </div>
-                                            <div className={`flex items-center gap-1.5 ${password.length >= 8 ? "text-emerald-700 font-bold" : "text-stone-450"}`}>
+                                            <div className={`flex items-center gap-1.5 ${password.length >= 8 ? "text-blue-700 font-bold" : "text-stone-450"}`}>
                                                 <span className="text-[20px]">•</span> 8+ characters
                                             </div>
                                             {confirmPassword && (
-                                                <div className={`flex items-center gap-1.5 col-span-2 sm:col-span-1 ${password === confirmPassword ? "text-emerald-700 font-bold" : "text-rose-600 font-semibold"}`}>
+                                                <div className={`flex items-center gap-1.5 col-span-2 sm:col-span-1 ${password === confirmPassword ? "text-blue-700 font-bold" : "text-rose-600 font-semibold"}`}>
                                                     <span className="text-[20px]">•</span> {password === confirmPassword ? "Passwords match" : "Match failed"}
                                                 </div>
                                             )}
@@ -780,7 +782,7 @@ export default function CustomerDetailsPage() {
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-stone-500 font-semibold">Total Guests:</span>
-                                    <span className="font-bold text-emerald-850 bg-emerald-50 px-2.5 py-0.5 rounded-lg text-xs">
+                                    <span className="font-bold text-blue-950 bg-blue-50 px-2.5 py-0.5 rounded-lg text-xs">
                                         {totalAdults} Adults {totalKids > 0 ? `, ${totalKids} Kids` : ""}
                                     </span>
                                 </div>
@@ -796,7 +798,7 @@ export default function CustomerDetailsPage() {
                                     </div>
                                 ))}
                                 {airportPickup?.enabled && airportPickup.flightNo && (
-                                    <div className="flex justify-between text-xs py-1.5 px-3 bg-emerald-50 border border-emerald-100 rounded-xl font-medium text-emerald-800">
+                                    <div className="flex justify-between text-xs py-1.5 px-3 bg-blue-50 border border-blue-100 rounded-xl font-medium text-blue-900">
                                         <span className="font-semibold">Flight Number</span>
                                         <span className="font-bold">{airportPickup.flightNo}</span>
                                     </div>
@@ -805,14 +807,14 @@ export default function CustomerDetailsPage() {
 
                             {/* Price Breakdown */}
                             <div className="space-y-2.5">
-                                <div className="flex justify-between items-center bg-emerald-800 text-white p-4 rounded-2xl shadow-3xs">
-                                    <span className="font-extrabold text-sm tracking-wide">Stay Total Cost:</span>
-                                    <span className="text-2xl font-black">{import.meta.env.VITE_CURRENCY_TYPE}{Number(totalPrice || 0).toFixed(2)}</span>
+                                <div className="flex justify-between items-center bg-slate-50 border border-slate-200 p-4 rounded-2xl shadow-3xs">
+                                    <span className="font-extrabold text-xs uppercase tracking-widest text-slate-500">Stay Total Cost</span>
+                                    <span className="text-2xl font-black text-blue-950">{import.meta.env.VITE_CURRENCY_TYPE}{Number(totalPrice || 0).toFixed(2)}</span>
                                 </div>
 
-                                <div className="p-3 bg-emerald-50 border border-emerald-150 rounded-xl flex gap-2.5">
-                                    <FaCheck className="h-4 w-4 text-emerald-800 shrink-0 mt-0.5" />
-                                    <div className="text-[11px] leading-tight text-emerald-800 font-semibold">
+                                <div className="p-3 bg-blue-50 border border-blue-150 rounded-xl flex gap-2.5">
+                                    <FaCheck className="h-4 w-4 text-blue-900 shrink-0 mt-0.5" />
+                                    <div className="text-[11px] leading-tight text-blue-900 font-semibold">
                                         You pay 50% advance on the next payment page to secure your luxury booking.
                                     </div>
                                 </div>
@@ -823,12 +825,12 @@ export default function CustomerDetailsPage() {
                                 type="button"
                                 disabled={loading}
                                 onClick={handleRegisterAndPayment}
-                                className="w-full h-12 bg-emerald-800 hover:bg-emerald-950 text-white shadow-[0_4px_15px_rgba(6,95,70,0.12)] hover:shadow-[0_4px_22px_rgba(6,95,70,0.22)] rounded-xl font-extrabold text-xs tracking-widest uppercase transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center cursor-pointer gap-2 group border border-emerald-900/10"
+                                className="w-full h-12 bg-blue-900 hover:bg-blue-950 text-white shadow-[0_4px_15px_rgba(6,95,70,0.12)] hover:shadow-[0_4px_22px_rgba(6,95,70,0.22)] rounded-xl font-extrabold text-xs tracking-widest uppercase transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center cursor-pointer gap-2 group border border-blue-950/10"
                             >
                                 {isLoggedIn
                                     ? (loading ? "Verifying..." : "Confirm & Proceed to Payment")
                                     : (loading ? "Registering..." : "Register & Proceed to Payment")}
-                                {!loading && <FaArrowRight className="w-3.5 h-3.5 text-emerald-250 group-hover:translate-x-0.5 transition-transform" />}
+                                {!loading && <FaArrowRight className="w-3.5 h-3.5 text-blue-200 group-hover:translate-x-0.5 transition-transform" />}
                             </button>
                         </div>
                     </div>

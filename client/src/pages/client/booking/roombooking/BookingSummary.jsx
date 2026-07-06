@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ArrowLeft, Calendar, Users, DollarSign, Car, Sparkles, Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import BookingSteps from './BookingSteps';
 
 const BookingSummary = () => {
     const CURRENCY = import.meta.env.VITE_CURRENCY_TYPE || "LKR";
@@ -182,7 +183,7 @@ const BookingSummary = () => {
                     <p className="text-stone-600 mb-6">Please select at least one room to continue.</p>
                     <button
                         onClick={handleGoBack}
-                        className="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-6 py-3 text-sm font-extrabold uppercase tracking-wider text-white transition hover:bg-emerald-800"
+                        className="inline-flex items-center gap-2 rounded-lg bg-blue-700 px-6 py-3 text-sm font-extrabold uppercase tracking-wider text-white transition hover:bg-blue-900"
                     >
                         <ArrowLeft className="h-4 w-4" />
                         Go Back
@@ -199,7 +200,7 @@ const BookingSummary = () => {
                 <div className="mx-auto max-w-7xl px-4 py-6 sm:px-8 lg:px-14">
                     <button
                         onClick={handleGoBack}
-                        className="mb-4 flex items-center gap-2 text-emerald-700 hover:text-emerald-800 transition"
+                        className="mb-4 flex items-center gap-2 text-blue-700 hover:text-blue-900 transition"
                     >
                         <ArrowLeft className="h-5 w-5" />
                         Back to Booking
@@ -210,6 +211,7 @@ const BookingSummary = () => {
             </div>
 
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-8 lg:px-14">
+                <BookingSteps activeStep={2} />
                 <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
                     {/* Main Content */}
                     <div className="lg:col-span-2 space-y-6">
@@ -255,17 +257,17 @@ const BookingSummary = () => {
                         {(airportPickup?.enabled || (personalRequest && personalRequest.trim().length > 0)) && (
                             <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm space-y-4">
                                 <h2 className="text-xl font-extrabold text-stone-900 flex items-center gap-2">
-                                    <Sparkles className="h-5 w-5 text-emerald-750" />
+                                    <Sparkles className="h-5 w-5 text-blue-750" />
                                     Guest Services & Requests
                                 </h2>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {/* Airport Pickup Column */}
                                     {airportPickup?.enabled ? (
-                                        <div className="rounded-xl bg-emerald-50/30 border border-emerald-100 p-4 space-y-2">
+                                        <div className="rounded-xl bg-blue-50/30 border border-blue-100 p-4 space-y-2">
                                             <div className="flex items-center gap-2">
-                                                <Car className="h-4 w-4 text-emerald-800" />
-                                                <p className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+                                                <Car className="h-4 w-4 text-blue-900" />
+                                                <p className="text-xs font-bold uppercase tracking-wider text-blue-900">
                                                     Sanctuary Shuttle Service
                                                 </p>
                                             </div>
@@ -281,7 +283,7 @@ const BookingSummary = () => {
                                                 </p>
                                                 <p className="flex justify-between items-center">
                                                     <span className="flex items-center gap-1 text-stone-500 text-xs"><Clock className="h-3.5 w-3.5 text-stone-400" /> Landing Time:</span>
-                                                    <span className="font-bold bg-emerald-100/50 text-emerald-950 px-2 py-0.5 rounded text-xs">{airportPickup.time || '12:00'}</span>
+                                                    <span className="font-bold bg-blue-100/50 text-blue-950 px-2 py-0.5 rounded text-xs">{airportPickup.time || '12:00'}</span>
                                                 </p>
                                                 {airportPickup.flightNo && (
                                                     <p className="flex justify-between">
@@ -301,7 +303,7 @@ const BookingSummary = () => {
                                                     <span className="text-stone-500 text-xs">Vehicle(s):</span>
                                                     <span className="font-bold text-xs text-indigo-750">{getAirportPickupVehicleDescription(airportPickup.passengerCount, airportPickup.baggageCount)}</span>
                                                 </p>
-                                                <p className="flex justify-between text-xs pt-1.5 border-t border-emerald-100 text-emerald-800 font-bold">
+                                                <p className="flex justify-between text-xs pt-1.5 border-t border-blue-100 text-blue-900 font-bold">
                                                     <span>Shuttle Fee:</span>
                                                     <span className="font-extrabold text-amber-800">{CURRENCY} {shuttleCost.toFixed(2)} (Pay at Hotel)</span>
                                                 </p>
@@ -320,7 +322,7 @@ const BookingSummary = () => {
                                         <div className="rounded-xl bg-stone-50 border border-stone-200 p-4 flex flex-col justify-between">
                                             <div>
                                                 <p className="text-xs font-bold uppercase tracking-wider text-stone-500 mb-1.5 flex items-center gap-1.5">
-                                                    <Sparkles className="h-3.5 w-3.5 text-emerald-800" />
+                                                    <Sparkles className="h-3.5 w-3.5 text-blue-900" />
                                                     Special Request
                                                 </p>
                                                 <p className="text-xs font-semibold text-stone-750 italic leading-relaxed p-3 bg-white border border-stone-200/60 rounded-lg">
@@ -361,7 +363,7 @@ const BookingSummary = () => {
                                                             {CURRENCY} {Number(room.originalTotalPrice || 0).toFixed(2)}
                                                         </p>
                                                     )}
-                                                    <p className="text-2xl font-black text-emerald-700">
+                                                    <p className="text-2xl font-black text-blue-700">
                                                         {CURRENCY} {calculateRoomTotal(room).toFixed(2)}
                                                     </p>
                                                     <p className="text-xs text-stone-500">total for stay</p>
@@ -428,9 +430,9 @@ const BookingSummary = () => {
                                                                     {ages.map((age, ageIndex) => (
                                                                         <span
                                                                             key={ageIndex}
-                                                                            className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800 border border-emerald-100"
+                                                                            className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-900 border border-blue-100"
                                                                         >
-                                                                            <span className="flex w-4 h-4 rounded-full bg-emerald-300 text-white text-[11px] font-bold items-center justify-center">{ageIndex + 1}</span>
+                                                                            <span className="flex w-4 h-4 rounded-full bg-blue-300 text-white text-[11px] font-bold items-center justify-center">{ageIndex + 1}</span>
                                                                             <span>Age {age}</span>
                                                                         </span>
                                                                     ))}
@@ -467,7 +469,7 @@ const BookingSummary = () => {
                                     </div>
                                 ))}
                                 {airportPickup?.enabled && (
-                                    <div className="flex justify-between text-sm text-emerald-800 font-semibold pt-2 border-t border-stone-100">
+                                    <div className="flex justify-between text-sm text-blue-900 font-semibold pt-2 border-t border-stone-100">
                                         <span className="flex items-center gap-1.5">
                                             <Car className="h-3.5 w-3.5" /> Airport Shuttle
                                         </span>
@@ -484,7 +486,7 @@ const BookingSummary = () => {
                                             {CURRENCY} {originalTotalCost.toFixed(2)}
                                         </p>
                                     )}
-                                    <span className="text-3xl font-black text-emerald-700">
+                                    <span className="text-3xl font-black text-blue-700">
                                         {CURRENCY} {totalCost.toFixed(2)}
                                     </span>
                                 </div>
@@ -496,8 +498,8 @@ const BookingSummary = () => {
                                     ? `You save ${CURRENCY} ${totalSavings.toFixed(2)} with your "${firstDiscountRoom.discountName}" discount!`
                                     : `You save ${CURRENCY} ${totalSavings.toFixed(2)} with your discount!`;
                                 return (
-                                    <div className="mb-6 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
-                                        <p className="text-sm font-semibold text-emerald-800 flex items-center gap-1">
+                                    <div className="mb-6 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+                                        <p className="text-sm font-semibold text-blue-900 flex items-center gap-1">
                                             ✨ {savingText}
                                         </p>
                                     </div>
@@ -507,7 +509,7 @@ const BookingSummary = () => {
                             <button
                                 onClick={handleConfirmBooking}
                                 disabled={isProcessing}
-                                className="w-full rounded-xl bg-emerald-700 px-6 py-3 text-sm font-extrabold uppercase tracking-[0.14em] text-white transition hover:bg-emerald-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                className="w-full rounded-xl bg-blue-700 px-6 py-3 text-sm font-extrabold uppercase tracking-[0.14em] text-white transition hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 {isProcessing ? 'Processing...' : 'Proceed to Payment'}
                             </button>

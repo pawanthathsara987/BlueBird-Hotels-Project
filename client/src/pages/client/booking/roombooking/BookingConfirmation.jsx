@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { CheckCircle, ArrowLeft, Home, Calendar, Users } from "lucide-react";
 import { format } from "date-fns";
+import BookingSteps from "./BookingSteps";
 
 const BookingConfirmation = () => {
   const CURRENCY = import.meta.env.VITE_CURRENCY_TYPE || "LKR";
@@ -64,7 +65,7 @@ const BookingConfirmation = () => {
           </p>
           <button
             onClick={() => navigate("/booking")}
-            className="px-4 py-2 bg-emerald-700 text-white rounded-lg"
+            className="px-4 py-2 bg-blue-700 text-white rounded-lg"
           >
             Go to Booking
           </button>
@@ -74,12 +75,13 @@ const BookingConfirmation = () => {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-6 gap-6">
+      <BookingSteps activeStep={5} />
       <div className="bg-white rounded-2xl shadow-lg max-w-2xl w-full p-8">
 
         {/* Header */}
         <div className="text-center mb-8">
-          <CheckCircle className="h-16 w-16 text-emerald-600 mx-auto mb-3" />
+          <CheckCircle className="h-16 w-16 text-blue-600 mx-auto mb-3" />
           <h1 className="text-3xl font-bold text-stone-900">
             Booking Confirmed!
           </h1>
@@ -89,7 +91,7 @@ const BookingConfirmation = () => {
         </div>
 
         {/* Booking Summary */}
-        <div className="bg-emerald-50 rounded-xl p-6 mb-6 border border-emerald-200">
+        <div className="bg-blue-50 rounded-xl p-6 mb-6 border border-blue-200">
           <h2 className="text-lg font-bold text-stone-900 mb-4">Booking Summary</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
@@ -136,7 +138,7 @@ const BookingConfirmation = () => {
           {bookingConfirmation?.bookingId && (
             <div className="flex justify-between items-center">
               <span className="text-stone-600 font-medium">Booking ID</span>
-              <span className="font-bold text-emerald-700 text-lg">
+              <span className="font-bold text-blue-700 text-lg">
                 #{bookingConfirmation.bookingId}
               </span>
             </div>
@@ -145,7 +147,7 @@ const BookingConfirmation = () => {
           {paymentConfirmation?.paymentId && (
             <div className="flex justify-between items-center">
               <span className="text-stone-600 font-medium">Payment ID</span>
-              <span className="font-bold text-emerald-700">
+              <span className="font-bold text-blue-700">
                 {paymentConfirmation.paymentId}
               </span>
             </div>
@@ -159,7 +161,7 @@ const BookingConfirmation = () => {
                   {CURRENCY} {totalOriginal.toFixed(2)}
                 </p>
               )}
-              <span className="font-bold text-emerald-700 text-lg">
+              <span className="font-bold text-blue-700 text-lg">
                 {CURRENCY} {totalDiscounted.toFixed(2)}
               </span>
             </div>
@@ -168,7 +170,7 @@ const BookingConfirmation = () => {
           {totalSavings > 0 && (
             <div className="flex justify-between items-center">
               <span className="text-stone-600 font-medium">You saved</span>
-              <span className="font-bold text-emerald-700">
+              <span className="font-bold text-blue-700">
                 {CURRENCY} {totalSavings.toFixed(2)}
               </span>
             </div>
@@ -197,7 +199,7 @@ const BookingConfirmation = () => {
                       <h3 className="font-bold text-stone-900">
                         {room.packageName || `Room ${index + 1}`}
                       </h3>
-                      <span className="text-emerald-700 font-bold">{CURRENCY} {room.totalPrice?.toFixed(2) || "0.00"}</span>
+                      <span className="text-blue-700 font-bold">{CURRENCY} {room.totalPrice?.toFixed(2) || "0.00"}</span>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                       <div>
@@ -238,8 +240,8 @@ const BookingConfirmation = () => {
                             <p className="text-xs font-bold uppercase tracking-wider text-stone-500 mb-2">Kid Ages</p>
                             <div className="flex flex-wrap items-center gap-2">
                               {ages.map((age, ageIndex) => (
-                                <span key={ageIndex} className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800 border border-emerald-100">
-                                  <span className="flex w-4 h-4 rounded-full bg-emerald-300 text-white text-[11px] font-bold items-center justify-center">{ageIndex+1}</span>
+                                <span key={ageIndex} className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-900 border border-blue-100">
+                                  <span className="flex w-4 h-4 rounded-full bg-blue-300 text-white text-[11px] font-bold items-center justify-center">{ageIndex+1}</span>
                                   <span>Age {age}</span>
                                 </span>
                               ))}
@@ -267,7 +269,7 @@ const BookingConfirmation = () => {
         <div className="flex gap-3">
           <button
             onClick={() => navigate("/")}
-            className="flex-1 flex items-center justify-center gap-2 bg-emerald-700 text-white py-3 rounded-lg font-semibold hover:bg-emerald-800 transition"
+            className="flex-1 flex items-center justify-center gap-2 bg-blue-700 text-white py-3 rounded-lg font-semibold hover:bg-blue-900 transition"
           >
             <Home className="h-4 w-4" />
             Home
