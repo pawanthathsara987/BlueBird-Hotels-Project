@@ -666,7 +666,7 @@ export default function TourBookings() {
 
                 <div className="flex gap-2 flex-shrink-0">
                     <button
-                        onClick={() => window.open("http://localhost:5173/booking/tour", "_blank")}
+                        onClick={() => window.open((import.meta.env.VITE_CUSTOMER_FRONTEND_URL || "http://localhost:5173") + "/booking/tour", "_blank")}
                         className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 rounded-xl transition duration-200 cursor-pointer shadow-sm text-slate-700 dark:text-slate-200"
                     >
                         <MdTerrain size={16} className={currentAccent.text} /> View Tour Site
