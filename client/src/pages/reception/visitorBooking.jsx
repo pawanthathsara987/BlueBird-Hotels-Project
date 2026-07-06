@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { MdAdd, MdSearch, MdClose } from "react-icons/md";
+import { toast } from "react-hot-toast";
 
 export default function VisitorBooking() {
     const [searchTerm, setSearchTerm] = useState("");
@@ -52,7 +53,7 @@ export default function VisitorBooking() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        alert(`Walk-in guest ${formData.name} registered successfully!`);
+        toast.success(`Walk-in guest ${formData.name} registered successfully!`);
         setFormData({
             name: "",
             phone: "",
