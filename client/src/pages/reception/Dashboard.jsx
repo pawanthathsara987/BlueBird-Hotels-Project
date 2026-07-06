@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import RoomStatusGrid from "../../components/admin/dashboard/RoomStatusGrid";
 import { toast } from "react-hot-toast";
-import { MdLocalTaxi, MdTerrain } from "react-icons/md";
+import { MdLocalTaxi, MdTerrain, MdDirectionsCar } from "react-icons/md";
 
 export default function Dashboard() {
     // ----------------------------------------------------
@@ -726,6 +726,10 @@ export default function Dashboard() {
                     <button onClick={() => window.location.href = "/reception/tours?action=new"} className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 transition cursor-pointer text-center group">
                         <MdTerrain className="w-5 h-5 text-green-500 mb-2 group-hover:scale-110 transition" />
                         <span className="text-[11px] font-bold">Book Tour</span>
+                    </button>
+                    <button onClick={() => window.location.href = "/reception/vehicles?action=new"} className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 transition cursor-pointer text-center group">
+                        <MdDirectionsCar className="w-5.5 h-5.5 text-rose-500 mb-1.5 group-hover:scale-110 transition" />
+                        <span className="text-[11px] font-bold">Book Vehicle</span>
                     </button>
                     <button onClick={() => window.location.href = "/reception/bookings"} className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 transition cursor-pointer text-center group">
                         <Search className="w-5 h-5 text-slate-500 mb-2 group-hover:scale-110 transition" />

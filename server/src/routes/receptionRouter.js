@@ -1,5 +1,5 @@
 import express from 'express';
-import { getAvailableRooms, todayCheckIns, todayCheckOuts, getOccupiedRooms, recentCheckins, recentCheckouts, recentBookings, getAnalyticsSummary, getDailyReport, getMonthlyReport } from '../controllers/reception/dashboardController.js';
+import { getAvailableRooms, todayCheckIns, todayCheckOuts, getOccupiedRooms, recentCheckins, recentCheckouts, recentBookings, getAnalyticsSummary, getDailyReport, getMonthlyReport, getRangeReport } from '../controllers/reception/dashboardController.js';
 import { setCheckIn, setCheckOut, getPendingCheckins, getPendingCheckOuts, getAirportPickups, updateAirportPickupStatus, createAirportPickup, getPickupAlerts, getCheckInDetails, recordManualPayment } from '../controllers/reception/receptionBookingController.js';
 import { getAllRooms } from '../controllers/admin/roomController.js';
 import { requireAuth, requireRole } from '../middleware/authMiddleware.js';
@@ -20,6 +20,7 @@ router.get('/recent-bookings', recentBookings);
 router.get('/analytics-summary', getAnalyticsSummary);
 router.get('/report/daily', getDailyReport);
 router.get('/report/monthly', getMonthlyReport);
+router.get('/report/range', getRangeReport);
 
 // receptionBookingController
 router.get('/pending-checkins', getPendingCheckins);
