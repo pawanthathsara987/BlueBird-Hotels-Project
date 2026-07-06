@@ -23,7 +23,6 @@ import RentalsTab from "./RentalsTab";
 import PaymentsTab from "./PaymentsTab";
 import ReviewsTab from "./ReviewsTab";
 import ProfileTab from "./ProfileTab";
-import WalletTab from "./WalletTab";
 import DashboardModals from "./DashboardModals";
 
 // ==========================================
@@ -747,11 +746,6 @@ export default function CustomerDashboard() {
                   maskCard={maskCard}
                 />
               )}
-
-              {activeTab === "wallet" && (
-                <WalletTab />
-              )}
-
 
               {activeTab === "reviews" && (
                 <ReviewsTab

@@ -13,8 +13,7 @@ import {
   LogOut,
   ChevronUp,
   Home,
-  X,
-  Wallet
+  X
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -59,8 +58,7 @@ export default function DashboardSidebar({
     { id: "bookings", label: "Hotel Bookings", icon: <Calendar size={16} />, badge: bookings.length },
     { id: "tours", label: "Tour Inquiries", icon: <Compass size={16} />, badge: tours.filter(t => t.status === "Pending Review").length },
     { id: "rentals", label: "Vehicle Rentals", icon: <Car size={16} /> },
-    { id: "payments", label: "Payments & Invoices", icon: <History size={16} /> },
-    { id: "wallet", label: "My Wallet", icon: <Wallet size={16} /> }
+    { id: "payments", label: "Payments & Invoices", icon: <History size={16} /> }
   ];
 
   const preferenceTabs = [

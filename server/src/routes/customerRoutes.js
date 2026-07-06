@@ -23,8 +23,7 @@ import {
     cancelCustomerRental,
     cancelSingleBookedRoom,
     cancelAirportPickup,
-    handleContactInquiry,
-    getCustomerWallet
+    handleContactInquiry
 } from "../controllers/customerController.js";
 import { requireAuth, requireRole } from "../middleware/authMiddleware.js";
 
@@ -51,8 +50,6 @@ customerRouter.get("/rentals", requireAuth, requireRole("customer"), getCustomer
 customerRouter.get("/tours", requireAuth, requireRole("customer"), getCustomerTours);
 customerRouter.get("/payments", requireAuth, requireRole("customer"), getCustomerPayments);
 customerRouter.get("/reviews", requireAuth, requireRole("customer"), getCustomerDashboardReviews);
-customerRouter.get("/wallet", requireAuth, requireRole("customer"), getCustomerWallet);
-
 
 customerRouter.post("/bookings/:id/cancel", requireAuth, requireRole("customer"), cancelCustomerBooking);
 customerRouter.post("/bookings/:bookingId/rooms/:bookedRoomId/cancel", requireAuth, requireRole("customer"), cancelSingleBookedRoom);

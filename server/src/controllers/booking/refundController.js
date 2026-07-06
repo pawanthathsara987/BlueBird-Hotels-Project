@@ -1,4 +1,4 @@
-import { Booking, BookedRoom, Room, RoomType, AirPortPickup, RoomPayment, BookingRefund, BookingRefundItem, StaffMember, Customer, Policy, CustomerWallet, WalletTransaction } from "../../models/index.js";
+import { Booking, BookedRoom, Room, RoomType, AirPortPickup, RoomPayment, BookingRefund, BookingRefundItem, StaffMember, Customer, Policy } from "../../models/index.js";
 import { Op } from "sequelize";
 import sequelize from "../../config/database.js";
 
@@ -962,41 +962,6 @@ export const actionCategoryRefundRequest = async (req, res) => {
             // Record negative payment entry in tour_payments if tour payments exist
             if (status === "APPROVED" && approvedAmount > 0) {
                 try {
-                    const isWalletRefund = refund.refundMethod === 'wallet';
-                    
-                    if (isWalletRefund) {
-                        const [customerRow] = await sequelize.query(
-                            `SELECT customerId FROM tour_inquiries WHERE id = (SELECT inquiryId FROM tour_bookings WHERE id = :bookingId LIMIT 1) LIMIT 1`,
-                            {
-                                replacements: { bookingId: refund.bookingId },
-                                type: sequelize.QueryTypes.SELECT,
-                                transaction: t
-                            }
-                        );
-                        
-                        const customerId = customerRow?.customerId;
-                        if (customerId) {
-                            const [wallet] = await CustomerWallet.findOrCreate({
-                                where: { customerId },
-                                defaults: { customerId, balance: 0.00 },
-                                transaction: t
-                            });
-                            
-                            const newBalance = Number((Number(wallet.balance) + approvedAmount).toFixed(2));
-                            await wallet.update({ balance: newBalance }, { transaction: t });
-                            
-                            await WalletTransaction.create({
-                                walletId: wallet.id,
-                                amount: approvedAmount,
-                                type: 'deposit',
-                                description: `Refund deposit from Tour cancellation (${refund.refundRef})`,
-                                referenceId: refund.refundRef
-                            }, { transaction: t });
-                            
-                            console.log(`[WALLET DEPOSIT] Deposited ${approvedAmount} to customer #${customerId} wallet`);
-                        }
-                    }
-
                     const paymentNo = `TRF-RCPT-${refund.bookingId}-${Date.now()}`;
                     await sequelize.query(`
                         INSERT INTO tour_payments (
@@ -1011,13 +976,13 @@ export const actionCategoryRefundRequest = async (req, res) => {
                             bookingId: refund.bookingId,
                             paymentNo,
                             amount: -approvedAmount,
-                            method: isWalletRefund ? 'wallet' : (paymentMethod || 'Cash').toLowerCase()
+                            method: (paymentMethod || 'Cash').toLowerCase()
                         },
                         type: sequelize.QueryTypes.INSERT,
                         transaction: t
                     });
                 } catch (pe) {
-                    console.error("Error creating tour payment/wallet deposit entry:", pe);
+                    console.error("Error creating tour payment entry:", pe);
                 }
             }
         } else if (category === "vehicle") {

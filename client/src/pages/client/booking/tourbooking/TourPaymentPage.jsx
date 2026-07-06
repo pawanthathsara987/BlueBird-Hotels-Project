@@ -4,7 +4,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Header from '../../../../components/header';
 import Footer from '../../../../components/footer';
-import { toast } from 'react-hot-toast';
 
 export default function TourPaymentPage() {
   const location = useLocation();
@@ -21,8 +20,6 @@ export default function TourPaymentPage() {
   });
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
-  const [walletBalance, setWalletBalance] = useState(0);
-  const [useWallet, setUseWallet] = useState(false);
 
   useEffect(() => {
     if (!tour || !inquiry) {
@@ -31,13 +28,14 @@ export default function TourPaymentPage() {
   }, [tour, inquiry, navigate]);
 
   useEffect(() => {
-    const fetchCustomerProfileAndWallet = async () => {
+    const fetchCustomerProfile = async () => {
       try {
-        const token = sessionStorage.getItem("customerToken") || localStorage.getItem("customerToken");
+        let token = sessionStorage.getItem("customerToken") || localStorage.getItem("customerToken");
         if (token) {
-          const profileRes = await axios.get(`${backendBaseUrl}/customers/profile`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          const profileRes = await axios.get(
+            `${backendBaseUrl}/customer/profile`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
           if (profileRes.data) {
             const customer = profileRes.data;
             setBilling({
@@ -47,20 +45,13 @@ export default function TourPaymentPage() {
               address: customer.address || inquiry?.address || ''
             });
           }
-
-          const walletRes = await axios.get(`${backendBaseUrl}/customers/wallet`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          if (walletRes.data?.success) {
-            setWalletBalance(walletRes.data.data.balance || 0);
-          }
         }
       } catch (err) {
-        console.error("Error fetching customer profile or wallet:", err);
+        console.error("Error fetching customer profile:", err);
       }
     };
 
-    fetchCustomerProfileAndWallet();
+    fetchCustomerProfile();
   }, [backendBaseUrl, inquiry]);
 
   if (!tour || !inquiry) return null;
@@ -85,50 +76,8 @@ export default function TourPaymentPage() {
     setError('');
     setProcessing(true);
 
-    const walletDeduction = useWallet ? Math.min(walletBalance, advanceAmount) : 0;
-    const remainingPayHereAmount = Number((advanceAmount - walletDeduction).toFixed(2));
-    let token = sessionStorage.getItem("customerToken") || localStorage.getItem("customerToken");
-
-    // Case 1: Fully paid via Wallet
-    if (useWallet && remainingPayHereAmount <= 0) {
-      try {
-        const response = await axios.post(
-          `${backendBaseUrl}/payment/tour-pay-wallet`,
-          { inquiryId: inquiry.realId },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        if (response.data.success) {
-          toast.success("Paid successfully from your wallet!");
-          setProcessing(false);
-          navigate('/tour-confirm', {
-            state: {
-              tour,
-              inquiry,
-              paymentNo: response.data.paymentNo || `WLT-TR-FULL-${inquiry.realId}`,
-              amountPaid: advanceAmount,
-              totalAmount: discountedSubtotal,
-              balanceDue: discountedSubtotal - advanceAmount,
-              originalSubtotal,
-              discountPercentage,
-              discountAmount,
-              billing,
-              warning: ""
-            }
-          });
-        } else {
-          throw new Error(response.data.message || "Failed to pay with wallet");
-        }
-      } catch (err) {
-        console.error(err);
-        setError(err.response?.data?.message || "Failed to complete wallet payment.");
-        setProcessing(false);
-      }
-      return;
-    }
-
-    // Case 2: Split payment or standard PayHere payment
     try {
+      let token = sessionStorage.getItem("customerToken") || localStorage.getItem("customerToken");
       const orderId = `TOUR_${inquiry.realId}`;
       const nameParts = billing.fullName.trim().split(" ");
       const firstName = nameParts[0] || "Customer";
@@ -136,7 +85,7 @@ export default function TourPaymentPage() {
 
       const hashRes = await axios.post(
         `${backendBaseUrl}/payment/payhere-hash`,
-        { orderId, amount: remainingPayHereAmount, currency: import.meta.env.VITE_CURRENCY_TYPE || "LKR" },
+        { orderId, amount: advanceAmount, currency: import.meta.env.VITE_CURRENCY_TYPE || "LKR" },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -162,9 +111,8 @@ export default function TourPaymentPage() {
               {
                 inquiryId: inquiry.realId,
                 paymentNo: finalOid,
-                amount: remainingPayHereAmount,
-                currency: import.meta.env.VITE_CURRENCY_TYPE || "LKR",
-                useWallet: useWallet
+                amount: advanceAmount,
+                currency: import.meta.env.VITE_CURRENCY_TYPE || "LKR"
               },
               { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -208,7 +156,7 @@ export default function TourPaymentPage() {
           notify_url: import.meta.env.VITE_NOTIFY_URL || "https://bluebird.com/notify",
           order_id: orderId,
           items: `Advance Payment - ${tour.packageName || 'Tour Package'}`,
-          amount: remainingPayHereAmount,
+          amount: advanceAmount,
           currency: import.meta.env.VITE_CURRENCY_TYPE || "LKR",
           hash,
           first_name: firstName,
@@ -350,41 +298,7 @@ export default function TourPaymentPage() {
                       {import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {advanceAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
-                  {useWallet && (
-                    <>
-                      <div className="flex justify-between text-rose-700 pt-2.5 border-t border-slate-100">
-                        <span>Wallet Credit Applied</span>
-                        <span className="font-bold">
-                          -{import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {Math.min(walletBalance, advanceAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-baseline pt-2.5 text-slate-800">
-                        <span className="font-bold uppercase tracking-wide text-[10px]">Net PayHere Amount</span>
-                        <span className="text-lg font-bold">
-                          {import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {Math.max(0, advanceAmount - walletBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                    </>
-                  )}
                 </div>
-
-                {/* Wallet Balance Options */}
-                {walletBalance > 0 && (
-                  <div className="px-6 py-4 border-t border-slate-150 bg-slate-50/50">
-                    <label className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-2xl cursor-pointer hover:bg-blue-50/10 hover:border-blue-300 transition duration-350 select-none">
-                      <input
-                        type="checkbox"
-                        checked={useWallet}
-                        onChange={(e) => setUseWallet(e.target.checked)}
-                        className="w-4.5 h-4.5 rounded text-blue-900 focus:ring-blue-900 border-slate-300 cursor-pointer"
-                      />
-                      <div className="text-xs">
-                        <span className="font-bold text-slate-800 block">Deduct from Hotel Wallet</span>
-                        <span className="text-slate-550 mt-0.5 block">Available Balance: LKR {walletBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    </label>
-                  </div>
-                )}
 
                 {/* Payment Trigger Section */}
                 <div className="px-6 pb-6 space-y-3.5">
@@ -400,11 +314,7 @@ export default function TourPaymentPage() {
                     disabled={processing}
                     className="w-full py-4 rounded-2xl text-xs font-black uppercase tracking-wider bg-slate-900 hover:bg-slate-800 text-white shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {processing 
-                      ? 'Processing Payment...' 
-                      : useWallet && walletBalance >= advanceAmount 
-                        ? `Pay LKR ${advanceAmount.toLocaleString()} with Wallet` 
-                        : `Confirm & Pay ${import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} ${(useWallet ? Math.max(0, advanceAmount - walletBalance) : advanceAmount).toLocaleString()} Now`}
+                    {processing ? 'Processing Payment...' : `Confirm & Pay ${import.meta.env.VITE_CURRENCY_TYPE || 'LKR'} {advanceAmount.toLocaleString()} Now`}
                   </button>
                   
                   <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-wider">
