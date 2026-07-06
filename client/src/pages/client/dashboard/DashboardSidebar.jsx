@@ -56,7 +56,7 @@ export default function DashboardSidebar({
   const workspaceTabs = [
     { id: "overview", label: "Overview", icon: <Sliders size={16} /> },
     { id: "bookings", label: "Hotel Bookings", icon: <Calendar size={16} />, badge: bookings.length },
-    { id: "tours", label: "Tour Inquiries", icon: <Compass size={16} />, badge: tours.filter(t => t.status === "Pending Review").length },
+    { id: "tours", label: "Tours & Excursions", icon: <Compass size={16} />, badge: tours.filter(t => t.rawStatus !== "canceled").length },
     { id: "rentals", label: "Vehicle Rentals", icon: <Car size={16} /> },
     { id: "payments", label: "Payments & Invoices", icon: <History size={16} /> }
   ];

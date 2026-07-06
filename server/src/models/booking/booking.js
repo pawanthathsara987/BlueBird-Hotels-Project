@@ -48,7 +48,7 @@ Booking.init(
             defaultValue: 0.00,
         },
         payment_status: {
-            type: DataTypes.ENUM("FULLY_PAID", "PARTIALLY_PAID", "REFUND_PENDING", "REFUNDED", "PAY_AT_CHECKIN"),
+            type: DataTypes.ENUM("FULLY_PAID", "PARTIALLY_PAID", "REFUND_PENDING", "REFUNDED", "PAY_AT_CHECKIN", "UNPAID"),
             allowNull: false,
             defaultValue: "PARTIALLY_PAID",
         }

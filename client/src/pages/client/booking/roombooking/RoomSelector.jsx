@@ -1363,7 +1363,7 @@ const RoomSelector = () => {
               ? "bg-amber-50 text-amber-700 border-amber-250/50"
               : "bg-emerald-50 text-emerald-850 border-emerald-250/50"
               }`}>
-              {hasUnconfiguredRoom ? "Incomplete" : "Verified"}
+              {hasUnconfiguredRoom ? "Progress" : "Verified"}
             </span>
           </div>
         </div>

@@ -33,6 +33,27 @@ export async function registerCustomer(req, res) {
 
         const hashedPassword = await bcrypt.hash(data.password, 10);
 
+        if (data.idNumber) {
+            const trimmedId = data.idNumber.trim();
+            if (trimmedId !== "") {
+                if (data.idType === "NIC") {
+                    const nicRegex = /^([0-9]{9}[vVxX]|[0-9]{12})$/;
+                    if (!nicRegex.test(trimmedId)) {
+                        return res.status(400).json({
+                            message: "Invalid NIC format. Use 9 digits followed by V/X or 12 digits."
+                        });
+                    }
+                } else if (data.idType === "PASSPORT") {
+                    const passportRegex = /^[a-zA-Z0-9]{6,15}$/;
+                    if (!passportRegex.test(trimmedId)) {
+                        return res.status(400).json({
+                            message: "Invalid Passport format. Must be alphanumeric and 6-15 characters."
+                        });
+                    }
+                }
+            }
+        }
+
         const newCustomer = await Customer.create({
             firstName: data.firstName,
             lastName: data.lastName,
@@ -376,6 +397,31 @@ export async function updateCustomerProfile(req, res) {
             return res.status(404).json({
                 message: "Customer not found"
             });
+        }
+
+        // Validate ID document if provided
+        const checkIdType = idType !== undefined ? idType : customer.idType;
+        const checkIdNumber = idNumber !== undefined ? idNumber : customer.idNumber;
+
+        if (checkIdNumber) {
+            const trimmedId = checkIdNumber.trim();
+            if (trimmedId !== "") {
+                if (checkIdType === "NIC") {
+                    const nicRegex = /^([0-9]{9}[vVxX]|[0-9]{12})$/;
+                    if (!nicRegex.test(trimmedId)) {
+                        return res.status(400).json({
+                            message: "Invalid NIC format. Use 9 digits followed by V/X or 12 digits."
+                        });
+                    }
+                } else if (checkIdType === "PASSPORT") {
+                    const passportRegex = /^[a-zA-Z0-9]{6,15}$/;
+                    if (!passportRegex.test(trimmedId)) {
+                        return res.status(400).json({
+                            message: "Invalid Passport format. Must be alphanumeric and 6-15 characters."
+                        });
+                    }
+                }
+            }
         }
 
         if (firstName !== undefined) customer.firstName = firstName;
@@ -1567,25 +1613,108 @@ export const handleContactInquiry = async (req, res) => {
             });
         }
 
-        const emailSent = await sendInquiryEmail({ name, email, message });
+        const html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                    }
+                    .container {
+                        max-width: 600px;
+                        margin: auto;
+                        padding: 20px;
+                        border: 1px solid #ddd;
+                        border-radius: 8px;
+                    }
+                    .header {
+                        background: #0f766e;
+                        color: white;
+                        padding: 15px;
+                        border-radius: 8px 8px 0 0;
+                    }
+                    .content {
+                        padding: 20px;
+                    }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                    }
+                    td {
+                        padding: 8px;
+                        border-bottom: 1px solid #eee;
+                    }
+                    .message-box {
+                        margin-top: 20px;
+                        padding: 15px;
+                        background: #f9fafb;
+                        border-left: 4px solid #0f766e;
+                        border-radius: 5px;
+                        white-space: pre-wrap;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h2>New Contact Inquiry</h2>
+                    </div>
 
-        if (!emailSent) {
-            return res.status(500).json({
-                success: false,
-                message: "Failed to dispatch email notification."
-            });
-        }
+                    <div class="content">
+                        <p>A customer has submitted a contact inquiry.</p>
+
+                        <table>
+                            <tr>
+                                <td><strong>Name</strong></td>
+                                <td>${name}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Email</strong></td>
+                                <td>${email}</td>
+                            </tr>
+                        </table>
+
+                        <h3>Message</h3>
+
+                        <div class="message-box">
+                            ${message}
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        await sendEmail({
+            to: process.env.SUPPORT_EMAIL,
+            subject: `New Contact Inquiry from ${name}`,
+            html,
+            text: `
+                New Contact Inquiry
+
+                Name: ${name}
+                Email: ${email}
+
+                Message:
+                ${message}
+            `,
+            fromName: "BlueBird Contact Form"
+        });
 
         return res.status(200).json({
             success: true,
-            message: "Inquiry message received and email dispatched successfully"
+            message: "Inquiry submitted successfully."
         });
 
     } catch (error) {
-        console.error("Error handling contact inquiry:", error);
+        console.error("Contact Inquiry Error:", error);
+
         return res.status(500).json({
             success: false,
-            message: "Internal server error"
+            message: "Failed to send inquiry email."
         });
     }
 };

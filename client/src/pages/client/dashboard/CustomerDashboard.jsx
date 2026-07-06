@@ -344,6 +344,7 @@ export default function CustomerDashboard() {
             email: t.email || "",
             phone: t.phone || "",
             address: t.address || "",
+            image: t.Tour?.image || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80",
             conciergeNotes: reply,
             refund: t.refund || null,
             review: t.review || null,
@@ -466,6 +467,7 @@ export default function CustomerDashboard() {
     const lastName = nameParts.slice(1).join(" ") || "";
 
     try {
+      setIsLoading(true);
       const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/customers/update-profile`, {
         firstName,
         lastName,
@@ -517,6 +519,8 @@ export default function CustomerDashboard() {
       } else {
         toast.error(err.response?.data?.message || "Failed to update profile");
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -577,6 +581,7 @@ export default function CustomerDashboard() {
     }
 
     try {
+      setIsLoading(true);
       const bookingId = selectedBookingForCancel.realId;
       await axios.post(`${import.meta.env.VITE_BACKEND_URL}/customers/bookings/${bookingId}/cancel`, {}, {
         headers: { Authorization: `Bearer ${token}` }
@@ -599,6 +604,7 @@ export default function CustomerDashboard() {
       }
     } finally {
       setSelectedBookingForCancel(null);
+      setIsLoading(false);
     }
   };
 
@@ -816,6 +822,7 @@ export default function CustomerDashboard() {
 
       {/* CONSOLIDATED MODALS */}
       <DashboardModals
+        isLoading={isLoading}
         isEditProfileOpen={isEditProfileOpen}
         setIsEditProfileOpen={setIsEditProfileOpen}
         editProfileForm={editProfileForm}
