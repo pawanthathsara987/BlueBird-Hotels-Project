@@ -1,4 +1,4 @@
-import { TourInquiry, Tour, Customer, StaffMember } from "../../models/index.js";
+import { TourInquiry, Tour, Customer, StaffMember, TourPayment } from "../../models/index.js";
 import { Op } from "sequelize";
 import sequelize from "../../config/database.js";
 import crypto from "crypto";
@@ -17,12 +17,13 @@ const buildReferenceCode = (prefix) => {
   return `${prefix}-${year}-${randomPart}`;
 };
 
-const generateUniqueReferenceCode = async (model, fieldName, prefix, maxAttempts = 10) => {
+const generateUniqueReferenceCode = async (model, fieldName, prefix, maxAttempts = 10, transaction = null) => {
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const referenceCode = buildReferenceCode(prefix);
     const existingRecord = await model.findOne({
       where: { [fieldName]: referenceCode },
       attributes: ["id"],
+      transaction,
     });
 
     if (!existingRecord) {
@@ -35,6 +36,7 @@ const generateUniqueReferenceCode = async (model, fieldName, prefix, maxAttempts
 
 // Create new tour inquiry (receptionist side)
 export const createTourInquiry = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     const {
       tourId,
@@ -49,28 +51,37 @@ export const createTourInquiry = async (req, res) => {
       startDate,
       pickupLocation,
       specialRequests,
+      isFullyPaid = false,
+      paymentMethod = 'cash'
     } = req.body;
 
     // Validate required fields
     if (!tourId) {
+      await t.rollback();
       return res.status(400).json({ success: false, message: "Tour selection is required", field: "tourId" });
     }
     if (!fullName) {
+      await t.rollback();
       return res.status(400).json({ success: false, message: "Full name is required", field: "fullName" });
     }
     if (!email) {
+      await t.rollback();
       return res.status(400).json({ success: false, message: "Email is required", field: "email" });
     }
     if (!phone) {
+      await t.rollback();
       return res.status(400).json({ success: false, message: "Phone number is required", field: "phone" });
     }
     if (!nationality) {
+      await t.rollback();
       return res.status(400).json({ success: false, message: "Nationality is required", field: "nationality" });
     }
     if (!startDate) {
+      await t.rollback();
       return res.status(400).json({ success: false, message: "Travel start date is required", field: "startDate" });
     }
     if (!pickupLocation) {
+      await t.rollback();
       return res.status(400).json({ success: false, message: "Pickup location is required", field: "pickupLocation" });
     }
 
@@ -122,6 +133,7 @@ export const createTourInquiry = async (req, res) => {
     }
 
     if (Object.keys(validationErrors).length > 0) {
+      await t.rollback();
       return res.status(400).json({
         success: false,
         message: "Validation failed",
@@ -130,23 +142,37 @@ export const createTourInquiry = async (req, res) => {
     }
 
     // Validate tour exists
-    const tour = await Tour.findByPk(tourId);
+    const tour = await Tour.findByPk(tourId, { transaction: t });
     if (!tour) {
+      await t.rollback();
       return res.status(404).json({ success: false, message: "Tour not found", field: "tourId" });
     }
     if (tour.status !== "active") {
+      await t.rollback();
       return res.status(400).json({ success: false, message: "This tour is not currently available", field: "tourId" });
     }
 
-    // Lookup customer ID by email if receptionist is creating the booking
+    // Lookup customer ID by email if receptionist is creating the booking, or create a customer
     let guestCustomerId = null;
-    const customerObj = await Customer.findOne({ where: { email } });
+    let customerObj = await Customer.findOne({ where: { email }, transaction: t });
     if (customerObj) {
+      guestCustomerId = customerObj.id;
+    } else {
+      const names = fullName.trim().split(" ");
+      const firstName = names[0];
+      const lastName = names.slice(1).join(" ") || "Guest";
+      customerObj = await Customer.create({
+        firstName,
+        lastName,
+        email,
+        phoneNumber: phone,
+        country: nationality || "Unknown"
+      }, { transaction: t });
       guestCustomerId = customerObj.id;
     }
 
     // Generate unique inquiry reference
-    const inquiryRef = await generateUniqueReferenceCode(TourInquiry, "inquiryRef", "TI");
+    const inquiryRef = await generateUniqueReferenceCode(TourInquiry, "inquiryRef", "TI", 10, t);
 
     // Create inquiry
     const inquiry = await TourInquiry.create({
@@ -164,12 +190,102 @@ export const createTourInquiry = async (req, res) => {
       startDate,
       pickupLocation,
       specialRequests,
-      status: "pending",
-    });
+      status: isFullyPaid ? "accepted" : "pending",
+    }, { transaction: t });
+
+    if (isFullyPaid) {
+      // Generate booking reference
+      const cleanInquiryRef = inquiryRef.replace(/^TI-/, '');
+      const bookingRef = `TB-${cleanInquiryRef}`;
+
+      // Calculate total amount
+      const discountPercentage = Number(tour.discount || 0);
+      const originalPrice = Number(tour.price || 0);
+      const discountedPrice = discountPercentage > 0
+          ? originalPrice - (originalPrice * discountPercentage / 100)
+          : originalPrice;
+
+      let extraPrice = 0;
+      if (req.body.additionalPrice !== undefined) {
+        extraPrice = parseFloat(req.body.additionalPrice) || 0;
+      } else if (specialRequests) {
+        const match = specialRequests.match(/\[Additional Custom Price:\s*LKR\s*([\d.]+)\]/);
+        if (match && match[1]) {
+          extraPrice = parseFloat(match[1]) || 0;
+        }
+      }
+      const totalAmount = Number((discountedPrice + extraPrice).toFixed(2));
+
+      // Resolve receptionist user/staff ID
+      let balanceCollectedBy = null;
+      if (req.user?.id) {
+        const staffObj = await StaffMember.findOne({
+          where: {
+            [Op.or]: [
+              { userId: req.user.id },
+              { email: req.user.email }
+            ]
+          },
+          transaction: t
+        });
+        if (staffObj) {
+          balanceCollectedBy = staffObj.userId;
+        }
+      }
+
+      // Generate a tracking token
+      const trackingToken = crypto.randomBytes(16).toString("hex");
+
+      // Insert into tour_bookings
+      await sequelize.query(
+        `INSERT INTO tour_bookings 
+           (bookingRef, inquiryId, tourStartDate, totalAmount, depositAmount, remainingAmount, 
+            status, trackingToken, acceptedAt, balancePaidAt, balancePaymentMethod, balanceCollectedBy, createdAt, updatedAt) 
+         VALUES 
+           (:bookingRef, :inquiryId, :tourStartDate, :totalAmount, :depositAmount, :remainingAmount, 
+            :status, :trackingToken, NOW(), NOW(), :balancePaymentMethod, :balanceCollectedBy, NOW(), NOW())`,
+        {
+          replacements: {
+            bookingRef,
+            inquiryId: inquiry.id,
+            tourStartDate: startDate,
+            totalAmount,
+            depositAmount: totalAmount,
+            remainingAmount: 0,
+            status: 'completed',
+            trackingToken,
+            balancePaymentMethod: paymentMethod || 'cash',
+            balanceCollectedBy
+          },
+          transaction: t
+        }
+      );
+
+      // Create a successful payment entry in tour_payments table
+      const paymentNo = `PAY-T-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(2).toString("hex").toUpperCase()}`;
+      await TourPayment.create({
+        inquiry_id: inquiry.id,
+        customer_id: guestCustomerId,
+        payment_no: paymentNo,
+        amount: totalAmount,
+        currency: "LKR",
+        method: paymentMethod || "cash",
+        status: "success",
+        raw_payload: {
+          receivedBy: balanceCollectedBy,
+          notes: "Full payment collected at desk upon booking",
+          receivedAt: new Date()
+        }
+      }, { transaction: t });
+    }
+
+    await t.commit();
 
     res.status(201).json({
       success: true,
-      message: "Tour booking inquiry created successfully!",
+      message: isFullyPaid 
+        ? "Tour booking and full payment completed successfully!" 
+        : "Tour booking inquiry created successfully!",
       data: {
         inquiryId: inquiry.id,
         inquiryRef: inquiry.inquiryRef,
@@ -177,6 +293,7 @@ export const createTourInquiry = async (req, res) => {
       },
     });
   } catch (error) {
+    await t.rollback();
     console.error("Error creating tour inquiry in reception:", error);
     res.status(500).json({
       success: false,

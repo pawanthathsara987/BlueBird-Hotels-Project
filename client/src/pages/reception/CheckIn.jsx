@@ -61,14 +61,20 @@ export default function CheckIn() {
         setModalLoading(true);
         setPaymentVerified(false);
         setPaymentAmount("");
-        setPaymentNote("");
+        setPaymentNote("Additional payment");
         setPaymentMethod("cash");
         setCheckInModal({ reservationId: guest.reservation_id, data: null, guestName: `${guest.firstName} ${guest.lastName}` });
         try {
             const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/checkin-details/${guest.reservation_id}`);
             if (res.data.success) {
                 setCheckInModal(prev => ({ ...prev, data: res.data.data }));
-                if (res.data.data.paymentSummary.balanceDue <= 0) setPaymentVerified(true);
+                const balanceDue = res.data.data.paymentSummary.balanceDue;
+                if (balanceDue <= 0) {
+                    setPaymentVerified(true);
+                } else {
+                    const halfTotal = (res.data.data.paymentSummary.totalPrice * 0.5);
+                    setPaymentAmount(halfTotal.toFixed(2));
+                }
             }
         } catch (error) { toast.error("Failed to load guest check-in details."); setCheckInModal(null); }
         finally { setModalLoading(false); }
@@ -86,7 +92,7 @@ export default function CheckIn() {
                 const newSummary = res.data.data.paymentSummary;
                 setCheckInModal(prev => ({ ...prev, data: { ...prev.data, paymentSummary: newSummary, payments: [...(prev.data.payments || []), res.data.data.payment] } }));
                 if (newSummary.balanceDue <= 0) setPaymentVerified(true);
-                setPaymentAmount(""); setPaymentNote("");
+                setPaymentAmount(""); setPaymentNote("Additional payment");
             }
         } catch (error) { toast.error(error.response?.data?.message || "Failed to record payment."); }
         finally { setPaymentRecording(false); }
@@ -283,7 +289,7 @@ export default function CheckIn() {
                                                 <div className="space-y-1 max-h-28 overflow-y-auto">
                                                     {payments.map((p, i) => (
                                                         <div key={i} className={`flex justify-between items-center text-[10px] px-2.5 py-1.5 rounded-lg border ${dk ? "bg-slate-900/60 border-slate-700" : "bg-white border-slate-200"}`}>
-                                                            <span className="text-slate-500">{new Date(p.createdAt).toLocaleDateString()} - {p.method?.toUpperCase()}</span>
+                                                            <span className="text-slate-500">{new Date(p.createdAt).toLocaleDateString()} - {p.method?.toUpperCase()} {p.note ? `(${p.note})` : ""}</span>
                                                             <span className={`font-bold ${p.status === "success" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500"}`}>LKR {p.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                                         </div>
                                                     ))}
