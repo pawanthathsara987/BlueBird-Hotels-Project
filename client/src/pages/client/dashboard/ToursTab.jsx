@@ -15,7 +15,7 @@ export default function ToursTab({
   const [processingId, setProcessingId] = useState(null);
   const [modifyModal, setModifyModal] = useState({ isOpen: false, tour: null });
   const [selectedTourForDetails, setSelectedTourForDetails] = useState(null);
-  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, tourId: null, isPaid: false, isProcessing: false, reason: "" });
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, tourId: null, isPaid: false, isProcessing: false, reason: "", refundMethod: "wallet" });
   const [reviewPanel, setReviewPanel] = useState({ isOpen: false, tourId: null, tourRating: 0, guideRating: 0, comment: "", submitting: false });
   const navigate = useNavigate();
 
@@ -57,7 +57,7 @@ export default function ToursTab({
   };
 
   const openCancelDialog = (tourId, isPaid = false) => {
-    setConfirmDialog({ isOpen: true, tourId, isPaid, isProcessing: false, reason: "" });
+    setConfirmDialog({ isOpen: true, tourId, isPaid, isProcessing: false, reason: "", refundMethod: "wallet" });
   };
 
   const handleCancelConfirmed = async () => {
@@ -74,7 +74,10 @@ export default function ToursTab({
       const token = sessionStorage.getItem("customerToken") || localStorage.getItem("customerToken");
       const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3002/api').replace(/\/$/, '');
       
-      const response = await axios.put(`${backendBaseUrl}/tour-inquiry/${tourId}/cancel`, { reason: reason.trim() }, {
+      const response = await axios.put(`${backendBaseUrl}/tour-inquiry/${tourId}/cancel`, { 
+        reason: reason.trim(),
+        refundMethod: confirmDialog.refundMethod
+      }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -609,6 +612,37 @@ export default function ToursTab({
               {confirmDialog.isPaid && (
                 <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl text-[11px] text-amber-800 leading-relaxed">
                   <strong>Cancellation Policy:</strong> Cancellations made at least 3 day before the excursion date are eligible for a full deposit refund. Last-minute cancellations may not qualify.
+                </div>
+              )}
+              {confirmDialog.isPaid && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-600 block">Refund Destination</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className={`flex flex-col items-center justify-center p-2.5 rounded-xl border-2 cursor-pointer transition ${confirmDialog.refundMethod === 'wallet' ? 'border-blue-600 bg-blue-50/20' : 'border-slate-200 hover:bg-slate-50'}`}>
+                      <input
+                        type="radio"
+                        name="refundMethod"
+                        value="wallet"
+                        checked={confirmDialog.refundMethod === 'wallet'}
+                        onChange={() => setConfirmDialog(p => ({ ...p, refundMethod: 'wallet' }))}
+                        className="sr-only"
+                      />
+                      <span className="text-[11px] font-bold text-blue-950">Hotel Wallet</span>
+                      <span className="text-[9px] text-slate-500 mt-0.5">Instant Deposit</span>
+                    </label>
+                    <label className={`flex flex-col items-center justify-center p-2.5 rounded-xl border-2 cursor-pointer transition ${confirmDialog.refundMethod === 'traditional' ? 'border-blue-600 bg-blue-50/20' : 'border-slate-200 hover:bg-slate-50'}`}>
+                      <input
+                        type="radio"
+                        name="refundMethod"
+                        value="traditional"
+                        checked={confirmDialog.refundMethod === 'traditional'}
+                        onChange={() => setConfirmDialog(p => ({ ...p, refundMethod: 'traditional' }))}
+                        className="sr-only"
+                      />
+                      <span className="text-[11px] font-bold text-blue-950">Bank/Card Reversal</span>
+                      <span className="text-[9px] text-slate-500 mt-0.5">3-5 Business Days</span>
+                    </label>
+                  </div>
                 </div>
               )}
               {/* Reason textarea */}

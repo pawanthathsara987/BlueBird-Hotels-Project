@@ -1,4 +1,4 @@
-import { TourInquiry, Tour } from "../../models/index.js";
+import { TourInquiry, Tour, CustomerWallet, WalletTransaction } from "../../models/index.js";
 import sequelize from "../../config/database.js";
 import crypto from "crypto";
 import {
@@ -602,7 +602,7 @@ export const getInquiryStats = async (req, res) => {
 export const cancelInquiry = async (req, res) => {
   try {
     const { id } = req.params;
-    const { reason } = req.body;
+    const { reason, refundMethod = 'wallet' } = req.body;
     
     const inquiry = await TourInquiry.findByPk(id);
     
@@ -629,18 +629,20 @@ export const cancelInquiry = async (req, res) => {
 
     const wasAccepted = inquiry.status === "accepted" || inquiry.status === "progress";
     
-    inquiry.status = "canceled";
-    if (reason) inquiry.rejectionReason = reason;
-    await inquiry.save();
+    const t = await sequelize.transaction();
+    try {
+      inquiry.status = "canceled";
+      if (reason) inquiry.rejectionReason = reason;
+      await inquiry.save({ transaction: t });
 
-    if (wasAccepted) {
-      try {
+      if (wasAccepted) {
         // Find matching tour_bookings record
         const bookings = await sequelize.query(
           "SELECT * FROM tour_bookings WHERE inquiryId = :inquiryId LIMIT 1",
           {
             replacements: { inquiryId: inquiry.id },
-            type: sequelize.QueryTypes.SELECT
+            type: sequelize.QueryTypes.SELECT,
+            transaction: t
           }
         );
 
@@ -655,16 +657,21 @@ export const cancelInquiry = async (req, res) => {
           const timeDiff = tourDate.getTime() - today.getTime();
           const daysBeforeTour = Math.ceil(timeDiff / (1000 * 3600 * 24));
           const isEligible = daysBeforeTour >= 3; // 3 days notice required for full refund
-          const refundAmount = isEligible ? depositAmount : 0;
+          const refundAmount = depositAmount; // Save full deposit amount as requested refund amount
           const refundRef = "TRF-" + crypto.randomBytes(6).toString("hex").toUpperCase();
+
+          const isWalletRefund = refundMethod === 'wallet';
+          const finalStatus = isWalletRefund 
+            ? (isEligible ? 'approved' : 'rejected') 
+            : 'requested';
 
           await sequelize.query(`
             INSERT INTO tour_refunds (
               bookingId, isEligible, daysBeforeTour, refundAmount, status, 
-              clientReason, requestedAt, refundRef, inquiryRef, createdAt, updatedAt
+              clientReason, requestedAt, refundRef, inquiryRef, refundMethod, createdAt, updatedAt
             ) VALUES (
-              :bookingId, :isEligible, :daysBeforeTour, :refundAmount, 'requested',
-              :clientReason, NOW(), :refundRef, :inquiryRef, NOW(), NOW()
+              :bookingId, :isEligible, :daysBeforeTour, :refundAmount, :status,
+              :clientReason, NOW(), :refundRef, :inquiryRef, :refundMethod, NOW(), NOW()
             )
           `, {
             replacements: {
@@ -672,23 +679,81 @@ export const cancelInquiry = async (req, res) => {
               isEligible: isEligible ? 1 : 0,
               daysBeforeTour: daysBeforeTour > 0 ? daysBeforeTour : 0,
               refundAmount,
+              status: finalStatus,
               clientReason: reason || "Customer canceled booking.",
               refundRef,
-              inquiryRef: inquiry.inquiryRef
-            }
+              inquiryRef: inquiry.inquiryRef,
+              refundMethod
+            },
+            transaction: t
           });
-          console.log(`[REFUND CREATED] Created tour refund ${refundRef} for booking ID ${bookingId}`);
-        }
-      } catch (err) {
-        console.error("Error creating tour refund record:", err);
-      }
-    }
 
-    res.status(200).json({
-      success: true,
-      message: "Inquiry canceled successfully, and any eligible refunds will be processed.",
-      data: inquiry
-    });
+          await sequelize.query(
+            "UPDATE tour_bookings SET status = 'cancelled', cancelledAt = NOW(), updatedAt = NOW() WHERE id = :bookingId",
+            {
+              replacements: { bookingId },
+              type: sequelize.QueryTypes.UPDATE,
+              transaction: t
+            }
+          );
+
+          if (isWalletRefund && isEligible && refundAmount > 0) {
+            const customerId = inquiry.customerId;
+            if (customerId) {
+              const [wallet] = await CustomerWallet.findOrCreate({
+                where: { customerId },
+                defaults: { customerId, balance: 0.00 },
+                transaction: t
+              });
+
+              const newBalance = Number((Number(wallet.balance) + refundAmount).toFixed(2));
+              await wallet.update({ balance: newBalance }, { transaction: t });
+
+              await WalletTransaction.create({
+                walletId: wallet.id,
+                amount: refundAmount,
+                type: 'deposit',
+                description: `Refund deposit from Tour cancellation (${refundRef})`,
+                referenceId: refundRef
+              }, { transaction: t });
+
+              // Insert negative entry in tour_payments
+              const paymentNo = `TRF-RCPT-${bookingId}-${Date.now()}`;
+              await sequelize.query(`
+                INSERT INTO tour_payments (
+                    inquiry_id, customer_id, payment_no, amount, currency, method, status, createdAt, updatedAt
+                ) VALUES (
+                    :inquiryId, :customerId, :paymentNo, :amount, 'LKR', 'wallet', 'success', NOW(), NOW()
+                )
+              `, {
+                replacements: {
+                  inquiryId: inquiry.id,
+                  customerId,
+                  paymentNo,
+                  amount: -refundAmount
+                },
+                type: sequelize.QueryTypes.INSERT,
+                transaction: t
+              });
+
+              console.log(`[INSTANT WALLET DEPOSIT] Auto-deposited ${refundAmount} to customer #${customerId} wallet`);
+            }
+          }
+        }
+      }
+
+      await t.commit();
+
+      res.status(200).json({
+        success: true,
+        message: "Inquiry canceled successfully, and any eligible refunds will be processed.",
+        data: inquiry
+      });
+
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
 
   } catch (error) {
     console.error("Error canceling inquiry:", error);

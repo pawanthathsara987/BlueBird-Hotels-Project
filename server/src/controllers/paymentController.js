@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import sequelize from '../config/database.js';
-import { Reservation, Customer, BookedRoom, Room, RoomType, RoomPayment, AirPortPickup, VehicleBooking, Payment, TourInquiry, Tour, TourPayment } from "../models/index.js";
+import { Reservation, Customer, BookedRoom, Room, RoomType, RoomPayment, AirPortPickup, VehicleBooking, Payment, TourInquiry, Tour, TourPayment, CustomerWallet, WalletTransaction } from "../models/index.js";
 import { sendBookingConfirmationEmail, sendPersonalRequestEmail } from "../services/emailService.js";
 
 // Helper to generate MD5 hash
@@ -431,43 +431,42 @@ export const handlePayHereNotification = async (req, res) => {
 };
 
 export const confirmTourPayment = async (req, res) => {
+    const t = await sequelize.transaction();
     try {
         const customerId = req.user.id;
-        const { inquiryId, paymentNo, amount, currency } = req.body;
+        const { inquiryId, paymentNo, amount, currency, useWallet } = req.body;
 
         if (!inquiryId || !paymentNo || !amount) {
+            await t.rollback();
             return res.status(400).json({ success: false, message: "Missing required fields" });
         }
 
-        const booking = await TourInquiry.findByPk(inquiryId, { include: [{ model: Tour }] });
+        const booking = await TourInquiry.findByPk(inquiryId, { 
+            include: [{ model: Tour }],
+            transaction: t
+        });
         if (!booking) {
+            await t.rollback();
             return res.status(404).json({ success: false, message: "Tour Inquiry not found" });
         }
 
         if (booking.customerId) {
             if (booking.customerId !== customerId) {
+                await t.rollback();
                 return res.status(403).json({ success: false, message: "Not authorized" });
             }
         } else {
             if (booking.email !== req.user.email) {
+                await t.rollback();
                 return res.status(403).json({ success: false, message: "Not authorized" });
             }
-            await booking.update({ customerId });
+            await booking.update({ customerId }, { transaction: t });
         }
 
         // Update TourInquiry status
         if (booking.status === "progress") {
-            await booking.update({ status: "accepted" });
+            await booking.update({ status: "accepted" }, { transaction: t });
         }
-
-        // 1. Create or update tour_bookings record
-        const [existingTourBooking] = await sequelize.query(
-            'SELECT id FROM tour_bookings WHERE inquiryId = :inquiryId LIMIT 1',
-            {
-                replacements: { inquiryId: Number(inquiryId) },
-                type: sequelize.QueryTypes.SELECT
-            }
-        );
 
         const discountPercentage = Number(booking.Tour.discount || 0);
         const originalPrice = Number(booking.Tour.price || 0);
@@ -476,8 +475,71 @@ export const confirmTourPayment = async (req, res) => {
             : originalPrice;
 
         const totalAmount = Number((discountedPrice * booking.numberOfAdults).toFixed(2));
-        const depositAmount = Number(amount);
+        const expectedDeposit = Number((totalAmount * 0.5).toFixed(2));
+        const receivedAmount = Number(amount);
+
+        let walletDeduction = 0;
+        if (useWallet && receivedAmount < expectedDeposit) {
+            walletDeduction = Number((expectedDeposit - receivedAmount).toFixed(2));
+            
+            // Get or create wallet
+            const [wallet] = await CustomerWallet.findOrCreate({
+                where: { customerId },
+                defaults: { customerId, balance: 0.00 },
+                transaction: t
+            });
+
+            if (Number(wallet.balance) < walletDeduction) {
+                await t.rollback();
+                return res.status(400).json({ success: false, message: "Insufficient wallet balance for split payment" });
+            }
+
+            // Deduct from wallet
+            const newBalance = Number((Number(wallet.balance) - walletDeduction).toFixed(2));
+            await wallet.update({ balance: newBalance }, { transaction: t });
+
+            // Create WalletTransaction
+            await WalletTransaction.create({
+                walletId: wallet.id,
+                amount: -walletDeduction,
+                type: 'withdrawal',
+                description: `Paid advance for Tour booking ${booking.inquiryRef} (Split)`,
+                referenceId: String(inquiryId)
+            }, { transaction: t });
+
+            // Log wallet payment
+            const walletPaymentNo = `WLT-TR-${inquiryId}-${Date.now()}`;
+            await sequelize.query(
+                `INSERT INTO tour_payments (inquiry_id, customer_id, payment_no, amount, currency, method, status, raw_payload, createdAt, updatedAt) 
+                 VALUES (:inquiry_id, :customer_id, :payment_no, :amount, :currency, :method, :status, :raw_payload, NOW(), NOW())`,
+                {
+                    replacements: {
+                        inquiry_id: Number(inquiryId),
+                        customer_id: customerId,
+                        payment_no: walletPaymentNo,
+                        amount: walletDeduction,
+                        currency: currency || 'LKR',
+                        method: 'wallet',
+                        status: 'success',
+                        raw_payload: JSON.stringify({ type: 'wallet-deduction', inquiryId })
+                    },
+                    transaction: t
+                }
+            );
+        }
+
+        const depositAmount = receivedAmount + walletDeduction;
         const remainingAmount = Number((totalAmount - depositAmount).toFixed(2));
+
+        // 1. Create or update tour_bookings record
+        const [existingTourBooking] = await sequelize.query(
+            'SELECT id FROM tour_bookings WHERE inquiryId = :inquiryId LIMIT 1',
+            {
+                replacements: { inquiryId: Number(inquiryId) },
+                type: sequelize.QueryTypes.SELECT,
+                transaction: t
+            }
+        );
 
         if (!existingTourBooking) {
             const trackingToken = crypto.randomBytes(16).toString("hex");
@@ -497,7 +559,8 @@ export const confirmTourPayment = async (req, res) => {
                         remainingAmount,
                         status: 'half_paid',
                         trackingToken
-                    }
+                    },
+                    transaction: t
                 }
             );
         } else {
@@ -508,7 +571,8 @@ export const confirmTourPayment = async (req, res) => {
                         inquiryId: Number(inquiryId),
                         depositAmount,
                         remainingAmount
-                    }
+                    },
+                    transaction: t
                 }
             );
         }
@@ -518,7 +582,8 @@ export const confirmTourPayment = async (req, res) => {
             'SELECT id FROM tour_payments WHERE payment_no = :payment_no LIMIT 1',
             {
                 replacements: { payment_no: paymentNo },
-                type: sequelize.QueryTypes.SELECT
+                type: sequelize.QueryTypes.SELECT,
+                transaction: t
             }
         );
 
@@ -531,18 +596,21 @@ export const confirmTourPayment = async (req, res) => {
                         inquiry_id: Number(inquiryId),
                         customer_id: customerId,
                         payment_no: paymentNo,
-                        amount: depositAmount,
+                        amount: receivedAmount,
                         currency: currency || 'LKR',
                         method: 'online',
                         status: 'success',
                         raw_payload: JSON.stringify({ type: 'client-confirmed', ...req.body })
-                    }
+                    },
+                    transaction: t
                 }
             );
         }
 
+        await t.commit();
         return res.status(200).json({ success: true, message: "Tour payment logged successfully" });
     } catch (error) {
+        await t.rollback();
         console.error("Error confirming tour payment:", error);
         return res.status(500).json({ success: false, message: "Internal server error" });
     }
@@ -616,6 +684,154 @@ export const confirmVehiclePayment = async (req, res) => {
         return res.status(200).json({ success: true, message: "Vehicle payment logged successfully" });
     } catch (error) {
         console.error("Error confirming vehicle payment:", error);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
+
+/**
+ * Deduct tour booking payment fully from wallet.
+ */
+export const tourPayWallet = async (req, res) => {
+    const t = await sequelize.transaction();
+    try {
+        const customerId = req.user.id;
+        const { inquiryId } = req.body;
+
+        if (!inquiryId) {
+            await t.rollback();
+            return res.status(400).json({ success: false, message: "Missing inquiryId" });
+        }
+
+        const booking = await TourInquiry.findByPk(inquiryId, {
+            include: [{ model: Tour }],
+            transaction: t
+        });
+
+        if (!booking) {
+            await t.rollback();
+            return res.status(404).json({ success: false, message: "Tour Inquiry not found" });
+        }
+
+        // Verify ownership
+        if (booking.customerId && booking.customerId !== customerId) {
+            await t.rollback();
+            return res.status(403).json({ success: false, message: "Not authorized" });
+        }
+
+        // Set customerId if not set
+        if (!booking.customerId) {
+            await booking.update({ customerId }, { transaction: t });
+        }
+
+        // Update TourInquiry status
+        if (booking.status === "progress") {
+            await booking.update({ status: "accepted" }, { transaction: t });
+        }
+
+        const discountPercentage = Number(booking.Tour.discount || 0);
+        const originalPrice = Number(booking.Tour.price || 0);
+        const discountedPrice = discountPercentage > 0
+            ? originalPrice - (originalPrice * discountPercentage / 100)
+            : originalPrice;
+
+        const totalAmount = Number((discountedPrice * booking.numberOfAdults).toFixed(2));
+        const advanceAmount = Number((totalAmount * 0.5).toFixed(2));
+
+        // Get or create wallet
+        const [wallet] = await CustomerWallet.findOrCreate({
+            where: { customerId },
+            defaults: { customerId, balance: 0.00 },
+            transaction: t
+        });
+
+        if (Number(wallet.balance) < advanceAmount) {
+            await t.rollback();
+            return res.status(400).json({ success: false, message: "Insufficient wallet balance" });
+        }
+
+        // Deduct from wallet
+        const newBalance = Number((Number(wallet.balance) - advanceAmount).toFixed(2));
+        await wallet.update({ balance: newBalance }, { transaction: t });
+
+        // Create WalletTransaction
+        await WalletTransaction.create({
+            walletId: wallet.id,
+            amount: -advanceAmount,
+            type: 'withdrawal',
+            description: `Paid advance for Tour booking ${booking.inquiryRef} (Wallet)`,
+            referenceId: String(inquiryId)
+        }, { transaction: t });
+
+        // Log wallet payment
+        const paymentNo = `WLT-TR-FULL-${inquiryId}-${Date.now()}`;
+        await sequelize.query(
+            `INSERT INTO tour_payments (inquiry_id, customer_id, payment_no, amount, currency, method, status, raw_payload, createdAt, updatedAt) 
+             VALUES (:inquiry_id, :customer_id, :payment_no, :amount, 'LKR', 'wallet', 'success', :raw_payload, NOW(), NOW())`,
+            {
+                replacements: {
+                    inquiry_id: Number(inquiryId),
+                    customer_id: customerId,
+                    payment_no: paymentNo,
+                    amount: advanceAmount,
+                    raw_payload: JSON.stringify({ type: 'wallet-payment-full', inquiryId })
+                },
+                transaction: t
+            }
+        );
+
+        // 1. Create or update tour_bookings record
+        const [existingTourBooking] = await sequelize.query(
+            'SELECT id FROM tour_bookings WHERE inquiryId = :inquiryId LIMIT 1',
+            {
+                replacements: { inquiryId: Number(inquiryId) },
+                type: sequelize.QueryTypes.SELECT,
+                transaction: t
+            }
+        );
+
+        const remainingAmount = Number((totalAmount - advanceAmount).toFixed(2));
+
+        if (!existingTourBooking) {
+            const trackingToken = crypto.randomBytes(16).toString("hex");
+            const cleanInquiryRef = (booking.inquiryRef || String(inquiryId)).replace(/^TI-/, '');
+            const bookingRef = `TB-${cleanInquiryRef}`;
+
+            await sequelize.query(
+                `INSERT INTO tour_bookings (bookingRef, inquiryId, tourStartDate, totalAmount, depositAmount, remainingAmount, status, trackingToken, acceptedAt, createdAt, updatedAt) 
+                 VALUES (:bookingRef, :inquiryId, :tourStartDate, :totalAmount, :depositAmount, :remainingAmount, :status, :trackingToken, NOW(), NOW(), NOW())`,
+                {
+                    replacements: {
+                        bookingRef,
+                        inquiryId: Number(inquiryId),
+                        tourStartDate: booking.startDate,
+                        totalAmount,
+                        depositAmount: advanceAmount,
+                        remainingAmount,
+                        status: 'half_paid',
+                        trackingToken
+                    },
+                    transaction: t
+                }
+            );
+        } else {
+            await sequelize.query(
+                `UPDATE tour_bookings SET status = 'half_paid', depositAmount = :depositAmount, remainingAmount = :remainingAmount, updatedAt = NOW() WHERE inquiryId = :inquiryId`,
+                {
+                    replacements: {
+                        inquiryId: Number(inquiryId),
+                        depositAmount: advanceAmount,
+                        remainingAmount
+                    },
+                    transaction: t
+                }
+            );
+        }
+
+        await t.commit();
+        return res.status(200).json({ success: true, message: "Tour booking paid successfully via wallet", paymentNo });
+    } catch (error) {
+        await t.rollback();
+        console.error("Error paying tour with wallet:", error);
         return res.status(500).json({ success: false, message: "Internal server error" });
     }
 };

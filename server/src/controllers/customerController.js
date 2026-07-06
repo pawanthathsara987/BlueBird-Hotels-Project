@@ -11,7 +11,7 @@ import { Op } from "sequelize";
 dotenv.config();
 
 import sequelize from "../config/database.js";
-import { Booking, BookedRoom, Room, RoomType, AirPortPickup, VehicleBooking, Vehicle, TourInquiry, Tour, Payment, RoomPayment, BoardType, RoomPrice, AirportPickupVehicle, RoomReview, VehicleReview, TourReview } from "../models/index.js";
+import { Booking, BookedRoom, Room, RoomType, AirPortPickup, VehicleBooking, Vehicle, TourInquiry, Tour, Payment, RoomPayment, BoardType, RoomPrice, AirportPickupVehicle, RoomReview, VehicleReview, TourReview, CustomerWallet, WalletTransaction } from "../models/index.js";
 
 export async function registerCustomer(req, res) {
 
@@ -1286,7 +1286,7 @@ export async function cancelCustomerRental(req, res) {
             const daysBeforePickup = Math.ceil((pickupDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
             const isEligible = daysBeforePickup >= 5;
             const depositAmount = parseFloat(successPayment.amount || 0);
-            const refundAmount = isEligible ? depositAmount : 0;
+            const refundAmount = depositAmount; // Save full deposit amount as requested refund amount
             const refundRef = "VRF-" + (await import("crypto")).default.randomBytes(6).toString("hex").toUpperCase();
 
             // Ensure vehicle_refunds table exists
@@ -1300,7 +1300,7 @@ export async function cancelCustomerRental(req, res) {
                     daysBeforePickup INT NOT NULL DEFAULT 0,
                     depositAmount DECIMAL(10,2) NOT NULL DEFAULT 0,
                     refundAmount DECIMAL(10,2) NOT NULL DEFAULT 0,
-                    status VARCHAR(30) NOT NULL DEFAULT 'requested',
+                    status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
                     clientReason TEXT,
                     managerNote TEXT,
                     requestedAt DATETIME NOT NULL,
@@ -1316,7 +1316,7 @@ export async function cancelCustomerRental(req, res) {
                      status, clientReason, requestedAt, createdAt, updatedAt)
                 VALUES
                     (:bookingId, :bookingNo, :refundRef, :isEligible, :daysBeforePickup, :depositAmount, :refundAmount,
-                     'requested', :clientReason, NOW(), NOW(), NOW())
+                     'PENDING', :clientReason, NOW(), NOW(), NOW())
             `, {
                 replacements: {
                     bookingId: rental.id,
@@ -1588,4 +1588,32 @@ export const handleContactInquiry = async (req, res) => {
             message: "Internal server error"
         });
     }
-};
+}
+
+export async function getCustomerWallet(req, res) {
+    try {
+        const customerId = req.user.id;
+        
+        const [wallet] = await CustomerWallet.findOrCreate({
+            where: { customerId },
+            defaults: { customerId, balance: 0.00 }
+        });
+        
+        const transactions = await WalletTransaction.findAll({
+            where: { walletId: wallet.id },
+            order: [["createdAt", "DESC"]]
+        });
+        
+        return res.status(200).json({
+            success: true,
+            data: {
+                balance: parseFloat(wallet.balance),
+                transactions
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching customer wallet:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+}
+
