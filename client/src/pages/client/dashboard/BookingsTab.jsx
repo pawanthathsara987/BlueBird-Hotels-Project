@@ -911,7 +911,7 @@ export default function BookingsTab({
                         >
                           <Eye size={13} />
                         </button>
-                        {b.paymentStatus.toLowerCase() !== "pending" && (
+                        {b.status.toLowerCase() !== "pending" && b.paymentStatus.toLowerCase() !== "unpaid" && b.paymentStatus.toLowerCase() !== "pending" && (
                           <button
                             onClick={() => handlePrintInvoice(b)}
                             title="Download PDF invoice"
@@ -924,7 +924,7 @@ export default function BookingsTab({
                           <button
                             onClick={() => {
                               setSelectedBooking(b);
-                              if (b.paymentStatus.toLowerCase() === "pending") {
+                              if (b.status.toLowerCase() === "pending" || b.paymentStatus.toLowerCase() === "unpaid" || b.paymentStatus.toLowerCase() === "pending") {
                                 handleInitiateCancel(b);
                               } else {
                                 handleRequestRefundClick(null, false, true, b);
@@ -1021,7 +1021,7 @@ export default function BookingsTab({
                   >
                     Details
                   </button>
-                  {b.paymentStatus.toLowerCase() !== "pending" && (
+                  {b.status.toLowerCase() !== "pending" && b.paymentStatus.toLowerCase() !== "unpaid" && b.paymentStatus.toLowerCase() !== "pending" && (
                     <button
                       onClick={() => handlePrintInvoice(b)}
                       className="flex-1 py-2 bg-blue-50 border border-blue-100 text-blue-700 rounded-lg text-[10px] font-bold text-center cursor-pointer"
@@ -1033,7 +1033,7 @@ export default function BookingsTab({
                     <button
                       onClick={() => {
                         setSelectedBooking(b);
-                        if (b.paymentStatus.toLowerCase() === "pending") {
+                        if (b.status.toLowerCase() === "pending" || b.paymentStatus.toLowerCase() === "unpaid" || b.paymentStatus.toLowerCase() === "pending") {
                           handleInitiateCancel(b);
                         } else {
                           handleRequestRefundClick(null, false, true, b);
@@ -1225,7 +1225,7 @@ export default function BookingsTab({
                         <span className="text-blue-600 font-extrabold text-[9px] block mt-1.5 uppercase tracking-wide">✓ Checked Out</span>
                       ) : room.status === "checked_in" ? (
                         <span className="text-emerald-600 font-extrabold text-[9px] block mt-1.5 uppercase tracking-wide">✓ Checked In</span>
-                      ) : (!isBookingCompleted(selectedBooking) && selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && selectedBooking.status.toLowerCase() !== "cancellation pending" && selectedBooking.paymentStatus.toLowerCase() !== "pending") ? (
+                      ) : (!isBookingCompleted(selectedBooking) && selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && selectedBooking.status.toLowerCase() !== "cancellation pending" && selectedBooking.status.toLowerCase() !== "pending" && selectedBooking.paymentStatus.toLowerCase() !== "unpaid" && selectedBooking.paymentStatus.toLowerCase() !== "pending") ? (
                         <button
                           onClick={() => handleRequestRefundClick(room.id, false)}
                           className="mt-2 text-rose-600 hover:text-rose-800 font-bold text-[9px] hover:underline cursor-pointer flex items-center gap-1 uppercase tracking-wider"
@@ -1259,7 +1259,7 @@ export default function BookingsTab({
                       <p className="col-span-2 text-rose-600 font-extrabold uppercase text-[10px] tracking-wide mt-1.5 flex items-center gap-1">
                         🚫 Airport Shuttle Cancelled
                       </p>
-                    ) : (!isBookingCompleted(selectedBooking) && selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && selectedBooking.status.toLowerCase() !== "cancellation pending" && selectedBooking.paymentStatus.toLowerCase() !== "pending") ? (
+                    ) : (!isBookingCompleted(selectedBooking) && selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && selectedBooking.status.toLowerCase() !== "cancellation pending" && selectedBooking.status.toLowerCase() !== "pending" && selectedBooking.paymentStatus.toLowerCase() !== "unpaid" && selectedBooking.paymentStatus.toLowerCase() !== "pending") ? (
                       <button
                         onClick={handleOpenPickupCancelModal}
                         className="col-span-2 mt-2 px-3 py-1.5 bg-rose-50 hover:bg-rose-105 border border-rose-200 text-rose-700 font-extrabold rounded-lg text-[9px] hover:underline cursor-pointer flex items-center justify-center gap-1.5 w-full uppercase tracking-wider transition-all"
@@ -1364,7 +1364,7 @@ export default function BookingsTab({
 
             {/* Modal Actions Footer */}
             <div className="p-4 border-t border-slate-200 bg-slate-50 flex gap-2">
-              {selectedBooking.paymentStatus.toLowerCase() !== "pending" && (
+              {selectedBooking.status.toLowerCase() !== "pending" && selectedBooking.paymentStatus.toLowerCase() !== "unpaid" && selectedBooking.paymentStatus.toLowerCase() !== "pending" && (
                 <button
                   onClick={() => handlePrintInvoice(selectedBooking)}
                   className="flex-1 py-3 bg-blue-700 hover:bg-blue-800 text-white rounded-xl text-xs font-bold text-center cursor-pointer flex justify-center items-center gap-1.5 hover:scale-[1.02] transition-all"
@@ -1373,7 +1373,7 @@ export default function BookingsTab({
                   Invoice
                 </button>
               )}
-              {selectedBooking.paymentStatus.toLowerCase() !== "pending" && !isBookingCompleted(selectedBooking) && selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && (
+              {selectedBooking.status.toLowerCase() !== "pending" && selectedBooking.paymentStatus.toLowerCase() !== "unpaid" && selectedBooking.paymentStatus.toLowerCase() !== "pending" && !isBookingCompleted(selectedBooking) && selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && (
                 <button
                   onClick={() => handleRequestRefundClick(null, false)}
                   className="px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold text-center cursor-pointer flex justify-center items-center gap-1 hover:scale-[1.02] transition-all"
@@ -1385,7 +1385,7 @@ export default function BookingsTab({
               {!isBookingCompleted(selectedBooking) && selectedBooking.status.toLowerCase() !== "cancelled" && selectedBooking.status.toLowerCase() !== "completed" && selectedBooking.status.toLowerCase() !== "cancellation pending" ? (
                 <button
                   onClick={() => {
-                    if (selectedBooking.paymentStatus.toLowerCase() === "pending") {
+                    if (selectedBooking.status.toLowerCase() === "pending" || selectedBooking.paymentStatus.toLowerCase() === "unpaid" || selectedBooking.paymentStatus.toLowerCase() === "pending") {
                       handleInitiateCancel(selectedBooking);
                     } else {
                       handleRequestRefundClick(null, false, true);

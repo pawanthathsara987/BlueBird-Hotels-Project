@@ -50,7 +50,7 @@ Booking.init(
         payment_status: {
             type: DataTypes.ENUM("FULLY_PAID", "PARTIALLY_PAID", "REFUND_PENDING", "REFUNDED", "PAY_AT_CHECKIN", "UNPAID"),
             allowNull: false,
-            defaultValue: "PARTIALLY_PAID",
+            defaultValue: "UNPAID",
         }
     },
     {
@@ -58,6 +58,13 @@ Booking.init(
         modelName: "Booking",
         tableName: "booking",
         timestamps: true,
+        hooks: {
+            beforeSave: (booking) => {
+                if (booking.status === "pending") {
+                    booking.payment_status = "UNPAID";
+                }
+            }
+        }
     }
 );
 
