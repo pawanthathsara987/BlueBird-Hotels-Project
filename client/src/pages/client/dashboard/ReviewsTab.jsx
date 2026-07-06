@@ -47,7 +47,7 @@ export default function ReviewsTab({
       {/* Header section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-slate-200">
         <div>
-          <h2 className="font-serif font-normal text-xl md:text-2xl text-slate-900 tracking-wide">My Feedback History</h2>
+          <h2 className="font-serif font-semibold text-xl md:text-2xl text-blue-950">My Feedback History</h2>
           <p className="text-slate-500 text-xs mt-0.5 font-light">Your official platform reviews published to verified guests globally.</p>
         </div>
       </div>

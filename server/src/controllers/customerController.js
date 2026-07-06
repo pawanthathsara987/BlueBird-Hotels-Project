@@ -11,7 +11,7 @@ import { Op } from "sequelize";
 dotenv.config();
 
 import sequelize from "../config/database.js";
-import { Booking, BookedRoom, Room, RoomType, AirPortPickup, VehicleBooking, Vehicle, TourInquiry, Tour, Payment, RoomPayment, BoardType, RoomPrice, AirportPickupVehicle, RoomReview, VehicleReview, TourReview } from "../models/index.js";
+import { Booking, BookedRoom, Room, RoomType, AirPortPickup, VehicleBooking, Vehicle, TourInquiry, Tour, Payment, RoomPayment, BoardType, RoomPrice, AirportPickupVehicle, RoomReview, VehicleReview, TourReview, BookingRefund } from "../models/index.js";
 
 export async function registerCustomer(req, res) {
 
@@ -1214,7 +1214,110 @@ export async function getCustomerPayments(req, res) {
             status: p.status === "success" ? "Succeeded" : p.status === "pending" ? "Pending" : "Failed"
         }));
 
-        const allPayments = [...mappedRoomPayments, ...mappedVehiclePayments, ...mappedTourPayments].sort(
+        // ── Room Booking Refunds ──
+        let mappedRoomRefunds = [];
+        try {
+            const roomRefunds = await BookingRefund.findAll({
+                include: [
+                    {
+                        model: Booking,
+                        as: "booking",
+                        where: { customer_id: customerId }
+                    }
+                ],
+                order: [["createdAt", "DESC"]]
+            });
+            mappedRoomRefunds = roomRefunds.map(r => ({
+                id: `RFD-RM-${r.id}`,
+                refNo: r.refund_no || `RF-RM-${r.id}`,
+                date: r.request_date || r.createdAt,
+                category: "Room Booking",
+                description: `Room Booking Refund Approval – ${r.status}`,
+                bookingRef: `#${r.booking_id}`,
+                method: r.payment_method || "Card Reversal",
+                currency: "LKR",
+                amount: parseFloat(r.amount),
+                isRefund: true,
+                notes: r.reason || null,
+                status: r.status === "APPROVED" || r.status === "COMPLETED" ? "Refunded" : r.status === "PENDING" ? "Pending" : "Failed"
+            }));
+        } catch (e) {
+            console.error("Error fetching room refunds in customerController:", e);
+        }
+
+        // ── Vehicle Booking Refunds ──
+        let mappedVehicleRefunds = [];
+        try {
+            const vehicleRefunds = await sequelize.query(
+                `SELECT vr.*, vb.bookingNo 
+                 FROM vehicle_refunds vr 
+                 JOIN vehicle_bookings vb ON vr.bookingId = vb.id 
+                 WHERE vb.customerId = :customerId`,
+                {
+                    replacements: { customerId },
+                    type: sequelize.QueryTypes.SELECT
+                }
+            );
+            mappedVehicleRefunds = vehicleRefunds.map(r => ({
+                id: `RFD-VH-${r.id}`,
+                refNo: r.refundRef || `RF-VH-${r.id}`,
+                date: r.requestedAt || r.createdAt,
+                category: "Vehicle Rental",
+                description: `Vehicle Rental Refund Approval – ${r.status}`,
+                bookingRef: `#${r.bookingNo || r.bookingId}`,
+                method: "Card Reversal",
+                currency: "LKR",
+                amount: parseFloat(r.refundAmount || 0),
+                isRefund: true,
+                notes: r.clientReason || null,
+                status: r.status === "approved" || r.status === "completed" || r.status === "Refunded" || r.status === "APPROVED" ? "Refunded" : r.status === "pending" || r.status === "Pending" || r.status === "PENDING" || r.status === "requested" ? "Pending" : "Failed"
+            }));
+        } catch (e) {
+            console.error("Error fetching vehicle refunds in customerController:", e);
+        }
+
+        // ── Tour Booking Refunds ──
+        let mappedTourRefunds = [];
+        try {
+            const customer = await Customer.findByPk(customerId);
+            if (customer) {
+                const tourRefunds = await sequelize.query(
+                    `SELECT tr.*, ti.inquiryRef 
+                     FROM tour_refunds tr 
+                     JOIN tour_inquiries ti ON tr.inquiryRef = ti.inquiryRef 
+                     WHERE ti.customerId = :customerId OR ti.email = :email`,
+                    {
+                        replacements: { customerId, email: customer.email },
+                        type: sequelize.QueryTypes.SELECT
+                    }
+                );
+                mappedTourRefunds = tourRefunds.map(r => ({
+                    id: `RFD-TR-${r.id}`,
+                    refNo: r.refundRef || `RF-TR-${r.id}`,
+                    date: r.requestedAt || r.createdAt,
+                    category: "Tour Package",
+                    description: `Tour Package Refund Approval – ${r.status}`,
+                    bookingRef: `#${r.inquiryRef || r.bookingId}`,
+                    method: "Card Reversal",
+                    currency: "LKR",
+                    amount: parseFloat(r.refundAmount || 0),
+                    isRefund: true,
+                    notes: r.clientReason || null,
+                    status: r.status === "approved" || r.status === "completed" || r.status === "Refunded" || r.status === "APPROVED" ? "Refunded" : r.status === "pending" || r.status === "Pending" || r.status === "PENDING" || r.status === "requested" ? "Pending" : "Failed"
+                }));
+            }
+        } catch (e) {
+            console.error("Error fetching tour refunds in customerController:", e);
+        }
+
+        const allPayments = [
+            ...mappedRoomPayments,
+            ...mappedVehiclePayments,
+            ...mappedTourPayments,
+            ...mappedRoomRefunds,
+            ...mappedVehicleRefunds,
+            ...mappedTourRefunds
+        ].sort(
             (a, b) => new Date(b.date) - new Date(a.date)
         );
 

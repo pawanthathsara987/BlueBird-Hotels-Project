@@ -24,6 +24,7 @@ export default function DashboardSidebar({
   setSearchQuery,
   bookings,
   tours,
+  vehicles = [],
   isEmptyState,
   isMobileSidebarOpen,
   setIsMobileSidebarOpen,
@@ -57,7 +58,7 @@ export default function DashboardSidebar({
     { id: "overview", label: "Overview", icon: <Sliders size={16} /> },
     { id: "bookings", label: "Hotel Bookings", icon: <Calendar size={16} />, badge: bookings.length },
     { id: "tours", label: "Tours & Excursions", icon: <Compass size={16} />, badge: tours.filter(t => t.rawStatus !== "canceled").length },
-    { id: "rentals", label: "Vehicle Rentals", icon: <Car size={16} /> },
+    { id: "rentals", label: "Vehicle Rentals", icon: <Car size={16} />, badge: vehicles.filter(v => v.rawStatus !== "pending_payment").length },
     { id: "payments", label: "Payments & Invoices", icon: <History size={16} /> }
   ];
 

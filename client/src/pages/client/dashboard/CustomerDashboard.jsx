@@ -676,6 +676,7 @@ export default function CustomerDashboard() {
           setSearchQuery={setSearchQuery}
           bookings={bookings}
           tours={tours}
+          vehicles={vehicles}
           isEmptyState={isEmptyState}
           isMobileSidebarOpen={isMobileSidebarOpen}
           setIsMobileSidebarOpen={setIsMobileSidebarOpen}
@@ -709,6 +710,7 @@ export default function CustomerDashboard() {
                   bookings={bookings}
                   tours={tours}
                   vehicles={vehicles}
+                  payments={payments}
                   isEmptyState={isEmptyState}
                   setActiveTab={setActiveTab}
                 />
