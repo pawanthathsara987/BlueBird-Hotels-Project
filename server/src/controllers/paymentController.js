@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import sequelize from '../config/database.js';
-import { Reservation, Customer, BookedRoom, Room, RoomType, RoomPayment, AirPortPickup, VehicleBooking, Payment, TourInquiry, Tour, TourPayment } from "../models/index.js";
-import { sendBookingConfirmationEmail, sendPersonalRequestEmail } from "../services/emailService.js";
+import { Reservation, Customer, BookedRoom, Room, RoomType, RoomPayment, AirPortPickup, VehicleBooking, Payment, TourInquiry, Tour, TourPayment, Vehicle } from "../models/index.js";
+import { sendBookingConfirmationEmail, sendPersonalRequestEmail, sendVehicleBookingConfirmationEmail } from "../services/emailService.js";
 
 // Helper to generate MD5 hash
 const md5 = (string) => {
@@ -110,7 +110,12 @@ export const handlePayHereNotification = async (req, res) => {
                 expectedAmount = Number((Number(booking.Tour.price) * booking.numberOfAdults * 0.5).toFixed(2));
             } else if (isVehicle) {
                 actualOrderId = String(order_id).replace("VEHICLE_", "");
-                booking = await VehicleBooking.findByPk(actualOrderId);
+                booking = await VehicleBooking.findByPk(actualOrderId, {
+                    include: [
+                        { model: Customer, as: 'customer' },
+                        { model: Vehicle, as: 'vehicle' }
+                    ]
+                });
                 if (!booking) {
                     console.warn(`[PAYHERE WARNING] Vehicle Booking ID #${actualOrderId} not found.`);
                     return res.status(404).send("Vehicle Booking not found");
@@ -263,6 +268,25 @@ export const handlePayHereNotification = async (req, res) => {
                     await booking.update({
                         status: "confirmed",
                         depositPaidAt: new Date()
+                    });
+
+                    // Send confirmation email asynchronously
+                    sendVehicleBookingConfirmationEmail({
+                        email: booking.customer?.email,
+                        name: `${booking.customer?.firstName || ''} ${booking.customer?.lastName || ''}`.trim(),
+                        bookingNo: booking.bookingNo,
+                        vehicleName: `${booking.vehicle?.brand || ''} ${booking.vehicle?.model || ''}`.trim(),
+                        pickupDatetime: booking.pickupDatetime,
+                        returnDatetime: booking.returnDatetime,
+                        numDays: booking.numDays,
+                        hireType: booking.hireType,
+                        pickupLocation: booking.pickupLocation,
+                        dropoffLocation: booking.dropoffLocation,
+                        totalPayable: booking.totalPayable,
+                        depositAmount: booking.depositAmount,
+                        balanceAmount: booking.balanceAmount,
+                    }).catch(err => {
+                        console.error("[EMAIL ERROR] Failed to send vehicle booking confirmation email via IPN:", err.message);
                     });
                 } else {
                     console.log(`[PAYHERE IGNORE] Vehicle Booking #${order_id} is already in state: ${booking.status}`);
@@ -562,7 +586,12 @@ export const confirmVehiclePayment = async (req, res) => {
             return res.status(400).json({ success: false, message: "Missing required fields" });
         }
 
-        const booking = await VehicleBooking.findByPk(bookingId);
+        const booking = await VehicleBooking.findByPk(bookingId, {
+            include: [
+                { model: Customer, as: 'customer' },
+                { model: Vehicle, as: 'vehicle' }
+            ]
+        });
         if (!booking) {
             return res.status(404).json({ success: false, message: "Vehicle Booking not found" });
         }
@@ -611,6 +640,25 @@ export const confirmVehiclePayment = async (req, res) => {
                 paymentMethod: 'online'
             });
             console.log(`[VEHICLE CONFIRM] Booking #${bookingId} status updated to confirmed`);
+
+            // Send confirmation email asynchronously
+            sendVehicleBookingConfirmationEmail({
+                email: booking.customer?.email,
+                name: `${booking.customer?.firstName || ''} ${booking.customer?.lastName || ''}`.trim(),
+                bookingNo: booking.bookingNo,
+                vehicleName: `${booking.vehicle?.brand || ''} ${booking.vehicle?.model || ''}`.trim(),
+                pickupDatetime: booking.pickupDatetime,
+                returnDatetime: booking.returnDatetime,
+                numDays: booking.numDays,
+                hireType: booking.hireType,
+                pickupLocation: booking.pickupLocation,
+                dropoffLocation: booking.dropoffLocation,
+                totalPayable: booking.totalPayable,
+                depositAmount: booking.depositAmount,
+                balanceAmount: booking.balanceAmount,
+            }).catch(err => {
+                console.error("[EMAIL ERROR] Failed to send vehicle booking confirmation email via client fallback:", err.message);
+            });
         }
 
         return res.status(200).json({ success: true, message: "Vehicle payment logged successfully" });

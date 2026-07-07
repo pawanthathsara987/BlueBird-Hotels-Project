@@ -14,6 +14,7 @@ import {
 import {
   sendAcceptedInquiryQuoteEmail,
   sendRejectionEmail,
+  sendInquiryConfirmationEmail,
 } from "../../services/emailService.js";
 
 const getBasePricePerGuest = (tour) => {
@@ -207,6 +208,11 @@ export const createTourInquiry = async (req, res) => {
       pickupLocation,
       specialRequests,
       status: "pending",
+    });
+
+    // Send confirmation email asynchronously
+    sendInquiryConfirmationEmail(inquiry).catch((err) => {
+      console.error("[EMAIL ERROR] Failed to send tour inquiry confirmation email:", err.message);
     });
 
     res.status(201).json({
@@ -441,23 +447,34 @@ export const sendAcceptedInquiryEmail = async (req, res) => {
       remainingAmount,
     };
 
-    await sendAcceptedInquiryQuoteEmail(
-      inquiry,
-      quoteBooking,
-      {
-        packageName: inquiry.Tour?.packageName,
-        tourBasePrice: basePrice,
-        totalAmount,
-        adults,
-        children,
-        tourStartDate: tourDate,
-        managerNote,
-      }
-    );
+    let emailSent = false;
+    let emailErrorMsg = null;
+    try {
+      await sendAcceptedInquiryQuoteEmail(
+        inquiry,
+        quoteBooking,
+        {
+          packageName: inquiry.Tour?.packageName,
+          tourBasePrice: basePrice,
+          totalAmount,
+          adults,
+          children,
+          tourStartDate: tourDate,
+          managerNote,
+        }
+      );
+      emailSent = true;
+    } catch (emailError) {
+      console.error("Warning: Accepted inquiry email sending failed:", emailError.message);
+      emailErrorMsg = emailError.message;
+    }
 
     res.status(200).json({
       success: true,
-      message: "Quote email sent successfully to guest",
+      message: emailSent 
+        ? "Quote email sent successfully to guest" 
+        : `Action completed, but email failed to send: ${emailErrorMsg}`,
+      emailSent,
       data: {
         inquiryId: inquiry.id,
         bookingRef: quoteBooking.bookingRef,
@@ -603,9 +620,9 @@ export const cancelInquiry = async (req, res) => {
   try {
     const { id } = req.params;
     const { reason } = req.body;
-    
+
     const inquiry = await TourInquiry.findByPk(id);
-    
+
     if (!inquiry) {
       return res.status(404).json({
         success: false,
@@ -614,10 +631,10 @@ export const cancelInquiry = async (req, res) => {
     }
 
     if (inquiry.customerId !== req.user.id) {
-       return res.status(403).json({
-         success: false,
-         message: "Not authorized to cancel this inquiry"
-       });
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to cancel this inquiry"
+      });
     }
 
     if (inquiry.status === 'canceled' || inquiry.status === 'rejected') {
@@ -628,7 +645,7 @@ export const cancelInquiry = async (req, res) => {
     }
 
     const wasAccepted = inquiry.status === "accepted" || inquiry.status === "progress";
-    
+
     inquiry.status = "canceled";
     if (reason) inquiry.rejectionReason = reason;
     await inquiry.save();
