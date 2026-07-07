@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import {
   Wrench, Plus, Search, Pencil, Trash2, X, ChevronDown,
-  Calendar, DollarSign, Gauge, FileText, AlertCircle, Check
+  Calendar, DollarSign, Gauge, FileText, AlertCircle, Check, Eye
 } from "lucide-react";
 
 const API = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3002/api").replace(/\/$/, "");
@@ -77,9 +77,9 @@ export default function ServiceLogManagement() {
   const [formErrors, setFormErrors] = useState({});
   const [saving, setSaving] = useState(false);
 
-  // Delete
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [viewItem, setViewItem] = useState(null);
 
   // ── Auth Config ──────────────────────────────────
   const token = localStorage.getItem("managerToken") || localStorage.getItem("token") || localStorage.getItem("accessToken");
@@ -146,7 +146,15 @@ export default function ServiceLogManagement() {
     });
     setReceiptFile(null);
     setFormErrors({});
-    setModalOpen(true);
+  };
+
+  const handleVehicleChange = (vehId) => {
+    const veh = vehicles.find(v => v.id === Number(vehId));
+    setForm(prev => ({
+      ...prev,
+      vehicleId: vehId,
+      mileageAtService: veh?.currentMileage !== undefined && veh?.currentMileage !== null ? String(veh.currentMileage) : prev.mileageAtService
+    }));
   };
 
   // ── Save ─────────────────────────────────────────
@@ -311,7 +319,7 @@ export default function ServiceLogManagement() {
             <tbody>
               {filtered.map((log) => (
                 <tr key={log.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition">
-                  <td className="px-4 py-3 font-medium text-slate-900 whitespace-nowrap">{vehicleName(log)}</td>
+                  <td className="px-4 py-3 font-medium text-blue-650 hover:text-blue-800 cursor-pointer whitespace-nowrap" onClick={() => setViewItem(log)}>{vehicleName(log)}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${typeBadgeColor(log.serviceType)}`}>
                       {typeLabel(log.serviceType)}
@@ -324,6 +332,9 @@ export default function ServiceLogManagement() {
                   <td className="px-4 py-3 text-slate-600">{log.vendor || "—"}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="inline-flex gap-1 items-center">
+                      <button onClick={() => setViewItem(log)} className="rounded-lg p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition" title="View Details">
+                        <Eye className="h-4 w-4" />
+                      </button>
                       {log.receiptUrl && (
                         <a href={log.receiptUrl} target="_blank" rel="noreferrer" className="rounded-lg p-1.5 text-blue-500 hover:bg-blue-50 transition" title="View Receipt">
                           <FileText className="h-4 w-4" />
@@ -364,7 +375,7 @@ export default function ServiceLogManagement() {
                 {/* Vehicle */}
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Vehicle *</label>
-                  <select value={form.vehicleId} onChange={(e) => setForm({ ...form, vehicleId: e.target.value })} required className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
+                  <select value={form.vehicleId} onChange={(e) => handleVehicleChange(e.target.value)} required className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
                     <option value="">Select vehicle</option>
                     {vehicles.map((v) => (
                       <option key={v.id} value={String(v.id)}>{v.brand} {v.model} ({v.plateNumber})</option>
@@ -467,6 +478,106 @@ export default function ServiceLogManagement() {
               <button onClick={() => setDeleteId(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
               <button onClick={handleDelete} disabled={deleting} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60">
                 {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── View Details Modal ───────────────────────── */}
+      {viewItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setViewItem(null)}>
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-2xl border border-slate-100" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="sticky top-0 z-10 flex justify-between items-center border-b border-slate-100 bg-white px-6 py-5 rounded-t-3xl">
+              <div>
+                <span className={`inline-block rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider ${typeBadgeColor(viewItem.serviceType)}`}>
+                  {typeLabel(viewItem.serviceType)}
+                </span>
+                <h2 className="text-lg font-black text-slate-800 tracking-tight mt-1">
+                  Service Log Details - {vehicleName(viewItem)}
+                </h2>
+              </div>
+              <button onClick={() => setViewItem(null)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-50 transition cursor-pointer">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              {/* Meta Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50/70 p-4 rounded-2xl border border-slate-100">
+                <div>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider text-[9px]">Serviced By</span>
+                  <p className="text-sm font-semibold text-slate-700 mt-0.5">{viewItem.performedBy || "—"}</p>
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider text-[9px]">Service Date</span>
+                  <p className="text-sm font-semibold text-slate-755 mt-0.5">{viewItem.servicedAt}</p>
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider text-[9px]">Mileage at Service</span>
+                  <p className="text-sm font-semibold text-slate-700 mt-0.5">{viewItem.mileageAtService ? `${Number(viewItem.mileageAtService).toLocaleString()} km` : "—"}</p>
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider text-[9px]">Servicing Cost</span>
+                  <p className="text-sm font-bold text-slate-900 mt-0.5">{money(viewItem.cost)}</p>
+                </div>
+              </div>
+
+              {/* Vendor & General */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 border border-slate-100 rounded-2xl bg-white shadow-2xs">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider text-[9px]">Workshop / Vendor</span>
+                  <p className="text-sm font-bold text-slate-800 mt-1">{viewItem.vendor || "—"}</p>
+                </div>
+                <div className="p-4 border border-slate-100 rounded-2xl bg-white shadow-2xs">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider text-[9px]">Vehicle Description</span>
+                  <p className="text-sm font-semibold text-slate-650 mt-1">{vehicleName(viewItem)}</p>
+                </div>
+              </div>
+
+              {/* Service Description */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider text-[9px]">Service Description</h4>
+                <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl text-xs text-slate-605 leading-relaxed min-h-[60px]">
+                  {viewItem.description}
+                </div>
+              </div>
+
+              {/* Service Notes */}
+              {viewItem.notes && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider text-[9px]">Additional Notes</h4>
+                  <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl text-xs text-slate-605 leading-relaxed">
+                    {viewItem.notes}
+                  </div>
+                </div>
+              )}
+
+              {/* Receipt Preview */}
+              {viewItem.receiptUrl && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider text-[9px]">Receipt Attachment</h4>
+                  <div className="p-4 border border-slate-100 rounded-2xl bg-slate-50 flex items-center justify-between">
+                    <span className="text-xs font-medium text-slate-600">receipt_attachment.png</span>
+                    <a
+                      href={viewItem.receiptUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-4 py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-xl hover:bg-blue-100 transition cursor-pointer"
+                    >
+                      Open Attachment
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end p-6 border-t border-slate-100 bg-slate-50/20 sticky bottom-0">
+              <button onClick={() => setViewItem(null)} className="rounded-2xl bg-slate-800 hover:bg-slate-900 px-6 py-3 text-xs font-black uppercase tracking-wider text-white transition cursor-pointer">
+                Close Report
               </button>
             </div>
           </div>

@@ -83,7 +83,49 @@ export default function ChecklistManagement() {
 
   const handleBookingChange = (bkgId) => {
     const bkg = bookings.find(b => b.id === Number(bkgId));
-    setForm({ ...form, bookingId: bkgId, vehicleId: bkg ? String(bkg.vehicleId) : "" });
+    if (bkg) {
+      setForm(prev => {
+        let inspectedAt = prev.inspectedAt;
+        let mileage = prev.mileage;
+        if (prev.type === "pickup") {
+          inspectedAt = bkg.pickupDatetime ? new Date(bkg.pickupDatetime).toISOString().slice(0, 16) : prev.inspectedAt;
+        } else if (prev.type === "return") {
+          inspectedAt = bkg.returnDatetime ? new Date(bkg.returnDatetime).toISOString().slice(0, 16) : prev.inspectedAt;
+        }
+        mileage = bkg.vehicle?.currentMileage !== undefined ? String(bkg.vehicle.currentMileage) : prev.mileage;
+        return {
+          ...prev,
+          bookingId: bkgId,
+          vehicleId: String(bkg.vehicleId),
+          inspectedAt,
+          mileage
+        };
+      });
+    } else {
+      setForm(prev => ({ ...prev, bookingId: bkgId, vehicleId: "" }));
+    }
+  };
+
+  const handleTypeChange = (newType) => {
+    setForm(prev => {
+      const bkg = bookings.find(b => b.id === Number(prev.bookingId));
+      let inspectedAt = prev.inspectedAt;
+      let mileage = prev.mileage;
+      if (bkg) {
+        if (newType === "pickup") {
+          inspectedAt = bkg.pickupDatetime ? new Date(bkg.pickupDatetime).toISOString().slice(0, 16) : prev.inspectedAt;
+        } else if (newType === "return") {
+          inspectedAt = bkg.returnDatetime ? new Date(bkg.returnDatetime).toISOString().slice(0, 16) : prev.inspectedAt;
+        }
+        mileage = bkg.vehicle?.currentMileage !== undefined ? String(bkg.vehicle.currentMileage) : prev.mileage;
+      }
+      return {
+        ...prev,
+        type: newType,
+        inspectedAt,
+        mileage
+      };
+    });
   };
 
   const handleSave = async (e) => {
@@ -268,7 +310,7 @@ export default function ChecklistManagement() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Type</label>
-                  <select required value={form.type} onChange={(e) => setForm({...form, type: e.target.value})} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400">
+                  <select required value={form.type} onChange={(e) => handleTypeChange(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400">
                     <option value="pickup">Pre-trip (Pickup)</option>
                     <option value="return">Post-trip (Return)</option>
                   </select>
