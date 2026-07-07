@@ -1,53 +1,40 @@
-import nodemailer from 'nodemailer';
+import nodemailer from "nodemailer";
+import axios from 'axios';
 import { RoomPayment, AirPortPickup, Policy, BookedRoom } from '../models/index.js';
-
-// Configure Nodemailer transporter
-const useGmail = !process.env.SMTP_SERVER && process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD;
-
-const transporterConfig = useGmail
-  ? {
-      service: 'gmail',
-      auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD,
-      }
-    }
-  : {
-      host: process.env.SMTP_SERVER || 'localhost',
-      port: parseInt(process.env.SMTP_PORT) || 587,
-      secure: (parseInt(process.env.SMTP_PORT) || 587) === 465,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-      tls: {  
-        rejectUnauthorized: false
-      }
-    };
-
-const transporter = nodemailer.createTransport(transporterConfig);
 
 const getCurrencyType = () => process.env.CURRENCY_TYPE || 'LKR';
 
-// Helper function to send emails
-export const sendEmail = async ({ to, subject, html, text, fromName }) => {
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_SERVER,
+  port: Number(process.env.SMTP_PORT),
+  secure: Number(process.env.SMTP_PORT) === 465,
+  requireTLS: true,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+export const sendEmail = async ({
+  to,
+  subject,
+  html,
+  text,
+  fromName,
+}) => {
   try {
-    const senderEmail = process.env.EMAIL_SENDER || process.env.GMAIL_USER || 'info@bluebirdhotels.lk';
-    const senderName = fromName || process.env.EMAIL_SENDER_NAME || 'BlueBird Hotels & Tours';
-
-    const mailOptions = {
-      from: `"${senderName}" <${senderEmail}>`,
+    const info = await transporter.sendMail({
+      from: `"${fromName || process.env.EMAIL_SENDER_NAME}" <${process.env.EMAIL_SENDER}>`,
       to,
-      subject: subject,
-      html,
+      subject,
       text,
-    };
+      html,
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`[EMAIL SUCCESS] Email sent to ${to}: ${info.response}`);
-    return true;
+    console.log("Email sent:", info.messageId);
+    return info;
   } catch (error) {
-    console.error(`[EMAIL ERROR] Failed to send email to ${to}:`, error.message);
+    console.error("Email Error:", error);
     throw error;
   }
 };
@@ -929,7 +916,7 @@ export const sendInquiryEmail = async ({ name, email, message }) => {
     `;
 
     await sendEmail({
-      to: "sandeepal513@gmail.com",
+      to: process.env.SUPPORT_EMAIL,
       subject,
       html,
       text: `New Contact Inquiry from ${name}\n\nEmail: ${email}\n\nMessage:\n${message}`,

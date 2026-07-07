@@ -132,31 +132,6 @@ export default function RoomTypeDetails() {
         return isNaN(minPrice) ? null : minPrice;
     };
 
-    const handleBookNow = () => {
-        if (!roomType) return;
-        const minPrice = getStartingPrice();
-
-        // Pass the pre-selected room configuration in react-router state
-        navigate("/booking", {
-            state: {
-                selectedRooms: [
-                    {
-                        frontendRoomId: Date.now(),
-                        roomType: roomType.type,
-                        adults: roomType.occupancyType?.capacity || 2,
-                        kids: 0,
-                        kidAges: [],
-                        boardType: prices[0]?.boardType?.type || "Room Only",
-                        pricePerNight: minPrice || 10000,
-                        isConfigured: true,
-                        categoryIndex: 0,
-                        packageIndex: 0
-                    }
-                ]
-            }
-        });
-    };
-
     if (isLoading) {
         return (
             <div className="w-full min-h-screen flex flex-col justify-between">
@@ -405,14 +380,7 @@ export default function RoomTypeDetails() {
                             </div>
                         </div>
 
-                        {/* Action CTA Button */}
-                        <button
-                            onClick={handleBookNow}
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl shadow-md shadow-blue-500/20 hover:shadow-lg transition-all hover:scale-[1.02] flex items-center justify-center gap-2 cursor-pointer text-base"
-                        >
-                            <Calendar size={18} />
-                            <span>Book This Room</span>
-                        </button>
+
                     </div>
                 </div>
             </main>

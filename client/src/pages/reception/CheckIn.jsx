@@ -61,14 +61,20 @@ export default function CheckIn() {
         setModalLoading(true);
         setPaymentVerified(false);
         setPaymentAmount("");
-        setPaymentNote("");
+        setPaymentNote("Additional payment");
         setPaymentMethod("cash");
         setCheckInModal({ reservationId: guest.reservation_id, data: null, guestName: `${guest.firstName} ${guest.lastName}` });
         try {
             const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/reception/checkin-details/${guest.reservation_id}`);
             if (res.data.success) {
                 setCheckInModal(prev => ({ ...prev, data: res.data.data }));
-                if (res.data.data.paymentSummary.balanceDue <= 0) setPaymentVerified(true);
+                const balanceDue = res.data.data.paymentSummary.balanceDue;
+                if (balanceDue <= 0) {
+                    setPaymentVerified(true);
+                } else {
+                    const halfTotal = (res.data.data.paymentSummary.totalPrice * 0.5);
+                    setPaymentAmount(halfTotal.toFixed(2));
+                }
             }
         } catch (error) { toast.error("Failed to load guest check-in details."); setCheckInModal(null); }
         finally { setModalLoading(false); }
@@ -86,7 +92,7 @@ export default function CheckIn() {
                 const newSummary = res.data.data.paymentSummary;
                 setCheckInModal(prev => ({ ...prev, data: { ...prev.data, paymentSummary: newSummary, payments: [...(prev.data.payments || []), res.data.data.payment] } }));
                 if (newSummary.balanceDue <= 0) setPaymentVerified(true);
-                setPaymentAmount(""); setPaymentNote("");
+                setPaymentAmount(""); setPaymentNote("Additional payment");
             }
         } catch (error) { toast.error(error.response?.data?.message || "Failed to record payment."); }
         finally { setPaymentRecording(false); }
@@ -122,21 +128,19 @@ export default function CheckIn() {
             <div className="flex gap-2 mb-6 border-b dark:border-slate-800 border-slate-200 pb-3">
                 <button
                     onClick={() => setSubTab("today")}
-                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                        subTab === "today"
-                            ? "bg-blue-600 text-white shadow-sm font-bold"
-                            : (dk ? "bg-slate-900 text-slate-400 hover:text-white" : "bg-white text-slate-600 hover:text-slate-950 border border-slate-200")
-                    }`}
+                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${subTab === "today"
+                        ? "bg-blue-600 text-white shadow-sm font-bold"
+                        : (dk ? "bg-slate-900 text-slate-400 hover:text-white" : "bg-white text-slate-600 hover:text-slate-950 border border-slate-200")
+                        }`}
                 >
                     Today's Arrivals ({todayCheckInsList.length})
                 </button>
                 <button
                     onClick={() => setSubTab("upcoming")}
-                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                        subTab === "upcoming"
-                            ? "bg-blue-600 text-white shadow-sm font-bold"
-                            : (dk ? "bg-slate-900 text-slate-400 hover:text-white" : "bg-white text-slate-600 hover:text-slate-950 border border-slate-200")
-                    }`}
+                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${subTab === "upcoming"
+                        ? "bg-blue-600 text-white shadow-sm font-bold"
+                        : (dk ? "bg-slate-900 text-slate-400 hover:text-white" : "bg-white text-slate-600 hover:text-slate-950 border border-slate-200")
+                        }`}
                 >
                     Upcoming Arrivals ({upcomingCheckInsList.length})
                 </button>
@@ -151,13 +155,12 @@ export default function CheckIn() {
                             <div className="flex justify-between items-start">
                                 <div>
                                     <h2 className={`text-lg font-bold ${dk ? "text-white" : "text-slate-800"}`}>{guest.firstName} {guest.lastName}</h2>
-                                    <span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                                        guest.checkIn < todayStr
-                                            ? "bg-rose-100 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border-rose-200 dark:border-rose-900/40 animate-pulse"
-                                            : guest.checkIn === todayStr
-                                                ? "bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-200 dark:border-amber-900/40"
-                                                : "bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200 dark:border-blue-900/40"
-                                    }`}>
+                                    <span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${guest.checkIn < todayStr
+                                        ? "bg-rose-100 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border-rose-200 dark:border-rose-900/40 animate-pulse"
+                                        : guest.checkIn === todayStr
+                                            ? "bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-200 dark:border-amber-900/40"
+                                            : "bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200 dark:border-blue-900/40"
+                                        }`}>
                                         {guest.checkIn < todayStr ? "Overdue Arrival" : guest.checkIn === todayStr ? "Arriving Today" : "Upcoming Arrival"}
                                     </span>
                                 </div>
@@ -283,7 +286,7 @@ export default function CheckIn() {
                                                 <div className="space-y-1 max-h-28 overflow-y-auto">
                                                     {payments.map((p, i) => (
                                                         <div key={i} className={`flex justify-between items-center text-[10px] px-2.5 py-1.5 rounded-lg border ${dk ? "bg-slate-900/60 border-slate-700" : "bg-white border-slate-200"}`}>
-                                                            <span className="text-slate-500">{new Date(p.createdAt).toLocaleDateString()} - {p.method?.toUpperCase()}</span>
+                                                            <span className="text-slate-500">{new Date(p.createdAt).toLocaleDateString()} - {p.method?.toUpperCase()} {p.note ? `(${p.note})` : ""}</span>
                                                             <span className={`font-bold ${p.status === "success" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500"}`}>LKR {p.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                                         </div>
                                                     ))}

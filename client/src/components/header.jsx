@@ -137,6 +137,22 @@ export default function Header() {
 
   return (
     <header className="w-full bg-white shadow-sm relative z-50">
+      <style>{`
+        @keyframes slideInFromLeft {
+          from { transform: translateX(-100%); }
+          to { transform: translateX(0); }
+        }
+        @keyframes fadeInBg {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .animate-slide-in-left {
+          animation: slideInFromLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .animate-fade-in-bg {
+          animation: fadeInBg 0.25s ease-out forwards;
+        }
+      `}</style>
       {/* ── Desktop bar ── */}
       <div className="w-full px-4 lg:px-10 h-[90px] hidden lg:grid grid-cols-[1fr_auto_1fr] items-center">
 
@@ -328,11 +344,11 @@ export default function Header() {
       {/* ── Mobile sidebar drawer ── */}
       {sideBarOpen && (
         <div
-          className="fixed lg:hidden inset-0 bg-black/50 z-50"
+          className="fixed lg:hidden inset-0 bg-black/50 z-50 animate-fade-in-bg"
           onClick={() => setSideBarOpen(false)}
         >
           <div
-            className="bg-white w-72 h-full flex flex-col shadow-2xl animate-in slide-in-from-left duration-300"
+            className="bg-white w-72 h-full flex flex-col shadow-2xl animate-slide-in-left"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-5 h-20 border-b border-gray-100 bg-gradient-to-r from-blue-950 to-blue-800">

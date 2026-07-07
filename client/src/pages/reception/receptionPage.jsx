@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, Routes, Route, useLocation, useNavigate } from "react-router-dom";
-import { MdDashboard, MdCheckCircle, MdLogout, MdMenu, MdClose, MdNotifications, MdOutlineBookOnline, MdBarChart, MdLocalTaxi, MdTerrain } from "react-icons/md";
+import { MdDashboard, MdCheckCircle, MdLogout, MdMenu, MdClose, MdNotifications, MdOutlineBookOnline, MdBarChart, MdLocalTaxi, MdTerrain, MdSettings } from "react-icons/md";
 import { jwtDecode } from "jwt-decode";
 import axios from "axios";
 import Dashboard from "./Dashboard";
@@ -11,6 +11,7 @@ import Reports from "./Reports";
 import AirportPickups from "./AirportPickups";
 import TourBookings from "./TourBookings";
 import VehicleBookings from "./VehicleBookings";
+import ReceptionProfileSettings from "./ReceptionProfileSettings";
 
 export default function ReceptionPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -235,6 +236,7 @@ export default function ReceptionPage() {
                     <Link to="/reception/vehicles" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/vehicles")}><MdLocalTaxi className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Vehicle Bookings</span></Link>
                     <Link to="/reception/tours" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/tours")}><MdTerrain className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Tour Bookings</span></Link>
                     <Link to="/reception/reports" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/reports")}><MdBarChart className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Reports</span></Link>
+                    <Link to="/reception/settings" onClick={() => setSidebarOpen(false)} className={getLinkClass("/reception/settings")}><MdSettings className="text-xl md:text-2xl flex-shrink-0" /> <span className="truncate">Profile Settings</span></Link>
 
                     <div className="mt-auto pt-6">
                         <button
@@ -413,6 +415,7 @@ export default function ReceptionPage() {
                         <Route path="/vehicles" element={<VehicleBookings />} />
                         <Route path="/tours" element={<TourBookings />} />
                         <Route path="/reports" element={<Reports />} />
+                        <Route path="/settings" element={<ReceptionProfileSettings />} />
                     </Routes>
                 </div>
             </div>

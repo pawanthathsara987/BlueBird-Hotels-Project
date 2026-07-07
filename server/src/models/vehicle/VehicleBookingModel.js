@@ -27,7 +27,7 @@ VehicleBooking.init(
     bookingNo: {
       type: DataTypes.STRING(30),
       allowNull: false,
-      unique: true,             // e.g. BK-20240118-4F2A
+      unique: true,     
     },
 
     // ── Foreign keys ──────────────────────────────

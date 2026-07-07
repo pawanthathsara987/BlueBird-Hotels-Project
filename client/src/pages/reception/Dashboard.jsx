@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import RoomStatusGrid from "../../components/admin/dashboard/RoomStatusGrid";
 import { toast } from "react-hot-toast";
-import { MdLocalTaxi, MdTerrain } from "react-icons/md";
+import { MdLocalTaxi, MdTerrain, MdDirectionsCar } from "react-icons/md";
 
 export default function Dashboard() {
     // ----------------------------------------------------
@@ -702,14 +702,10 @@ export default function Dashboard() {
                     <Sparkles size={16} className={currentAccent.text} />
                     Quick Actions Panel
                 </h3>
-                <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-9 gap-3">
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-3 mb-3">
                     <button onClick={() => window.location.href = "/reception/bookings?tab=new"} className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 transition cursor-pointer text-center group">
                         <Calendar className="w-5 h-5 text-blue-500 mb-2 group-hover:scale-110 transition" />
                         <span className="text-[11px] font-bold">New Booking</span>
-                    </button>
-                    <button onClick={() => window.location.href = "/reception/bookings?tab=new"} className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 transition cursor-pointer text-center group">
-                        <User className="w-5 h-5 text-emerald-500 mb-2 group-hover:scale-110 transition" />
-                        <span className="text-[11px] font-bold">Walk-in Guest</span>
                     </button>
                     <button onClick={() => window.location.href = "/reception/checkin"} className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 transition cursor-pointer text-center group">
                         <CheckCircle className="w-5 h-5 text-indigo-500 mb-2 group-hover:scale-110 transition" />
@@ -718,10 +714,6 @@ export default function Dashboard() {
                     <button onClick={() => window.location.href = "/reception/checkout"} className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 transition cursor-pointer text-center group">
                         <CheckSquare className="w-5 h-5 text-orange-500 mb-2 group-hover:scale-110 transition" />
                         <span className="text-[11px] font-bold">Check Out</span>
-                    </button>
-                    <button onClick={() => window.location.href = "/reception/checkin"} className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 transition cursor-pointer text-center group">
-                        <Hotel className="w-5 h-5 text-violet-500 mb-2 group-hover:scale-110 transition" />
-                        <span className="text-[11px] font-bold">Assign Room</span>
                     </button>
                     <button onClick={() => window.location.href = "/reception/reports"} className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 transition cursor-pointer text-center group">
                         <ClipboardList className="w-5 h-5 text-amber-500 mb-2 group-hover:scale-110 transition" />
@@ -734,6 +726,10 @@ export default function Dashboard() {
                     <button onClick={() => window.location.href = "/reception/tours?action=new"} className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 transition cursor-pointer text-center group">
                         <MdTerrain className="w-5 h-5 text-green-500 mb-2 group-hover:scale-110 transition" />
                         <span className="text-[11px] font-bold">Book Tour</span>
+                    </button>
+                    <button onClick={() => window.location.href = "/reception/vehicles?action=new"} className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 transition cursor-pointer text-center group">
+                        <MdDirectionsCar className="w-5.5 h-5.5 text-rose-500 mb-1.5 group-hover:scale-110 transition" />
+                        <span className="text-[11px] font-bold">Book Vehicle</span>
                     </button>
                     <button onClick={() => window.location.href = "/reception/bookings"} className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 transition cursor-pointer text-center group">
                         <Search className="w-5 h-5 text-slate-500 mb-2 group-hover:scale-110 transition" />

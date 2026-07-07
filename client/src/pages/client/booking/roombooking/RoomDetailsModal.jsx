@@ -19,13 +19,13 @@ export default function RoomDetailsModal({ selectedRoom, onClose }) {
   useEffect(() => {
     if (!selectedRoom) return;
 
-    // If the room object directly contains predefined images/imageList (e.g. mock roomTypes)
-    if (selectedRoom.imageList && Array.isArray(selectedRoom.imageList)) {
+    // If the room object directly contains multiple predefined images/imageList
+    if (selectedRoom.imageList && Array.isArray(selectedRoom.imageList) && selectedRoom.imageList.length > 1) {
       setImageList(selectedRoom.imageList);
       setLoading(false);
       return;
     }
-    if (selectedRoom.images && Array.isArray(selectedRoom.images)) {
+    if (selectedRoom.images && Array.isArray(selectedRoom.images) && selectedRoom.images.length > 1) {
       setImageList(selectedRoom.images);
       setLoading(false);
       return;
@@ -41,17 +41,22 @@ export default function RoomDetailsModal({ selectedRoom, onClose }) {
       setLoading(true);
       try {
         const response = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/admin/packageimage/${selectedRoom.id}`
+          `${import.meta.env.VITE_BACKEND_URL}/admin/room-type/${selectedRoom.id}`
         );
-        const images = response?.data?.data;
+        const images = response?.data?.data?.images;
 
         if (!Array.isArray(images) || images.length === 0) {
           setImageList(roomImage ? [roomImage] : []);
         } else {
-          setImageList(images.map((img) => img.url ?? img.imageUrl ?? img));
+          // Put the main roomImage first if it's not already in the array, then add the rest
+          const allImages = [...images];
+          if (roomImage && !allImages.includes(roomImage)) {
+            allImages.unshift(roomImage);
+          }
+          setImageList(allImages);
         }
       } catch (error) {
-        console.error('Failed to fetch package images:', error);
+        console.error('Failed to fetch room type images:', error);
         setImageList(roomImage ? [roomImage] : []);
       } finally {
         setLoading(false);

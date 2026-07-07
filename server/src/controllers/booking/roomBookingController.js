@@ -1,7 +1,8 @@
 import { col, fn, Op, QueryTypes } from "sequelize";
 import sequelize from "../../config/database.js";
 import { sendEmail, sendBookingConfirmationEmail, sendPersonalRequestEmail } from "../../services/emailService.js";
-import { Customer, Room, BookedRoom, Reservation, AirPortPickup, ServiceCharge, RoomType, Amenities, Policy, BoardType, OccupancyType, RoomPrice, SeasonalDiscount, RoomPayment, AirportPickupVehicle } from "../../models/index.js";
+import { Customer, Room, BookedRoom, Reservation, AirPortPickup, ServiceCharge, RoomType, Amenities, Policy, BoardType, OccupancyType, RoomPrice, SeasonalDiscount, RoomPayment, AirportPickupVehicle, StaffMember, BookingRefund, BookingRefundItem } from "../../models/index.js";
+
 
 export const calculateOptimalPickup = async (passengerCount, baggageCount) => {
     const vehicles = await AirportPickupVehicle.findAll();
@@ -651,11 +652,38 @@ const getBookingById = async (req, res) => {
                         model: Room,
                         include: [{ model: RoomType, as: "roomType" }]
                     }]
+                },
+                {
+                    model: RoomPayment,
+                    as: 'payments'
+                },
+                {
+                    model: BookingRefund,
+                    as: 'refunds',
+                    include: [
+                        {
+                            model: BookingRefundItem,
+                            as: 'items'
+                        },
+                        {
+                            model: StaffMember,
+                            as: 'processedByStaff',
+                            attributes: ['staffId', 'userId', 'name', 'userName']
+                        }
+                    ]
+                },
+                {
+                    model: AirPortPickup,
+                    as: 'airportPickup'
                 }
             ]
         });
         if (!booking) return res.status(404).json({ message: "Not found" });
-        return res.status(200).json({ success: true, data: booking });
+        
+        // Fetch active policy
+        const policy = await Policy.findOne({ where: { status: true } });
+
+        return res.status(200).json({ success: true, data: booking, policy });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }

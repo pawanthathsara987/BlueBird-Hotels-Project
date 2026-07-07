@@ -11,7 +11,7 @@ import { Op } from "sequelize";
 dotenv.config();
 
 import sequelize from "../config/database.js";
-import { Booking, BookedRoom, Room, RoomType, AirPortPickup, VehicleBooking, Vehicle, TourInquiry, Tour, Payment, RoomPayment, BoardType, RoomPrice, AirportPickupVehicle, RoomReview, VehicleReview, TourReview } from "../models/index.js";
+import { Booking, BookedRoom, Room, RoomType, AirPortPickup, VehicleBooking, Vehicle, TourInquiry, Tour, Payment, RoomPayment, BoardType, RoomPrice, AirportPickupVehicle, RoomReview, VehicleReview, TourReview, BookingRefund } from "../models/index.js";
 
 export async function registerCustomer(req, res) {
 
@@ -32,6 +32,27 @@ export async function registerCustomer(req, res) {
         }
 
         const hashedPassword = await bcrypt.hash(data.password, 10);
+
+        if (data.idNumber) {
+            const trimmedId = data.idNumber.trim();
+            if (trimmedId !== "") {
+                if (data.idType === "NIC") {
+                    const nicRegex = /^([0-9]{9}[vVxX]|[0-9]{12})$/;
+                    if (!nicRegex.test(trimmedId)) {
+                        return res.status(400).json({
+                            message: "Invalid NIC format. Use 9 digits followed by V/X or 12 digits."
+                        });
+                    }
+                } else if (data.idType === "PASSPORT") {
+                    const passportRegex = /^[a-zA-Z0-9]{6,15}$/;
+                    if (!passportRegex.test(trimmedId)) {
+                        return res.status(400).json({
+                            message: "Invalid Passport format. Must be alphanumeric and 6-15 characters."
+                        });
+                    }
+                }
+            }
+        }
 
         const newCustomer = await Customer.create({
             firstName: data.firstName,
@@ -376,6 +397,31 @@ export async function updateCustomerProfile(req, res) {
             return res.status(404).json({
                 message: "Customer not found"
             });
+        }
+
+        // Validate ID document if provided
+        const checkIdType = idType !== undefined ? idType : customer.idType;
+        const checkIdNumber = idNumber !== undefined ? idNumber : customer.idNumber;
+
+        if (checkIdNumber) {
+            const trimmedId = checkIdNumber.trim();
+            if (trimmedId !== "") {
+                if (checkIdType === "NIC") {
+                    const nicRegex = /^([0-9]{9}[vVxX]|[0-9]{12})$/;
+                    if (!nicRegex.test(trimmedId)) {
+                        return res.status(400).json({
+                            message: "Invalid NIC format. Use 9 digits followed by V/X or 12 digits."
+                        });
+                    }
+                } else if (checkIdType === "PASSPORT") {
+                    const passportRegex = /^[a-zA-Z0-9]{6,15}$/;
+                    if (!passportRegex.test(trimmedId)) {
+                        return res.status(400).json({
+                            message: "Invalid Passport format. Must be alphanumeric and 6-15 characters."
+                        });
+                    }
+                }
+            }
         }
 
         if (firstName !== undefined) customer.firstName = firstName;
@@ -1168,7 +1214,110 @@ export async function getCustomerPayments(req, res) {
             status: p.status === "success" ? "Succeeded" : p.status === "pending" ? "Pending" : "Failed"
         }));
 
-        const allPayments = [...mappedRoomPayments, ...mappedVehiclePayments, ...mappedTourPayments].sort(
+        // ── Room Booking Refunds ──
+        let mappedRoomRefunds = [];
+        try {
+            const roomRefunds = await BookingRefund.findAll({
+                include: [
+                    {
+                        model: Booking,
+                        as: "booking",
+                        where: { customer_id: customerId }
+                    }
+                ],
+                order: [["createdAt", "DESC"]]
+            });
+            mappedRoomRefunds = roomRefunds.map(r => ({
+                id: `RFD-RM-${r.id}`,
+                refNo: r.refund_no || `RF-RM-${r.id}`,
+                date: r.request_date || r.createdAt,
+                category: "Room Booking",
+                description: `Room Booking Refund Approval – ${r.status}`,
+                bookingRef: `#${r.booking_id}`,
+                method: r.payment_method || "Card Reversal",
+                currency: "LKR",
+                amount: parseFloat(r.amount),
+                isRefund: true,
+                notes: r.reason || null,
+                status: r.status === "APPROVED" || r.status === "COMPLETED" ? "Refunded" : r.status === "PENDING" ? "Pending" : "Failed"
+            }));
+        } catch (e) {
+            console.error("Error fetching room refunds in customerController:", e);
+        }
+
+        // ── Vehicle Booking Refunds ──
+        let mappedVehicleRefunds = [];
+        try {
+            const vehicleRefunds = await sequelize.query(
+                `SELECT vr.*, vb.bookingNo 
+                 FROM vehicle_refunds vr 
+                 JOIN vehicle_bookings vb ON vr.bookingId = vb.id 
+                 WHERE vb.customerId = :customerId`,
+                {
+                    replacements: { customerId },
+                    type: sequelize.QueryTypes.SELECT
+                }
+            );
+            mappedVehicleRefunds = vehicleRefunds.map(r => ({
+                id: `RFD-VH-${r.id}`,
+                refNo: r.refundRef || `RF-VH-${r.id}`,
+                date: r.requestedAt || r.createdAt,
+                category: "Vehicle Rental",
+                description: `Vehicle Rental Refund Approval – ${r.status}`,
+                bookingRef: `#${r.bookingNo || r.bookingId}`,
+                method: "Card Reversal",
+                currency: "LKR",
+                amount: parseFloat(r.refundAmount || 0),
+                isRefund: true,
+                notes: r.clientReason || null,
+                status: r.status === "approved" || r.status === "completed" || r.status === "Refunded" || r.status === "APPROVED" ? "Refunded" : r.status === "pending" || r.status === "Pending" || r.status === "PENDING" || r.status === "requested" ? "Pending" : "Failed"
+            }));
+        } catch (e) {
+            console.error("Error fetching vehicle refunds in customerController:", e);
+        }
+
+        // ── Tour Booking Refunds ──
+        let mappedTourRefunds = [];
+        try {
+            const customer = await Customer.findByPk(customerId);
+            if (customer) {
+                const tourRefunds = await sequelize.query(
+                    `SELECT tr.*, ti.inquiryRef 
+                     FROM tour_refunds tr 
+                     JOIN tour_inquiries ti ON tr.inquiryRef = ti.inquiryRef 
+                     WHERE ti.customerId = :customerId OR ti.email = :email`,
+                    {
+                        replacements: { customerId, email: customer.email },
+                        type: sequelize.QueryTypes.SELECT
+                    }
+                );
+                mappedTourRefunds = tourRefunds.map(r => ({
+                    id: `RFD-TR-${r.id}`,
+                    refNo: r.refundRef || `RF-TR-${r.id}`,
+                    date: r.requestedAt || r.createdAt,
+                    category: "Tour Package",
+                    description: `Tour Package Refund Approval – ${r.status}`,
+                    bookingRef: `#${r.inquiryRef || r.bookingId}`,
+                    method: "Card Reversal",
+                    currency: "LKR",
+                    amount: parseFloat(r.refundAmount || 0),
+                    isRefund: true,
+                    notes: r.clientReason || null,
+                    status: r.status === "approved" || r.status === "completed" || r.status === "Refunded" || r.status === "APPROVED" ? "Refunded" : r.status === "pending" || r.status === "Pending" || r.status === "PENDING" || r.status === "requested" ? "Pending" : "Failed"
+                }));
+            }
+        } catch (e) {
+            console.error("Error fetching tour refunds in customerController:", e);
+        }
+
+        const allPayments = [
+            ...mappedRoomPayments,
+            ...mappedVehiclePayments,
+            ...mappedTourPayments,
+            ...mappedRoomRefunds,
+            ...mappedVehicleRefunds,
+            ...mappedTourRefunds
+        ].sort(
             (a, b) => new Date(b.date) - new Date(a.date)
         );
 
@@ -1567,25 +1716,108 @@ export const handleContactInquiry = async (req, res) => {
             });
         }
 
-        const emailSent = await sendInquiryEmail({ name, email, message });
+        const html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                    }
+                    .container {
+                        max-width: 600px;
+                        margin: auto;
+                        padding: 20px;
+                        border: 1px solid #ddd;
+                        border-radius: 8px;
+                    }
+                    .header {
+                        background: #0f766e;
+                        color: white;
+                        padding: 15px;
+                        border-radius: 8px 8px 0 0;
+                    }
+                    .content {
+                        padding: 20px;
+                    }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                    }
+                    td {
+                        padding: 8px;
+                        border-bottom: 1px solid #eee;
+                    }
+                    .message-box {
+                        margin-top: 20px;
+                        padding: 15px;
+                        background: #f9fafb;
+                        border-left: 4px solid #0f766e;
+                        border-radius: 5px;
+                        white-space: pre-wrap;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h2>New Contact Inquiry</h2>
+                    </div>
 
-        if (!emailSent) {
-            return res.status(500).json({
-                success: false,
-                message: "Failed to dispatch email notification."
-            });
-        }
+                    <div class="content">
+                        <p>A customer has submitted a contact inquiry.</p>
+
+                        <table>
+                            <tr>
+                                <td><strong>Name</strong></td>
+                                <td>${name}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Email</strong></td>
+                                <td>${email}</td>
+                            </tr>
+                        </table>
+
+                        <h3>Message</h3>
+
+                        <div class="message-box">
+                            ${message}
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        await sendEmail({
+            to: process.env.SUPPORT_EMAIL,
+            subject: `New Contact Inquiry from ${name}`,
+            html,
+            text: `
+                New Contact Inquiry
+
+                Name: ${name}
+                Email: ${email}
+
+                Message:
+                ${message}
+            `,
+            fromName: "BlueBird Contact Form"
+        });
 
         return res.status(200).json({
             success: true,
-            message: "Inquiry message received and email dispatched successfully"
+            message: "Inquiry submitted successfully."
         });
 
     } catch (error) {
-        console.error("Error handling contact inquiry:", error);
+        console.error("Contact Inquiry Error:", error);
+
         return res.status(500).json({
             success: false,
-            message: "Internal server error"
+            message: "Failed to send inquiry email."
         });
     }
 };

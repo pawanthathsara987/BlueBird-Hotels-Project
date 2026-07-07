@@ -65,7 +65,9 @@ export default function TourBookings() {
         numberOfChildren: 0,
         startDate: getMinStartDate(),
         pickupLocation: "Hotel Lobby",
-        specialRequests: ""
+        specialRequests: "",
+        isFullyPaid: true,
+        paymentMethod: "cash"
     });
 
     const location = useLocation();
@@ -80,6 +82,7 @@ export default function TourBookings() {
             font: "sans"
         };
     });
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: "", message: "", onConfirm: null });
 
     useEffect(() => {
         const updateTheme = () => {
@@ -193,7 +196,7 @@ export default function TourBookings() {
     const handleCreateInquiry = async (e) => {
         e.preventDefault();
 
-        // Strict frontend validation: Tour must be booked at least 1 day in advance
+        // Strict frontend validation: Tours must be booked at least 1 day in advance
         const tourDate = new Date(newInquiry.startDate);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -234,6 +237,10 @@ export default function TourBookings() {
             ? `🪪 NIC: ${newInquiry.nic}`
             : `🛂 Passport: ${newInquiry.passportId} (${newInquiry.nationality})`;
 
+        const paymentDetailsText = newInquiry.isFullyPaid 
+            ? `Fully Paid (${newInquiry.paymentMethod.toUpperCase()} at Desk)` 
+            : "Awaiting Online Deposit (50%)";
+
         const confirmMsg = `Confirm Tour Booking?\n\n` +
             `🔹 Tour Package: ${calc.packageName}\n` +
             `📅 Start Date: ${newInquiry.startDate}\n` +
@@ -242,45 +249,52 @@ export default function TourBookings() {
             `🆔 Identification: ${idDetails}\n` +
             `👥 Guests: ${newInquiry.numberOfAdults} Adult(s), ${newInquiry.numberOfChildren} Child(ren)\n` +
             `📍 Pickup: ${newInquiry.pickupLocation}\n` +
+            `💳 Payment Status: ${paymentDetailsText}\n` +
             `💵 Estimated Total: LKR ${calc.totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n\n` +
             `Do you want to proceed and save this booking?`;
 
-        if (!window.confirm(confirmMsg)) {
-            return;
-        }
+        setConfirmModal({
+            isOpen: true,
+            title: "Confirm Tour Booking",
+            message: confirmMsg,
+            onConfirm: async () => {
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                try {
+                    const payload = { ...newInquiry };
+                    if (parseFloat(additionalPrice) > 0) {
+                        payload.specialRequests = `[Additional Custom Price: LKR ${parseFloat(additionalPrice).toFixed(2)}] ${newInquiry.specialRequests || ""}`.trim();
+                    }
 
-        try {
-            const payload = { ...newInquiry };
-            if (parseFloat(additionalPrice) > 0) {
-                payload.specialRequests = `[Additional Custom Price: LKR ${parseFloat(additionalPrice).toFixed(2)}] ${newInquiry.specialRequests || ""}`.trim();
+                    const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/reception/tour-inquiries`, payload);
+                    if (res.data.success) {
+                        toast.success(newInquiry.isFullyPaid ? "Tour booking and full payment completed successfully!" : "Tour booking inquiry created successfully!");
+                        setShowForm(false);
+                        setAdditionalPrice("0");
+                        setIsLocalGuest(false);
+                        setNewInquiry({
+                            tourId: "",
+                            fullName: "",
+                            email: "",
+                            phone: "",
+                            nationality: "",
+                            nic: "",
+                            passportId: "",
+                            numberOfAdults: 1,
+                            numberOfChildren: 0,
+                            startDate: getMinStartDate(),
+                            pickupLocation: "Hotel Lobby",
+                            specialRequests: "",
+                            isFullyPaid: true,
+                            paymentMethod: "cash"
+                        });
+                        fetchData();
+                    }
+                } catch (error) {
+                    console.error(error);
+                    toast.error(error.response?.data?.message || "Failed to submit tour booking inquiry.");
+                }
             }
-
-            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/reception/tour-inquiries`, payload);
-            if (res.data.success) {
-                toast.success("Tour booking inquiry created successfully!");
-                setShowForm(false);
-                setAdditionalPrice("0");
-                setIsLocalGuest(false);
-                setNewInquiry({
-                    tourId: "",
-                    fullName: "",
-                    email: "",
-                    phone: "",
-                    nationality: "",
-                    nic: "",
-                    passportId: "",
-                    numberOfAdults: 1,
-                    numberOfChildren: 0,
-                    startDate: getMinStartDate(),
-                    pickupLocation: "Hotel Lobby",
-                    specialRequests: ""
-                });
-                fetchData();
-            }
-        } catch (error) {
-            console.error(error);
-            toast.error(error.response?.data?.message || "Failed to submit tour booking inquiry.");
-        }
+        });
     };
 
     // Update pax count API submit
@@ -303,20 +317,25 @@ export default function TourBookings() {
     };
 
     // Cancel tour booking API request
-    const handleCancelBooking = async (id) => {
-        if (!window.confirm("Are you sure you want to cancel this tour booking?\nThis will mark the booking as rejected, and the manager will handle any cash refund/reconciliations on the admin side.")) {
-            return;
-        }
-        try {
-            const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/reception/tour-inquiries/${id}/cancel`);
-            if (res.data.success) {
-                toast.success("Tour booking cancelled successfully!");
-                fetchData();
+    const handleCancelBooking = (id) => {
+        setConfirmModal({
+            isOpen: true,
+            title: "Cancel Tour Booking",
+            message: "Are you sure you want to cancel this tour booking?\nThis will mark the booking as rejected, and the manager will handle any cash refund/reconciliations on the admin side.",
+            onConfirm: async () => {
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                try {
+                    const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/reception/tour-inquiries/${id}/cancel`);
+                    if (res.data.success) {
+                        toast.success("Tour booking cancelled successfully!");
+                        fetchData();
+                    }
+                } catch (error) {
+                    console.error(error);
+                    toast.error(error.response?.data?.message || "Failed to cancel tour booking.");
+                }
             }
-        } catch (error) {
-            console.error(error);
-            toast.error(error.response?.data?.message || "Failed to cancel tour booking.");
-        }
+        });
     };
 
     const handleCollectBalance = async (inquiryId) => {
@@ -489,6 +508,10 @@ export default function TourBookings() {
         const tourName = tours.find(t => t.id === inquiry.tourId)?.packageName || "Custom Excursion";
         const guestName = inquiry.fullName || "Guest";
         const { totalPrice } = getRowPriceParts(inquiry);
+        const isFullyPaid = inquiry.balancePaidAt || parseFloat(inquiry.remainingAmount || 0) === 0;
+        const paidAmount = isFullyPaid
+            ? totalPrice
+            : parseFloat(inquiry.depositAmount || 0);
         
         printWindow.document.write(`
             <html>
@@ -526,12 +549,20 @@ export default function TourBookings() {
                         <span style="font-weight: bold;">${inquiry.numberOfAdults} Ad, ${inquiry.numberOfChildren} Ch</span>
                     </div>
                     <div class="receipt-row">
+                        <span>Payment Status:</span>
+                        <span style="font-weight: bold; text-transform: uppercase;">${isFullyPaid ? "Fully Paid" : "Deposit Paid"}</span>
+                    </div>
+                    <div class="receipt-row">
+                        <span>Payment Method:</span>
+                        <span style="font-weight: bold; text-transform: uppercase;">${inquiry.balancePaymentMethod || "Online Payment"}</span>
+                    </div>
+                    <div class="receipt-row">
                         <span>Transaction Date:</span>
                         <span style="font-weight: bold;">${new Date().toLocaleString()}</span>
                     </div>
                     <div class="receipt-row total">
                         <span>Paid Amount:</span>
-                        <span>LKR ${totalPrice.toLocaleString()}</span>
+                        <span>LKR ${paidAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                     
                     <div class="footer">
@@ -635,7 +666,7 @@ export default function TourBookings() {
 
                 <div className="flex gap-2 flex-shrink-0">
                     <button
-                        onClick={() => window.open("http://localhost:5173/booking/tour", "_blank")}
+                        onClick={() => window.open((import.meta.env.VITE_CUSTOMER_FRONTEND_URL || "http://localhost:5173") + "/booking/tour", "_blank")}
                         className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/60 hover:bg-slate-100/50 dark:hover:bg-slate-800 rounded-xl transition duration-200 cursor-pointer shadow-sm text-slate-700 dark:text-slate-200"
                     >
                         <MdTerrain size={16} className={currentAccent.text} /> View Tour Site
@@ -818,20 +849,29 @@ export default function TourBookings() {
                                                              {/* Half / Full details */}
                                                              {inq.bookingId ? (
                                                                  <div className="mt-1 pt-1 border-t border-dashed border-slate-200 dark:border-slate-800 space-y-0.5 text-[9px] font-bold">
-                                                                     <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-                                                                         <span>Deposit (50%):</span>
-                                                                         <span>LKR {parseFloat(inq.depositAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                                                     </div>
-                                                                     {inq.balancePaidAt ? (
+                                                                     {parseFloat(inq.remainingAmount || 0) === 0 ? (
                                                                          <div className="flex justify-between text-blue-500 dark:text-blue-400 font-black">
-                                                                             <span>Remaining ({inq.balancePaymentMethod}):</span>
+                                                                             <span>Full Paid ({inq.balancePaymentMethod || "cash"}):</span>
                                                                              <span>Paid</span>
                                                                          </div>
                                                                      ) : (
-                                                                         <div className="flex justify-between text-rose-500 dark:text-rose-400">
-                                                                             <span>Balance Due:</span>
-                                                                             <span>LKR {parseFloat(inq.remainingAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                                                         </div>
+                                                                         <>
+                                                                             <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                                                                                 <span>Deposit (50%):</span>
+                                                                                 <span>LKR {parseFloat(inq.depositAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                                             </div>
+                                                                             {inq.balancePaidAt ? (
+                                                                                 <div className="flex justify-between text-blue-500 dark:text-blue-400 font-black">
+                                                                                     <span>Remaining ({inq.balancePaymentMethod}):</span>
+                                                                                     <span>Paid</span>
+                                                                                 </div>
+                                                                             ) : (
+                                                                                 <div className="flex justify-between text-rose-500 dark:text-rose-400">
+                                                                                     <span>Balance Due:</span>
+                                                                                     <span>LKR {parseFloat(inq.remainingAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                                                 </div>
+                                                                             )}
+                                                                         </>
                                                                      )}
                                                                  </div>
                                                              ) : (
@@ -1146,6 +1186,37 @@ export default function TourBookings() {
                                 />
                             </div>
 
+                            {/* Payment options for desk collection */}
+                            <div className="bg-slate-50/50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 space-y-4">
+                                <label className="flex items-center gap-2 font-bold uppercase text-slate-500 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={newInquiry.isFullyPaid}
+                                        onChange={(e) => setNewInquiry(prev => ({
+                                            ...prev,
+                                            isFullyPaid: e.target.checked
+                                        }))}
+                                        className="rounded border-slate-350 accent-indigo-650 w-4 h-4 cursor-pointer"
+                                    />
+                                    <span className="text-slate-705 dark:text-slate-300 text-xs">Collect Full Payment immediately at desk</span>
+                                </label>
+
+                                {newInquiry.isFullyPaid && (
+                                    <div className="animate-fadeIn">
+                                        <label className="block font-bold uppercase text-slate-500 mb-2">Payment Method *</label>
+                                        <select
+                                            value={newInquiry.paymentMethod}
+                                            onChange={(e) => setNewInquiry(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none font-bold"
+                                        >
+                                            <option value="cash">Cash</option>
+                                            <option value="card">Card Payment</option>
+                                            <option value="bank_transfer">Bank Transfer</option>
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+
                             {priceDetails.basePrice > 0 && (
                                 <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/60 dark:border-slate-800 space-y-2 mt-4 text-left">
                                     <div className="flex justify-between font-bold text-slate-700 dark:text-slate-350">
@@ -1359,26 +1430,40 @@ export default function TourBookings() {
                                                         <span>Total Payable:</span>
                                                         <span>LKR {parseFloat(selectedInquiry.totalAmount || totalPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                                     </div>
-                                                    <div className="flex justify-between text-emerald-600 dark:text-emerald-450 font-bold">
-                                                        <span>Advance Paid (Deposit):</span>
-                                                        <span>LKR {parseFloat(selectedInquiry.depositAmount || (totalPrice * 0.5)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                                                    </div>
-                                                    {isPaid ? (
+                                                    {parseFloat(selectedInquiry.remainingAmount || 0) === 0 ? (
                                                         <>
-                                                            <div className="flex justify-between text-teal-600 dark:text-teal-450 font-extrabold text-sm border-t border-dashed dark:border-slate-800 pt-1.5">
-                                                                <span>Remaining Balance (Paid):</span>
-                                                                <span>LKR {parseFloat(selectedInquiry.remainingAmount || (totalPrice * 0.5)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                            <div className="flex justify-between text-teal-650 dark:text-teal-455 font-extrabold text-sm border-t border-dashed dark:border-slate-800 pt-1.5">
+                                                                <span>Full Payment (Paid):</span>
+                                                                <span>LKR {parseFloat(selectedInquiry.totalAmount || totalPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                                             </div>
                                                             <div className="text-[9px] text-slate-400 mt-1 font-bold">
-                                                                Balance collected on {new Date(selectedInquiry.balancePaidAt).toLocaleString()} via {selectedInquiry.balancePaymentMethod?.toUpperCase()}
+                                                                Full payment collected at desk via {selectedInquiry.balancePaymentMethod?.toUpperCase() || "CASH"}
                                                             </div>
                                                         </>
                                                     ) : (
                                                         <>
-                                                            <div className="flex justify-between text-rose-600 dark:text-rose-400 font-extrabold text-sm border-t border-dashed dark:border-slate-800 pt-1.5">
-                                                                <span>Remaining Balance Due:</span>
-                                                                <span>LKR {parseFloat(selectedInquiry.remainingAmount || (totalPrice * 0.5)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                            <div className="flex justify-between text-emerald-600 dark:text-emerald-455 font-bold">
+                                                                <span>Advance Paid (Deposit):</span>
+                                                                <span>LKR {parseFloat(selectedInquiry.depositAmount || (totalPrice * 0.5)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                                             </div>
+                                                            {isPaid ? (
+                                                                <>
+                                                                    <div className="flex justify-between text-teal-650 dark:text-teal-455 font-extrabold text-sm border-t border-dashed dark:border-slate-800 pt-1.5">
+                                                                        <span>Remaining Balance (Paid):</span>
+                                                                        <span>LKR {parseFloat(selectedInquiry.remainingAmount || (totalPrice * 0.5)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                                    </div>
+                                                                    <div className="text-[9px] text-slate-400 mt-1 font-bold">
+                                                                        Balance collected on {new Date(selectedInquiry.balancePaidAt).toLocaleString()} via {selectedInquiry.balancePaymentMethod?.toUpperCase()}
+                                                                    </div>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <div className="flex justify-between text-rose-600 dark:text-rose-450 font-extrabold text-sm border-t border-dashed dark:border-slate-800 pt-1.5">
+                                                                        <span>Remaining Balance Due:</span>
+                                                                        <span>LKR {parseFloat(selectedInquiry.remainingAmount || (totalPrice * 0.5)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                                    </div>
+                                                                </>
+                                                            )}
                                                         </>
                                                     )}
                                                 </>
@@ -1394,7 +1479,7 @@ export default function TourBookings() {
                             </div>
 
                             {/* Collect Balance Payment Panel (Reception desk) */}
-                            {!selectedInquiry.balancePaidAt && selectedInquiry.status !== "rejected" && selectedInquiry.status !== "canceled" && (
+                            {!selectedInquiry.balancePaidAt && parseFloat(selectedInquiry.remainingAmount || 0) > 0 && selectedInquiry.status !== "rejected" && selectedInquiry.status !== "canceled" && (
                                 <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/5 dark:bg-rose-500/2 space-y-3.5">
                                     <div className="flex items-center gap-1.5 text-rose-550 dark:text-rose-400 font-bold uppercase tracking-wider text-[10px]">
                                         <span>💵 Collect Remaining Balance Payment</span>
@@ -1467,6 +1552,31 @@ export default function TourBookings() {
                                 className={`px-5 py-2 text-xs font-bold text-white rounded-xl cursor-pointer transition shadow-xs ${currentAccent.bg}`}
                             >
                                 Close View
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {confirmModal.isOpen && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn text-left">
+                    <div className={`w-full max-w-md rounded-2xl shadow-2xl border p-6 ${theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-800"}`}>
+                        <h3 className="text-base font-black tracking-tight mb-2">{confirmModal.title}</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-6 whitespace-pre-line leading-normal">{confirmModal.message}</p>
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                                className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl transition hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    confirmModal.onConfirm?.();
+                                }}
+                                className="px-4 py-2 text-xs font-bold text-white bg-indigo-650 hover:bg-indigo-755 rounded-xl transition cursor-pointer shadow-sm"
+                            >
+                                Confirm
                             </button>
                         </div>
                     </div>
