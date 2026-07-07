@@ -421,33 +421,57 @@ export const getConfirmedTourBookings = async (req, res) => {
 
 export const getTourAnalytics = async (req, res) => {
   try {
+    const { startDate, endDate } = req.query;
+
+    let dateFilterInquiry = "";
+    let dateFilterBooking = "";
+    let dateFilterJoin = "";
+    const replacements = {};
+
+    if (startDate && endDate) {
+      replacements.start = `${startDate} 00:00:00`;
+      replacements.end = `${endDate} 23:59:59`;
+      dateFilterInquiry = "WHERE createdAt BETWEEN :start AND :end";
+      dateFilterBooking = "WHERE createdAt BETWEEN :start AND :end";
+      dateFilterJoin = "AND ti.createdAt BETWEEN :start AND :end";
+    }
+
     // 1. Total listed tours
     const [toursCount] = await sequelize.query("SELECT COUNT(*) as count FROM tours", { type: sequelize.QueryTypes.SELECT });
     
     // 2. Total inquiries
-    const [inquiriesCount] = await sequelize.query("SELECT COUNT(*) as count FROM tour_inquiries", { type: sequelize.QueryTypes.SELECT });
+    const [inquiriesCount] = await sequelize.query(
+      `SELECT COUNT(*) as count FROM tour_inquiries ${dateFilterInquiry}`,
+      { replacements, type: sequelize.QueryTypes.SELECT }
+    );
     
     // 3. Inquiry status breakdown
     const inquiryStatusBreakdown = await sequelize.query(
-      "SELECT status, COUNT(*) as count FROM tour_inquiries GROUP BY status",
-      { type: sequelize.QueryTypes.SELECT }
+      `SELECT status, COUNT(*) as count FROM tour_inquiries ${dateFilterInquiry} GROUP BY status`,
+      { replacements, type: sequelize.QueryTypes.SELECT }
     );
 
     // 4. Total confirmed bookings
-    const [bookingsCount] = await sequelize.query("SELECT COUNT(*) as count FROM tour_bookings", { type: sequelize.QueryTypes.SELECT });
+    const [bookingsCount] = await sequelize.query(
+      `SELECT COUNT(*) as count FROM tour_bookings ${dateFilterBooking}`,
+      { replacements, type: sequelize.QueryTypes.SELECT }
+    );
 
     // 5. Total booking revenue (sum of depositAmount)
-    const [revenueData] = await sequelize.query("SELECT SUM(depositAmount) as total FROM tour_bookings", { type: sequelize.QueryTypes.SELECT });
+    const [revenueData] = await sequelize.query(
+      `SELECT SUM(depositAmount) as total FROM tour_bookings ${dateFilterBooking}`,
+      { replacements, type: sequelize.QueryTypes.SELECT }
+    );
 
     // 6. Popular tours by inquiries
     const popularTours = await sequelize.query(
       `SELECT t.packageName, COUNT(ti.id) as inquiryCount 
        FROM tours t
-       LEFT JOIN tour_inquiries ti ON t.id = ti.tourId
+       LEFT JOIN tour_inquiries ti ON t.id = ti.tourId ${dateFilterJoin}
        GROUP BY t.id, t.packageName
        ORDER BY inquiryCount DESC
        LIMIT 5`,
-      { type: sequelize.QueryTypes.SELECT }
+      { replacements, type: sequelize.QueryTypes.SELECT }
     );
 
     return res.status(200).json({

@@ -37,6 +37,12 @@ export default function VehicleReports() {
   const [tourLoading, setTourLoading] = useState(false);
   const [tourError, setTourError] = useState("");
   
+  // Report selection types
+  const [reportPeriodType, setReportPeriodType] = useState("custom"); // "daily", "monthly", "custom"
+  const [reportDate, setReportDate] = useState(new Date().toISOString().split("T")[0]);
+  const [reportMonth, setReportMonth] = useState(new Date().getMonth() + 1);
+  const [reportYear, setReportYear] = useState(new Date().getFullYear());
+
   // Date filters
   const [startDate, setStartDate] = useState(() => {
     // Default to first day of current month
@@ -47,6 +53,19 @@ export default function VehicleReports() {
     // Default to today
     return new Date().toISOString().split("T")[0];
   });
+
+  useEffect(() => {
+    if (reportPeriodType === "daily") {
+      setStartDate(reportDate);
+      setEndDate(reportDate);
+    } else if (reportPeriodType === "monthly") {
+      const firstDay = `${reportYear}-${String(reportMonth).padStart(2, '0')}-01`;
+      const lastDayDate = new Date(reportYear, reportMonth, 0);
+      const lastDay = `${reportYear}-${String(reportMonth).padStart(2, '0')}-${String(lastDayDate.getDate()).padStart(2, '0')}`;
+      setStartDate(firstDay);
+      setEndDate(lastDay);
+    }
+  }, [reportPeriodType, reportDate, reportMonth, reportYear]);
 
   const [sortField, setSortField] = useState("totalRevenue");
   const [sortAsc, setSortAsc] = useState(false);
@@ -78,7 +97,11 @@ export default function VehicleReports() {
   const fetchTourReports = useCallback(async () => {
     try {
       setTourLoading(true);
-      const res = await axios.get(`${backendBaseUrl}/manager/tour-analytics`, config);
+      const params = {};
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+
+      const res = await axios.get(`${backendBaseUrl}/manager/tour-analytics`, { params, ...config });
       setTourData(res.data?.data || null);
       setTourError("");
     } catch (err) {
@@ -87,7 +110,7 @@ export default function VehicleReports() {
     } finally {
       setTourLoading(false);
     }
-  }, [backendBaseUrl, config]);
+  }, [backendBaseUrl, startDate, endDate, config]);
 
   useEffect(() => {
     if (activeTab === "vehicles") {
@@ -234,39 +257,140 @@ export default function VehicleReports() {
 
       <div className="w-full max-w-7xl mx-auto space-y-6">
 
-      {activeTab === "vehicles" ? (
-        <>
-          {/* Date Range Panel */}
-          <Card className="bg-white border border-slate-100 shadow-sm">
-            <div className="flex flex-col md:flex-row items-end gap-4">
-              <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Start Date</label>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-455 transition"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">End Date</label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-455 transition"
-                  />
+        {/* Date Range & Report Period Panel */}
+        <Card className="bg-white border border-slate-100 shadow-sm">
+          <div className="flex flex-col md:flex-row items-end justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-4 flex-1 w-full">
+              {/* Report Period Toggle */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Report Type</label>
+                <div className="flex bg-slate-100 p-1 border border-slate-200 rounded-xl w-fit">
+                  <button
+                    onClick={() => setReportPeriodType("daily")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer ${
+                      reportPeriodType === "daily" ? "bg-white text-slate-800 shadow-xs" : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    Daily
+                  </button>
+                  <button
+                    onClick={() => setReportPeriodType("monthly")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer ${
+                      reportPeriodType === "monthly" ? "bg-white text-slate-800 shadow-xs" : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    Monthly
+                  </button>
+                  <button
+                    onClick={() => setReportPeriodType("custom")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer ${
+                      reportPeriodType === "custom" ? "bg-white text-slate-800 shadow-xs" : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    Custom Range
+                  </button>
                 </div>
               </div>
-              <button
-                onClick={fetchReports}
-                className="w-full md:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition shadow-sm hover:scale-[1.02]"
-              >
-                Apply Filters
-              </button>
+
+              {/* Dynamic Inputs based on type */}
+              {reportPeriodType === "daily" && (
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Select Date</label>
+                  <input
+                    type="date"
+                    value={reportDate}
+                    onChange={(e) => setReportDate(e.target.value)}
+                    className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none text-slate-800 focus:bg-white transition"
+                  />
+                </div>
+              )}
+
+              {reportPeriodType === "monthly" && (
+                <div className="flex gap-2">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Month</label>
+                    <select
+                      value={reportMonth}
+                      onChange={(e) => setReportMonth(Number(e.target.value))}
+                      className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none text-slate-800 focus:bg-white transition cursor-pointer"
+                    >
+                      {[
+                        { value: 1, label: "January" },
+                        { value: 2, label: "February" },
+                        { value: 3, label: "March" },
+                        { value: 4, label: "April" },
+                        { value: 5, label: "May" },
+                        { value: 6, label: "June" },
+                        { value: 7, label: "July" },
+                        { value: 8, label: "August" },
+                        { value: 9, label: "September" },
+                        { value: 10, label: "October" },
+                        { value: 11, label: "November" },
+                        { value: 12, label: "December" }
+                      ].map(m => (
+                        <option key={m.value} value={m.value}>{m.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Year</label>
+                    <select
+                      value={reportYear}
+                      onChange={(e) => setReportYear(Number(e.target.value))}
+                      className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none text-slate-800 focus:bg-white transition cursor-pointer"
+                    >
+                      {[0, 1, 2].map(i => {
+                        const y = new Date().getFullYear() - i;
+                        return <option key={y} value={y}>{y}</option>;
+                      })}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {reportPeriodType === "custom" && (
+                <div className="flex gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Start Date</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none text-slate-800 focus:bg-white transition"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">End Date</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none text-slate-800 focus:bg-white transition"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
-          </Card>
+
+            <button
+              onClick={activeTab === "vehicles" ? fetchReports : fetchTourReports}
+              className="w-full md:w-auto px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition shadow-sm hover:scale-[1.02] cursor-pointer whitespace-nowrap"
+            >
+              Generate Report
+            </button>
+          </div>
+        </Card>
+
+        <div className="text-xs font-bold text-slate-400 uppercase tracking-widest bg-slate-100/60 px-3 py-1.5 border border-slate-200 rounded-xl w-fit">
+          Report Period: {reportPeriodType === "daily" ? startDate : reportPeriodType === "monthly" ? `${[
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+          ][reportMonth - 1]} ${reportYear}` : `${startDate} to ${endDate}`}
+        </div>
+
+      {activeTab === "vehicles" ? (
+        <>
+
 
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 space-y-4">

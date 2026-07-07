@@ -838,10 +838,10 @@ export default function VehicleBookings() {
                             key={st}
                             onClick={() => setStatusFilter(st)}
                             className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider border transition cursor-pointer select-none whitespace-nowrap ${statusFilter === st
-                                    ? currentAccent.bg + " text-white " + currentAccent.border
-                                    : theme.mode === "dark"
-                                        ? "bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
-                                        : "bg-slate-50 border-slate-100 text-slate-600 hover:bg-slate-100"
+                                ? currentAccent.bg + " text-white " + currentAccent.border
+                                : theme.mode === "dark"
+                                    ? "bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+                                    : "bg-slate-50 border-slate-100 text-slate-600 hover:bg-slate-100"
                                 }`}
                         >
                             {st.replace("_", " ")}
@@ -1087,8 +1087,8 @@ export default function VehicleBookings() {
                                             value={newBooking.vehicleId}
                                             onChange={(e) => setNewBooking({ ...newBooking, vehicleId: e.target.value })}
                                             className={`w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-3 outline-none cursor-pointer transition-all ${availabilityError.includes("no longer available") || availabilityError.includes("not available")
-                                                    ? "border-rose-500 bg-rose-50/10 focus:border-rose-500 text-rose-600 dark:text-rose-450"
-                                                    : "border-slate-200 dark:border-slate-800 focus:border-blue-500"
+                                                ? "border-rose-500 bg-rose-50/10 focus:border-rose-500 text-rose-600 dark:text-rose-450"
+                                                : "border-slate-200 dark:border-slate-800 focus:border-blue-500"
                                                 }`}
                                         >
                                             <option value="">-- Select Active Vehicle --</option>
@@ -1166,8 +1166,8 @@ export default function VehicleBookings() {
                                             value={newBooking.pickupDatetime}
                                             onChange={(e) => setNewBooking({ ...newBooking, pickupDatetime: e.target.value })}
                                             className={`w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-3 outline-none transition-all ${dateErrors.pickup
-                                                    ? "border-rose-500 bg-rose-50/10 focus:border-rose-500 text-rose-600 dark:text-rose-450"
-                                                    : "border-slate-200 dark:border-slate-800 focus:border-blue-500"
+                                                ? "border-rose-500 bg-rose-50/10 focus:border-rose-500 text-rose-600 dark:text-rose-450"
+                                                : "border-slate-200 dark:border-slate-800 focus:border-blue-500"
                                                 }`}
                                         />
                                         {dateErrors.pickup && (
@@ -1186,8 +1186,8 @@ export default function VehicleBookings() {
                                             value={newBooking.returnDatetime}
                                             onChange={(e) => setNewBooking({ ...newBooking, returnDatetime: e.target.value })}
                                             className={`w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-3 outline-none transition-all ${dateErrors.return
-                                                    ? "border-rose-500 bg-rose-50/10 focus:border-rose-500 text-rose-600 dark:text-rose-450"
-                                                    : "border-slate-200 dark:border-slate-800 focus:border-blue-500"
+                                                ? "border-rose-500 bg-rose-50/10 focus:border-rose-500 text-rose-600 dark:text-rose-450"
+                                                : "border-slate-200 dark:border-slate-800 focus:border-blue-500"
                                                 }`}
                                         />
                                         {dateErrors.return && (
@@ -1225,8 +1225,8 @@ export default function VehicleBookings() {
                                 {/* License details (WITHOUT driver only) */}
                                 {newBooking.hireType === "without_driver" && (
                                     <div className={`grid grid-cols-2 gap-3 p-4 rounded-xl border ${theme.mode === "dark"
-                                            ? "bg-slate-950/40 border-slate-850"
-                                            : "bg-slate-50 border-slate-200/50"
+                                        ? "bg-slate-950/40 border-slate-850"
+                                        : "bg-slate-50 border-slate-200/50"
                                         }`}>
                                         <div>
                                             <label className="block text-slate-550 mb-2">Driver License Number *</label>
@@ -1237,8 +1237,8 @@ export default function VehicleBookings() {
                                                 value={newBooking.customerLicenseNo}
                                                 onChange={(e) => setNewBooking({ ...newBooking, customerLicenseNo: e.target.value })}
                                                 className={`w-full border rounded-xl p-3 outline-none ${theme.mode === "dark"
-                                                        ? "bg-slate-900 border-slate-800 text-white"
-                                                        : "bg-white border-slate-200 text-slate-800"
+                                                    ? "bg-slate-900 border-slate-800 text-white"
+                                                    : "bg-white border-slate-200 text-slate-800"
                                                     }`}
                                             />
                                         </div>
@@ -1251,8 +1251,8 @@ export default function VehicleBookings() {
                                                 value={newBooking.customerLicenseExpiry}
                                                 onChange={(e) => setNewBooking({ ...newBooking, customerLicenseExpiry: e.target.value })}
                                                 className={`w-full border rounded-xl p-3 outline-none ${theme.mode === "dark"
-                                                        ? "bg-slate-900 border-slate-800 text-white"
-                                                        : "bg-white border-slate-200 text-slate-800"
+                                                    ? "bg-slate-900 border-slate-800 text-white"
+                                                    : "bg-white border-slate-200 text-slate-800"
                                                     }`}
                                             />
                                         </div>
@@ -1294,8 +1294,8 @@ export default function VehicleBookings() {
                                         type="submit"
                                         disabled={!!availabilityError}
                                         className={`px-6 py-3 text-white rounded-xl flex items-center gap-1.5 font-black transition shadow-md ${availabilityError
-                                                ? "bg-slate-400 dark:bg-slate-850 cursor-not-allowed opacity-60 shadow-none text-slate-500 dark:text-slate-400"
-                                                : currentAccent.bg + " cursor-pointer"
+                                            ? "bg-slate-400 dark:bg-slate-850 cursor-not-allowed opacity-60 shadow-none text-slate-500 dark:text-slate-400"
+                                            : currentAccent.bg + " cursor-pointer"
                                             }`}
                                     >
                                         <MdCheckCircle size={16} /> Confirm Hire Booking
@@ -1524,69 +1524,69 @@ export default function VehicleBookings() {
                                 (!["cancelled", "completed", "returned"].includes(selectedBooking.status)) ||
                                 (selectedBooking.status === "completed" && parseFloat(selectedBooking.balanceAmount || 0) > 0.01)
                             ) && (
-                                <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/5 dark:bg-rose-500/2 space-y-3.5">
-                                    <div className="flex items-center gap-1.5 text-rose-550 dark:text-rose-400 font-bold uppercase tracking-wider text-[10px]">
-                                        <span>💵 {selectedBooking.status === "completed" ? "Collect Final Settlement Payment" : "Collect Remaining Balance + Security Deposit"}</span>
-                                    </div>
-                                    {selectedBooking.hireType === "with_driver" && !selectedBooking.driverId ? (
-                                        <div className="flex items-start gap-2 p-3 bg-amber-500/10 text-amber-500 border border-amber-500/25 rounded-lg font-bold text-[11px]">
-                                            <span className="mt-0.5">⚠️</span>
-                                            <span>Chauffeur Unassigned: The manager must assign a chauffeur to this booking before the balance payment can be collected by reception.</span>
+                                    <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/5 dark:bg-rose-500/2 space-y-3.5">
+                                        <div className="flex items-center gap-1.5 text-rose-550 dark:text-rose-400 font-bold uppercase tracking-wider text-[10px]">
+                                            <span>💵 {selectedBooking.status === "completed" ? "Collect Final Settlement Payment" : "Collect Remaining Balance + Security Deposit"}</span>
                                         </div>
-                                    ) : selectedBooking.status === "pending_payment" ? (
-                                        <div className="flex items-start gap-2 p-3 bg-amber-500/10 text-amber-500 border border-amber-500/25 rounded-lg font-bold text-[11px]">
-                                            <span className="mt-0.5">⚠️</span>
-                                            <span>Advance Deposit Unpaid: The customer has not paid the online deposit (50%) for this booking yet. The remaining balance can only be collected after the deposit is paid and status becomes confirmed.</span>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            {!["confirmed", "driver_assigned"].includes(selectedBooking.status) ? (
-                                                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-bold">
-                                                    <span>The customer has a pending outstanding bill of <span className="text-rose-500 font-extrabold">LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> for extra mileage, damages, or late return fees. Confirm payment to clear this booking.</span>
-                                                </p>
-                                            ) : (
-                                                <>
-                                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-bold">
-                                                        The customer must pay the remaining balance plus the refundable security deposit at vehicle pickup:
-                                                    </p>
-                                                    <div className={`rounded-lg border p-3 space-y-1.5 text-xs font-bold ${theme.mode === "dark" ? "bg-slate-800/40 border-slate-700" : "bg-white border-slate-200"}`}>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-slate-500">Remaining Balance:</span>
-                                                            <span className="text-rose-500">LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-slate-500">Security Deposit (Refundable):</span>
-                                                            <span className="text-indigo-500">LKR {parseFloat(policy?.securityDepositAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                                                        </div>
-                                                        <div className="flex justify-between border-t border-dashed border-slate-200 dark:border-slate-700 pt-1.5 text-sm">
-                                                            <span className="text-slate-700 dark:text-slate-200">Total to Collect:</span>
-                                                            <span className="text-rose-600 dark:text-rose-400 font-extrabold">LKR {(parseFloat(selectedBooking.balanceAmount || 0) + parseFloat(policy?.securityDepositAmount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                                                        </div>
-                                                    </div>
-                                                </>
-                                            )}
-                                            <div className="flex flex-col sm:flex-row gap-3 items-end">
-                                                <div className="flex-1 w-full">
-                                                    <label className="block text-[10px] text-slate-450 uppercase mb-1.5 font-bold">Select Payment Method</label>
-                                                    <select
-                                                        value={collectPaymentMethod}
-                                                        onChange={(e) => setCollectPaymentMethod(e.target.value)}
-                                                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 outline-none font-bold text-xs cursor-pointer"
-                                                    >
-                                                        <option value="cash">Cash</option>
-                                                        <option value="card">Card Payment</option>
-                                                        <option value="bank_transfer">Bank Transfer</option>
-                                                    </select>
-                                                </div>
-                                                <button
-                                                    onClick={() => handleCollectBalance(selectedBooking.id)}
-                                                    disabled={isCollecting}
-                                                    className="px-5 py-2.5 text-xs font-black text-white bg-rose-600 hover:bg-rose-700 disabled:bg-slate-400 rounded-lg transition shadow-sm cursor-pointer select-none whitespace-nowrap h-9 flex items-center justify-center"
-                                                >
-                                                    {isCollecting ? "Recording..." : `Confirm Payment (LKR ${parseFloat(selectedBooking.balanceAmount || 0).toLocaleString()})`}
-                                                </button>
+                                        {selectedBooking.hireType === "with_driver" && !selectedBooking.driverId ? (
+                                            <div className="flex items-start gap-2 p-3 bg-amber-500/10 text-amber-500 border border-amber-500/25 rounded-lg font-bold text-[11px]">
+                                                <span className="mt-0.5">⚠️</span>
+                                                <span>Chauffeur Unassigned: The manager must assign a chauffeur to this booking before the balance payment can be collected by reception.</span>
                                             </div>
-                                        </>
+                                        ) : selectedBooking.status === "pending_payment" ? (
+                                            <div className="flex items-start gap-2 p-3 bg-amber-500/10 text-amber-500 border border-amber-500/25 rounded-lg font-bold text-[11px]">
+                                                <span className="mt-0.5">⚠️</span>
+                                                <span>Advance Deposit Unpaid: The customer has not paid the online deposit (50%) for this booking yet. The remaining balance can only be collected after the deposit is paid and status becomes confirmed.</span>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {!["confirmed", "driver_assigned"].includes(selectedBooking.status) ? (
+                                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-bold">
+                                                        <span>The customer has a pending outstanding bill of <span className="text-rose-500 font-extrabold">LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> for extra mileage, damages, or late return fees. Confirm payment to clear this booking.</span>
+                                                    </p>
+                                                ) : (
+                                                    <>
+                                                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-bold">
+                                                            The customer must pay the remaining balance plus the refundable security deposit at vehicle pickup:
+                                                        </p>
+                                                        <div className={`rounded-lg border p-3 space-y-1.5 text-xs font-bold ${theme.mode === "dark" ? "bg-slate-800/40 border-slate-700" : "bg-white border-slate-200"}`}>
+                                                            <div className="flex justify-between">
+                                                                <span className="text-slate-500">Remaining Balance:</span>
+                                                                <span className="text-rose-500">LKR {parseFloat(selectedBooking.balanceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="text-slate-500">Security Deposit (Refundable):</span>
+                                                                <span className="text-indigo-500">LKR {parseFloat(policy?.securityDepositAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                            </div>
+                                                            <div className="flex justify-between border-t border-dashed border-slate-200 dark:border-slate-700 pt-1.5 text-sm">
+                                                                <span className="text-slate-700 dark:text-slate-200">Total to Collect:</span>
+                                                                <span className="text-rose-600 dark:text-rose-400 font-extrabold">LKR {(parseFloat(selectedBooking.balanceAmount || 0) + parseFloat(policy?.securityDepositAmount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                            </div>
+                                                        </div>
+                                                    </>
+                                                )}
+                                                <div className="flex flex-col sm:flex-row gap-3 items-end">
+                                                    <div className="flex-1 w-full">
+                                                        <label className="block text-[10px] text-slate-450 uppercase mb-1.5 font-bold">Select Payment Method</label>
+                                                        <select
+                                                            value={collectPaymentMethod}
+                                                            onChange={(e) => setCollectPaymentMethod(e.target.value)}
+                                                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 outline-none font-bold text-xs cursor-pointer"
+                                                        >
+                                                            <option value="cash">Cash</option>
+                                                            <option value="card">Card Payment</option>
+                                                            <option value="bank_transfer">Bank Transfer</option>
+                                                        </select>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleCollectBalance(selectedBooking.id)}
+                                                        disabled={isCollecting}
+                                                        className="px-5 py-2.5 text-xs font-black text-white bg-rose-600 hover:bg-rose-700 disabled:bg-slate-400 rounded-lg transition shadow-sm cursor-pointer select-none whitespace-nowrap h-9 flex items-center justify-center"
+                                                    >
+                                                        {isCollecting ? "Recording..." : `Confirm Payment (LKR ${parseFloat(selectedBooking.balanceAmount || 0).toLocaleString()})`}
+                                                    </button>
+                                                </div>
+                                            </>
                                         )}
                                     </div>
                                 )}
@@ -1634,7 +1634,7 @@ export default function VehicleBookings() {
                     <div className={`w-full max-w-md rounded-2xl shadow-2xl border p-6 ${theme.mode === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-800"}`}>
                         <h3 className="text-base font-black tracking-tight mb-2">{confirmModal.title}</h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-4 whitespace-pre-line leading-normal">{confirmModal.message}</p>
-                        
+
                         {confirmModal.showInput && (
                             <div className="mb-4">
                                 <label className="text-[10px] font-bold text-slate-500 block mb-1">Reason for Cancellation</label>
