@@ -5,15 +5,17 @@ import { RoomPayment, AirPortPickup, Policy, BookedRoom } from '../models/index.
 const getCurrencyType = () => process.env.CURRENCY_TYPE || 'LKR';
 
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_SERVER,
-  port: Number(process.env.SMTP_PORT),
-  secure: Number(process.env.SMTP_PORT) === 465,
-  requireTLS: true,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+      host: process.env.SMTP_SERVER,
+      port: parseInt(process.env.SMTP_PORT) || 587,
+      secure: (parseInt(process.env.SMTP_PORT) || 587) === 465,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+      tls: {  
+        rejectUnauthorized: false
+      }
+    });
 
 export const sendEmail = async ({
   to,
